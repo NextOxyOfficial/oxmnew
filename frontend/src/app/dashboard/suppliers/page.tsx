@@ -98,6 +98,23 @@ export default function SuppliersPage() {
   const [showCreatePurchaseModal, setShowCreatePurchaseModal] = useState(false);
   const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
   const [selectedSupplierForAction, setSelectedSupplierForAction] = useState<Supplier | null>(null);
+  
+  // Confirmation modal state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+    type: 'delete' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+    type: 'delete'
+  });
 
   // Form states for modals
   const [purchaseForm, setPurchaseForm] = useState({
@@ -623,6 +640,66 @@ export default function SuppliersPage() {
     }
   };
 
+  const handleDeletePurchase = async (purchaseId: number) => {
+    const purchase = purchases.find(p => p.id === purchaseId);
+    const supplierName = purchase?.supplier.name || 'Unknown Supplier';
+    
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Purchase',
+      message: `Are you sure you want to delete this purchase from ${supplierName}? This action cannot be undone.`,
+      type: 'delete',
+      onConfirm: async () => {
+        try {
+          await ApiService.deletePurchase(purchaseId);
+          
+          // Remove from local state
+          setPurchases(prev => prev.filter(purchase => purchase.id !== purchaseId));
+          
+          showNotification('success', 'Purchase deleted successfully');
+        } catch (error) {
+          console.error('Error deleting purchase:', error);
+          showNotification('error', 'Failed to delete purchase. Please try again.');
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      },
+      onCancel: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
+  const handleDeletePayment = async (paymentId: number) => {
+    const payment = payments.find(p => p.id === paymentId);
+    const supplierName = payment?.supplier.name || 'Unknown Supplier';
+    
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Payment',
+      message: `Are you sure you want to delete this payment to ${supplierName}? This action cannot be undone.`,
+      type: 'delete',
+      onConfirm: async () => {
+        try {
+          await ApiService.deletePayment(paymentId);
+          
+          // Remove from local state
+          setPayments(prev => prev.filter(payment => payment.id !== paymentId));
+          
+          showNotification('success', 'Payment deleted successfully');
+        } catch (error) {
+          console.error('Error deleting payment:', error);
+          showNotification('error', 'Failed to delete payment. Please try again.');
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      },
+      onCancel: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   const tabs = [
     { id: 'suppliers', label: 'Suppliers' },
     { id: 'purchases', label: 'Purchase History' },
@@ -722,6 +799,7 @@ export default function SuppliersPage() {
                       formatDate={formatDate}
                       getStatusColor={getStatusColor}
                       onUpdatePurchase={handleUpdatePurchase}
+                      onDeletePurchase={handleDeletePurchase}
                     />
                   )}
                   
@@ -746,6 +824,7 @@ export default function SuppliersPage() {
                   getStatusColor={getStatusColor}
                   getPaymentMethodIcon={getPaymentMethodIcon}
                   onUpdatePayment={handleUpdatePayment}
+                  onDeletePayment={handleDeletePayment}
                 />
               )}
 
@@ -793,6 +872,58 @@ export default function SuppliersPage() {
             handleSubmit={handleCreatePayment}
             loading={loading}
           />
+
+          {/* Confirmation Modal */}
+          {confirmDialog.isOpen && (
+            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="bg-slate-800/95 backdrop-blur border border-slate-700/50 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    {confirmDialog.type === 'delete' ? (
+                      <div className="w-12 h-12 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 bg-yellow-500/20 border border-yellow-500/30 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-slate-100 mb-3">
+                      {confirmDialog.title}
+                    </h3>
+                    <p className="text-slate-300 text-sm leading-relaxed">
+                      {confirmDialog.message}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end gap-3 mt-8">
+                  <button
+                    onClick={confirmDialog.onCancel}
+                    className="px-6 py-2.5 text-slate-300 hover:text-slate-100 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 hover:border-slate-500 rounded-lg transition-all duration-200 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDialog.onConfirm}
+                    className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-lg ${
+                      confirmDialog.type === 'delete'
+                        ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500'
+                        : 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500'
+                    }`}
+                  >
+                    {confirmDialog.type === 'delete' ? 'Delete' : 'Confirm'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </ClientOnly>

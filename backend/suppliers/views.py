@@ -84,6 +84,12 @@ class PurchaseViewSet(viewsets.ModelViewSet):
         instance.is_active = False
         instance.save()
 
+    def destroy(self, request, *args, **kwargs):
+        """Override destroy to handle soft deletion with proper response"""
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
@@ -116,3 +122,9 @@ class PaymentViewSet(viewsets.ModelViewSet):
         """Soft delete - mark as inactive instead of actually deleting"""
         instance.is_active = False
         instance.save()
+
+    def destroy(self, request, *args, **kwargs):
+        """Override destroy to handle soft deletion with proper response"""
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
