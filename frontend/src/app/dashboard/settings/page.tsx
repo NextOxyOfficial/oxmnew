@@ -507,21 +507,14 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div >
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 px-2">
-          <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-          <p className="text-gray-300 text-lg">Manage your account preferences and configuration</p>
-        </div>
-
-        {/* Notification */}
-        {notification.isVisible && (
-          <div className={`mb-6 p-4 rounded-lg border ${
-            notification.type === 'success' 
-              ? 'bg-green-500/10 border-green-400/30 text-green-300' 
-              : 'bg-red-500/10 border-red-400/30 text-red-300'
-          } backdrop-blur-sm`}>
+    <div className="p-6 space-y-6">
+      {/* Header - removed since breadcrumb is now in the main header */}      {/* Notification */}
+      {notification.isVisible && (
+        <div className={`p-4 rounded-lg border ${
+          notification.type === 'success' 
+            ? 'bg-green-500/10 border-green-400/30 text-green-300' 
+            : 'bg-red-500/10 border-red-400/30 text-red-300'
+        }`}>
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 {notification.type === 'success' ? (
@@ -544,8 +537,8 @@ export default function SettingsPage() {
         )}
 
         {/* Tabs */}
-        <div className="bg-white/5 backdrop-blur-xl border mb-6 border-white/10 rounded-2xl shadow-2xl">
-          <div className="border-b border-white/10">
+        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
+          <div className="border-b border-slate-700/50">
             <nav className="flex space-x-8 px-6 pt-6">
               {tabs.map((tab) => (
                 <button
@@ -553,8 +546,8 @@ export default function SettingsPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`py-2 px-1 border-b-2 font-medium text-sm transition-all duration-200 cursor-pointer ${
                     activeTab === tab.id
-                      ? 'border-blue-400 text-blue-400'
-                      : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                      ? 'border-cyan-400 text-cyan-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300'
                   }`}
                 >
                   {tab.label}
@@ -570,14 +563,14 @@ export default function SettingsPage() {
                 <div>
                   {/* Company Images */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-white mb-4">Company Images</h4>
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">Company Images</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Store Logo */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
                           Store Logo
                         </label>
-                        <div className="w-full h-32 border-2 border-dashed border-white/20 rounded-lg flex items-center justify-center bg-white/5 backdrop-blur-sm hover:border-white/30 transition-all duration-200 cursor-pointer relative group"
+                        <div className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group"
                              onClick={() => {
                                const input = document.createElement('input');
                                input.type = 'file';
@@ -627,10 +620,10 @@ export default function SettingsPage() {
                             </>
                           ) : (
                             <div className="text-center">
-                              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
-                              <div className="mt-2 text-xs text-gray-400">
+                              <div className="mt-2 text-xs text-slate-400">
                                 Click to upload logo
                               </div>
                             </div>
@@ -640,10 +633,10 @@ export default function SettingsPage() {
 
                       {/* Banner Image */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
                           Banner Image
                         </label>
-                        <div className="w-full h-32 border-2 border-dashed border-white/20 rounded-lg flex items-center justify-center bg-white/5 backdrop-blur-sm hover:border-white/30 transition-all duration-200 cursor-pointer relative group"
+                        <div className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group"
                              onClick={() => {
                                const input = document.createElement('input');
                                input.type = 'file';
@@ -708,16 +701,16 @@ export default function SettingsPage() {
 
                   {/* Company Address */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-white mb-4">Company Address</h4>
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">Company Address</h4>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
                         Address
                       </label>
                       <textarea
                         rows={3}
                         value={profile.company_address}
                         onChange={(e) => setProfile({ ...profile, company_address: e.target.value })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm resize-none"
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
                         placeholder="Enter your company address"
                       />
                     </div>
@@ -725,65 +718,65 @@ export default function SettingsPage() {
 
                   {/* Personal Information */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-white mb-4">Personal Information</h4>
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">Personal Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
                           First Name
                         </label>
                         <input
                           type="text"
                           value={profile.first_name}
                           onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                           placeholder="Enter your first name"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
                           Last Name
                         </label>
                         <input
                           type="text"
                           value={profile.last_name}
                           onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                           placeholder="Enter your last name"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
                           Company
                         </label>
                         <input
                           type="text"
                           value={profile.company}
                           onChange={(e) => setProfile({ ...profile, company: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                           placeholder="Enter your company name"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
                           Email
                         </label>
                         <input
                           type="email"
                           value={profile.email}
                           onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                           placeholder="Enter your email"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
                           Phone
                         </label>
                         <input
                           type="tel"
                           value={profile.phone}
                           onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                           placeholder="Enter your phone number"
                         />
                       </div>
@@ -794,7 +787,7 @@ export default function SettingsPage() {
                     <button
                       onClick={handleProfileSave}
                       disabled={loading}
-                      className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                      className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                     >
                       {loading ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -809,19 +802,19 @@ export default function SettingsPage() {
                 <div>
                   {/* Add Category */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-white mb-4">Add New Category</h4>
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">Add New Category</h4>
                     <div className="flex gap-3 max-w-md">
                       <input
                         type="text"
                         value={newCategory}
                         onChange={(e) => setNewCategory(e.target.value)}
-                        className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                        className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                         placeholder="Category name"
                       />
                       <button
                         onClick={handleAddCategory}
                         disabled={loading || !newCategory.trim()}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                        className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                       >
                         Add
                       </button>
@@ -830,10 +823,10 @@ export default function SettingsPage() {
 
                   {/* Categories List */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-white mb-4">Categories</h4>
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">Categories</h4>
                     <div className="max-w-2xl">
                       {categories.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400">
+                        <div className="text-center py-8 text-slate-400">
                           <p>No categories found. Add your first category above.</p>
                         </div>
                       ) : (
@@ -879,39 +872,39 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 {/* Preferences */}
                 <div className="mb-8">
-                  <h4 className="text-lg font-medium text-white mb-4">Preferences</h4>
+                  <h4 className="text-lg font-medium text-slate-100 mb-4">Preferences</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
                         Language
                       </label>
                       <select
                         value={generalSettings.language}
                         onChange={(e) => setGeneralSettings({ ...generalSettings, language: e.target.value })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white text-sm backdrop-blur-sm"
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
                       >
-                        <option value="en" className="bg-gray-800 text-white">English</option>
-                        <option value="bn" className="bg-gray-800 text-white">Bangla</option>
+                        <option value="en" className="bg-slate-800 text-slate-100">English</option>
+                        <option value="bn" className="bg-slate-800 text-slate-100">Bangla</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
                         Currency
                       </label>
                       <select
                         value={generalSettings.currency}
                         onChange={(e) => setGeneralSettings({ ...generalSettings, currency: e.target.value })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white text-sm backdrop-blur-sm"
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
                       >
-                        <option value="USD" className="bg-gray-800 text-white">USD - US Dollar</option>
-                        <option value="EUR" className="bg-gray-800 text-white">EUR - Euro</option>
-                        <option value="GBP" className="bg-gray-800 text-white">GBP - British Pound</option>
-                        <option value="JPY" className="bg-gray-800 text-white">JPY - Japanese Yen</option>
-                        <option value="CAD" className="bg-gray-800 text-white">CAD - Canadian Dollar</option>
-                        <option value="AUD" className="bg-gray-800 text-white">AUD - Australian Dollar</option>
-                        <option value="CHF" className="bg-gray-800 text-white">CHF - Swiss Franc</option>
-                        <option value="CNY" className="bg-gray-800 text-white">CNY - Chinese Yuan</option>
-                        <option value="BDT" className="bg-gray-800 text-white">BDT - Bangladeshi Taka</option>
+                        <option value="USD" className="bg-slate-800 text-slate-100">USD - US Dollar</option>
+                        <option value="EUR" className="bg-slate-800 text-slate-100">EUR - Euro</option>
+                        <option value="GBP" className="bg-slate-800 text-slate-100">GBP - British Pound</option>
+                        <option value="JPY" className="bg-slate-800 text-slate-100">JPY - Japanese Yen</option>
+                        <option value="CAD" className="bg-slate-800 text-slate-100">CAD - Canadian Dollar</option>
+                        <option value="AUD" className="bg-slate-800 text-slate-100">AUD - Australian Dollar</option>
+                        <option value="CHF" className="bg-slate-800 text-slate-100">CHF - Swiss Franc</option>
+                        <option value="CNY" className="bg-slate-800 text-slate-100">CNY - Chinese Yuan</option>
+                        <option value="BDT" className="bg-slate-800 text-slate-100">BDT - Bangladeshi Taka</option>
                       </select>
                     </div>
                   </div>
@@ -1021,7 +1014,6 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
-      </div>
 
       {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && (
@@ -1172,7 +1164,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleLevelDeleteCancel}
                   disabled={loading}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-slate-600 shadow-sm px-4 py-2 bg-slate-800 text-base font-medium text-slate-100 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   Cancel
                 </button>
@@ -1181,7 +1173,6 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

@@ -93,7 +93,7 @@ export default function Sidebar({
 
       {/* Desktop sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:top-16 lg:bottom-0 z-40">
-        <div className="bg-slate-900 border border-slate-700/30 rounded-lg m-4 h-full flex flex-col">
+        <div className="bg-slate-900 border border-slate-700/30 rounded-lg my-6 mx-3 h-full flex flex-col">
           <div className="p-4 flex-1">
             <nav className="space-y-1 mb-8">
               {navigation.map((item) => (
