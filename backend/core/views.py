@@ -10,7 +10,7 @@ from django.db import IntegrityError
 from django.core.mail import send_mail
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from .models import UserProfile, Category, UserSettings
+from .models import UserProfile, Category, UserSettings, Gift
 import json
 
 @api_view(['GET'])
@@ -670,6 +670,170 @@ def request_password_reset(request):
             'message': f'Password reset instructions have been sent to {user.email}'
         }, status=status.HTTP_200_OK)
         
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def gifts(request):
+    """
+    Get all gifts or create a new gift
+    """
+    if request.method == 'GET':
+        try:
+            user_gifts = Gift.objects.filter(user=request.user)
+            gifts_data = []
+            for gift in user_gifts:
+                gifts_data.append({
+                    'id': gift.id,
+                    'name': gift.name,
+                    'is_active': gift.is_active,
+                    'created_at': gift.created_at,
+                    'updated_at': gift.updated_at,
+                })
+            
+            return Response({
+                'gifts': gifts_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'POST':
+        try:
+            name = request.data.get('name', '').strip()
+            
+            if not name:
+                return Response({
+                    'error': 'Gift name is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if gift with same name already exists for this user
+            if Gift.objects.filter(user=request.user, name__iexact=name).exists():
+                return Response({
+                    'error': 'Gift with this name already exists'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create new gift
+            gift = Gift.objects.create(
+                name=name,
+                user=request.user,
+                is_active=request.data.get('is_active', True)
+            )
+            
+            return Response({
+                'message': 'Gift created successfully',
+                'gift': {
+                    'id': gift.id,
+                    'name': gift.name,
+                    'is_active': gift.is_active,
+                    'created_at': gift.created_at,
+                    'updated_at': gift.updated_at,
+                }
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def gift_detail(request, gift_id):
+    """
+    Update or delete a specific gift
+    """
+    try:
+        gift = Gift.objects.get(id=gift_id, user=request.user)
+    except Gift.DoesNotExist:
+        return Response({
+            'error': 'Gift not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'PUT':
+        try:
+            # Update gift fields
+            if 'name' in request.data:
+                name = request.data['name'].strip()
+                if not name:
+                    return Response({
+                        'error': 'Gift name cannot be empty'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Check if another gift with same name exists for this user
+                if Gift.objects.filter(
+                    user=request.user, 
+                    name__iexact=name
+                ).exclude(id=gift_id).exists():
+                    return Response({
+                        'error': 'Gift with this name already exists'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                gift.name = name
+            
+            if 'is_active' in request.data:
+                gift.is_active = bool(request.data['is_active'])
+            
+            gift.save()
+            
+            return Response({
+                'message': 'Gift updated successfully',
+                'gift': {
+                    'id': gift.id,
+                    'name': gift.name,
+                    'is_active': gift.is_active,
+                    'created_at': gift.created_at,
+                    'updated_at': gift.updated_at,
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'DELETE':
+        try:
+            gift.delete()
+            return Response({
+                'message': 'Gift deleted successfully'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def toggle_gift(request, gift_id):
+    """
+    Toggle gift active status
+    """
+    try:
+        gift = Gift.objects.get(id=gift_id, user=request.user)
+        gift.is_active = not gift.is_active
+        gift.save()
+        
+        return Response({
+            'message': f'Gift {gift.name} {"activated" if gift.is_active else "deactivated"} successfully',
+            'gift': {
+                'id': gift.id,
+                'name': gift.name,
+                'is_active': gift.is_active,
+                'created_at': gift.created_at,
+                'updated_at': gift.updated_at,
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Gift.DoesNotExist:
+        return Response({
+            'error': 'Gift not found'
+        }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({
             'error': str(e)

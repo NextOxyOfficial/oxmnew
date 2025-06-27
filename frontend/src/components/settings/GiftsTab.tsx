@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ApiService } from '@/lib/api';
 
 interface Gift {
   id: number;
@@ -26,39 +27,44 @@ export default function GiftsTab({ gifts, setGifts, showNotification, loading }:
     if (!newGift.trim()) return;
     
     try {
-      // For now, just add to local state (backend integration can be added later)
-      const newGiftItem = {
-        id: Date.now(), // temporary ID
+      const response = await ApiService.createGift({
         name: newGift.trim(),
         is_active: true
-      };
+      });
+      
+      const newGiftItem = response.gift;
       setGifts([...gifts, newGiftItem]);
       setNewGift('');
       showNotification('success', 'Gift added successfully!');
     } catch (error) {
-      showNotification('error', 'Failed to add gift');
+      console.error('Error adding gift:', error);
+      showNotification('error', error instanceof Error ? error.message : 'Failed to add gift');
     }
   };
 
   const toggleGift = async (id: number) => {
     try {
+      await ApiService.toggleGift(id);
       setGifts(gifts.map(gift => 
         gift.id === id ? { ...gift, is_active: !gift.is_active } : gift
       ));
       const updatedGift = gifts.find(g => g.id === id);
-      showNotification('success', `Gift ${updatedGift?.is_active ? 'deactivated' : 'activated'} successfully!`);
+      showNotification('success', `Gift ${!updatedGift?.is_active ? 'activated' : 'deactivated'} successfully!`);
     } catch (error) {
-      showNotification('error', 'Error updating gift. Please try again.');
+      console.error('Error updating gift:', error);
+      showNotification('error', error instanceof Error ? error.message : 'Error updating gift. Please try again.');
     }
   };
 
   const deleteGift = async (id: number) => {
     try {
+      await ApiService.deleteGift(id);
       setGifts(gifts.filter(gift => gift.id !== id));
       setDeleteModal({ isOpen: false, gift: null });
       showNotification('success', 'Gift deleted successfully!');
     } catch (error) {
-      showNotification('error', 'Error deleting gift. Please try again.');
+      console.error('Error deleting gift:', error);
+      showNotification('error', error instanceof Error ? error.message : 'Error deleting gift. Please try again.');
     }
   };
 
@@ -149,15 +155,15 @@ export default function GiftsTab({ gifts, setGifts, showNotification, loading }:
 
       {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div className="fixed inset-0 transition-opacity z-[9998]" aria-hidden="true">
               <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
             </div>
 
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-            <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
+            <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20 relative z-[9999]">
               <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">

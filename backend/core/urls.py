@@ -18,4 +18,7 @@ urlpatterns = [
     path('categories/', views.categories, name='categories'),
     path('categories/<int:category_id>/', views.category_detail, name='category-detail'),
     path('categories/<int:category_id>/toggle/', views.toggle_category, name='toggle-category'),
+    path('gifts/', views.gifts, name='gifts'),
+    path('gifts/<int:gift_id>/', views.gift_detail, name='gift-detail'),
+    path('gifts/<int:gift_id>/toggle/', views.toggle_gift, name='toggle-gift'),
 ]

@@ -244,6 +244,33 @@ export class ApiService {
     return this.post('/auth/request-password-reset/', {});
   }
 
+  // Gift methods
+  static async getGifts() {
+    return this.get('/gifts/');
+  }
+
+  static async createGift(giftData: {
+    name: string;
+    is_active?: boolean;
+  }) {
+    return this.post('/gifts/', giftData);
+  }
+
+  static async updateGift(giftId: number, giftData: {
+    name?: string;
+    is_active?: boolean;
+  }) {
+    return this.put(`/gifts/${giftId}/`, giftData);
+  }
+
+  static async deleteGift(giftId: number) {
+    return this.delete(`/gifts/${giftId}/`);
+  }
+
+  static async toggleGift(giftId: number) {
+    return this.put(`/gifts/${giftId}/toggle/`, {});
+  }
+
   // Check if user is authenticated
   static isAuthenticated(): boolean {
     return !!AuthToken.get();

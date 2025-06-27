@@ -77,3 +77,18 @@ def save_user_profile(sender, instance, **kwargs):
         instance.settings.save()
     else:
         UserSettings.objects.create(user=instance)
+
+class Gift(models.Model):
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gifts')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name_plural = "Gifts"
+        ordering = ['name']
+        unique_together = ['name', 'user']  # Prevent duplicate gift names per user
+    
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"

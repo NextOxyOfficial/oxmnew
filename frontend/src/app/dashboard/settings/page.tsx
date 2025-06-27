@@ -97,6 +97,7 @@ export default function SettingsPage() {
     fetchCategories();
     fetchProfile();
     fetchSettings();
+    fetchGifts();
   }, []);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -150,6 +151,17 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
+    }
+  };
+
+  const fetchGifts = async () => {
+    try {
+      const response = await ApiService.getGifts();
+      if (response.gifts) {
+        setGifts(response.gifts);
+      }
+    } catch (error) {
+      console.error('Error fetching gifts:', error);
     }
   };
 
