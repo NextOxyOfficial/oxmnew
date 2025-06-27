@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import CustomDomainSettings from '@/components/CustomDomainSettings';
 
 interface Category {
   id: number;
@@ -175,6 +176,21 @@ export default function SettingsPage() {
     }
   };
 
+  const handleCustomDomainSave = async (settings: any) => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Custom domain settings saved:', settings);
+      alert('Custom domain settings saved successfully!');
+    } catch (error) {
+      console.error('Error saving custom domain settings:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const tabs = [
     { id: 'profile', label: 'Profile' },
     { id: 'categories', label: 'Categories' },
@@ -182,7 +198,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="p-6 lg:p-8">
+    <div >
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -211,7 +227,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Tab Content */}
-          <div className="p-6">
+          <div className="p-2">
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="space-y-6">
@@ -489,6 +505,15 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Custom Domain & DNS */}
+                <div>
+                  <h3 className="text-xl font-semibold text-white mb-6">Domain & DNS</h3>
+                  <CustomDomainSettings
+                    loading={loading}
+                    onSave={handleCustomDomainSave}
+                  />
                 </div>
               </div>
             )}
