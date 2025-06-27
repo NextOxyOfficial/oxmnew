@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface Purchase {
   id: number;
@@ -33,6 +33,32 @@ export default function PurchaseHistoryTab({
   formatDate,
   getStatusColor
 }: PurchaseHistoryTabProps) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const filteredSuppliers = getUniqueSuppliers().filter(supplier =>
+    supplier.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+        setSearchTerm('');
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSupplierSelect = (supplier: string) => {
+    setSelectedSupplier(supplier);
+    setIsDropdownOpen(false);
+    setSearchTerm('');
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -41,18 +67,60 @@ export default function PurchaseHistoryTab({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <label className="text-sm font-medium text-slate-300">Filter by Supplier:</label>
-            <select
-              value={selectedSupplier}
-              onChange={(e) => setSelectedSupplier(e.target.value)}
-              className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
-            >
-              <option value="all">All Suppliers</option>
-              {getUniqueSuppliers().map((supplier) => (
-                <option key={supplier} value={supplier} className="bg-slate-800">
-                  {supplier}
-                </option>
-              ))}
-            </select>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer min-w-[200px] flex items-center justify-between"
+              >
+                <span className="truncate">
+                  {selectedSupplier === 'all' ? 'All Suppliers' : selectedSupplier}
+                </span>
+                <svg className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700/50 rounded-lg shadow-lg z-10 max-h-64 overflow-hidden">
+                  <div className="p-2 border-b border-slate-700/50">
+                    <input
+                      type="text"
+                      placeholder="Search suppliers..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    <button
+                      onClick={() => handleSupplierSelect('all')}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors ${
+                        selectedSupplier === 'all' ? 'bg-slate-700/50 text-cyan-400' : 'text-slate-300'
+                      }`}
+                    >
+                      All Suppliers
+                    </button>
+                    {filteredSuppliers.map((supplier) => (
+                      <button
+                        key={supplier}
+                        onClick={() => handleSupplierSelect(supplier)}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors ${
+                          selectedSupplier === supplier ? 'bg-slate-700/50 text-cyan-400' : 'text-slate-300'
+                        }`}
+                      >
+                        {supplier}
+                      </button>
+                    ))}
+                    {filteredSuppliers.length === 0 && searchTerm && (
+                      <div className="px-3 py-2 text-sm text-slate-400">
+                        No suppliers found
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {selectedSupplier !== 'all' && (
               <button
