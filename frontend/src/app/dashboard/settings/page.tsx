@@ -508,7 +508,8 @@ export default function SettingsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header - removed since breadcrumb is now in the main header */}      {/* Notification */}
+      <div className="max-w-4xl">
+        {/* Header - removed since breadcrumb is now in the main header */}      {/* Notification */}
       {notification.isVisible && (
         <div className={`p-4 rounded-lg border ${
           notification.type === 'success' 
@@ -1173,6 +1174,7 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
