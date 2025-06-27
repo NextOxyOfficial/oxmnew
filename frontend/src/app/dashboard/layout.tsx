@@ -130,6 +130,33 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   };
 
+  // Get breadcrumbs based on current path
+  const getBreadcrumbs = () => {
+    const pathSegments = pathname.split('/').filter(Boolean);
+    const breadcrumbs = [];
+
+    if (pathSegments.length > 1) {
+      // Add intermediate segments
+      for (let i = 1; i < pathSegments.length; i++) {
+        const segment = pathSegments[i];
+        const href = '/' + pathSegments.slice(0, i + 1).join('/');
+        
+        // Convert segment to readable name
+        const name = segment
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+        
+        breadcrumbs.push({
+          name: name,
+          href: i === pathSegments.length - 1 ? undefined : href // Last item has no href
+        });
+      }
+    }
+
+    return breadcrumbs.length > 0 ? breadcrumbs : undefined;
+  };
+
   useEffect(() => {
     if (!loading && !user) {
       router.push("/auth/login");
@@ -160,6 +187,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           onLogout={logout}
           onMenuClick={() => setSidebarOpen(true)}
           title={getPageTitle()}
+          breadcrumbs={getBreadcrumbs()}
         />
       </div>
 
