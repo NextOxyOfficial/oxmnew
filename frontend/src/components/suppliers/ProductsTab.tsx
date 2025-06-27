@@ -61,12 +61,12 @@ export default function ProductsTab({
   return (
     <div className="space-y-6">
       <div>
-        <h4 className="text-lg font-medium text-slate-100 mb-4">Products Owned</h4>
+        <h4 className="text-lg font-medium text-slate-100 mb-4">Products</h4>
         {/* Filter by Supplier */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="space-y-4 mb-6">
           <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-slate-300">Filter by Supplier:</label>
             <div className="relative" ref={dropdownRef}>
+              {/* ...existing dropdown code... */}
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer min-w-[200px] flex items-center justify-between"
@@ -131,13 +131,15 @@ export default function ProductsTab({
             )}
           </div>
 
-          {/* Results Summary - Only show when supplier is selected */}
+          {/* Results Summary - Under the filter row when supplier is selected */}
           {selectedProductSupplier !== 'all' && (
-            <div className="text-sm text-slate-400">
-              Showing {getFilteredProducts().length} products for {selectedProductSupplier}
-              <span className="ml-2 text-cyan-400">
-                | Total Value: {formatCurrency(getFilteredProducts().reduce((sum, p) => sum + p.total_value, 0))}
-              </span>
+            <div className="text-sm text-slate-400 border-t border-slate-700/30 pt-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <span>Showing {getFilteredProducts().length} products for {selectedProductSupplier}</span>
+                <span className="text-cyan-400">
+                  Total Value: {formatCurrency(getFilteredProducts().reduce((sum, p) => sum + p.total_value, 0))}
+                </span>
+              </div>
             </div>
           )}
         </div>

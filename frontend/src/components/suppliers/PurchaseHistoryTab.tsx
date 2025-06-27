@@ -59,15 +59,142 @@ export default function PurchaseHistoryTab({
     setSearchTerm('');
   };
 
+  const downloadCSV = () => {
+    const filteredData = getFilteredPurchases();
+    const headers = ['Date', 'Supplier', 'Products', 'Amount', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredData.map(purchase => [
+        formatDate(purchase.date),
+        `"${purchase.supplier}"`,
+        `"${purchase.products.join(', ')}"`,
+        purchase.amount,
+        purchase.status
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `purchase-history-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const downloadPDF = () => {
+    const filteredData = getFilteredPurchases();
+    const currentDate = new Date().toLocaleDateString();
+    const totalAmount = filteredData.reduce((sum, p) => sum + p.amount, 0);
+    
+    // Create HTML content for PDF
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Purchase History Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #0891b2; padding-bottom: 15px; }
+            .title { font-size: 24px; font-weight: bold; color: #0891b2; margin-bottom: 10px; }
+            .subtitle { font-size: 14px; color: #666; }
+            .summary { margin-bottom: 20px; padding: 15px; background-color: #f8fafc; border-radius: 8px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #0891b2; color: white; font-weight: bold; }
+            tr:nth-child(even) { background-color: #f8fafc; }
+            tr:hover { background-color: #e0f2fe; }
+            .amount { font-weight: bold; color: #059669; }
+            .status { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+            .completed { background-color: #d1fae5; color: #065f46; }
+            .pending { background-color: #fef3c7; color: #92400e; }
+            .cancelled { background-color: #fee2e2; color: #991b1b; }
+            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">Purchase History Report</div>
+            <div class="subtitle">Generated on ${currentDate}</div>
+          </div>
+          <div class="summary">
+            <strong>Summary:</strong> ${filteredData.length} purchases | Total Amount: ${formatCurrency(totalAmount)}
+            ${selectedSupplier !== 'all' ? ` | Filtered by: ${selectedSupplier}` : ''}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Supplier</th>
+                <th>Products</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredData.map(purchase => `
+                <tr>
+                  <td>${formatDate(purchase.date)}</td>
+                  <td>${purchase.supplier}</td>
+                  <td>${purchase.products.join(', ')}</td>
+                  <td class="amount">${formatCurrency(purchase.amount)}</td>
+                  <td><span class="status ${purchase.status}">${purchase.status}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="footer">
+            This report was generated automatically from the supplier management system.
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Open print dialog with the formatted content
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h4 className="text-lg font-medium text-slate-100 mb-4">Purchase History</h4>
-        {/* Filter by Supplier */}
         <div className="flex items-center justify-between mb-4">
+          <h4 className="text-lg font-medium text-slate-100">Purchase History</h4>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={downloadCSV}
+              className="px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg flex items-center gap-2 cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              CSV
+            </button>
+            <button
+              onClick={downloadPDF}
+              className="px-3 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-lg hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 shadow-lg flex items-center gap-2 cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              PDF
+            </button>
+          </div>
+        </div>
+        {/* Filter by Supplier */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-slate-300">Filter by Supplier:</label>
             <div className="relative" ref={dropdownRef}>
+              {/* ...existing dropdown code... */}
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer min-w-[200px] flex items-center justify-between"
@@ -134,12 +261,14 @@ export default function PurchaseHistoryTab({
 
           {/* Results Summary */}
           <div className="text-sm text-slate-400">
-            Showing {getFilteredPurchases().length} of {purchases.length} purchases
-            {selectedSupplier !== 'all' && (
-              <span className="ml-2 text-cyan-400">
-                | Total: {formatCurrency(getFilteredPurchases().reduce((sum, p) => sum + p.amount, 0))}
-              </span>
-            )}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <span>Showing {getFilteredPurchases().length} of {purchases.length} purchases</span>
+              {selectedSupplier !== 'all' && (
+                <span className="text-cyan-400">
+                  Total: {formatCurrency(getFilteredPurchases().reduce((sum, p) => sum + p.amount, 0))}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
