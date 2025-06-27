@@ -4,12 +4,18 @@ import React, { useState, useRef, useEffect } from 'react';
 
 interface Purchase {
   id: number;
+  supplier: {
+    id: number;
+    name: string;
+  };
   date: string;
-  supplier: string;
   amount: number;
   status: 'pending' | 'completed' | 'cancelled';
-  products: string[];
-  proofUrl?: string;
+  products: string;
+  notes?: string;
+  proof_document?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface PurchaseHistoryTabProps {
@@ -66,8 +72,8 @@ export default function PurchaseHistoryTab({
       headers.join(','),
       ...filteredData.map(purchase => [
         formatDate(purchase.date),
-        `"${purchase.supplier}"`,
-        `"${purchase.products.join(', ')}"`,
+        `"${purchase.supplier.name}"`,
+        `"${purchase.products}"`,
         purchase.amount,
         purchase.status
       ].join(','))
@@ -137,8 +143,8 @@ export default function PurchaseHistoryTab({
               ${filteredData.map(purchase => `
                 <tr>
                   <td>${formatDate(purchase.date)}</td>
-                  <td>${purchase.supplier}</td>
-                  <td>${purchase.products.join(', ')}</td>
+                  <td>${purchase.supplier.name}</td>
+                  <td>${purchase.products}</td>
                   <td class="amount">${formatCurrency(purchase.amount)}</td>
                   <td><span class="status ${purchase.status}">${purchase.status}</span></td>
                 </tr>
@@ -288,11 +294,10 @@ export default function PurchaseHistoryTab({
               {getFilteredPurchases().map((purchase) => (
                 <tr key={purchase.id} className="border-t border-slate-700/30 hover:bg-slate-800/30 transition-colors">
                   <td className="py-3 px-4 text-slate-100 text-sm">{formatDate(purchase.date)}</td>
-                  <td className="py-3 px-4 text-slate-100 text-sm">{purchase.supplier}</td>
+                  <td className="py-3 px-4 text-slate-100 text-sm">{purchase.supplier.name}</td>
                   <td className="py-3 px-4">
                     <div className="text-slate-300 text-sm">
-                      {purchase.products.slice(0, 2).join(', ')}
-                      {purchase.products.length > 2 && ` +${purchase.products.length - 2} more`}
+                      {purchase.products}
                     </div>
                   </td>
                   <td className="py-3 px-4 text-slate-100 font-medium text-sm">{formatCurrency(purchase.amount)}</td>
@@ -302,11 +307,11 @@ export default function PurchaseHistoryTab({
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    {purchase.proofUrl ? (
+                    {purchase.proof_document ? (
                       <div className="flex items-center gap-2">
-                        {purchase.proofUrl.toLowerCase().includes('.pdf') ? (
+                        {purchase.proof_document.toLowerCase().includes('.pdf') ? (
                           <a
-                            href={purchase.proofUrl}
+                            href={purchase.proof_document}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors text-xs cursor-pointer"
@@ -318,7 +323,7 @@ export default function PurchaseHistoryTab({
                           </a>
                         ) : (
                           <button
-                            onClick={() => window.open(purchase.proofUrl, '_blank')}
+                            onClick={() => window.open(purchase.proof_document, '_blank')}
                             className="flex items-center gap-1 px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20 transition-colors text-xs cursor-pointer"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

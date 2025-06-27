@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import EmailValidator, URLValidator
+from django.db.models import Sum
 
 
 class Supplier(models.Model):
@@ -26,11 +27,37 @@ class Supplier(models.Model):
     @property
     def total_orders(self):
         """Calculate total number of orders from this supplier"""
-        # This will be implemented when we add purchase orders
-        return 0
+        return self.purchases.filter(is_active=True).count()
 
     @property
     def total_amount(self):
         """Calculate total amount spent with this supplier"""
-        # This will be implemented when we add purchase orders
-        return 0
+        return self.purchases.filter(is_active=True).aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+
+
+class Purchase(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='purchases')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='purchases')
+    date = models.DateField()
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    products = models.TextField(help_text="Products purchased (comma-separated)")
+    notes = models.TextField(blank=True, null=True)
+    proof_document = models.FileField(upload_to='purchase_proofs/', blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        return f"Purchase from {self.supplier.name} - {self.date} - ${self.amount}"

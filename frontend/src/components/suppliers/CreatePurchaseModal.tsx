@@ -29,7 +29,7 @@ interface CreatePurchaseModalProps {
     products: string;
     notes: string;
     proofFile?: File | null;
-    proofUrl?: string;
+    proof_document?: string;
   };
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;

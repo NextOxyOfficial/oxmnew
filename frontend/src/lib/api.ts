@@ -385,6 +385,84 @@ export class ApiService {
     return this.post(`/suppliers/${id}/deactivate/`, {});
   }
 
+  // Purchase methods
+  static async getPurchases() {
+    return this.get('/purchases/');
+  }
+
+  static async createPurchase(purchaseData: {
+    supplier: number;
+    date: string;
+    amount: number;
+    status: 'pending' | 'completed' | 'cancelled';
+    products: string;
+    notes?: string;
+    proof_document?: File;
+  }) {
+    const formData = new FormData();
+    formData.append('supplier', purchaseData.supplier.toString());
+    formData.append('date', purchaseData.date);
+    formData.append('amount', purchaseData.amount.toString());
+    formData.append('status', purchaseData.status);
+    formData.append('products', purchaseData.products);
+    
+    if (purchaseData.notes) {
+      formData.append('notes', purchaseData.notes);
+    }
+    
+    if (purchaseData.proof_document) {
+      formData.append('proof_document', purchaseData.proof_document);
+    }
+
+    return this.request('/purchases/', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  static async updatePurchase(id: number, purchaseData: {
+    supplier?: number;
+    date?: string;
+    amount?: number;
+    status?: 'pending' | 'completed' | 'cancelled';
+    products?: string;
+    notes?: string;
+    proof_document?: File;
+  }) {
+    const formData = new FormData();
+    
+    if (purchaseData.supplier) {
+      formData.append('supplier', purchaseData.supplier.toString());
+    }
+    if (purchaseData.date) {
+      formData.append('date', purchaseData.date);
+    }
+    if (purchaseData.amount) {
+      formData.append('amount', purchaseData.amount.toString());
+    }
+    if (purchaseData.status) {
+      formData.append('status', purchaseData.status);
+    }
+    if (purchaseData.products) {
+      formData.append('products', purchaseData.products);
+    }
+    if (purchaseData.notes) {
+      formData.append('notes', purchaseData.notes);
+    }
+    if (purchaseData.proof_document) {
+      formData.append('proof_document', purchaseData.proof_document);
+    }
+
+    return this.request(`/purchases/${id}/`, {
+      method: 'PUT',
+      body: formData,
+    });
+  }
+
+  static async deletePurchase(id: number) {
+    return this.delete(`/purchases/${id}/`);
+  }
+
   // Check if user is authenticated
   static isAuthenticated(): boolean {
     return !!AuthToken.get();

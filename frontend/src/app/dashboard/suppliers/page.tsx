@@ -7,12 +7,18 @@ import { SuppliersTab, PurchaseHistoryTab, PaymentsTab, ProductsTab, CreatePurch
 
 interface Purchase {
   id: number;
+  supplier: {
+    id: number;
+    name: string;
+  };
   date: string;
-  supplier: string;
   amount: number;
   status: 'pending' | 'completed' | 'cancelled';
-  products: string[];
-  proofUrl?: string;
+  products: string;
+  notes?: string;
+  proof_document?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Payment {
@@ -92,7 +98,7 @@ export default function SuppliersPage() {
     products: '',
     notes: '',
     proofFile: null as File | null,
-    proofUrl: ''
+    proof_document: ''
   });
 
   const [paymentForm, setPaymentForm] = useState({
@@ -106,36 +112,10 @@ export default function SuppliersPage() {
     proofUrl: ''
   });
 
-  // Mock data - replace with actual API calls
-  const [purchases, setPurchases] = useState<Purchase[]>([
-    {
-      id: 1,
-      date: '2024-12-20',
-      supplier: 'Tech Solutions Ltd',
-      amount: 15000,
-      status: 'completed',
-      products: ['Laptops', 'Keyboards', 'Mice'],
-      proofUrl: 'https://via.placeholder.com/400x300/0891b2/ffffff?text=Purchase+Receipt'
-    },
-    {
-      id: 2,
-      date: '2024-12-18',
-      supplier: 'Office Supplies Co',
-      amount: 2500,
-      status: 'pending',
-      products: ['Paper', 'Pens', 'Folders'],
-      proofUrl: 'https://via.placeholder.com/400x300/eab308/ffffff?text=Invoice.pdf'
-    },
-    {
-      id: 3,
-      date: '2024-12-15',
-      supplier: 'Furniture Express',
-      amount: 8500,
-      status: 'completed',
-      products: ['Desks', 'Chairs']
-    }
-  ]);
+  // Real purchases state - will be populated from API
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
 
+  // Mock data for payments and products (to be implemented later)
   const [payments, setPayments] = useState<Payment[]>([
     {
       id: 1,
@@ -204,24 +184,28 @@ export default function SuppliersPage() {
   // Real suppliers state - will be populated from API
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
-  // Fetch suppliers from API
+  // Fetch suppliers and purchases from API
   useEffect(() => {
-    const fetchSuppliers = async () => {
+    const fetchData = async () => {
       if (!user) return;
       
       try {
         setLoading(true);
-        const response = await ApiService.getSuppliers();
-        setSuppliers(response);
+        const [suppliersResponse, purchasesResponse] = await Promise.all([
+          ApiService.getSuppliers(),
+          ApiService.getPurchases()
+        ]);
+        setSuppliers(suppliersResponse);
+        setPurchases(purchasesResponse);
       } catch (error) {
-        console.error('Error fetching suppliers:', error);
-        showNotification('error', 'Failed to load suppliers');
+        console.error('Error fetching data:', error);
+        showNotification('error', 'Failed to load data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSuppliers();
+    fetchData();
   }, [user]);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -255,7 +239,7 @@ export default function SuppliersPage() {
       setPurchaseForm(prev => ({
         ...prev,
         proofFile: file,
-        proofUrl: fileUrl
+        proof_document: fileUrl
       }));
     }
   };
@@ -337,20 +321,21 @@ export default function SuppliersPage() {
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newPurchase: Purchase = {
-        id: purchases.length + 1,
+      if (!selectedSupplierForAction) {
+        throw new Error('No supplier selected');
+      }
+
+      const newPurchase = await ApiService.createPurchase({
+        supplier: selectedSupplierForAction.id,
         date: purchaseForm.date,
-        supplier: selectedSupplierForAction?.name || '',
         amount: parseFloat(purchaseForm.amount),
         status: purchaseForm.status,
-        products: purchaseForm.products.split(',').map(p => p.trim()),
-        proofUrl: purchaseForm.proofUrl
-      };
+        products: purchaseForm.products,
+        notes: purchaseForm.notes || undefined,
+        proof_document: purchaseForm.proofFile || undefined,
+      });
 
-      setPurchases([...purchases, newPurchase]);
+      setPurchases(prev => [...prev, newPurchase]);
       setPurchaseForm({
         date: new Date().toISOString().split('T')[0],
         amount: '',
@@ -358,12 +343,13 @@ export default function SuppliersPage() {
         products: '',
         notes: '',
         proofFile: null,
-        proofUrl: ''
+        proof_document: ''
       });
       setShowCreatePurchaseModal(false);
       setSelectedSupplierForAction(null);
       showNotification('success', 'Purchase order created successfully!');
     } catch (error) {
+      console.error('Error creating purchase:', error);
       showNotification('error', 'Failed to create purchase. Please try again.');
     } finally {
       setLoading(false);
@@ -415,7 +401,7 @@ export default function SuppliersPage() {
     if (selectedSupplier === 'all') {
       return purchases;
     }
-    return purchases.filter(purchase => purchase.supplier === selectedSupplier);
+    return purchases.filter(purchase => purchase.supplier.name === selectedSupplier);
   };
 
   // Filter payments by selected supplier
@@ -436,7 +422,7 @@ export default function SuppliersPage() {
 
   // Get unique suppliers from purchases for dropdown
   const getUniqueSuppliers = () => {
-    const uniqueSuppliers = [...new Set(purchases.map(purchase => purchase.supplier))];
+    const uniqueSuppliers = [...new Set(purchases.map(purchase => purchase.supplier.name))];
     return uniqueSuppliers.sort();
   };
 
@@ -506,7 +492,7 @@ export default function SuppliersPage() {
       products: '',
       notes: '',
       proofFile: null,
-      proofUrl: ''
+      proof_document: ''
     });
     setShowCreatePurchaseModal(true);
   };
