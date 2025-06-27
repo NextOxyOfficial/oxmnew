@@ -3,6 +3,173 @@
 import { useState } from "react";
 import { Product } from "@/types/product";
 
+interface ProductDetailsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  product: Product;
+  onEdit: (product: Product) => void;
+  onDelete: (productId: number) => void;
+}
+
+function ProductDetailsModal({
+  isOpen,
+  onClose,
+  product,
+  onEdit,
+  onDelete
+}: ProductDetailsModalProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleDelete = async () => {
+    await onDelete(product.id);
+    setShowDeleteConfirm(false);
+    onClose();
+  };
+
+  const profit = product.salePrice - product.buyPrice;
+  const profitMargin = ((profit / product.salePrice) * 100).toFixed(1);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto scrollbar-hide">
+      <div className="bg-slate-800 border border-slate-700/50 rounded-lg p-6 w-full max-w-2xl my-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h4 className="text-xl font-medium text-slate-100">Product Details</h4>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-300 cursor-pointer"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Product Info */}
+        <div className="space-y-6">
+          {/* Header with Product Name and Category */}
+          <div className="bg-slate-700/30 border border-slate-600/50 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <h5 className="text-lg font-semibold text-slate-100">{product.name}</h5>
+              <span className="bg-slate-600/50 text-slate-300 px-3 py-1 rounded-full text-sm font-medium">
+                {product.category}
+              </span>
+            </div>
+            <p className="text-slate-400 text-sm">Product ID: #{product.id}</p>
+          </div>
+
+          {/* Product Details Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-slate-700/20 border border-slate-600/30 rounded-lg p-4">
+              <h6 className="text-sm font-medium text-slate-300 mb-2">Current Stock</h6>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-cyan-300">{product.stock}</span>
+                <span className="text-slate-400 text-sm">units</span>
+                {product.stock < 5 && (
+                  <div className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 px-2 py-1 rounded text-xs">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    Low Stock
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-slate-700/20 border border-slate-600/30 rounded-lg p-4">
+              <h6 className="text-sm font-medium text-slate-300 mb-2">Units Sold</h6>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-green-300">{product.sold}</span>
+                <span className="text-slate-400 text-sm">units</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-700/20 border border-slate-600/30 rounded-lg p-4">
+              <h6 className="text-sm font-medium text-slate-300 mb-2">Buy Price</h6>
+              <p className="text-lg font-semibold text-red-300">${product.buyPrice}</p>
+            </div>
+
+            <div className="bg-slate-700/20 border border-slate-600/30 rounded-lg p-4">
+              <h6 className="text-sm font-medium text-slate-300 mb-2">Sale Price</h6>
+              <p className="text-lg font-semibold text-green-300">${product.salePrice}</p>
+            </div>
+
+            <div className="bg-slate-700/20 border border-slate-600/30 rounded-lg p-4">
+              <h6 className="text-sm font-medium text-slate-300 mb-2">Profit per Unit</h6>
+              <p className="text-lg font-semibold text-purple-300">${profit}</p>
+              <p className="text-xs text-slate-400">{profitMargin}% margin</p>
+            </div>
+
+            <div className="bg-slate-700/20 border border-slate-600/30 rounded-lg p-4">
+              <h6 className="text-sm font-medium text-slate-300 mb-2">Total Inventory Value</h6>
+              <p className="text-lg font-semibold text-cyan-300">${product.buyPrice * product.stock}</p>
+              <p className="text-xs text-slate-400">At buy price</p>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4 border-t border-slate-700/50">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-slate-600 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 cursor-pointer"
+            >
+              Close
+            </button>
+            
+            <button
+              onClick={() => onEdit(product)}
+              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
+            >
+              Edit Product
+            </button>
+            
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 shadow-lg cursor-pointer"
+            >
+              Delete Product
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-60 p-4">
+          <div className="bg-slate-800 border border-slate-700/50 rounded-lg p-6 w-full max-w-md">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100/10 mb-4">
+                <svg className="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-slate-100 mb-2">Delete Product</h3>
+              <p className="text-sm text-slate-400 mb-6">
+                Are you sure you want to delete "{product.name}"? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2 border border-slate-600 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 shadow-lg cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
@@ -15,6 +182,23 @@ export default function ProductsPage() {
     setSelectedProduct(product);
     setIsModalOpen(true);
     console.log("Modal should be open now");
+  };
+
+  const handleEditProduct = (product: Product) => {
+    console.log("Edit product:", product.name);
+    // TODO: Implement edit functionality
+    setIsModalOpen(false);
+  };
+
+  const handleDeleteProduct = async (productId: number) => {
+    console.log("Delete product:", productId);
+    // TODO: Implement delete functionality
+    // For now, just close the modal
+  };
+
+  const handleAddProduct = () => {
+    console.log("Add new product");
+    // TODO: Implement add product functionality
   };
 
   const closeModal = () => {
@@ -732,49 +916,13 @@ export default function ProductsPage() {
 
       {/* Product Details Modal */}
       {isModalOpen && selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Background overlay */}
-          <div
-            className="absolute inset-0 bg-black bg-opacity-75"
-            onClick={closeModal}
-          ></div>
-
-          {/* Modal panel */}
-          <div className="relative bg-gray-900 rounded-lg p-6 w-full max-w-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-white">{selectedProduct.name}</h3>
-              <button
-                onClick={closeModal}
-                className="text-gray-400 hover:text-white"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-400">Category</label>
-                  <p className="text-white">{selectedProduct.category}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Stock</label>
-                  <p className="text-white">{selectedProduct.stock} units</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Buy Price</label>
-                  <p className="text-red-400">${selectedProduct.buyPrice}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400">Sale Price</label>
-                  <p className="text-green-400">${selectedProduct.salePrice}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProductDetailsModal
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          product={selectedProduct}
+          onEdit={() => handleEditProduct(selectedProduct)}
+          onDelete={() => handleDeleteProduct(selectedProduct.id)}
+        />
       )}
     </div>
   );
