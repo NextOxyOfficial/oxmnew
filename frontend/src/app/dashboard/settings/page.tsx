@@ -114,6 +114,13 @@ export default function SettingsPage() {
     fetchAchievements();
   }, []);
 
+  // Fetch achievements when the achievements tab becomes active
+  useEffect(() => {
+    if (activeTab === 'achievements') {
+      fetchAchievements();
+    }
+  }, [activeTab]);
+
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ isVisible: true, type, message });
     setTimeout(() => {
@@ -182,11 +189,18 @@ export default function SettingsPage() {
   const fetchAchievements = async () => {
     try {
       const response = await ApiService.getAchievements();
+      console.log('Achievements response:', response); // Debug log
       if (response.achievements) {
         setAchievements(response.achievements);
+      } else {
+        // If no achievements property, set empty array
+        setAchievements([]);
       }
     } catch (error) {
       console.error('Error fetching achievements:', error);
+      // Set empty array on error to show "no achievements" state
+      setAchievements([]);
+      showNotification('error', 'Failed to load achievements');
     }
   };
 
@@ -938,6 +952,7 @@ export default function SettingsPage() {
                 setAchievements={setAchievements}
                 showNotification={showNotification}
                 loading={loading}
+                onRefresh={fetchAchievements}
               />
             )}
           </div>

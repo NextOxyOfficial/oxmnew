@@ -17,9 +17,10 @@ interface AchievementsTabProps {
   setAchievements: (achievements: Achievement[]) => void;
   showNotification: (type: 'success' | 'error', message: string) => void;
   loading: boolean;
+  onRefresh?: () => void;
 }
 
-export default function AchievementsTab({ achievements, setAchievements, showNotification, loading }: AchievementsTabProps) {
+export default function AchievementsTab({ achievements, setAchievements, showNotification, loading, onRefresh }: AchievementsTabProps) {
   const [formData, setFormData] = useState({
     type: 'orders' as 'orders' | 'amount',
     value: '',
@@ -30,6 +31,9 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
     achievement: Achievement | null;
   }>({ isOpen: false, achievement: null });
   const [toggleLoading, setToggleLoading] = useState<Set<number>>(new Set());
+
+  // Debug: Log achievements when they change
+  console.log('AchievementsTab - Current achievements:', achievements);
 
   // Dummy achievements for design preview
   const dummyAchievements: Achievement[] = [
@@ -67,8 +71,8 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
     }
   ];
 
-  // Use dummy data if no real achievements exist
-  const displayAchievements = achievements.length > 0 ? achievements : dummyAchievements;
+  // Only show achievements from the backend, no dummy data mixing
+  const displayAchievements = achievements;
 
   const handleCreateAchievement = async () => {
     if (!formData.value || !formData.points) {
@@ -85,6 +89,7 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
     }
     
     try {
+      console.log('Creating achievement with data:', { type: formData.type, value, points });
       const response = await ApiService.createAchievement({
         type: formData.type,
         value: value,
@@ -92,14 +97,20 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
         is_active: true
       });
       
+      console.log('Create achievement response:', response);
+      
       if (response.achievement) {
         setAchievements([...achievements, response.achievement]);
         setFormData({ type: 'orders', value: '', points: '' });
         showNotification('success', 'Achievement created successfully!');
+        // Refresh the achievements list
+        if (onRefresh) {
+          onRefresh();
+        }
       }
     } catch (error) {
       console.error('Error creating achievement:', error);
-      showNotification('error', 'Failed to create achievement');
+      showNotification('error', error instanceof Error ? error.message : 'Failed to create achievement');
     }
   };
 

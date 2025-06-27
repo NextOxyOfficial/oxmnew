@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, Category, UserSettings, Gift
+from .models import UserProfile, Category, UserSettings, Gift, Achievement
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
@@ -42,6 +42,20 @@ class GiftAdmin(admin.ModelAdmin):
     search_fields = ('name', 'user__username')
     readonly_fields = ('created_at', 'updated_at')
     ordering = ('name',)
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(user=request.user)
+
+@admin.register(Achievement)
+class AchievementAdmin(admin.ModelAdmin):
+    list_display = ('name', 'type', 'value', 'points', 'user', 'is_active', 'created_at', 'updated_at')
+    list_filter = ('type', 'is_active', 'created_at', 'updated_at', 'user')
+    search_fields = ('name', 'user__username')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('type', 'value')
     
     def get_queryset(self, request):
         qs = super().get_queryset(request)
