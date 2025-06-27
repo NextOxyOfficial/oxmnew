@@ -330,7 +330,7 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-gray-300 mb-2">
                           Store Logo
                         </label>
-                        <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-white/20 rounded-lg p-4 hover:border-white/40 transition-colors">
+                        <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-white/20 rounded-lg p-4 hover:border-white/40 transition-colors min-h-[120px]">
                           {profile.store_logo ? (
                             <div className="relative">
                               <img
