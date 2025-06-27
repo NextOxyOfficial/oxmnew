@@ -40,6 +40,11 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    isVisible: boolean;
+    type: 'success' | 'error';
+    message: string;
+  }>({ isVisible: false, type: 'success', message: '' });
   
   // Profile state
   const [profile, setProfile] = useState<UserProfile>({
@@ -56,6 +61,10 @@ export default function SettingsPage() {
   // Categories state
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState('');
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    category: Category | null;
+  }>({ isOpen: false, category: null });
 
   // General settings state
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
@@ -74,6 +83,13 @@ export default function SettingsPage() {
     fetchCategories();
     fetchProfile();
   }, []);
+
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ isVisible: true, type, message });
+    setTimeout(() => {
+      setNotification({ isVisible: false, type: 'success', message: '' });
+    }, 5000);
+  };
 
   const fetchProfile = async () => {
     try {
@@ -119,10 +135,10 @@ export default function SettingsPage() {
       });
       
       console.log('Profile saved:', response);
-      alert('Profile updated successfully!');
+      showNotification('success', 'Profile updated successfully!');
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Error saving profile. Please try again.');
+      showNotification('error', 'Error saving profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -147,9 +163,10 @@ export default function SettingsPage() {
           }));
         }
         console.log('Image uploaded:', response);
+        showNotification('success', `${type === 'logo' ? 'Store logo' : 'Banner image'} uploaded successfully!`);
       } catch (error) {
         console.error('Error uploading image:', error);
-        alert('Error uploading image. Please try again.');
+        showNotification('error', 'Error uploading image. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -173,9 +190,10 @@ export default function SettingsPage() {
         }));
       }
       console.log(`${type} removed successfully`);
+      showNotification('success', `${type === 'logo' ? 'Store logo' : 'Banner image'} removed successfully!`);
     } catch (error) {
       console.error(`Error removing ${type}:`, error);
-      alert(`Error removing ${type}. Please try again.`);
+      showNotification('error', `Error removing ${type}. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -194,10 +212,11 @@ export default function SettingsPage() {
         setCategories([...categories, response.category]);
         setNewCategory('');
         console.log('Category added:', response.message);
+        showNotification('success', 'Category added successfully!');
       }
     } catch (error) {
       console.error('Error adding category:', error);
-      alert('Error adding category. Please try again.');
+      showNotification('error', 'Error adding category. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -212,30 +231,43 @@ export default function SettingsPage() {
           cat.id === id ? response.category : cat
         ));
         console.log('Category toggled:', response.message);
+        showNotification('success', `Category ${response.category.is_active ? 'activated' : 'deactivated'} successfully!`);
       }
     } catch (error) {
       console.error('Error toggling category:', error);
-      alert('Error toggling category. Please try again.');
+      showNotification('error', 'Error toggling category. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteCategory = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this category?')) {
-      return;
-    }
-    
     setLoading(true);
     try {
       await ApiService.deleteCategory(id);
       setCategories(categories.filter(cat => cat.id !== id));
       console.log('Category deleted successfully');
+      setDeleteModal({ isOpen: false, category: null });
+      showNotification('success', 'Category deleted successfully!');
     } catch (error) {
       console.error('Error deleting category:', error);
-      alert('Error deleting category. Please try again.');
+      showNotification('error', 'Error deleting category. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (category: Category) => {
+    setDeleteModal({ isOpen: true, category });
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal({ isOpen: false, category: null });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteModal.category) {
+      deleteCategory(deleteModal.category.id);
     }
   };
 
@@ -326,6 +358,45 @@ export default function SettingsPage() {
           <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
           <p className="text-gray-300 text-lg">Manage your account preferences and configuration</p>
         </div>
+
+        {/* Notification */}
+        {notification.isVisible && (
+          <div className={`mb-6 p-4 rounded-lg border ${
+            notification.type === 'success' 
+              ? 'bg-green-500/10 border-green-400/30 text-green-300' 
+              : 'bg-red-500/10 border-red-400/30 text-red-300'
+          } backdrop-blur-sm`}>
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                {notification.type === 'success' ? (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                )}
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium">{notification.message}</p>
+              </div>
+              <div className="ml-auto pl-3">
+                <div className="-mx-1.5 -my-1.5">
+                  <button
+                    onClick={() => setNotification({ isVisible: false, type: 'success', message: '' })}
+                    className="inline-flex rounded-md p-1.5 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/20"
+                  >
+                    <span className="sr-only">Dismiss</span>
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl mb-6">
@@ -600,7 +671,7 @@ export default function SettingsPage() {
                               </span>
                               <span className="text-sm font-medium text-white whitespace-nowrap">{category.name}</span>
                               <button
-                                onClick={() => deleteCategory(category.id)}
+                                onClick={() => handleDeleteClick(category)}
                                 className="p-1.5 bg-red-500/20 text-red-300 rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200 cursor-pointer"
                                 title="Delete category"
                               >
@@ -750,6 +821,59 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+            </div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
+              <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
+                    <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg leading-6 font-medium text-white" id="modal-title">
+                      Delete Category
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-300">
+                        Are you sure you want to delete the category{' '}
+                        <span className="font-semibold text-white">"{deleteModal.category?.name}"</span>? 
+                        This action cannot be undone and will permanently remove this category from your system.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={loading}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  {loading ? 'Deleting...' : 'Delete'}
+                </button>
+                <button
+                  onClick={handleDeleteCancel}
+                  disabled={loading}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-gray-300 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
