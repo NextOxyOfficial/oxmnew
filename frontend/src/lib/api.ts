@@ -328,7 +328,7 @@ export class ApiService {
   }
 
   static async toggleLevel(levelId: number) {
-    return this.post(`/levels/${levelId}/toggle/`, {});
+    return this.put(`/levels/${levelId}/toggle/`, {});
   }
 
   // Check if user is authenticated

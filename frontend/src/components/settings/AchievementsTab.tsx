@@ -116,14 +116,20 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
 
   const toggleAchievement = async (id: number) => {
     try {
+      console.log('Toggling achievement with id:', id);
       setToggleLoading(prev => new Set(prev).add(id));
       const response = await ApiService.toggleAchievement(id);
+      console.log('Toggle achievement response:', response);
       
       if (response.achievement) {
+        console.log('Updating achievement in state:', response.achievement);
         setAchievements(achievements.map(achievement => 
           achievement.id === id ? response.achievement : achievement
         ));
         showNotification('success', `Achievement ${response.achievement.is_active ? 'activated' : 'deactivated'} successfully!`);
+      } else {
+        console.error('No achievement in response:', response);
+        showNotification('error', 'Invalid response from server');
       }
     } catch (error) {
       console.error('Error toggling achievement:', error);

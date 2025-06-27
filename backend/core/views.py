@@ -1072,7 +1072,7 @@ def achievement_detail(request, achievement_id):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['POST'])
+@api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def toggle_achievement(request, achievement_id):
     """
@@ -1276,7 +1276,7 @@ def level_detail(request, level_id):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['POST'])
+@api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def toggle_level(request, level_id):
     """
