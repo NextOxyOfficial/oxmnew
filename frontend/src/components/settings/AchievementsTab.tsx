@@ -5,6 +5,9 @@ import { useState } from 'react';
 interface Achievement {
   id: number;
   name: string;
+  type: 'orders' | 'amount';
+  value: number;
+  points: number;
   is_active: boolean;
 }
 
@@ -16,27 +19,45 @@ interface AchievementsTabProps {
 }
 
 export default function AchievementsTab({ achievements, setAchievements, showNotification, loading }: AchievementsTabProps) {
-  const [newAchievement, setNewAchievement] = useState('');
+  const [formData, setFormData] = useState({
+    type: 'orders' as 'orders' | 'amount',
+    value: '',
+    points: ''
+  });
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     achievement: Achievement | null;
   }>({ isOpen: false, achievement: null });
 
-  const handleAddAchievement = async () => {
-    if (!newAchievement.trim()) return;
+  const handleCreateAchievement = async () => {
+    if (!formData.value || !formData.points) {
+      showNotification('error', 'Please fill in all fields');
+      return;
+    }
+    
+    const value = parseInt(formData.value);
+    const points = parseInt(formData.points);
+    
+    if (value <= 0 || points <= 0) {
+      showNotification('error', 'Value and points must be greater than 0');
+      return;
+    }
     
     try {
-      // For now, just add to local state (backend integration can be added later)
-      const newAchievementItem = {
-        id: Date.now(), // temporary ID
-        name: newAchievement.trim(),
+      const newAchievement: Achievement = {
+        id: Date.now(),
+        name: `${formData.type === 'orders' ? 'Complete' : 'Spend'} ${value} ${formData.type === 'orders' ? 'orders' : 'dollars'}`,
+        type: formData.type,
+        value: value,
+        points: points,
         is_active: true
       };
-      setAchievements([...achievements, newAchievementItem]);
-      setNewAchievement('');
-      showNotification('success', 'Achievement added successfully!');
+      
+      setAchievements([...achievements, newAchievement]);
+      setFormData({ type: 'orders', value: '', points: '' });
+      showNotification('success', 'Achievement created successfully!');
     } catch (error) {
-      showNotification('error', 'Failed to add achievement');
+      showNotification('error', 'Failed to create achievement');
     }
   };
 
@@ -80,25 +101,61 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
     <>
       <div className="space-y-6">
         <div>
-          {/* Add Achievement */}
+          {/* Create Achievement Form */}
           <div className="mb-8">
-            <h4 className="text-lg font-medium text-white mb-4">Add New Achievement</h4>
-            <div className="flex gap-3 max-w-md">
-              <input
-                type="text"
-                value={newAchievement}
-                onChange={(e) => setNewAchievement(e.target.value)}
-                className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                placeholder="Achievement name"
-                onKeyPress={(e) => e.key === 'Enter' && handleAddAchievement()}
-              />
-              <button
-                onClick={handleAddAchievement}
-                disabled={loading || !newAchievement.trim()}
-                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-              >
-                Add
-              </button>
+            <h4 className="text-lg font-medium text-white mb-4">Create Achievement</h4>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 max-w-md">
+              <div className="space-y-4">
+                {/* Type Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Type</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'orders' | 'amount' }))}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="orders" className="bg-gray-800">By Orders</option>
+                    <option value="amount" className="bg-gray-800">By Purchased Amount</option>
+                  </select>
+                </div>
+
+                {/* Value Input */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    {formData.type === 'orders' ? 'Number of Orders' : 'Amount ($)'}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.value}
+                    onChange={(e) => setFormData(prev => ({ ...prev, value: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder={formData.type === 'orders' ? 'e.g. 10' : 'e.g. 500'}
+                  />
+                </div>
+
+                {/* Points Input */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Points</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.points}
+                    onChange={(e) => setFormData(prev => ({ ...prev, points: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="e.g. 100"
+                  />
+                </div>
+
+                {/* Create Button */}
+                <button
+                  onClick={handleCreateAchievement}
+                  disabled={loading || !formData.value || !formData.points}
+                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200"
+                >
+                  Create Achievement
+                </button>
+              </div>
             </div>
           </div>
 
@@ -108,36 +165,51 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
             <div className="max-w-2xl">
               {achievements.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
-                  <p>No achievements found. Add your first achievement above.</p>
+                  <p>No achievements found. Create your first achievement above.</p>
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-3">
+                <div className="space-y-3">
                   {achievements.map((achievement) => (
                     <div
                       key={achievement.id}
-                      className="flex items-center gap-2 p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200"
+                      className="flex items-center justify-between p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200"
                     >
-                      <span 
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 ${
-                          achievement.is_active
-                            ? 'bg-green-500/20 text-green-300 border border-green-400/30 hover:bg-green-500/30'
-                            : 'bg-gray-500/20 text-gray-300 border border-gray-400/30 hover:bg-gray-500/30'
-                        }`}
-                        onClick={() => toggleAchievement(achievement.id)}
-                        title="Click to toggle active/inactive status"
-                      >
-                        {achievement.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                      <span className="text-sm font-medium text-white whitespace-nowrap">{achievement.name}</span>
-                      <button
-                        onClick={() => handleDeleteClick(achievement)}
-                        className="p-1.5 bg-red-500/20 text-red-300 rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200 cursor-pointer"
-                        title="Delete achievement"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h5 className="font-medium text-white">{achievement.name}</h5>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            achievement.type === 'orders' 
+                              ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
+                              : 'bg-green-500/20 text-green-300 border border-green-400/30'
+                          }`}>
+                            {achievement.type === 'orders' ? '📦 Orders' : '💰 Amount'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-400">
+                          <span>Target: {achievement.value} {achievement.type === 'orders' ? 'orders' : 'dollars'}</span>
+                          <span>Points: {achievement.points}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleAchievement(achievement.id)}
+                          className={`px-3 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
+                            achievement.is_active
+                              ? 'bg-green-500/20 text-green-300 border border-green-400/30 hover:bg-green-500/30'
+                              : 'bg-gray-500/20 text-gray-300 border border-gray-400/30 hover:bg-gray-500/30'
+                          }`}
+                        >
+                          {achievement.is_active ? 'Active' : 'Inactive'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(achievement)}
+                          className="p-2 bg-red-500/20 text-red-300 rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
