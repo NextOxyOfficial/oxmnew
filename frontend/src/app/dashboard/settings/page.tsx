@@ -16,6 +16,15 @@ interface Category {
   updated_at?: string;
 }
 
+interface Achievement {
+  id: number;
+  name: string;
+  type: 'orders' | 'amount';
+  value: number;
+  points: number;
+  is_active: boolean;
+}
+
 interface UserProfile {
   email: string;
   first_name: string;
@@ -78,7 +87,7 @@ export default function SettingsPage() {
   }>({ isOpen: false, gift: null });
 
   // Achievements state (managed by component)
-  const [achievements, setAchievements] = useState<{ id: number; name: string; is_active: boolean }[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
 
 
 
