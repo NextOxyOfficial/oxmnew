@@ -53,17 +53,6 @@ export default function GiftsTab({ gifts, setGifts, showNotification, loading, o
     }
   };
 
-  const deleteGift = async (id: number) => {
-    try {
-      await ApiService.deleteGift(id);
-      setGifts(gifts.filter(gift => gift.id !== id));
-      showNotification('success', 'Gift deleted successfully!');
-    } catch (error) {
-      console.error('Error deleting gift:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Error deleting gift. Please try again.');
-    }
-  };
-
   const handleDeleteClick = (gift: Gift) => {
     onDeleteClick(gift);
   };
