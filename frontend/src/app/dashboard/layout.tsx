@@ -25,7 +25,8 @@ import {
   Diamond,
   Gift,
   Trophy,
-  FileText
+  FileText,
+  Truck
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -69,6 +70,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       current: pathname === "/dashboard/orders",
     },
     {
+      name: "Suppliers",
+      href: "/dashboard/suppliers",
+      icon: Truck,
+      current: pathname === "/dashboard/suppliers",
+    },
+    {
       name: "Settings",
       href: "/dashboard/settings",
       icon: Settings,
@@ -101,6 +108,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "Products";
       case "/dashboard/orders":
         return "Orders";
+      case "/dashboard/suppliers":
+        return "Suppliers";
       case "/dashboard/settings":
         return "Settings";
       case "/reports":
