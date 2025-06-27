@@ -46,7 +46,7 @@ export default function PaymentsTab({
             <select
               value={selectedPaymentSupplier}
               onChange={(e) => setSelectedPaymentSupplier(e.target.value)}
-              className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
+              className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
             >
               <option value="all">All Suppliers</option>
               {getUniqueSuppliersFromPayments().map((supplier) => (
@@ -59,7 +59,7 @@ export default function PaymentsTab({
             {selectedPaymentSupplier !== 'all' && (
               <button
                 onClick={() => setSelectedPaymentSupplier('all')}
-                className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+                className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
               >
                 Clear Filter
               </button>

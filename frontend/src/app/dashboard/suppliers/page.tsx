@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { SuppliersTab, PurchaseHistoryTab, PaymentsTab, ProductsTab } from '@/components/suppliers';
+import { SuppliersTab, PurchaseHistoryTab, PaymentsTab, ProductsTab, CreatePurchaseModal, CreatePaymentModal } from '@/components/suppliers';
 
 interface Purchase {
   id: number;
@@ -67,6 +67,29 @@ export default function SuppliersPage() {
     phone: '',
     website: '',
     email: ''
+  });
+
+  // Modal states
+  const [showCreatePurchaseModal, setShowCreatePurchaseModal] = useState(false);
+  const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
+  const [selectedSupplierForAction, setSelectedSupplierForAction] = useState<Supplier | null>(null);
+
+  // Form states for modals
+  const [purchaseForm, setPurchaseForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    amount: '',
+    status: 'pending' as 'pending' | 'completed' | 'cancelled',
+    products: '',
+    notes: ''
+  });
+
+  const [paymentForm, setPaymentForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    amount: '',
+    method: 'cash' as 'cash' | 'card' | 'bank_transfer' | 'check',
+    status: 'pending' as 'pending' | 'completed' | 'failed',
+    reference: '',
+    notes: ''
   });
 
   // Mock data - replace with actual API calls
@@ -211,6 +234,22 @@ export default function SuppliersPage() {
     }));
   };
 
+  const handlePurchaseInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setPurchaseForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handlePaymentInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setPaymentForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const handleCreateSupplier = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -237,6 +276,78 @@ export default function SuppliersPage() {
       showNotification('success', 'Supplier created successfully!');
     } catch (error) {
       showNotification('error', 'Failed to create supplier. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreatePurchase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newPurchase: Purchase = {
+        id: purchases.length + 1,
+        date: purchaseForm.date,
+        supplier: selectedSupplierForAction?.name || '',
+        amount: parseFloat(purchaseForm.amount),
+        status: purchaseForm.status,
+        products: purchaseForm.products.split(',').map(p => p.trim())
+      };
+
+      setPurchases([...purchases, newPurchase]);
+      setPurchaseForm({
+        date: new Date().toISOString().split('T')[0],
+        amount: '',
+        status: 'pending',
+        products: '',
+        notes: ''
+      });
+      setShowCreatePurchaseModal(false);
+      setSelectedSupplierForAction(null);
+      showNotification('success', 'Purchase order created successfully!');
+    } catch (error) {
+      showNotification('error', 'Failed to create purchase. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreatePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newPayment: Payment = {
+        id: payments.length + 1,
+        date: paymentForm.date,
+        supplier: selectedSupplierForAction?.name || '',
+        amount: parseFloat(paymentForm.amount),
+        method: paymentForm.method,
+        status: paymentForm.status,
+        reference: paymentForm.reference || `PAY-${Date.now()}`
+      };
+
+      setPayments([...payments, newPayment]);
+      setPaymentForm({
+        date: new Date().toISOString().split('T')[0],
+        amount: '',
+        method: 'cash',
+        status: 'pending',
+        reference: '',
+        notes: ''
+      });
+      setShowCreatePaymentModal(false);
+      setSelectedSupplierForAction(null);
+      showNotification('success', 'Payment record created successfully!');
+    } catch (error) {
+      showNotification('error', 'Failed to create payment. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -329,6 +440,56 @@ export default function SuppliersPage() {
     }
   };
 
+  const handleCreatePurchaseFromSupplier = (supplier: Supplier) => {
+    setSelectedSupplierForAction(supplier);
+    setPurchaseForm({
+      date: new Date().toISOString().split('T')[0],
+      amount: '',
+      status: 'pending',
+      products: '',
+      notes: ''
+    });
+    setShowCreatePurchaseModal(true);
+  };
+
+  const handleCreatePaymentFromSupplier = (supplier: Supplier) => {
+    setSelectedSupplierForAction(supplier);
+    setPaymentForm({
+      date: new Date().toISOString().split('T')[0],
+      amount: '',
+      method: 'cash',
+      status: 'pending',
+      reference: '',
+      notes: ''
+    });
+    setShowCreatePaymentModal(true);
+  };
+
+  const handleEditSupplier = (supplier: Supplier) => {
+    // TODO: Implement edit supplier functionality
+    // This could pre-populate the create form or open an edit modal
+    setSupplierForm({
+      name: supplier.name,
+      address: supplier.address,
+      phone: supplier.phone,
+      website: supplier.website,
+      email: supplier.email
+    });
+    setShowCreateForm(true);
+    showNotification('success', `Edit mode for ${supplier.name} - Update the form and save changes`);
+  };
+
+  const handleDeleteSupplier = (supplier: Supplier) => {
+    // TODO: Implement proper delete confirmation dialog
+    // For now, just show a confirmation via browser confirm dialog
+    if (window.confirm(`Are you sure you want to delete ${supplier.name}? This action cannot be undone.`)) {
+      setSuppliers(prevSuppliers => 
+        prevSuppliers.filter(s => s.id !== supplier.id)
+      );
+      showNotification('success', `${supplier.name} has been deleted successfully`);
+    }
+  };
+
   const tabs = [
     { id: 'suppliers', label: 'Suppliers' },
     { id: 'purchases', label: 'Purchase History' },
@@ -337,7 +498,7 @@ export default function SuppliersPage() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-1 sm:p-6 space-y-6">
       <div className="max-w-4xl">
         {/* Notification */}
         {notification.isVisible && (
@@ -387,7 +548,7 @@ export default function SuppliersPage() {
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-2 sm:p-6">
             {/* Suppliers Tab */}
             {activeTab === 'suppliers' && (
               <SuppliersTab
@@ -399,6 +560,10 @@ export default function SuppliersPage() {
                 handleCreateSupplier={handleCreateSupplier}
                 loading={loading}
                 formatCurrency={formatCurrency}
+                onCreatePurchase={handleCreatePurchaseFromSupplier}
+                onCreatePayment={handleCreatePaymentFromSupplier}
+                onEditSupplier={handleEditSupplier}
+                onDeleteSupplier={handleDeleteSupplier}
               />
             )}
 
@@ -445,6 +610,34 @@ export default function SuppliersPage() {
             )}
           </div>
         </div>
+
+        {/* Create Purchase Modal */}
+        <CreatePurchaseModal
+          isOpen={showCreatePurchaseModal}
+          onClose={() => {
+            setShowCreatePurchaseModal(false);
+            setSelectedSupplierForAction(null);
+          }}
+          supplier={selectedSupplierForAction}
+          purchaseForm={purchaseForm}
+          handleInputChange={handlePurchaseInputChange}
+          handleSubmit={handleCreatePurchase}
+          loading={loading}
+        />
+
+        {/* Create Payment Modal */}
+        <CreatePaymentModal
+          isOpen={showCreatePaymentModal}
+          onClose={() => {
+            setShowCreatePaymentModal(false);
+            setSelectedSupplierForAction(null);
+          }}
+          supplier={selectedSupplierForAction}
+          paymentForm={paymentForm}
+          handleInputChange={handlePaymentInputChange}
+          handleSubmit={handleCreatePayment}
+          loading={loading}
+        />
       </div>
     </div>
   );
