@@ -153,13 +153,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex flex-col">
-      {/* Full width header */}
-      <Header
-        user={user}
-        onLogout={logout}
-        onMenuClick={() => setSidebarOpen(true)}
-        title={getPageTitle()}
-      />
+      {/* Sticky full width header */}
+      <div className="sticky top-0 z-50">
+        <Header
+          user={user}
+          onLogout={logout}
+          onMenuClick={() => setSidebarOpen(true)}
+          title={getPageTitle()}
+        />
+      </div>
 
       {/* Content area with sidebar and main content */}
       <div className="flex flex-1 overflow-hidden">
