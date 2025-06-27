@@ -267,8 +267,8 @@ export default function SettingsPage() {
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-6">Profile Information</h3>
                   
-                  {/* Company Information Section */}
-                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6 mb-6">
+                  {/* Company Information */}
+                  <div className="mb-8">
                     <h4 className="text-lg font-medium text-white mb-4">Company Details</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
@@ -298,8 +298,8 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Store Branding Section */}
-                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6 mb-6">
+                  {/* Store Branding */}
+                  <div className="mb-8">
                     <h4 className="text-lg font-medium text-white mb-4">Store Branding</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Store Logo Upload */}
@@ -394,8 +394,8 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Personal Information Section */}
-                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+                  {/* Personal Information */}
+                  <div className="mb-8">
                     <h4 className="text-lg font-medium text-white mb-4">Personal Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
