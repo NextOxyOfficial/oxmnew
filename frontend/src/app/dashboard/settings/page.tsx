@@ -15,7 +15,10 @@ interface UserProfile {
   first_name: string;
   last_name: string;
   company: string;
+  company_address: string;
   phone: string;
+  store_logo: string;
+  banner_image: string;
 }
 
 interface GeneralSettings {
@@ -40,7 +43,10 @@ export default function SettingsPage() {
     first_name: '',
     last_name: '',
     company: '',
-    phone: ''
+    company_address: '',
+    phone: '',
+    store_logo: '',
+    banner_image: ''
   });
 
   // Categories state
@@ -87,6 +93,33 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageUpload = (file: File, type: 'logo' | 'banner') => {
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setProfile(prevProfile => {
+          if (type === 'logo') {
+            return { ...prevProfile, store_logo: result };
+          } else {
+            return { ...prevProfile, banner_image: result };
+          }
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = (type: 'logo' | 'banner') => {
+    setProfile(prevProfile => {
+      if (type === 'logo') {
+        return { ...prevProfile, store_logo: '' };
+      } else {
+        return { ...prevProfile, banner_image: '' };
+      }
+    });
   };
 
   const handleAddCategory = async () => {
@@ -233,68 +266,189 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-6">Profile Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        First Name
-                      </label>
-                      <input
-                        type="text"
-                        value={profile.first_name}
-                        onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                        placeholder="Enter your first name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Last Name
-                      </label>
-                      <input
-                        type="text"
-                        value={profile.last_name}
-                        onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                        placeholder="Enter your last name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={profile.email}
-                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                        placeholder="Enter your email"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Phone
-                      </label>
-                      <input
-                        type="tel"
-                        value={profile.phone}
-                        onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                        placeholder="Enter your phone number"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Company
-                      </label>
-                      <input
-                        type="text"
-                        value={profile.company}
-                        onChange={(e) => setProfile({ ...profile, company: e.target.value })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                        placeholder="Enter your company name"
-                      />
+                  
+                  {/* Company Information Section */}
+                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6 mb-6">
+                    <h4 className="text-lg font-medium text-white mb-4">Company Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Company Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profile.company}
+                          onChange={(e) => setProfile({ ...profile, company: e.target.value })}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          placeholder="Enter your company name"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Company Address
+                        </label>
+                        <textarea
+                          value={profile.company_address}
+                          onChange={(e) => setProfile({ ...profile, company_address: e.target.value })}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm resize-none"
+                          placeholder="Enter your company address"
+                          rows={3}
+                        />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Store Branding Section */}
+                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6 mb-6">
+                    <h4 className="text-lg font-medium text-white mb-4">Store Branding</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Store Logo Upload */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Store Logo
+                        </label>
+                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/20 rounded-lg p-4 hover:border-white/40 transition-colors">
+                          {profile.store_logo ? (
+                            <div className="relative">
+                              <img
+                                src={profile.store_logo}
+                                alt="Store Logo"
+                                className="w-24 h-24 object-cover rounded-full border-2 border-white/20"
+                              />
+                              <button
+                                onClick={() => removeImage('logo')}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <p className="text-sm text-gray-400">Upload Store Logo</p>
+                            </div>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleImageUpload(file, 'logo');
+                                e.target.value = ''; // Reset input
+                              }
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            id="logo-upload"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Recommended: 200x200px, PNG or JPG</p>
+                      </div>
+
+                      {/* Banner Image Upload */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Banner Image
+                        </label>
+                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/20 rounded-lg p-4 hover:border-white/40 transition-colors min-h-[120px]">
+                          {profile.banner_image ? (
+                            <div className="relative w-full">
+                              <img
+                                src={profile.banner_image}
+                                alt="Banner"
+                                className="w-full h-20 object-cover rounded-lg border border-white/20"
+                              />
+                              <button
+                                onClick={() => removeImage('banner')}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <p className="text-sm text-gray-400">Upload Banner</p>
+                            </div>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleImageUpload(file, 'banner');
+                                e.target.value = ''; // Reset input
+                              }
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            id="banner-upload"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Recommended: 1200x300px, PNG or JPG</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Personal Information Section */}
+                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+                    <h4 className="text-lg font-medium text-white mb-4">Personal Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          First Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profile.first_name}
+                          onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          placeholder="Enter your first name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Last Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profile.last_name}
+                          onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          placeholder="Enter your last name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          value={profile.email}
+                          onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          placeholder="Enter your email"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Phone
+                        </label>
+                        <input
+                          type="tel"
+                          value={profile.phone}
+                          onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          placeholder="Enter your phone number"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="mt-6 flex justify-end">
                     <button
                       onClick={handleProfileSave}
