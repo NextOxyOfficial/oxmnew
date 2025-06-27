@@ -20,13 +20,23 @@ backend/*.egg-info/
 backend/.installed.cfg
 backend/*.egg
 backend/MANIFEST
-backend/db.sqlite3
-backend/db.sqlite3-journal
 backend/media/
 backend/staticfiles/
 backend/.env
 backend/venv/
 backend/env/
+
+# Database
+*.sqlite3
+*.db
+backend/db.sqlite3
+backend/*.sqlite3
+backend/*.db
+pgdata/
+postgres_data/
+*.sql
+*.dump
+*.backup
 
 # Next.js
 frontend/.next/
