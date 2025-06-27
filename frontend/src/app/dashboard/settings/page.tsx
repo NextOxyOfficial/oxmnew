@@ -523,7 +523,7 @@ export default function SettingsPage() {
                   {/* Add Category */}
                   <div className="mb-8">
                     <h4 className="text-lg font-medium text-white mb-4">Add New Category</h4>
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 max-w-md">
                       <input
                         type="text"
                         value={newCategory}
@@ -544,18 +544,18 @@ export default function SettingsPage() {
                   {/* Categories List */}
                   <div className="mb-8">
                     <h4 className="text-lg font-medium text-white mb-4">Categories</h4>
-                    <div className="space-y-3">
+                    <div className="max-w-2xl">
                       {categories.length === 0 ? (
                         <div className="text-center py-8 text-gray-400">
                           <p>No categories found. Add your first category above.</p>
                         </div>
                       ) : (
-                        categories.map((category) => (
-                          <div
-                            key={category.id}
-                            className="flex items-center justify-between p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200"
-                          >
-                            <div className="flex items-center space-x-3">
+                        <div className="flex flex-wrap gap-3">
+                          {categories.map((category) => (
+                            <div
+                              key={category.id}
+                              className="flex items-center gap-2 p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200"
+                            >
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                 category.is_active
                                   ? 'bg-green-500/20 text-green-300 border border-green-400/30'
@@ -563,28 +563,19 @@ export default function SettingsPage() {
                               }`}>
                                 {category.is_active ? 'Active' : 'Inactive'}
                               </span>
-                              <span className="text-sm font-medium text-white">{category.name}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => toggleCategory(category.id)}
-                                className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer ${
-                                  category.is_active
-                                    ? 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/20'
-                                    : 'bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-400/30'
-                                }`}
-                              >
-                                {category.is_active ? 'Disable' : 'Enable'}
-                              </button>
+                              <span className="text-sm font-medium text-white whitespace-nowrap">{category.name}</span>
                               <button
                                 onClick={() => deleteCategory(category.id)}
-                                className="px-3 py-1 bg-red-500/20 text-red-300 text-xs font-medium rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200 cursor-pointer"
+                                className="p-1.5 bg-red-500/20 text-red-300 rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200 cursor-pointer"
+                                title="Delete category"
                               >
-                                Delete
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
                               </button>
                             </div>
-                          </div>
-                        ))
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
