@@ -260,13 +260,11 @@ export default function SettingsPage() {
           </div>
 
           {/* Tab Content */}
-          <div className="p-2">
+          <div className="p-2 sm:p-6">
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-semibold text-white mb-6">Profile Information</h3>
-                  
                   {/* Company Information */}
                   <div className="mb-8">
                     <h4 className="text-lg font-medium text-white mb-4">Company Details</h4>
@@ -307,7 +305,7 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-gray-300 mb-2">
                           Store Logo
                         </label>
-                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/20 rounded-lg p-4 hover:border-white/40 transition-colors">
+                        <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-white/20 rounded-lg p-4 hover:border-white/40 transition-colors">
                           {profile.store_logo ? (
                             <div className="relative">
                               <img
@@ -340,7 +338,7 @@ export default function SettingsPage() {
                                 e.target.value = ''; // Reset input
                               }
                             }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             id="logo-upload"
                           />
                         </div>
@@ -352,7 +350,7 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-gray-300 mb-2">
                           Banner Image
                         </label>
-                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/20 rounded-lg p-4 hover:border-white/40 transition-colors min-h-[120px]">
+                        <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-white/20 rounded-lg p-4 hover:border-white/40 transition-colors min-h-[120px]">
                           {profile.banner_image ? (
                             <div className="relative w-full">
                               <img
@@ -370,7 +368,7 @@ export default function SettingsPage() {
                           ) : (
                             <div className="text-center">
                               <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
                               <p className="text-sm text-gray-400">Upload Banner</p>
                             </div>
@@ -385,7 +383,7 @@ export default function SettingsPage() {
                                 e.target.value = ''; // Reset input
                               }
                             }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             id="banner-upload"
                           />
                         </div>
