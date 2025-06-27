@@ -20,26 +20,43 @@ export class ApiService {
     const url = `${API_BASE_URL}${endpoint}`;
     const token = AuthToken.get();
     
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    };
+
+    // Only add Authorization header if token exists and not explicitly disabled
+    const skipAuth = options.headers && 'Authorization' in options.headers && (options.headers as any)['Authorization'] === null;
+    if (token && !skipAuth) {
+      (headers as Record<string, string>)['Authorization'] = `Token ${token}`;
+    }
+
     const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Token ${token}` }),
-        ...options.headers,
-      },
       ...options,
+      headers,
     };
 
     try {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.detail || errorMessage;
+        } catch (e) {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
       
       return await response.json();
     } catch (error) {
       console.error('API request failed:', error);
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        throw new Error('Unable to connect to server. Please check if the backend is running.');
+      }
       throw error;
     }
   }
@@ -68,11 +85,17 @@ export class ApiService {
 
   // General API methods
   static async healthCheck() {
-    return this.request('/health/', { method: 'GET', headers: {} }); // No auth needed
+    return this.request('/health/', { 
+      method: 'GET',
+      headers: { 'Authorization': null } as any // No auth needed
+    });
   }
 
   static async getApiRoot() {
-    return this.request('/', { method: 'GET', headers: {} }); // No auth needed
+    return this.request('/', { 
+      method: 'GET',
+      headers: { 'Authorization': null } as any // No auth needed
+    });
   }
 
   // Authentication methods
@@ -86,7 +109,6 @@ export class ApiService {
     const response = await this.request('/auth/register/', {
       method: 'POST',
       body: JSON.stringify(userData),
-      headers: {}
     });
     
     if (response.token) {
@@ -100,7 +122,6 @@ export class ApiService {
     const response = await this.request('/auth/login/', {
       method: 'POST',
       body: JSON.stringify(credentials),
-      headers: {}
     });
     
     if (response.token) {
