@@ -9,7 +9,11 @@ interface Supplier {
   phone: string;
   website: string;
   email: string;
-  created_date: string;
+  created_at: string;
+  updated_at: string;
+  contact_person?: string;
+  notes?: string;
+  is_active: boolean;
   total_orders: number;
   total_amount: number;
 }

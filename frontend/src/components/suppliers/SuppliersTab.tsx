@@ -9,7 +9,11 @@ interface Supplier {
   phone: string;
   website: string;
   email: string;
-  created_date: string;
+  created_at: string;
+  updated_at: string;
+  contact_person?: string;
+  notes?: string;
+  is_active: boolean;
   total_orders: number;
   total_amount: number;
 }
@@ -27,6 +31,8 @@ interface SuppliersTabProps {
   };
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleCreateSupplier: (e: React.FormEvent) => Promise<void>;
+  handleCancelSupplierForm?: () => void;
+  isEditing?: boolean;
   loading: boolean;
   formatCurrency: (amount: number) => string;
   onCreatePurchase: (supplier: Supplier) => void;
@@ -42,6 +48,8 @@ export default function SuppliersTab({
   supplierForm,
   handleInputChange,
   handleCreateSupplier,
+  handleCancelSupplierForm,
+  isEditing = false,
   loading,
   formatCurrency,
   onCreatePurchase,
@@ -84,9 +92,11 @@ export default function SuppliersTab({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto scrollbar-hide">
           <div className="bg-slate-800 border border-slate-700/50 rounded-lg p-6 w-full max-w-md my-auto">
             <div className="flex justify-between items-center mb-4">
-              <h4 className="text-lg font-medium text-slate-100">Create New Supplier</h4>
+              <h4 className="text-lg font-medium text-slate-100">
+                {isEditing ? 'Edit Supplier' : 'Create New Supplier'}
+              </h4>
               <button
-                onClick={() => setShowCreateForm(false)}
+                onClick={() => handleCancelSupplierForm ? handleCancelSupplierForm() : setShowCreateForm(false)}
                 className="text-slate-400 hover:text-slate-300 cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +183,7 @@ export default function SuppliersTab({
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowCreateForm(false)}
+                  onClick={() => handleCancelSupplierForm ? handleCancelSupplierForm() : setShowCreateForm(false)}
                   className="flex-1 px-4 py-2 border border-slate-600 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 cursor-pointer"
                 >
                   Cancel
@@ -183,7 +193,7 @@ export default function SuppliersTab({
                   disabled={loading}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Creating...' : 'Create Supplier'}
+                  {loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Supplier' : 'Create Supplier')}
                 </button>
               </div>
             </form>

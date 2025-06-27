@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { ApiService } from '@/lib/api';
 import { SuppliersTab, PurchaseHistoryTab, PaymentsTab, ProductsTab, CreatePurchaseModal, CreatePaymentModal } from '@/components/suppliers';
 
 interface Purchase {
@@ -43,7 +44,11 @@ interface Supplier {
   phone: string;
   website: string;
   email: string;
-  created_date: string;
+  created_at: string;
+  updated_at: string;
+  contact_person?: string;
+  notes?: string;
+  is_active: boolean;
   total_orders: number;
   total_amount: number;
 }
@@ -70,6 +75,9 @@ export default function SuppliersPage() {
     website: '',
     email: ''
   });
+
+  // State for editing supplier
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
   // Modal states
   const [showCreatePurchaseModal, setShowCreatePurchaseModal] = useState(false);
@@ -193,41 +201,28 @@ export default function SuppliersPage() {
     }
   ]);
 
-  const [suppliers, setSuppliers] = useState<Supplier[]>([
-    {
-      id: 1,
-      name: 'Tech Solutions Ltd',
-      address: '123 Technology Dr, Silicon Valley, CA 94025',
-      phone: '+1 (555) 123-4567',
-      website: 'https://techsolutions.com',
-      email: 'contact@techsolutions.com',
-      created_date: '2024-01-15',
-      total_orders: 25,
-      total_amount: 125000
-    },
-    {
-      id: 2,
-      name: 'Office Supplies Co',
-      address: '456 Business Ave, New York, NY 10001',
-      phone: '+1 (555) 987-6543',
-      website: 'https://officesupplies.com',
-      email: 'orders@officesupplies.com',
-      created_date: '2024-02-20',
-      total_orders: 18,
-      total_amount: 45000
-    },
-    {
-      id: 3,
-      name: 'Furniture Express',
-      address: '789 Furniture Blvd, Chicago, IL 60601',
-      phone: '+1 (555) 456-7890',
-      website: 'https://furnitureexpress.com',
-      email: 'sales@furnitureexpress.com',
-      created_date: '2024-03-10',
-      total_orders: 12,
-      total_amount: 85000
-    }
-  ]);
+  // Real suppliers state - will be populated from API
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
+  // Fetch suppliers from API
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const response = await ApiService.getSuppliers();
+        setSuppliers(response);
+      } catch (error) {
+        console.error('Error fetching suppliers:', error);
+        showNotification('error', 'Failed to load suppliers');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSuppliers();
+  }, [user]);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ isVisible: true, type, message });
@@ -291,30 +286,50 @@ export default function SuppliersPage() {
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newSupplier: Supplier = {
-        id: suppliers.length + 1,
-        name: supplierForm.name,
-        address: supplierForm.address,
-        phone: supplierForm.phone,
-        website: supplierForm.website,
-        email: supplierForm.email,
-        created_date: new Date().toISOString().split('T')[0],
-        total_orders: 0,
-        total_amount: 0
-      };
+      if (editingSupplier) {
+        // Update existing supplier
+        const updatedSupplier = await ApiService.updateSupplier(editingSupplier.id, {
+          name: supplierForm.name,
+          address: supplierForm.address || undefined,
+          phone: supplierForm.phone || undefined,
+          website: supplierForm.website || undefined,
+          email: supplierForm.email || undefined,
+        });
 
-      setSuppliers([...suppliers, newSupplier]);
+        setSuppliers(prev => prev.map(supplier => 
+          supplier.id === editingSupplier.id ? updatedSupplier : supplier
+        ));
+        setEditingSupplier(null);
+        showNotification('success', 'Supplier updated successfully!');
+      } else {
+        // Create new supplier
+        const newSupplier = await ApiService.createSupplier({
+          name: supplierForm.name,
+          address: supplierForm.address || undefined,
+          phone: supplierForm.phone || undefined,
+          website: supplierForm.website || undefined,
+          email: supplierForm.email || undefined,
+        });
+
+        setSuppliers(prev => [...prev, newSupplier]);
+        showNotification('success', 'Supplier created successfully!');
+      }
+
       setSupplierForm({ name: '', address: '', phone: '', website: '', email: '' });
       setShowCreateForm(false);
-      showNotification('success', 'Supplier created successfully!');
     } catch (error) {
-      showNotification('error', 'Failed to create supplier. Please try again.');
+      console.error('Error saving supplier:', error);
+      const action = editingSupplier ? 'update' : 'create';
+      showNotification('error', `Failed to ${action} supplier. Please try again.`);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancelSupplierForm = () => {
+    setSupplierForm({ name: '', address: '', phone: '', website: '', email: '' });
+    setEditingSupplier(null);
+    setShowCreateForm(false);
   };
 
   const handleCreatePurchase = async (e: React.FormEvent) => {
@@ -512,27 +527,39 @@ export default function SuppliersPage() {
   };
 
   const handleEditSupplier = (supplier: Supplier) => {
-    // TODO: Implement edit supplier functionality
-    // This could pre-populate the create form or open an edit modal
+    // Pre-populate the form with supplier data for editing
     setSupplierForm({
       name: supplier.name,
-      address: supplier.address,
-      phone: supplier.phone,
-      website: supplier.website,
-      email: supplier.email
+      address: supplier.address || '',
+      phone: supplier.phone || '',
+      website: supplier.website || '',
+      email: supplier.email || ''
     });
     setShowCreateForm(true);
+    // Store the supplier ID for updating
+    setEditingSupplier(supplier);
     showNotification('success', `Edit mode for ${supplier.name} - Update the form and save changes`);
   };
 
-  const handleDeleteSupplier = (supplier: Supplier) => {
-    // TODO: Implement proper delete confirmation dialog
-    // For now, just show a confirmation via browser confirm dialog
+  const handleDeleteSupplier = async (supplier: Supplier) => {
+    // Confirmation dialog before deletion
     if (window.confirm(`Are you sure you want to delete ${supplier.name}? This action cannot be undone.`)) {
-      setSuppliers(prevSuppliers => 
-        prevSuppliers.filter(s => s.id !== supplier.id)
-      );
-      showNotification('success', `${supplier.name} has been deleted successfully`);
+      try {
+        setLoading(true);
+        await ApiService.deleteSupplier(supplier.id);
+        
+        // Remove from local state
+        setSuppliers(prevSuppliers => 
+          prevSuppliers.filter(s => s.id !== supplier.id)
+        );
+        
+        showNotification('success', `${supplier.name} has been deleted successfully`);
+      } catch (error) {
+        console.error('Error deleting supplier:', error);
+        showNotification('error', 'Failed to delete supplier. Please try again.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -604,6 +631,8 @@ export default function SuppliersPage() {
                 supplierForm={supplierForm}
                 handleInputChange={handleInputChange}
                 handleCreateSupplier={handleCreateSupplier}
+                handleCancelSupplierForm={handleCancelSupplierForm}
+                isEditing={!!editingSupplier}
                 loading={loading}
                 formatCurrency={formatCurrency}
                 onCreatePurchase={handleCreatePurchaseFromSupplier}

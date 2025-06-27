@@ -344,6 +344,47 @@ export class ApiService {
     return this.put(`/levels/${levelId}/toggle/`, {});
   }
 
+  // Suppliers methods
+  static async getSuppliers() {
+    return this.get('/suppliers/');
+  }
+
+  static async createSupplier(supplierData: {
+    name: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+    contact_person?: string;
+    notes?: string;
+  }) {
+    return this.post('/suppliers/', supplierData);
+  }
+
+  static async updateSupplier(id: number, supplierData: {
+    name?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+    contact_person?: string;
+    notes?: string;
+  }) {
+    return this.put(`/suppliers/${id}/`, supplierData);
+  }
+
+  static async deleteSupplier(id: number) {
+    return this.delete(`/suppliers/${id}/`);
+  }
+
+  static async activateSupplier(id: number) {
+    return this.post(`/suppliers/${id}/activate/`, {});
+  }
+
+  static async deactivateSupplier(id: number) {
+    return this.post(`/suppliers/${id}/deactivate/`, {});
+  }
+
   // Check if user is authenticated
   static isAuthenticated(): boolean {
     return !!AuthToken.get();
