@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect } from "react";
+import Link from "next/link";
 
 interface NavigationItem {
   name: string;
@@ -16,7 +17,6 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose, navigation }: SidebarProps) {
-
   // Add global styles for scrollbar hiding
   useEffect(() => {
     const style = document.createElement("style");
@@ -37,18 +37,18 @@ export default function Sidebar({ isOpen, onClose, navigation }: SidebarProps) {
         } fixed inset-0 z-50 lg:hidden`}
       >
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+          className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm"
           onClick={onClose}
         ></div>
-        <div className="fixed inset-y-0 left-0 flex w-64 flex-col transform transition-transform duration-200 ease-in-out">
-          <div className="flex flex-col h-full bg-white/10 backdrop-blur-xl border-r border-white/20 shadow-xl">
-            <div className="flex h-16 flex-shrink-0 items-center justify-between px-4 border-b border-white/20">
+        <div className="fixed inset-y-0 left-0 flex w-72 flex-col transform transition-transform duration-300 ease-out">
+          <div className="flex flex-col h-full bg-gradient-to-b from-gray-900/95 via-blue-900/95 to-purple-900/95 backdrop-blur-xl border-r border-white/20 shadow-2xl">
+            <div className="flex h-16 flex-shrink-0 items-center justify-between px-6 border-b border-white/20">
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 OxyManager
               </h1>
               <button
                 onClick={onClose}
-                className="lg:hidden rounded-md p-2 inline-flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors"
+                className="lg:hidden rounded-lg p-2 inline-flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
               >
                 <span className="sr-only">Close sidebar</span>
                 <svg
@@ -67,23 +67,23 @@ export default function Sidebar({ isOpen, onClose, navigation }: SidebarProps) {
               </button>
             </div>
             <div className="flex-1 flex flex-col overflow-hidden">
-              <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto scrollbar-hide">
+              <nav className="flex-1 space-y-2 px-4 py-6 overflow-y-auto scrollbar-hide">
                 {navigation.map((item) => (
-                  <a
+                  <Link
                     key={item.name}
                     href={item.href}
                     onClick={onClose}
                     className={`${
                       item.current
-                        ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-400/50 text-white shadow-sm"
-                        : "border-transparent text-gray-300 hover:bg-white/10 hover:text-white"
-                    } group flex items-center px-3 py-2.5 text-sm font-medium border-l-4 rounded-r-lg transition-all duration-200 backdrop-blur-sm`}
+                        ? "bg-gradient-to-r from-blue-500/30 to-purple-500/30 border-l-4 border-blue-400 text-white shadow-lg"
+                        : "border-l-4 border-transparent text-gray-300 hover:bg-white/10 hover:text-white hover:border-l-4 hover:border-blue-400/50"
+                    } group flex items-center px-4 py-3 text-sm font-medium rounded-r-lg transition-all duration-200 backdrop-blur-sm hover:shadow-md`}
                   >
-                    <span className="mr-3 text-lg flex-shrink-0">
+                    <span className="mr-4 text-lg flex-shrink-0 transition-transform duration-200 group-hover:scale-110">
                       {item.icon}
                     </span>
-                    <span className="truncate">{item.name}</span>
-                  </a>
+                    <span className="truncate font-medium">{item.name}</span>
+                  </Link>
                 ))}
               </nav>
             </div>
@@ -92,30 +92,30 @@ export default function Sidebar({ isOpen, onClose, navigation }: SidebarProps) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 z-40">
-        <div className="flex flex-col h-full bg-white/10 backdrop-blur-xl border-r border-white/20 shadow-lg">
-          <div className="flex items-center h-16 flex-shrink-0 px-4 border-b border-white/20">
+      <div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 z-40">
+        <div className="flex flex-col h-full bg-gradient-to-b from-gray-900/95 via-blue-900/95 to-purple-900/95 backdrop-blur-xl border-r border-white/20 shadow-2xl">
+          <div className="flex items-center h-16 flex-shrink-0 px-6 border-b border-white/20">
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               OxyManager
             </h1>
           </div>
           <div className="flex-1 flex flex-col overflow-hidden">
-            <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-hide">
+            <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto scrollbar-hide">
               {navigation.map((item) => (
-                <a
+                <Link
                   key={item.name}
                   href={item.href}
                   className={`${
                     item.current
-                      ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-400/50 text-white shadow-sm"
-                      : "border-transparent text-gray-300 hover:bg-white/10 hover:text-white"
-                  } group flex items-center px-3 py-2.5 text-sm font-medium border-l-4 rounded-r-lg transition-all duration-200 backdrop-blur-sm hover:shadow-md`}
+                      ? "bg-gradient-to-r from-blue-500/30 to-purple-500/30 border-l-4 border-blue-400 text-white shadow-lg"
+                      : "border-l-4 border-transparent text-gray-300 hover:bg-white/10 hover:text-white hover:border-l-4 hover:border-blue-400/50"
+                  } group flex items-center px-4 py-3 text-sm font-medium rounded-r-lg transition-all duration-200 backdrop-blur-sm hover:shadow-md`}
                 >
-                  <span className="mr-3 text-lg flex-shrink-0">
+                  <span className="mr-4 text-lg flex-shrink-0 transition-transform duration-200 group-hover:scale-110">
                     {item.icon}
                   </span>
-                  <span className="truncate">{item.name}</span>
-                </a>
+                  <span className="truncate font-medium">{item.name}</span>
+                </Link>
               ))}
             </nav>
           </div>
