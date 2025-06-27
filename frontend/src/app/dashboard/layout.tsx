@@ -7,6 +7,26 @@ import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import {
+  BarChart3,
+  Package,
+  ShoppingCart,
+  Settings,
+  TrendingUp,
+  Users,
+  Building2,
+  Briefcase,
+  CreditCard,
+  Store,
+  BookOpen,
+  Clock,
+  Smartphone,
+  Mail,
+  Diamond,
+  Gift,
+  Trophy,
+  FileText
+} from "lucide-react";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -33,41 +53,41 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     {
       name: "Dashboard",
       href: "/dashboard",
-      icon: "📊",
+      icon: BarChart3,
       current: pathname === "/dashboard",
     },
     {
       name: "Products",
       href: "/dashboard/products",
-      icon: "📦",
+      icon: Package,
       current: pathname === "/dashboard/products",
     },
     {
       name: "Orders",
       href: "/dashboard/orders",
-      icon: "🛒",
+      icon: ShoppingCart,
       current: pathname === "/dashboard/orders",
     },
     {
       name: "Settings",
       href: "/dashboard/settings",
-      icon: "⚙️",
+      icon: Settings,
       current: pathname === "/dashboard/settings",
     },
-    { name: "Reports", href: "/reports", icon: "📈", current: pathname === "/reports" },
-    { name: "Customers", href: "/customers", icon: "👥", current: pathname === "/customers" },
-    { name: "Banking", href: "/banking", icon: "🏦", current: pathname === "/banking" },
-    { name: "Employees", href: "/employees", icon: "👨‍💼", current: pathname === "/employees" },
-    { name: "Lending", href: "/lending", icon: "💳", current: pathname === "/lending" },
-    { name: "Online Store", href: "/online-store", icon: "🏪", current: pathname === "/online-store" },
-    { name: "Notebook", href: "/notebook", icon: "📓", current: pathname === "/notebook" },
-    { name: "Scheduler", href: "/scheduler", icon: "⏰", current: pathname === "/scheduler" },
-    { name: "SMS", href: "/sms", icon: "📱", current: pathname === "/sms" },
-    { name: "Email", href: "/email", icon: "✉️", current: pathname === "/email" },
+    { name: "Reports", href: "/reports", icon: TrendingUp, current: pathname === "/reports" },
+    { name: "Customers", href: "/customers", icon: Users, current: pathname === "/customers" },
+    { name: "Banking", href: "/banking", icon: Building2, current: pathname === "/banking" },
+    { name: "Employees", href: "/employees", icon: Briefcase, current: pathname === "/employees" },
+    { name: "Lending", href: "/lending", icon: CreditCard, current: pathname === "/lending" },
+    { name: "Online Store", href: "/online-store", icon: Store, current: pathname === "/online-store" },
+    { name: "Notebook", href: "/notebook", icon: BookOpen, current: pathname === "/notebook" },
+    { name: "Scheduler", href: "/scheduler", icon: Clock, current: pathname === "/scheduler" },
+    { name: "SMS", href: "/sms", icon: Smartphone, current: pathname === "/sms" },
+    { name: "Email", href: "/email", icon: Mail, current: pathname === "/email" },
     {
       name: "Subscriptions",
       href: "/subscriptions",
-      icon: "💎",
+      icon: Diamond,
       current: pathname === "/subscriptions",
     },
   ];
@@ -132,26 +152,30 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        navigation={navigation}
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex flex-col">
+      {/* Full width header */}
+      <Header
+        user={user}
+        onLogout={logout}
+        onMenuClick={() => setSidebarOpen(true)}
+        title={getPageTitle()}
       />
 
-      {/* Main content */}
-      <div className="flex flex-col flex-1 lg:pl-72 relative z-10">
-        <Header
-          user={user}
-          onLogout={logout}
-          onMenuClick={() => setSidebarOpen(true)}
-          title={getPageTitle()}
+      {/* Content area with sidebar and main content */}
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          navigation={navigation}
         />
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto">{children}</main>
+        {/* Main content */}
+        <div className="flex flex-col flex-1 lg:pl-64 relative">
+          {/* Main Content */}
+          <main className="flex-1 overflow-auto">{children}</main>
 
-        <Footer />
+          <Footer />
+        </div>
       </div>
     </div>
   );
