@@ -588,6 +588,23 @@ export default function SuppliersPage() {
     }
   };
 
+  const handleUpdatePurchase = async (purchaseId: number, updatedData: { status: 'pending' | 'completed' | 'cancelled' }) => {
+    try {
+      const updatedPurchase = await ApiService.updatePurchase(purchaseId, updatedData);
+      
+      // Update the local state
+      setPurchases(prev => prev.map(purchase => 
+        purchase.id === purchaseId ? { ...purchase, ...updatedPurchase } : purchase
+      ));
+      
+      showNotification('success', 'Purchase status updated successfully');
+    } catch (error) {
+      console.error('Error updating purchase:', error);
+      showNotification('error', 'Failed to update purchase status. Please try again.');
+      throw error; // Re-throw to let the component handle the error
+    }
+  };
+
   const tabs = [
     { id: 'suppliers', label: 'Suppliers' },
     { id: 'purchases', label: 'Purchase History' },
@@ -686,6 +703,7 @@ export default function SuppliersPage() {
                       formatCurrency={formatCurrency}
                       formatDate={formatDate}
                       getStatusColor={getStatusColor}
+                      onUpdatePurchase={handleUpdatePurchase}
                     />
                   )}
                   

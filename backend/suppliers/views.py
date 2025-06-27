@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from .models import Supplier, Purchase
 from .serializers import (
     SupplierSerializer, SupplierCreateSerializer, 
-    PurchaseSerializer, PurchaseCreateSerializer
+    PurchaseSerializer, PurchaseCreateSerializer, PurchaseUpdateSerializer
 )
 
 
@@ -70,6 +70,8 @@ class PurchaseViewSet(viewsets.ModelViewSet):
         """Use different serializers for different actions"""
         if self.action == 'create':
             return PurchaseCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return PurchaseUpdateSerializer
         return PurchaseSerializer
 
     def perform_create(self, serializer):

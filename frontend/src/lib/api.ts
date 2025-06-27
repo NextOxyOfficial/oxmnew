@@ -109,6 +109,13 @@ export class ApiService {
     });
   }
 
+  static async patch(endpoint: string, data: any) {
+    return this.request(endpoint, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
   static async delete(endpoint: string) {
     return this.request(endpoint, { method: 'DELETE' });
   }
@@ -446,34 +453,47 @@ export class ApiService {
     notes?: string;
     proof_document?: File;
   }) {
-    const formData = new FormData();
-    
-    if (purchaseData.supplier) {
-      formData.append('supplier', purchaseData.supplier.toString());
-    }
-    if (purchaseData.date) {
-      formData.append('date', purchaseData.date);
-    }
-    if (purchaseData.amount) {
-      formData.append('amount', purchaseData.amount.toString());
-    }
-    if (purchaseData.status) {
-      formData.append('status', purchaseData.status);
-    }
-    if (purchaseData.products) {
-      formData.append('products', purchaseData.products);
-    }
-    if (purchaseData.notes) {
-      formData.append('notes', purchaseData.notes);
-    }
+    // If we have a file, use FormData
     if (purchaseData.proof_document) {
+      const formData = new FormData();
+      
+      if (purchaseData.supplier) {
+        formData.append('supplier', purchaseData.supplier.toString());
+      }
+      if (purchaseData.date) {
+        formData.append('date', purchaseData.date);
+      }
+      if (purchaseData.amount) {
+        formData.append('amount', purchaseData.amount.toString());
+      }
+      if (purchaseData.status) {
+        formData.append('status', purchaseData.status);
+      }
+      if (purchaseData.products) {
+        formData.append('products', purchaseData.products);
+      }
+      if (purchaseData.notes) {
+        formData.append('notes', purchaseData.notes);
+      }
       formData.append('proof_document', purchaseData.proof_document);
-    }
 
-    return this.request(`/purchases/${id}/`, {
-      method: 'PUT',
-      body: formData,
-    });
+      return this.request(`/purchases/${id}/`, {
+        method: 'PUT',
+        body: formData,
+      });
+    } else {
+      // For simple updates like status, use JSON
+      const updateData: any = {};
+      
+      if (purchaseData.supplier) updateData.supplier = purchaseData.supplier;
+      if (purchaseData.date) updateData.date = purchaseData.date;
+      if (purchaseData.amount) updateData.amount = purchaseData.amount;
+      if (purchaseData.status) updateData.status = purchaseData.status;
+      if (purchaseData.products) updateData.products = purchaseData.products;
+      if (purchaseData.notes) updateData.notes = purchaseData.notes;
+
+      return this.patch(`/purchases/${id}/`, updateData);
+    }
   }
 
   static async deletePurchase(id: number) {

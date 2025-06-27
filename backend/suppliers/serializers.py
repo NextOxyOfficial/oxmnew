@@ -77,3 +77,16 @@ class PurchaseCreateSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         validated_data['user'] = user
         return super().create(validated_data)
+
+
+class PurchaseUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Purchase
+        fields = ['date', 'amount', 'status', 'products', 'notes', 'proof_document']
+        
+    def update(self, instance, validated_data):
+        # Update only the fields that are provided
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
