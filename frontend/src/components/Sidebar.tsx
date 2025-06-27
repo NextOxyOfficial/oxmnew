@@ -58,7 +58,7 @@ export default function Sidebar({
               <div className="flex items-center justify-end mb-4">
                 <button
                   onClick={onClose}
-                  className="lg:hidden rounded-lg p-2 inline-flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
+                  className="lg:hidden rounded-lg p-2 inline-flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-900/50 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
                 >
                   <span className="sr-only">Close sidebar</span>
                   <X className="h-5 w-5" />

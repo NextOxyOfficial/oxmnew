@@ -138,7 +138,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto"></div>
           <p className="mt-4 text-slate-300">Loading...</p>
@@ -152,7 +152,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-slate-900 flex flex-col">
       {/* Sticky full width header */}
       <div className="sticky top-0 z-50">
         <Header
@@ -174,7 +174,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Main content */}
         <div className="flex flex-col flex-1 lg:pl-64 relative">
           {/* Main Content */}
-          <main className="flex-1 overflow-auto bg-slate-950">{children}</main>
+          <main className="flex-1 overflow-auto bg-slate-900">{children}</main>
 
           <Footer />
         </div>

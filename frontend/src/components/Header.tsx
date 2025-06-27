@@ -26,7 +26,7 @@ export default function Header({ user, onLogout, onMenuClick, title }: HeaderPro
             {/* Mobile menu button */}
             <button
               onClick={onMenuClick}
-              className="lg:hidden rounded-md p-2 inline-flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-500 transition-colors"
+              className="lg:hidden rounded-md p-2 inline-flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-900/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-500 transition-colors"
             >
               <span className="sr-only">Open sidebar</span>
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

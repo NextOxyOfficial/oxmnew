@@ -21,19 +21,19 @@ export default function DashboardPage() {
             
             {/* User Info Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-4 border border-cyan-400/30">
+              <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-4 border border-cyan-400/30">
                 <h3 className="text-cyan-300 text-sm font-medium mb-1">Username</h3>
                 <p className="text-slate-100 font-semibold">{user?.username}</p>
               </div>
-              <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-4 border border-blue-400/30">
+              <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-4 border border-blue-400/30">
                 <h3 className="text-blue-300 text-sm font-medium mb-1">Email</h3>
                 <p className="text-slate-100 font-semibold">{user?.email}</p>
               </div>
-              <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-4 border border-green-400/30">
+              <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-4 border border-green-400/30">
                 <h3 className="text-green-300 text-sm font-medium mb-1">First Name</h3>
                 <p className="text-slate-100 font-semibold">{user?.first_name || 'Not provided'}</p>
               </div>
-              <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-4 border border-orange-400/30">
+              <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-4 border border-orange-400/30">
                 <h3 className="text-orange-300 text-sm font-medium mb-1">Last Name</h3>
                 <p className="text-slate-100 font-semibold">{user?.last_name || 'Not provided'}</p>
               </div>
@@ -43,7 +43,7 @@ export default function DashboardPage() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/50 transition-all duration-300">
+          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:bg-slate-900/50 transition-all duration-300">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-cyan-500 rounded-lg flex items-center justify-center">
