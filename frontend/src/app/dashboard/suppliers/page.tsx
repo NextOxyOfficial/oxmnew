@@ -25,13 +25,20 @@ interface Purchase {
 
 interface Payment {
   id: number;
+  supplier: {
+    id: number;
+    name: string;
+  };
   date: string;
-  supplier: string;
   amount: number;
   method: 'cash' | 'card' | 'bank_transfer' | 'check';
   status: 'pending' | 'completed' | 'failed';
   reference: string;
-  proofUrl?: string;
+  notes?: string;
+  proof_document?: string;
+  proof_url?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Product {
@@ -117,38 +124,8 @@ export default function SuppliersPage() {
   // Real purchases state - will be populated from API
   const [purchases, setPurchases] = useState<Purchase[]>([]);
 
-  // Mock data for payments and products (to be implemented later)
-  const [payments, setPayments] = useState<Payment[]>([
-    {
-      id: 1,
-      date: '2024-12-20',
-      supplier: 'Tech Solutions Ltd',
-      amount: 15000,
-      method: 'bank_transfer',
-      status: 'completed',
-      reference: 'TXN20241220001',
-      proofUrl: 'https://via.placeholder.com/400x300/0891b2/ffffff?text=Bank+Transfer+Receipt'
-    },
-    {
-      id: 2,
-      date: '2024-12-18',
-      supplier: 'Office Supplies Co',
-      amount: 2500,
-      method: 'card',
-      status: 'pending',
-      reference: 'TXN20241218001',
-      proofUrl: 'https://via.placeholder.com/400x300/eab308/ffffff?text=Payment+Proof.pdf'
-    },
-    {
-      id: 3,
-      date: '2024-12-15',
-      supplier: 'Furniture Express',
-      amount: 8500,
-      method: 'check',
-      status: 'completed',
-      reference: 'CHK20241215001'
-    }
-  ]);
+  // Real payments state - will be populated from API
+  const [payments, setPayments] = useState<Payment[]>([]);
 
   const [products, setProducts] = useState<Product[]>([
     {
@@ -186,7 +163,7 @@ export default function SuppliersPage() {
   // Real suppliers state - will be populated from API
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
-  // Fetch suppliers and purchases from API
+  // Fetch suppliers, purchases, and payments from API
   useEffect(() => {
     const fetchData = async () => {
       if (!user) {
@@ -196,7 +173,7 @@ export default function SuppliersPage() {
       
       try {
         setLoading(true);
-        console.log('Fetching suppliers and purchases for user:', user.username);
+        console.log('Fetching data for user:', user.username);
         
         // Fetch suppliers first
         try {
@@ -216,6 +193,16 @@ export default function SuppliersPage() {
         } catch (purchasesError) {
           console.error('Error fetching purchases:', purchasesError);
           showNotification('error', 'Failed to load purchases');
+        }
+
+        // Fetch payments
+        try {
+          const paymentsResponse = await ApiService.getPayments();
+          console.log('Payments fetched successfully:', paymentsResponse);
+          setPayments(paymentsResponse);
+        } catch (paymentsError) {
+          console.error('Error fetching payments:', paymentsError);
+          showNotification('error', 'Failed to load payments');
         }
       } catch (error) {
         console.error('Error in fetchData:', error);
@@ -393,21 +380,25 @@ export default function SuppliersPage() {
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newPayment: Payment = {
-        id: payments.length + 1,
+      if (!selectedSupplierForAction) {
+        throw new Error('No supplier selected');
+      }
+
+      const newPayment = await ApiService.createPayment({
+        supplier: selectedSupplierForAction.id,
         date: paymentForm.date,
-        supplier: selectedSupplierForAction?.name || '',
         amount: parseFloat(paymentForm.amount),
         method: paymentForm.method,
         status: paymentForm.status,
-        reference: paymentForm.reference || `PAY-${Date.now()}`,
-        proofUrl: paymentForm.proofUrl
-      };
+        reference: paymentForm.reference || '',
+        notes: paymentForm.notes || undefined,
+        proof_document: paymentForm.proofFile || undefined,
+      });
 
-      setPayments([...payments, newPayment]);
+      // Add the new payment to the state
+      setPayments(prev => [newPayment, ...prev]);
+      
+      // Reset form
       setPaymentForm({
         date: new Date().toISOString().split('T')[0],
         amount: '',
@@ -418,10 +409,20 @@ export default function SuppliersPage() {
         proofFile: null,
         proofUrl: ''
       });
+      
       setShowCreatePaymentModal(false);
       setSelectedSupplierForAction(null);
       showNotification('success', 'Payment record created successfully!');
+
+      // Refresh payments list to make sure we have the latest data
+      try {
+        const updatedPayments = await ApiService.getPayments();
+        setPayments(updatedPayments);
+      } catch (refreshError) {
+        console.error('Failed to refresh payments:', refreshError);
+      }
     } catch (error) {
+      console.error('Error creating payment:', error);
       showNotification('error', 'Failed to create payment. Please try again.');
     } finally {
       setLoading(false);
@@ -441,7 +442,7 @@ export default function SuppliersPage() {
     if (selectedPaymentSupplier === 'all') {
       return payments;
     }
-    return payments.filter(payment => payment.supplier === selectedPaymentSupplier);
+    return payments.filter(payment => payment.supplier.name === selectedPaymentSupplier);
   };
 
   // Filter products by selected supplier
@@ -460,7 +461,7 @@ export default function SuppliersPage() {
 
   // Get unique suppliers from payments for dropdown
   const getUniqueSuppliersFromPayments = () => {
-    const uniqueSuppliers = [...new Set(payments.map(payment => payment.supplier))];
+    const uniqueSuppliers = [...new Set(payments.map(payment => payment.supplier.name))];
     return uniqueSuppliers.sort();
   };
 

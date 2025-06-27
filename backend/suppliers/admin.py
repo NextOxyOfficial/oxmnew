@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Supplier, Purchase
+from .models import Supplier, Purchase, Payment
 
 
 @admin.register(Supplier)
@@ -38,6 +38,27 @@ class PurchaseAdmin(admin.ModelAdmin):
         }),
         ('Details', {
             'fields': ('products', 'notes', 'proof_document')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ['supplier', 'date', 'amount', 'method', 'status', 'reference', 'user', 'is_active', 'created_at']
+    list_filter = ['method', 'status', 'is_active', 'date', 'user', 'supplier']
+    search_fields = ['supplier__name', 'reference', 'notes']
+    readonly_fields = ['created_at', 'updated_at']
+    date_hierarchy = 'date'
+    fieldsets = (
+        ('Payment Information', {
+            'fields': ('supplier', 'user', 'date', 'amount', 'method', 'status', 'is_active')
+        }),
+        ('Details', {
+            'fields': ('reference', 'notes', 'proof_document')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

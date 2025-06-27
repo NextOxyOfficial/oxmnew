@@ -4,13 +4,20 @@ import React, { useState, useRef, useEffect } from 'react';
 
 interface Payment {
   id: number;
+  supplier: {
+    id: number;
+    name: string;
+  };
   date: string;
-  supplier: string;
   amount: number;
   method: 'cash' | 'card' | 'bank_transfer' | 'check';
   status: 'pending' | 'completed' | 'failed';
   reference: string;
-  proofUrl?: string;
+  notes?: string;
+  proof_document?: string;
+  proof_url?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface PaymentsTabProps {
@@ -69,7 +76,7 @@ export default function PaymentsTab({
       headers.join(','),
       ...filteredData.map(payment => [
         formatDate(payment.date),
-        `"${payment.supplier}"`,
+        `"${payment.supplier.name}"`,
         payment.method.replace('_', ' '),
         `"${payment.reference}"`,
         payment.amount,
@@ -142,7 +149,7 @@ export default function PaymentsTab({
               ${filteredData.map(payment => `
                 <tr>
                   <td>${formatDate(payment.date)}</td>
-                  <td>${payment.supplier}</td>
+                  <td>${payment.supplier.name}</td>
                   <td style="text-transform: capitalize;">${payment.method.replace('_', ' ')}</td>
                   <td style="font-family: monospace; font-size: 11px;">${payment.reference}</td>
                   <td class="amount">${formatCurrency(payment.amount)}</td>
@@ -295,7 +302,7 @@ export default function PaymentsTab({
                 <tr key={payment.id} className="border-t border-slate-700/30 hover:bg-slate-800/30 transition-colors">
                   <td className="py-3 px-4">
                     <div className="space-y-1">
-                      <div className="text-slate-100 text-sm font-medium">{payment.supplier}</div>
+                      <div className="text-slate-100 text-sm font-medium">{payment.supplier.name}</div>
                       <div className="text-slate-400 text-xs">{formatDate(payment.date)}</div>
                     </div>
                   </td>
@@ -313,11 +320,11 @@ export default function PaymentsTab({
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    {payment.proofUrl ? (
+                    {payment.proof_url ? (
                       <div className="flex items-center gap-2">
-                        {payment.proofUrl.toLowerCase().includes('.pdf') ? (
+                        {payment.proof_url.toLowerCase().includes('.pdf') ? (
                           <a
-                            href={payment.proofUrl}
+                            href={payment.proof_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors text-xs cursor-pointer"
@@ -329,7 +336,7 @@ export default function PaymentsTab({
                           </a>
                         ) : (
                           <button
-                            onClick={() => window.open(payment.proofUrl, '_blank')}
+                            onClick={() => window.open(payment.proof_url, '_blank')}
                             className="flex items-center gap-1 px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20 transition-colors text-xs cursor-pointer"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

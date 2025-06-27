@@ -61,3 +61,37 @@ class Purchase(models.Model):
 
     def __str__(self):
         return f"Purchase from {self.supplier.name} - {self.date} - ${self.amount}"
+
+
+class Payment(models.Model):
+    METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('card', 'Card'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('check', 'Check'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='payments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
+    date = models.DateField()
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    method = models.CharField(max_length=20, choices=METHOD_CHOICES, default='cash')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    reference = models.CharField(max_length=100, blank=True, null=True, help_text="Payment reference/transaction number")
+    notes = models.TextField(blank=True, null=True)
+    proof_document = models.FileField(upload_to='payment_proofs/', blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        return f"Payment to {self.supplier.name} - {self.date} - ${self.amount}"

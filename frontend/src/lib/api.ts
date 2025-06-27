@@ -500,6 +500,117 @@ export class ApiService {
     return this.delete(`/purchases/${id}/`);
   }
 
+  // Payment methods
+  static async getPayments() {
+    console.log('ApiService.getPayments() called');
+    console.log('API_BASE_URL:', API_BASE_URL);
+    console.log('Auth token:', AuthToken.get() ? 'exists' : 'missing');
+    try {
+      const result = await this.get('/payments/');
+      console.log('Payments API response:', result);
+      return result;
+    } catch (error) {
+      console.error('Error in getPayments:', error);
+      throw error;
+    }
+  }
+
+  static async createPayment(paymentData: {
+    supplier: number;
+    date: string;
+    amount: number;
+    method: 'cash' | 'card' | 'bank_transfer' | 'check';
+    status: 'pending' | 'completed' | 'failed';
+    reference?: string;
+    notes?: string;
+    proof_document?: File;
+  }) {
+    const formData = new FormData();
+    formData.append('supplier', paymentData.supplier.toString());
+    formData.append('date', paymentData.date);
+    formData.append('amount', paymentData.amount.toString());
+    formData.append('method', paymentData.method);
+    formData.append('status', paymentData.status);
+    
+    if (paymentData.reference) {
+      formData.append('reference', paymentData.reference);
+    }
+    
+    if (paymentData.notes) {
+      formData.append('notes', paymentData.notes);
+    }
+    
+    if (paymentData.proof_document) {
+      formData.append('proof_document', paymentData.proof_document);
+    }
+
+    return this.request('/payments/', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  static async updatePayment(id: number, paymentData: {
+    supplier?: number;
+    date?: string;
+    amount?: number;
+    method?: 'cash' | 'card' | 'bank_transfer' | 'check';
+    status?: 'pending' | 'completed' | 'failed';
+    reference?: string;
+    notes?: string;
+    proof_document?: File;
+  }) {
+    // If we have a file, use FormData
+    if (paymentData.proof_document) {
+      const formData = new FormData();
+      
+      if (paymentData.supplier) {
+        formData.append('supplier', paymentData.supplier.toString());
+      }
+      if (paymentData.date) {
+        formData.append('date', paymentData.date);
+      }
+      if (paymentData.amount) {
+        formData.append('amount', paymentData.amount.toString());
+      }
+      if (paymentData.method) {
+        formData.append('method', paymentData.method);
+      }
+      if (paymentData.status) {
+        formData.append('status', paymentData.status);
+      }
+      if (paymentData.reference) {
+        formData.append('reference', paymentData.reference);
+      }
+      if (paymentData.notes) {
+        formData.append('notes', paymentData.notes);
+      }
+      formData.append('proof_document', paymentData.proof_document);
+
+      return this.request(`/payments/${id}/`, {
+        method: 'PUT',
+        body: formData,
+      });
+    } else {
+      // For simple updates like status, use JSON
+      const updateData: any = {};
+      
+      if (paymentData.supplier) updateData.supplier = paymentData.supplier;
+      if (paymentData.date) updateData.date = paymentData.date;
+      if (paymentData.amount) updateData.amount = paymentData.amount;
+      if (paymentData.method) updateData.method = paymentData.method;
+      if (paymentData.status) updateData.status = paymentData.status;
+      if (paymentData.reference) updateData.reference = paymentData.reference;
+      if (paymentData.notes) updateData.notes = paymentData.notes;
+
+      return this.patch(`/payments/${id}/`, updateData);
+    }
+  }
+
+  static async deletePayment(id: number) {
+    return this.delete(`/payments/${id}/`);
+  }
+
   // Check if user is authenticated
   static isAuthenticated(): boolean {
     return !!AuthToken.get();
