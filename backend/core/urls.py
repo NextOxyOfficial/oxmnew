@@ -21,4 +21,7 @@ urlpatterns = [
     path('gifts/', views.gifts, name='gifts'),
     path('gifts/<int:gift_id>/', views.gift_detail, name='gift-detail'),
     path('gifts/<int:gift_id>/toggle/', views.toggle_gift, name='toggle-gift'),
+    path('achievements/', views.achievements, name='achievements'),
+    path('achievements/<int:achievement_id>/', views.achievement_detail, name='achievement-detail'),
+    path('achievements/<int:achievement_id>/toggle/', views.toggle_achievement, name='toggle-achievement'),
 ]

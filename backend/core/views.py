@@ -10,7 +10,7 @@ from django.db import IntegrityError
 from django.core.mail import send_mail
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from .models import UserProfile, Category, UserSettings, Gift
+from .models import UserProfile, Category, UserSettings, Gift, Achievement
 import json
 
 @api_view(['GET'])
@@ -833,6 +833,275 @@ def toggle_gift(request, gift_id):
     except Gift.DoesNotExist:
         return Response({
             'error': 'Gift not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Achievement Views
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def achievements(request):
+    """
+    GET: Retrieve all achievements for the authenticated user
+    POST: Create a new achievement
+    """
+    if request.method == 'GET':
+        try:
+            user_achievements = Achievement.objects.filter(user=request.user)
+            achievements_data = [{
+                'id': achievement.id,
+                'name': achievement.name,
+                'type': achievement.type,
+                'value': achievement.value,
+                'points': achievement.points,
+                'is_active': achievement.is_active,
+                'created_at': achievement.created_at,
+                'updated_at': achievement.updated_at,
+            } for achievement in user_achievements]
+            
+            return Response({
+                'achievements': achievements_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Validate required fields
+            required_fields = ['type', 'value', 'points']
+            for field in required_fields:
+                if field not in data:
+                    return Response({
+                        'error': f'Missing required field: {field}'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate achievement type
+            valid_types = ['orders', 'amount']
+            if data['type'] not in valid_types:
+                return Response({
+                    'error': f'Invalid achievement type. Must be one of: {valid_types}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate value and points are positive integers
+            try:
+                value = int(data['value'])
+                points = int(data['points'])
+                if value <= 0 or points <= 0:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                return Response({
+                    'error': 'Value and points must be positive integers'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Generate achievement name if not provided
+            achievement_name = data.get('name')
+            if not achievement_name:
+                if data['type'] == 'orders':
+                    achievement_name = f"Complete {value} orders"
+                else:
+                    achievement_name = f"Spend {value} dollars"
+            
+            # Check for duplicate achievement names for this user
+            if Achievement.objects.filter(user=request.user, name=achievement_name).exists():
+                return Response({
+                    'error': 'Achievement with this name already exists'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create the achievement
+            achievement = Achievement.objects.create(
+                user=request.user,
+                name=achievement_name,
+                type=data['type'],
+                value=value,
+                points=points,
+                is_active=data.get('is_active', True)
+            )
+            
+            return Response({
+                'message': 'Achievement created successfully',
+                'achievement': {
+                    'id': achievement.id,
+                    'name': achievement.name,
+                    'type': achievement.type,
+                    'value': achievement.value,
+                    'points': achievement.points,
+                    'is_active': achievement.is_active,
+                    'created_at': achievement.created_at,
+                    'updated_at': achievement.updated_at,
+                }
+            }, status=status.HTTP_201_CREATED)
+            
+        except json.JSONDecodeError:
+            return Response({
+                'error': 'Invalid JSON data'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError:
+            return Response({
+                'error': 'Achievement with this name already exists'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def achievement_detail(request, achievement_id):
+    """
+    GET: Retrieve a specific achievement
+    PUT: Update a specific achievement
+    DELETE: Delete a specific achievement
+    """
+    try:
+        achievement = Achievement.objects.get(id=achievement_id, user=request.user)
+    except Achievement.DoesNotExist:
+        return Response({
+            'error': 'Achievement not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        return Response({
+            'achievement': {
+                'id': achievement.id,
+                'name': achievement.name,
+                'type': achievement.type,
+                'value': achievement.value,
+                'points': achievement.points,
+                'is_active': achievement.is_active,
+                'created_at': achievement.created_at,
+                'updated_at': achievement.updated_at,
+            }
+        }, status=status.HTTP_200_OK)
+    
+    elif request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            
+            # Update fields if provided
+            if 'name' in data:
+                # Check for duplicate names (excluding current achievement)
+                if Achievement.objects.filter(
+                    user=request.user, 
+                    name=data['name']
+                ).exclude(id=achievement.id).exists():
+                    return Response({
+                        'error': 'Achievement with this name already exists'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                achievement.name = data['name']
+            
+            if 'type' in data:
+                valid_types = ['orders', 'amount']
+                if data['type'] not in valid_types:
+                    return Response({
+                        'error': f'Invalid achievement type. Must be one of: {valid_types}'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                achievement.type = data['type']
+            
+            if 'value' in data:
+                try:
+                    value = int(data['value'])
+                    if value <= 0:
+                        raise ValueError()
+                    achievement.value = value
+                except (ValueError, TypeError):
+                    return Response({
+                        'error': 'Value must be a positive integer'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if 'points' in data:
+                try:
+                    points = int(data['points'])
+                    if points <= 0:
+                        raise ValueError()
+                    achievement.points = points
+                except (ValueError, TypeError):
+                    return Response({
+                        'error': 'Points must be a positive integer'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if 'is_active' in data:
+                achievement.is_active = bool(data['is_active'])
+            
+            achievement.save()
+            
+            return Response({
+                'message': 'Achievement updated successfully',
+                'achievement': {
+                    'id': achievement.id,
+                    'name': achievement.name,
+                    'type': achievement.type,
+                    'value': achievement.value,
+                    'points': achievement.points,
+                    'is_active': achievement.is_active,
+                    'created_at': achievement.created_at,
+                    'updated_at': achievement.updated_at,
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except json.JSONDecodeError:
+            return Response({
+                'error': 'Invalid JSON data'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError:
+            return Response({
+                'error': 'Achievement with this name already exists'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'DELETE':
+        try:
+            achievement_name = achievement.name
+            achievement.delete()
+            
+            return Response({
+                'message': f'Achievement "{achievement_name}" deleted successfully'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_achievement(request, achievement_id):
+    """
+    Toggle achievement active/inactive status
+    """
+    try:
+        achievement = Achievement.objects.get(id=achievement_id, user=request.user)
+        
+        # Toggle the active status
+        achievement.is_active = not achievement.is_active
+        achievement.save()
+        
+        return Response({
+            'message': f'Achievement {achievement.name} {"activated" if achievement.is_active else "deactivated"} successfully',
+            'achievement': {
+                'id': achievement.id,
+                'name': achievement.name,
+                'type': achievement.type,
+                'value': achievement.value,
+                'points': achievement.points,
+                'is_active': achievement.is_active,
+                'created_at': achievement.created_at,
+                'updated_at': achievement.updated_at,
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Achievement.DoesNotExist:
+        return Response({
+            'error': 'Achievement not found'
         }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ApiService } from '@/lib/api';
 
 interface Achievement {
   id: number;
@@ -84,19 +85,20 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
     }
     
     try {
-      const newAchievement: Achievement = {
-        id: Date.now(),
-        name: `${formData.type === 'orders' ? 'Complete' : 'Spend'} ${value} ${formData.type === 'orders' ? 'orders' : 'dollars'}`,
+      const response = await ApiService.createAchievement({
         type: formData.type,
         value: value,
         points: points,
         is_active: true
-      };
+      });
       
-      setAchievements([...achievements, newAchievement]);
-      setFormData({ type: 'orders', value: '', points: '' });
-      showNotification('success', 'Achievement created successfully!');
+      if (response.achievement) {
+        setAchievements([...achievements, response.achievement]);
+        setFormData({ type: 'orders', value: '', points: '' });
+        showNotification('success', 'Achievement created successfully!');
+      }
     } catch (error) {
+      console.error('Error creating achievement:', error);
       showNotification('error', 'Failed to create achievement');
     }
   };
@@ -104,12 +106,16 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
   const toggleAchievement = async (id: number) => {
     try {
       setToggleLoading(prev => new Set(prev).add(id));
-      setAchievements(achievements.map(achievement => 
-        achievement.id === id ? { ...achievement, is_active: !achievement.is_active } : achievement
-      ));
-      const updatedAchievement = achievements.find(a => a.id === id);
-      showNotification('success', `Achievement ${updatedAchievement?.is_active ? 'deactivated' : 'activated'} successfully!`);
+      const response = await ApiService.toggleAchievement(id);
+      
+      if (response.achievement) {
+        setAchievements(achievements.map(achievement => 
+          achievement.id === id ? response.achievement : achievement
+        ));
+        showNotification('success', `Achievement ${response.achievement.is_active ? 'activated' : 'deactivated'} successfully!`);
+      }
     } catch (error) {
+      console.error('Error toggling achievement:', error);
       showNotification('error', 'Error updating achievement. Please try again.');
     } finally {
       setToggleLoading(prev => {
@@ -122,10 +128,12 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
 
   const deleteAchievement = async (id: number) => {
     try {
+      await ApiService.deleteAchievement(id);
       setAchievements(achievements.filter(achievement => achievement.id !== id));
       setDeleteModal({ isOpen: false, achievement: null });
       showNotification('success', 'Achievement deleted successfully!');
     } catch (error) {
+      console.error('Error deleting achievement:', error);
       showNotification('error', 'Error deleting achievement. Please try again.');
     }
   };

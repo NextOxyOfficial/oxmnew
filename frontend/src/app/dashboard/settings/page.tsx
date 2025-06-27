@@ -111,6 +111,7 @@ export default function SettingsPage() {
     fetchProfile();
     fetchSettings();
     fetchGifts();
+    fetchAchievements();
   }, []);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -175,6 +176,17 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error fetching gifts:', error);
+    }
+  };
+
+  const fetchAchievements = async () => {
+    try {
+      const response = await ApiService.getAchievements();
+      if (response.achievements) {
+        setAchievements(response.achievements);
+      }
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
     }
   };
 

@@ -271,6 +271,39 @@ export class ApiService {
     return this.put(`/gifts/${giftId}/toggle/`, {});
   }
 
+  // Achievement methods
+  static async getAchievements() {
+    return this.get('/achievements/');
+  }
+
+  static async createAchievement(achievementData: {
+    name?: string;
+    type: 'orders' | 'amount';
+    value: number;
+    points: number;
+    is_active?: boolean;
+  }) {
+    return this.post('/achievements/', achievementData);
+  }
+
+  static async updateAchievement(achievementId: number, achievementData: {
+    name?: string;
+    type?: 'orders' | 'amount';
+    value?: number;
+    points?: number;
+    is_active?: boolean;
+  }) {
+    return this.put(`/achievements/${achievementId}/`, achievementData);
+  }
+
+  static async deleteAchievement(achievementId: number) {
+    return this.delete(`/achievements/${achievementId}/`);
+  }
+
+  static async toggleAchievement(achievementId: number) {
+    return this.put(`/achievements/${achievementId}/toggle/`, {});
+  }
+
   // Check if user is authenticated
   static isAuthenticated(): boolean {
     return !!AuthToken.get();

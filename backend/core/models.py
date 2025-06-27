@@ -92,3 +92,26 @@ class Gift(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.user.username}"
+
+class Achievement(models.Model):
+    ACHIEVEMENT_TYPES = [
+        ('orders', 'Order Count'),
+        ('amount', 'Purchase Amount'),
+    ]
+    
+    name = models.CharField(max_length=100)
+    type = models.CharField(max_length=10, choices=ACHIEVEMENT_TYPES)
+    value = models.PositiveIntegerField(help_text='Target value (number of orders or amount in dollars)')
+    points = models.PositiveIntegerField(help_text='Points awarded when achievement is earned')
+    is_active = models.BooleanField(default=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='achievements')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name_plural = "Achievements"
+        ordering = ['type', 'value']
+        unique_together = ['name', 'user']  # Prevent duplicate achievement names per user
+    
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"
