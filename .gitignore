@@ -51,6 +51,7 @@ backend/core/migrations/__pycache__/
 backend/backend/__pycache__/
 
 # Database files - ALL database files should be ignored
+# SQLite (should not be used in this project)
 *.sqlite3
 *.db
 *.sqlite
@@ -59,14 +60,32 @@ backend/db.sqlite3
 backend/*.sqlite3
 backend/*.sqlite
 backend/*.db
-pgdata/
-postgres_data/
-*.sql
-*.dump
-*.backup
 database.sqlite3
 test.db
 local.sqlite3
+
+# PostgreSQL specific
+*.sql
+*.dump
+*.backup
+*.tar
+*.tar.gz
+*.gz
+pgdata/
+postgres_data/
+postgresql_data/
+pg_log/
+*.pgdump
+*.psql
+
+# Database backups and exports
+database_backup/
+database_backups/
+db_backup/
+data_backup/
+backup/
+*.bak
+*.backup
 
 # Next.js
 frontend/.next/
