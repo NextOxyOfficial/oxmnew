@@ -18,8 +18,6 @@ interface UserProfile {
 }
 
 interface GeneralSettings {
-  emailNotifications: boolean;
-  smsNotifications: boolean;
   language: string;
   currency: string;
 }
@@ -50,8 +48,6 @@ export default function SettingsPage() {
 
   // General settings state
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
-    emailNotifications: true,
-    smsNotifications: false,
     language: 'en',
     currency: 'USD'
   });
@@ -287,7 +283,7 @@ export default function SettingsPage() {
                     <button
                       onClick={handleProfileSave}
                       disabled={loading}
-                      className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
+                      className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                     >
                       {loading ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -316,7 +312,7 @@ export default function SettingsPage() {
                       <button
                         onClick={handleAddCategory}
                         disabled={loading || !newCategory.trim()}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
+                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                       >
                         Add
                       </button>
@@ -348,7 +344,7 @@ export default function SettingsPage() {
                           <div className="flex items-center space-x-2">
                             <button
                               onClick={() => toggleCategory(category.id)}
-                              className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
+                              className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer ${
                                 category.is_active
                                   ? 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/20'
                                   : 'bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-400/30'
@@ -358,7 +354,7 @@ export default function SettingsPage() {
                             </button>
                             <button
                               onClick={() => deleteCategory(category.id)}
-                              className="px-3 py-1 bg-red-500/20 text-red-300 text-xs font-medium rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200"
+                              className="px-3 py-1 bg-red-500/20 text-red-300 text-xs font-medium rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200 cursor-pointer"
                             >
                               Delete
                             </button>
@@ -374,36 +370,6 @@ export default function SettingsPage() {
             {/* General Tab */}
             {activeTab === 'general' && (
               <div className="space-y-8">
-                {/* Notifications */}
-                <div>
-                  <h3 className="text-xl font-semibold text-white mb-6">Notifications</h3>
-                  <div className="space-y-4">
-                    {[
-                      { key: 'emailNotifications', label: 'Email Notifications', desc: 'Receive updates via email' },
-                      { key: 'smsNotifications', label: 'SMS Notifications', desc: 'Receive text message alerts' }
-                    ].map((item) => (
-                      <div key={item.key} className="flex items-center justify-between py-3 px-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200">
-                        <div>
-                          <p className="text-sm font-medium text-white">{item.label}</p>
-                          <p className="text-xs text-gray-400">{item.desc}</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={generalSettings[item.key as keyof GeneralSettings] as boolean}
-                            onChange={(e) => setGeneralSettings({
-                              ...generalSettings,
-                              [item.key]: e.target.checked
-                            })}
-                            className="sr-only peer"
-                          />
-                          <div className="w-9 h-5 bg-white/20 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500 backdrop-blur-sm"></div>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Preferences */}
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-6">Preferences</h3>
@@ -497,7 +463,7 @@ export default function SettingsPage() {
                         <button
                           onClick={handlePasswordChange}
                           disabled={loading || !securitySettings.currentPassword || !securitySettings.newPassword || !securitySettings.confirmPassword}
-                          className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
+                          className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                         >
                           {loading ? 'Changing...' : 'Change Password'}
                         </button>
@@ -516,35 +482,13 @@ export default function SettingsPage() {
                         <button
                           onClick={handleForgotPassword}
                           disabled={loading}
-                          className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
+                          className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                         >
                           {loading ? 'Sending...' : 'Send Reset Link'}
                         </button>
                       </div>
                     </div>
-
-                    {/* Security Tips */}
-                    <div className="bg-blue-500/10 backdrop-blur-sm border border-blue-400/20 rounded-lg p-4">
-                      <h4 className="text-sm font-medium text-blue-300 mb-2">🔒 Security Tips</h4>
-                      <ul className="text-xs text-blue-200 space-y-1">
-                        <li>• Use a strong password with at least 8 characters</li>
-                        <li>• Include uppercase, lowercase, numbers, and special characters</li>
-                        <li>• Don't reuse passwords from other accounts</li>
-                        <li>• Enable two-factor authentication when available</li>
-                      </ul>
-                    </div>
                   </div>
-                </div>
-
-                {/* Save Button */}
-                <div className="flex justify-end pt-4 border-t border-white/20">
-                  <button
-                    onClick={handleGeneralSettingsSave}
-                    disabled={loading}
-                    className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
-                  >
-                    {loading ? 'Saving...' : 'Save Settings'}
-                  </button>
                 </div>
               </div>
             )}
