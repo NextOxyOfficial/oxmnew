@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import CustomDomainSettings from '@/components/CustomDomainSettings';
+import { ApiService } from '@/lib/api';
 
 interface Category {
   id: number;
@@ -68,7 +69,28 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchCategories();
+    fetchProfile();
   }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await ApiService.getProfile();
+      if (response.user && response.profile) {
+        setProfile({
+          email: response.user.email || '',
+          first_name: response.user.first_name || '',
+          last_name: response.user.last_name || '',
+          company: response.profile.company || '',
+          company_address: response.profile.company_address || '',
+          phone: response.profile.phone || '',
+          store_logo: response.profile.store_logo ? ApiService.getImageUrl(response.profile.store_logo) : '',
+          banner_image: response.profile.banner_image ? ApiService.getImageUrl(response.profile.banner_image) : ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -85,41 +107,76 @@ export default function SettingsPage() {
   const handleProfileSave = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Profile saved:', profile);
+      const response = await ApiService.updateProfile({
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        email: profile.email,
+        company: profile.company,
+        company_address: profile.company_address,
+        phone: profile.phone
+      });
+      
+      console.log('Profile saved:', response);
+      alert('Profile updated successfully!');
     } catch (error) {
       console.error('Error saving profile:', error);
+      alert('Error saving profile. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImageUpload = (file: File, type: 'logo' | 'banner') => {
+  const handleImageUpload = async (file: File, type: 'logo' | 'banner') => {
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setProfile(prevProfile => {
-          if (type === 'logo') {
-            return { ...prevProfile, store_logo: result };
-          } else {
-            return { ...prevProfile, banner_image: result };
-          }
-        });
-      };
-      reader.readAsDataURL(file);
+      setLoading(true);
+      try {
+        let response: any;
+        if (type === 'logo') {
+          response = await ApiService.uploadStoreLogo(file);
+          setProfile(prevProfile => ({
+            ...prevProfile,
+            store_logo: ApiService.getImageUrl(response.store_logo_url)
+          }));
+        } else {
+          response = await ApiService.uploadBannerImage(file);
+          setProfile(prevProfile => ({
+            ...prevProfile,
+            banner_image: ApiService.getImageUrl(response.banner_image_url)
+          }));
+        }
+        console.log('Image uploaded:', response);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Error uploading image. Please try again.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const removeImage = (type: 'logo' | 'banner') => {
-    setProfile(prevProfile => {
+  const removeImage = async (type: 'logo' | 'banner') => {
+    setLoading(true);
+    try {
       if (type === 'logo') {
-        return { ...prevProfile, store_logo: '' };
+        await ApiService.removeStoreLogo();
+        setProfile(prevProfile => ({
+          ...prevProfile,
+          store_logo: ''
+        }));
       } else {
-        return { ...prevProfile, banner_image: '' };
+        await ApiService.removeBannerImage();
+        setProfile(prevProfile => ({
+          ...prevProfile,
+          banner_image: ''
+        }));
       }
-    });
+      console.log(`${type} removed successfully`);
+    } catch (error) {
+      console.error(`Error removing ${type}:`, error);
+      alert(`Error removing ${type}. Please try again.`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddCategory = async () => {
@@ -265,40 +322,8 @@ export default function SettingsPage() {
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <div>
-                  {/* Company Information */}
-                  <div className="mb-8">
-                    <h4 className="text-lg font-medium text-white mb-4">Company Details</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Company Name
-                        </label>
-                        <input
-                          type="text"
-                          value={profile.company}
-                          onChange={(e) => setProfile({ ...profile, company: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                          placeholder="Enter your company name"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Company Address
-                        </label>
-                        <textarea
-                          value={profile.company_address}
-                          onChange={(e) => setProfile({ ...profile, company_address: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm resize-none"
-                          placeholder="Enter your company address"
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Store Branding */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-white mb-4">Store Branding</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Store Logo Upload */}
                       <div>
@@ -388,6 +413,37 @@ export default function SettingsPage() {
                           />
                         </div>
                         <p className="text-xs text-gray-400 mt-1">Recommended: 1200x300px, PNG or JPG</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Company Information */}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-medium text-white mb-4">Company Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Company Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profile.company}
+                          onChange={(e) => setProfile({ ...profile, company: e.target.value })}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          placeholder="Enter your company name"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Company Address
+                        </label>
+                        <textarea
+                          value={profile.company_address}
+                          onChange={(e) => setProfile({ ...profile, company_address: e.target.value })}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm resize-none"
+                          placeholder="Enter your company address"
+                          rows={3}
+                        />
                       </div>
                     </div>
                   </div>

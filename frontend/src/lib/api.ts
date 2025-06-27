@@ -1,4 +1,5 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 // Auth token management
 export const AuthToken = {
@@ -20,10 +21,17 @@ export class ApiService {
     const url = `${API_BASE_URL}${endpoint}`;
     const token = AuthToken.get();
     
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
-    };
+    const headers: HeadersInit = {};
+    
+    // Only set Content-Type for non-FormData requests
+    if (!(options.body instanceof FormData)) {
+      (headers as Record<string, string>)['Content-Type'] = 'application/json';
+    }
+    
+    // Add custom headers
+    if (options.headers) {
+      Object.assign(headers, options.headers);
+    }
 
     // Only add Authorization header if token exists and not explicitly disabled
     const skipAuth = options.headers && 'Authorization' in options.headers && (options.headers as any)['Authorization'] === null;
@@ -143,8 +151,54 @@ export class ApiService {
     return this.get('/auth/profile/');
   }
 
+  static async updateProfile(profileData: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    company?: string;
+    company_address?: string;
+    phone?: string;
+  }) {
+    return this.put('/auth/profile/', profileData);
+  }
+
+  static async uploadStoreLogo(file: File) {
+    const formData = new FormData();
+    formData.append('store_logo', file);
+    
+    return this.request('/auth/profile/upload-logo/', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  static async uploadBannerImage(file: File) {
+    const formData = new FormData();
+    formData.append('banner_image', file);
+    
+    return this.request('/auth/profile/upload-banner/', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  static async removeStoreLogo() {
+    return this.delete('/auth/profile/remove-logo/');
+  }
+
+  static async removeBannerImage() {
+    return this.delete('/auth/profile/remove-banner/');
+  }
+
   // Check if user is authenticated
   static isAuthenticated(): boolean {
     return !!AuthToken.get();
+  }
+
+  // Helper to get full URL for images
+  static getImageUrl(relativePath: string): string {
+    if (!relativePath) return '';
+    if (relativePath.startsWith('http')) return relativePath;
+    return `${BACKEND_BASE_URL}${relativePath}`;
   }
 }

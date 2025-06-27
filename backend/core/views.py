@@ -7,6 +7,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from django.db import IntegrityError
+from .models import UserProfile
+import json
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -22,6 +24,7 @@ def api_root(request):
             'login': '/api/auth/login/',
             'logout': '/api/auth/logout/',
             'profile': '/api/auth/profile/',
+            'update-profile': '/api/auth/profile/update/',
             'admin': '/admin/',
         }
     })
@@ -155,21 +158,186 @@ def logout(request):
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 def profile(request):
     """
-    Get user profile
+    Get or update user profile
     """
     user = request.user
-    return Response({
-        'user': {
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'date_joined': user.date_joined,
-            'last_login': user.last_login,
-        }
-    }, status=status.HTTP_200_OK)
+    
+    if request.method == 'GET':
+        # Get profile data
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        
+        return Response({
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'date_joined': user.date_joined,
+                'last_login': user.last_login,
+            },
+            'profile': {
+                'company': profile.company or '',
+                'company_address': profile.company_address or '',
+                'phone': profile.phone or '',
+                'store_logo': profile.store_logo.url if profile.store_logo else '',
+                'banner_image': profile.banner_image.url if profile.banner_image else '',
+            }
+        }, status=status.HTTP_200_OK)
+    
+    elif request.method == 'PUT':
+        # Update profile data
+        try:
+            # Get or create profile
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            
+            # Update user fields
+            if 'first_name' in request.data:
+                user.first_name = request.data['first_name']
+            if 'last_name' in request.data:
+                user.last_name = request.data['last_name']
+            if 'email' in request.data:
+                user.email = request.data['email']
+            
+            user.save()
+            
+            # Update profile fields
+            if 'company' in request.data:
+                profile.company = request.data['company']
+            if 'company_address' in request.data:
+                profile.company_address = request.data['company_address']
+            if 'phone' in request.data:
+                profile.phone = request.data['phone']
+            
+            profile.save()
+            
+            return Response({
+                'message': 'Profile updated successfully',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                },
+                'profile': {
+                    'company': profile.company or '',
+                    'company_address': profile.company_address or '',
+                    'phone': profile.phone or '',
+                    'store_logo': profile.store_logo.url if profile.store_logo else '',
+                    'banner_image': profile.banner_image.url if profile.banner_image else '',
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_store_logo(request):
+    """
+    Upload store logo
+    """
+    try:
+        if 'store_logo' not in request.FILES:
+            return Response({
+                'error': 'No file provided'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+        profile.store_logo = request.FILES['store_logo']
+        profile.save()
+        
+        return Response({
+            'message': 'Store logo uploaded successfully',
+            'store_logo_url': profile.store_logo.url
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_banner_image(request):
+    """
+    Upload banner image
+    """
+    try:
+        if 'banner_image' not in request.FILES:
+            return Response({
+                'error': 'No file provided'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+        profile.banner_image = request.FILES['banner_image']
+        profile.save()
+        
+        return Response({
+            'message': 'Banner image uploaded successfully',
+            'banner_image_url': profile.banner_image.url
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_store_logo(request):
+    """
+    Remove store logo
+    """
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+        if profile.store_logo:
+            profile.store_logo.delete()
+            profile.store_logo = None
+            profile.save()
+        
+        return Response({
+            'message': 'Store logo removed successfully'
+        }, status=status.HTTP_200_OK)
+        
+    except UserProfile.DoesNotExist:
+        return Response({
+            'error': 'Profile not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_banner_image(request):
+    """
+    Remove banner image
+    """
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+        if profile.banner_image:
+            profile.banner_image.delete()
+            profile.banner_image = None
+            profile.save()
+        
+        return Response({
+            'message': 'Banner image removed successfully'
+        }, status=status.HTTP_200_OK)
+        
+    except UserProfile.DoesNotExist:
+        return Response({
+            'error': 'Profile not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
