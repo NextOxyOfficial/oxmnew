@@ -30,6 +30,7 @@ interface PaymentsTabProps {
   formatDate: (dateString: string) => string;
   getStatusColor: (status: string) => string;
   getPaymentMethodIcon: (method: string) => string;
+  onUpdatePayment?: (paymentId: number, updatedData: { status: 'pending' | 'completed' | 'failed' }) => Promise<void>;
 }
 
 export default function PaymentsTab({
@@ -41,10 +42,13 @@ export default function PaymentsTab({
   formatCurrency,
   formatDate,
   getStatusColor,
-  getPaymentMethodIcon
+  getPaymentMethodIcon,
+  onUpdatePayment
 }: PaymentsTabProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
+  const [updating, setUpdating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const filteredSuppliers = getUniqueSuppliersFromPayments().filter(supplier =>
@@ -67,6 +71,21 @@ export default function PaymentsTab({
     setSelectedPaymentSupplier(supplier);
     setIsDropdownOpen(false);
     setSearchTerm('');
+  };
+
+  const handleStatusUpdate = async (paymentId: number, newStatus: 'pending' | 'completed' | 'failed') => {
+    if (!onUpdatePayment) return;
+    
+    setUpdating(true);
+    try {
+      await onUpdatePayment(paymentId, { status: newStatus });
+      setEditingPaymentId(null);
+    } catch (error) {
+      console.error('Failed to update payment status:', error);
+      // You might want to show an error notification here
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const downloadCSV = () => {
@@ -299,7 +318,7 @@ export default function PaymentsTab({
             </thead>
             <tbody>
               {getFilteredPayments().map((payment) => (
-                <tr key={payment.id} className="border-t border-slate-700/30 hover:bg-slate-800/30 transition-colors">
+                <tr key={payment.id} className="border-t border-slate-700/30 hover:bg-slate-800/30 transition-colors group">
                   <td className="py-3 px-4">
                     <div className="space-y-1">
                       <div className="text-slate-100 text-sm font-medium">{payment.supplier.name}</div>
@@ -315,9 +334,47 @@ export default function PaymentsTab({
                   <td className="py-3 px-4 text-slate-300 font-mono text-xs">{payment.reference}</td>
                   <td className="py-3 px-4 text-slate-100 font-medium text-sm">{formatCurrency(payment.amount)}</td>
                   <td className="py-3 px-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(payment.status)}`}>
-                      {payment.status}
-                    </span>
+                    {editingPaymentId === payment.id ? (
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={payment.status}
+                          onChange={(e) => handleStatusUpdate(payment.id, e.target.value as 'pending' | 'completed' | 'failed')}
+                          disabled={updating}
+                          className="px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="completed">Completed</option>
+                          <option value="failed">Failed</option>
+                        </select>
+                        <button
+                          onClick={() => setEditingPaymentId(null)}
+                          disabled={updating}
+                          className="p-1 text-slate-400 hover:text-slate-300 disabled:opacity-50"
+                          title="Cancel"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(payment.status)}`}>
+                          {payment.status}
+                        </span>
+                        {onUpdatePayment && (
+                          <button
+                            onClick={() => setEditingPaymentId(payment.id)}
+                            className="p-1 text-slate-400 hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Edit status"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     {payment.proof_url ? (
