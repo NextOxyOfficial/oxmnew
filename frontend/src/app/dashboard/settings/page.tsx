@@ -404,7 +404,7 @@ export default function SettingsPage() {
         )}
 
         {/* Tabs */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+        <div className="bg-white/5 backdrop-blur-xl border mb-6 border-white/10 rounded-2xl shadow-2xl">
           <div className="border-b border-white/10">
             <nav className="flex space-x-8 px-6 pt-6">
               {tabs.map((tab) => (
