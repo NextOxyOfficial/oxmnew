@@ -540,7 +540,7 @@ export default function SuppliersPage() {
     { id: 'suppliers', label: 'Suppliers' },
     { id: 'purchases', label: 'Purchase History' },
     { id: 'payments', label: 'Payments' },
-    { id: 'products', label: 'Products Owned' }
+    { id: 'products', label: 'Products' }
   ];
 
   return (
@@ -642,7 +642,7 @@ export default function SuppliersPage() {
               />
             )}
 
-            {/* Products Owned Tab */}
+            {/* Products Tab */}
             {activeTab === 'products' && (
               <ProductsTab
                 products={products}
