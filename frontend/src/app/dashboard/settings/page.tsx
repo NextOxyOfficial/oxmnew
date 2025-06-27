@@ -19,13 +19,15 @@ interface UserProfile {
 
 interface GeneralSettings {
   emailNotifications: boolean;
-  pushNotifications: boolean;
   smsNotifications: boolean;
-  profileVisibility: string;
-  dataSharing: boolean;
-  theme: string;
   language: string;
-  timezone: string;
+  currency: string;
+}
+
+interface SecuritySettings {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 export default function SettingsPage() {
@@ -49,13 +51,16 @@ export default function SettingsPage() {
   // General settings state
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
     emailNotifications: true,
-    pushNotifications: true,
     smsNotifications: false,
-    profileVisibility: 'public',
-    dataSharing: false,
-    theme: 'light',
     language: 'en',
-    timezone: 'UTC'
+    currency: 'USD'
+  });
+
+  // Security settings state
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   });
 
   useEffect(() => {
@@ -124,6 +129,51 @@ export default function SettingsPage() {
       console.log('General settings saved:', generalSettings);
     } catch (error) {
       console.error('Error saving general settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (securitySettings.newPassword !== securitySettings.confirmPassword) {
+      alert('New passwords do not match');
+      return;
+    }
+    
+    if (securitySettings.newPassword.length < 8) {
+      alert('Password must be at least 8 characters long');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Password changed successfully');
+      setSecuritySettings({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      alert('Password changed successfully!');
+    } catch (error) {
+      console.error('Error changing password:', error);
+      alert('Error changing password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Password reset email sent to:', user?.email);
+      alert(`Password reset instructions have been sent to ${user?.email}`);
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      alert('Error sending password reset email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -330,7 +380,6 @@ export default function SettingsPage() {
                   <div className="space-y-4">
                     {[
                       { key: 'emailNotifications', label: 'Email Notifications', desc: 'Receive updates via email' },
-                      { key: 'pushNotifications', label: 'Push Notifications', desc: 'Receive browser notifications' },
                       { key: 'smsNotifications', label: 'SMS Notifications', desc: 'Receive text message alerts' }
                     ].map((item) => (
                       <div key={item.key} className="flex items-center justify-between py-3 px-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200">
@@ -355,60 +404,10 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Privacy */}
-                <div>
-                  <h3 className="text-xl font-semibold text-white mb-6">Privacy</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Profile Visibility
-                      </label>
-                      <select
-                        value={generalSettings.profileVisibility}
-                        onChange={(e) => setGeneralSettings({ ...generalSettings, profileVisibility: e.target.value })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white text-sm backdrop-blur-sm"
-                      >
-                        <option value="public" className="bg-gray-800 text-white">Public</option>
-                        <option value="private" className="bg-gray-800 text-white">Private</option>
-                        <option value="contacts" className="bg-gray-800 text-white">Contacts Only</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200">
-                      <div>
-                        <p className="text-sm font-medium text-white">Data Sharing</p>
-                        <p className="text-xs text-gray-400">Allow analytics data sharing</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={generalSettings.dataSharing}
-                          onChange={(e) => setGeneralSettings({ ...generalSettings, dataSharing: e.target.checked })}
-                          className="sr-only peer"
-                        />
-                        <div className="w-9 h-5 bg-white/20 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500 backdrop-blur-sm"></div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Preferences */}
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-6">Preferences</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Theme
-                      </label>
-                      <select
-                        value={generalSettings.theme}
-                        onChange={(e) => setGeneralSettings({ ...generalSettings, theme: e.target.value })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white text-sm backdrop-blur-sm"
-                      >
-                        <option value="light" className="bg-gray-800 text-white">Light</option>
-                        <option value="dark" className="bg-gray-800 text-white">Dark</option>
-                        <option value="auto" className="bg-gray-800 text-white">Auto</option>
-                      </select>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Language
@@ -426,18 +425,113 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Timezone
+                        Currency
                       </label>
                       <select
-                        value={generalSettings.timezone}
-                        onChange={(e) => setGeneralSettings({ ...generalSettings, timezone: e.target.value })}
+                        value={generalSettings.currency}
+                        onChange={(e) => setGeneralSettings({ ...generalSettings, currency: e.target.value })}
                         className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white text-sm backdrop-blur-sm"
                       >
-                        <option value="UTC" className="bg-gray-800 text-white">UTC</option>
-                        <option value="EST" className="bg-gray-800 text-white">Eastern Time</option>
-                        <option value="CST" className="bg-gray-800 text-white">Central Time</option>
-                        <option value="PST" className="bg-gray-800 text-white">Pacific Time</option>
+                        <option value="USD" className="bg-gray-800 text-white">USD - US Dollar</option>
+                        <option value="EUR" className="bg-gray-800 text-white">EUR - Euro</option>
+                        <option value="GBP" className="bg-gray-800 text-white">GBP - British Pound</option>
+                        <option value="JPY" className="bg-gray-800 text-white">JPY - Japanese Yen</option>
+                        <option value="CAD" className="bg-gray-800 text-white">CAD - Canadian Dollar</option>
+                        <option value="AUD" className="bg-gray-800 text-white">AUD - Australian Dollar</option>
+                        <option value="CHF" className="bg-gray-800 text-white">CHF - Swiss Franc</option>
+                        <option value="CNY" className="bg-gray-800 text-white">CNY - Chinese Yuan</option>
                       </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security */}
+                <div>
+                  <h3 className="text-xl font-semibold text-white mb-6">Security</h3>
+                  <div className="space-y-6">
+                    {/* Change Password */}
+                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+                      <h4 className="text-lg font-medium text-white mb-4">Change Password</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Current Password
+                          </label>
+                          <input
+                            type="password"
+                            value={securitySettings.currentPassword}
+                            onChange={(e) => setSecuritySettings({ ...securitySettings, currentPassword: e.target.value })}
+                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                            placeholder="Enter current password"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            New Password
+                          </label>
+                          <input
+                            type="password"
+                            value={securitySettings.newPassword}
+                            onChange={(e) => setSecuritySettings({ ...securitySettings, newPassword: e.target.value })}
+                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                            placeholder="Enter new password"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Confirm New Password
+                          </label>
+                          <input
+                            type="password"
+                            value={securitySettings.confirmPassword}
+                            onChange={(e) => setSecuritySettings({ ...securitySettings, confirmPassword: e.target.value })}
+                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                            placeholder="Confirm new password"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-6 flex justify-between items-center">
+                        <div className="text-xs text-gray-400">
+                          Password must be at least 8 characters long
+                        </div>
+                        <button
+                          onClick={handlePasswordChange}
+                          disabled={loading || !securitySettings.currentPassword || !securitySettings.newPassword || !securitySettings.confirmPassword}
+                          className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
+                        >
+                          {loading ? 'Changing...' : 'Change Password'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Forgot Password */}
+                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-lg font-medium text-white mb-2">Forgot Password</h4>
+                          <p className="text-sm text-gray-400">
+                            Send a password reset link to your email: <span className="text-blue-400">{user?.email}</span>
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleForgotPassword}
+                          disabled={loading}
+                          className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
+                        >
+                          {loading ? 'Sending...' : 'Send Reset Link'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Security Tips */}
+                    <div className="bg-blue-500/10 backdrop-blur-sm border border-blue-400/20 rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-blue-300 mb-2">🔒 Security Tips</h4>
+                      <ul className="text-xs text-blue-200 space-y-1">
+                        <li>• Use a strong password with at least 8 characters</li>
+                        <li>• Include uppercase, lowercase, numbers, and special characters</li>
+                        <li>• Don't reuse passwords from other accounts</li>
+                        <li>• Enable two-factor authentication when available</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
