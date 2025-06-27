@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ClientOnly from "@/components/ClientOnly";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,9 +29,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <ClientOnly fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
+        }>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ClientOnly>
       </body>
     </html>
   );

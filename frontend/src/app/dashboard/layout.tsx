@@ -34,17 +34,6 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  // Add global styles for scrollbar hiding
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = scrollbarHideStyles;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -172,6 +161,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [user, loading, router]);
 
+  // Show loading spinner during auth check
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
@@ -184,6 +174,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   if (!user) {
+    // Redirect to login if not authenticated
+    router.push('/auth/login');
     return null;
   }
 
@@ -219,14 +211,3 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     </div>
   );
 }
-
-// Custom scrollbar hide styles
-const scrollbarHideStyles = `
-  .scrollbar-hide {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
-  }
-`;

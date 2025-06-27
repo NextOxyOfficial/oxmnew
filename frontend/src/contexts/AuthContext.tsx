@@ -35,14 +35,32 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
-  // Check if user is authenticated on mount
+  // Handle client-side mounting
   useEffect(() => {
-    checkAuth();
+    setMounted(true);
   }, []);
 
+  // Only run auth check after component is mounted
+  useEffect(() => {
+    if (mounted) {
+      checkAuth();
+    }
+  }, [mounted]);
+
   const checkAuth = async () => {
+    // Only check auth after component is mounted
+    if (!mounted) return;
+    
     try {
+      // First check if we have a token before making API call
+      const token = AuthToken.get();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      
       if (ApiService.isAuthenticated()) {
         const profile = await ApiService.getProfile();
         setUser(profile.user);
@@ -95,11 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     user,
-    loading,
+    loading: loading || !mounted, // Keep loading true until mounted
     login,
     register,
     logout,
-    isAuthenticated: !!user,
+    isAuthenticated: mounted && !!user, // Only show as authenticated after mounting
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

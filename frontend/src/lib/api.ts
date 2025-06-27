@@ -3,15 +3,28 @@ const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhos
 
 // Auth token management
 export const AuthToken = {
-  get: () => typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null,
+  get: () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem('auth_token');
+    } catch {
+      return null;
+    }
+  },
   set: (token: string) => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+    try {
       localStorage.setItem('auth_token', token);
+    } catch {
+      // Silently fail if localStorage is not available
     }
   },
   remove: () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+    try {
       localStorage.removeItem('auth_token');
+    } catch {
+      // Silently fail if localStorage is not available
     }
   }
 };
