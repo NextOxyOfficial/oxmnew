@@ -19,14 +19,14 @@ interface HeaderProps {
 
 export default function Header({ user, onLogout, onMenuClick, title }: HeaderProps) {
   return (
-    <header className="bg-white/10 backdrop-blur-xl border-b border-white/20 shadow-lg">
+    <header className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/50 shadow-lg">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             {/* Mobile menu button */}
             <button
               onClick={onMenuClick}
-              className="lg:hidden rounded-md p-2 inline-flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors"
+              className="lg:hidden rounded-md p-2 inline-flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-500 transition-colors"
             >
               <span className="sr-only">Open sidebar</span>
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,15 +34,15 @@ export default function Header({ user, onLogout, onMenuClick, title }: HeaderPro
               </svg>
             </button>
             
-            <h1 className="ml-4 lg:ml-0 text-xl font-semibold text-white">
+            <h1 className="ml-4 lg:ml-0 text-xl font-semibold text-slate-100">
               {title}
             </h1>
           </div>
           
           <div className="flex items-center space-x-4">
             {/* User info */}
-            <div className="hidden md:flex items-center space-x-2 text-gray-300">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center text-white font-medium text-sm">
+            <div className="hidden md:flex items-center space-x-2 text-slate-300">
+              <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-cyan-500 rounded-full flex items-center justify-center text-slate-900 font-medium text-sm">
                 {(user.first_name?.[0] || user.username[0]).toUpperCase()}
               </div>
               <span className="text-sm">
