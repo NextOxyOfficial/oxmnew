@@ -10,7 +10,7 @@ from django.db import IntegrityError
 from django.core.mail import send_mail
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from .models import UserProfile, Category, UserSettings, Gift, Achievement
+from .models import UserProfile, Category, UserSettings, Gift, Achievement, Level
 import json
 
 @api_view(['GET'])
@@ -1102,6 +1102,207 @@ def toggle_achievement(request, achievement_id):
     except Achievement.DoesNotExist:
         return Response({
             'error': 'Achievement not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Level Views
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def levels(request):
+    """
+    GET: Retrieve all levels for the authenticated user
+    POST: Create a new level
+    """
+    if request.method == 'GET':
+        try:
+            user_levels = Level.objects.filter(user=request.user)
+            levels_data = [{
+                'id': level.id,
+                'name': level.name,
+                'is_active': level.is_active,
+                'created_at': level.created_at,
+                'updated_at': level.updated_at,
+            } for level in user_levels]
+            
+            return Response({
+                'levels': levels_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Validate required fields
+            if 'name' not in data or not data['name'].strip():
+                return Response({
+                    'error': 'Level name is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            level_name = data['name'].strip()
+            
+            # Check for duplicate level names for this user
+            if Level.objects.filter(user=request.user, name=level_name).exists():
+                return Response({
+                    'error': 'Level with this name already exists'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create the level
+            level = Level.objects.create(
+                user=request.user,
+                name=level_name,
+                is_active=data.get('is_active', True)
+            )
+            
+            return Response({
+                'message': 'Level created successfully',
+                'level': {
+                    'id': level.id,
+                    'name': level.name,
+                    'is_active': level.is_active,
+                    'created_at': level.created_at,
+                    'updated_at': level.updated_at,
+                }
+            }, status=status.HTTP_201_CREATED)
+            
+        except json.JSONDecodeError:
+            return Response({
+                'error': 'Invalid JSON data'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError:
+            return Response({
+                'error': 'Level with this name already exists'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def level_detail(request, level_id):
+    """
+    GET: Retrieve a specific level
+    PUT: Update a specific level
+    DELETE: Delete a specific level
+    """
+    try:
+        level = Level.objects.get(id=level_id, user=request.user)
+    except Level.DoesNotExist:
+        return Response({
+            'error': 'Level not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        return Response({
+            'level': {
+                'id': level.id,
+                'name': level.name,
+                'is_active': level.is_active,
+                'created_at': level.created_at,
+                'updated_at': level.updated_at,
+            }
+        }, status=status.HTTP_200_OK)
+    
+    elif request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            
+            # Update fields if provided
+            if 'name' in data:
+                new_name = data['name'].strip()
+                if not new_name:
+                    return Response({
+                        'error': 'Level name cannot be empty'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Check for duplicate names (excluding current level)
+                if Level.objects.filter(
+                    user=request.user, 
+                    name=new_name
+                ).exclude(id=level.id).exists():
+                    return Response({
+                        'error': 'Level with this name already exists'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                level.name = new_name
+            
+            if 'is_active' in data:
+                level.is_active = bool(data['is_active'])
+            
+            level.save()
+            
+            return Response({
+                'message': 'Level updated successfully',
+                'level': {
+                    'id': level.id,
+                    'name': level.name,
+                    'is_active': level.is_active,
+                    'created_at': level.created_at,
+                    'updated_at': level.updated_at,
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except json.JSONDecodeError:
+            return Response({
+                'error': 'Invalid JSON data'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError:
+            return Response({
+                'error': 'Level with this name already exists'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'DELETE':
+        try:
+            level_name = level.name
+            level.delete()
+            
+            return Response({
+                'message': f'Level "{level_name}" deleted successfully'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_level(request, level_id):
+    """
+    Toggle level active/inactive status
+    """
+    try:
+        level = Level.objects.get(id=level_id, user=request.user)
+        
+        # Toggle the active status
+        level.is_active = not level.is_active
+        level.save()
+        
+        return Response({
+            'message': f'Level {level.name} {"activated" if level.is_active else "deactivated"} successfully',
+            'level': {
+                'id': level.id,
+                'name': level.name,
+                'is_active': level.is_active,
+                'created_at': level.created_at,
+                'updated_at': level.updated_at,
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Level.DoesNotExist:
+        return Response({
+            'error': 'Level not found'
         }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({

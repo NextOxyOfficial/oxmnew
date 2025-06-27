@@ -115,3 +115,18 @@ class Achievement(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.user.username}"
+
+class Level(models.Model):
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='levels')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name_plural = "Levels"
+        ordering = ['name']
+        unique_together = ['name', 'user']  # Prevent duplicate level names per user
+    
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"

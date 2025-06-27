@@ -304,6 +304,33 @@ export class ApiService {
     return this.put(`/achievements/${achievementId}/toggle/`, {});
   }
 
+  // Level methods
+  static async getLevels() {
+    return this.get('/levels/');
+  }
+
+  static async createLevel(levelData: {
+    name: string;
+    is_active?: boolean;
+  }) {
+    return this.post('/levels/', levelData);
+  }
+
+  static async updateLevel(levelId: number, levelData: {
+    name?: string;
+    is_active?: boolean;
+  }) {
+    return this.put(`/levels/${levelId}/`, levelData);
+  }
+
+  static async deleteLevel(levelId: number) {
+    return this.delete(`/levels/${levelId}/`);
+  }
+
+  static async toggleLevel(levelId: number) {
+    return this.post(`/levels/${levelId}/toggle/`, {});
+  }
+
   // Check if user is authenticated
   static isAuthenticated(): boolean {
     return !!AuthToken.get();

@@ -24,4 +24,7 @@ urlpatterns = [
     path('achievements/', views.achievements, name='achievements'),
     path('achievements/<int:achievement_id>/', views.achievement_detail, name='achievement-detail'),
     path('achievements/<int:achievement_id>/toggle/', views.toggle_achievement, name='toggle-achievement'),
+    path('levels/', views.levels, name='levels'),
+    path('levels/<int:level_id>/', views.level_detail, name='level-detail'),
+    path('levels/<int:level_id>/toggle/', views.toggle_level, name='toggle-level'),
 ]
