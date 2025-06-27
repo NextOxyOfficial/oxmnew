@@ -99,123 +99,235 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
 
   return (
     <>
-      <div className="space-y-6">
-        <div>
-          {/* Create Achievement Form */}
-          <div className="mb-8">
-            <h4 className="text-lg font-medium text-white mb-4">Create Achievement</h4>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 max-w-md">
-              <div className="space-y-4">
-                {/* Type Dropdown */}
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Type</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'orders' | 'amount' }))}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  >
-                    <option value="orders" className="bg-gray-800">By Orders</option>
-                    <option value="amount" className="bg-gray-800">By Purchased Amount</option>
-                  </select>
-                </div>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <h3 className="text-2xl font-bold text-white mb-2">Achievement System</h3>
+          <p className="text-gray-400">Reward customers for their purchases and loyalty</p>
+        </div>
 
-                {/* Value Input */}
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    {formData.type === 'orders' ? 'Number of Orders' : 'Amount ($)'}
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.value}
-                    onChange={(e) => setFormData(prev => ({ ...prev, value: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    placeholder={formData.type === 'orders' ? 'e.g. 10' : 'e.g. 500'}
-                  />
-                </div>
+        {/* Create Achievement Card */}
+        <div className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-blue-500/30 rounded-2xl p-6 backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-xl font-semibold text-white">Create New Achievement</h4>
+              <p className="text-sm text-gray-400">Set up rewards for customer milestones</p>
+            </div>
+          </div>
 
-                {/* Points Input */}
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Points</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.points}
-                    onChange={(e) => setFormData(prev => ({ ...prev, points: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    placeholder="e.g. 100"
-                  />
-                </div>
-
-                {/* Create Button */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Achievement Type */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-white">
+                Achievement Type
+              </label>
+              <div className="space-y-2">
                 <button
-                  onClick={handleCreateAchievement}
-                  disabled={loading || !formData.value || !formData.points}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200"
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, type: 'orders' }))}
+                  className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                    formData.type === 'orders'
+                      ? 'border-blue-500 bg-blue-500/10 text-white'
+                      : 'border-gray-600 bg-gray-800/30 text-gray-300 hover:border-gray-500'
+                  }`}
                 >
-                  Create Achievement
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">📦</span>
+                    <div>
+                      <div className="font-medium">Order Count</div>
+                      <div className="text-xs text-gray-400">Based on number of orders</div>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, type: 'amount' }))}
+                  className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                    formData.type === 'amount'
+                      ? 'border-green-500 bg-green-500/10 text-white'
+                      : 'border-gray-600 bg-gray-800/30 text-gray-300 hover:border-gray-500'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">💰</span>
+                    <div>
+                      <div className="font-medium">Purchase Amount</div>
+                      <div className="text-xs text-gray-400">Based on total spending</div>
+                    </div>
+                  </div>
                 </button>
               </div>
             </div>
-          </div>
 
-          {/* Achievements List */}
-          <div className="mb-8">
-            <h4 className="text-lg font-medium text-white mb-4">Achievements</h4>
-            <div className="max-w-2xl">
-              {achievements.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <p>No achievements found. Create your first achievement above.</p>
+            {/* Target Value */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-white">
+                Target {formData.type === 'orders' ? 'Orders' : 'Amount'}
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.value}
+                  onChange={(e) => setFormData(prev => ({ ...prev, value: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white text-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder={formData.type === 'orders' ? '10' : '500'}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                  {formData.type === 'orders' ? 'orders' : 'USD'}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {achievements.map((achievement) => (
-                    <div
-                      key={achievement.id}
-                      className="flex items-center justify-between p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h5 className="font-medium text-white">{achievement.name}</h5>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            achievement.type === 'orders' 
-                              ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
-                              : 'bg-green-500/20 text-green-300 border border-green-400/30'
-                          }`}>
-                            {achievement.type === 'orders' ? '📦 Orders' : '💰 Amount'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-400">
-                          <span>Target: {achievement.value} {achievement.type === 'orders' ? 'orders' : 'dollars'}</span>
-                          <span>Points: {achievement.points}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => toggleAchievement(achievement.id)}
-                          className={`px-3 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
-                            achievement.is_active
-                              ? 'bg-green-500/20 text-green-300 border border-green-400/30 hover:bg-green-500/30'
-                              : 'bg-gray-500/20 text-gray-300 border border-gray-400/30 hover:bg-gray-500/30'
-                          }`}
-                        >
-                          {achievement.is_active ? 'Active' : 'Inactive'}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(achievement)}
-                          className="p-2 bg-red-500/20 text-red-300 rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              </div>
+              <p className="text-xs text-gray-400">
+                {formData.type === 'orders' 
+                  ? 'Customer needs to complete this many orders'
+                  : 'Customer needs to spend this amount in total'
+                }
+              </p>
+            </div>
+
+            {/* Points Reward */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-white">
+                Points Reward
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.points}
+                  onChange={(e) => setFormData(prev => ({ ...prev, points: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white text-lg font-medium focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  placeholder="100"
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-yellow-400">
+                  ⭐
                 </div>
-              )}
+              </div>
+              <p className="text-xs text-gray-400">
+                Points awarded when achievement is earned
+              </p>
             </div>
           </div>
+
+          {/* Preview & Create */}
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <div className="flex items-center justify-between">
+              <div className="text-gray-300">
+                <span className="text-sm">Preview: </span>
+                <span className="font-medium text-white">
+                  {formData.value && formData.points ? (
+                    <>
+                      {formData.type === 'orders' ? 'Complete' : 'Spend'} {formData.value} {formData.type === 'orders' ? 'orders' : 'dollars'} → {formData.points} points
+                    </>
+                  ) : (
+                    'Fill in the fields to see preview'
+                  )}
+                </span>
+              </div>
+              <button
+                onClick={handleCreateAchievement}
+                disabled={loading || !formData.value || !formData.points}
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
+              >
+                {loading ? 'Creating...' : 'Create Achievement'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Existing Achievements */}
+        <div className="bg-gray-900/40 border border-gray-700 rounded-2xl p-6 backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-xl font-semibold text-white">Your Achievements</h4>
+              <p className="text-sm text-gray-400">{achievements.length} achievement{achievements.length !== 1 ? 's' : ''} created</p>
+            </div>
+          </div>
+
+          {achievements.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🏆</span>
+              </div>
+              <h5 className="text-lg font-medium text-white mb-2">No achievements yet</h5>
+              <p className="text-gray-400 mb-6">Create your first achievement above to start rewarding customers</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {achievements.map((achievement) => (
+                <div
+                  key={achievement.id}
+                  className="group bg-gray-800/50 border border-gray-700 rounded-xl p-5 hover:bg-gray-800/70 transition-all duration-200"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+                        achievement.type === 'orders' 
+                          ? 'bg-blue-500/20 border border-blue-500/30'
+                          : 'bg-green-500/20 border border-green-500/30'
+                      }`}>
+                        {achievement.type === 'orders' ? '📦' : '💰'}
+                      </div>
+                      <div>
+                        <h5 className="font-semibold text-white text-lg leading-tight">{achievement.name}</h5>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            achievement.type === 'orders' 
+                              ? 'bg-blue-500/20 text-blue-300'
+                              : 'bg-green-500/20 text-green-300'
+                          }`}>
+                            {achievement.type === 'orders' ? 'Order Based' : 'Amount Based'}
+                          </span>
+                          <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded-full text-xs font-medium">
+                            ⭐ {achievement.points} pts
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => toggleAchievement(achievement.id)}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          achievement.is_active
+                            ? 'bg-green-600 text-white hover:bg-green-700'
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        }`}
+                      >
+                        {achievement.is_active ? 'Active' : 'Inactive'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(achievement)}
+                        className="p-2 bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition-all"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-900/50 rounded-lg p-3">
+                    <div className="text-sm text-gray-300">
+                      <strong>Target:</strong> {achievement.value} {achievement.type === 'orders' ? 'orders' : 'dollars'}
+                    </div>
+                    <div className="text-sm text-gray-300 mt-1">
+                      <strong>Reward:</strong> {achievement.points} loyalty points
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
