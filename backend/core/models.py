@@ -31,10 +31,40 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username}'s Profile"
 
+class UserSettings(models.Model):
+    LANGUAGE_CHOICES = [
+        ('en', 'English'),
+        ('bn', 'Bangla'),
+    ]
+    
+    CURRENCY_CHOICES = [
+        ('USD', 'USD - US Dollar'),
+        ('EUR', 'EUR - Euro'),
+        ('GBP', 'GBP - British Pound'),
+        ('JPY', 'JPY - Japanese Yen'),
+        ('CAD', 'CAD - Canadian Dollar'),
+        ('AUD', 'AUD - Australian Dollar'),
+        ('CHF', 'CHF - Swiss Franc'),
+        ('CNY', 'CNY - Chinese Yuan'),
+        ('BDT', 'BDT - Bangladeshi Taka'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
+    language = models.CharField(max_length=5, choices=LANGUAGE_CHOICES, default='en', help_text='User preferred language')
+    currency = models.CharField(max_length=5, choices=CURRENCY_CHOICES, default='USD')
+    email_notifications = models.BooleanField(default=True)
+    marketing_notifications = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s Settings"
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
+        UserSettings.objects.create(user=instance)
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
@@ -42,3 +72,8 @@ def save_user_profile(sender, instance, **kwargs):
         instance.profile.save()
     else:
         UserProfile.objects.create(user=instance)
+    
+    if hasattr(instance, 'settings'):
+        instance.settings.save()
+    else:
+        UserSettings.objects.create(user=instance)

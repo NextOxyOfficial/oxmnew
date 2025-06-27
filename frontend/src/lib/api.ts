@@ -218,6 +218,32 @@ export class ApiService {
     return this.put(`/categories/${categoryId}/toggle/`, {});
   }
 
+  // Settings methods
+  static async getSettings() {
+    return this.get('/auth/settings/');
+  }
+
+  static async updateSettings(settingsData: {
+    language?: string;
+    currency?: string;
+    email_notifications?: boolean;
+    marketing_notifications?: boolean;
+  }) {
+    return this.put('/auth/settings/', settingsData);
+  }
+
+  static async changePassword(passwordData: {
+    current_password: string;
+    new_password: string;
+    confirm_password: string;
+  }) {
+    return this.post('/auth/change-password/', passwordData);
+  }
+
+  static async requestPasswordReset() {
+    return this.post('/auth/request-password-reset/', {});
+  }
+
   // Check if user is authenticated
   static isAuthenticated(): boolean {
     return !!AuthToken.get();

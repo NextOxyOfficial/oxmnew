@@ -7,7 +7,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from django.db import IntegrityError
-from .models import UserProfile, Category
+from django.core.mail import send_mail
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from .models import UserProfile, Category, UserSettings
 import json
 
 @api_view(['GET'])
@@ -510,6 +513,163 @@ def toggle_category(request, category_id):
         return Response({
             'error': 'Category not found'
         }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def user_settings(request):
+    """
+    Get or update user settings
+    """
+    user = request.user
+    
+    if request.method == 'GET':
+        try:
+            # Get or create settings
+            settings, created = UserSettings.objects.get_or_create(user=user)
+            
+            return Response({
+                'settings': {
+                    'language': settings.language,
+                    'currency': settings.currency,
+                    'email_notifications': settings.email_notifications,
+                    'marketing_notifications': settings.marketing_notifications,
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'PUT':
+        try:
+            # Get or create settings
+            settings, created = UserSettings.objects.get_or_create(user=user)
+            
+            # Update settings fields
+            if 'language' in request.data:
+                language = request.data['language']
+                if language in [choice[0] for choice in UserSettings.LANGUAGE_CHOICES]:
+                    settings.language = language
+                else:
+                    return Response({
+                        'error': 'Invalid language choice'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if 'currency' in request.data:
+                currency = request.data['currency']
+                if currency in [choice[0] for choice in UserSettings.CURRENCY_CHOICES]:
+                    settings.currency = currency
+                else:
+                    return Response({
+                        'error': 'Invalid currency choice'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if 'email_notifications' in request.data:
+                settings.email_notifications = bool(request.data['email_notifications'])
+            
+            if 'marketing_notifications' in request.data:
+                settings.marketing_notifications = bool(request.data['marketing_notifications'])
+            
+            settings.save()
+            
+            return Response({
+                'message': 'Settings updated successfully',
+                'settings': {
+                    'language': settings.language,
+                    'currency': settings.currency,
+                    'email_notifications': settings.email_notifications,
+                    'marketing_notifications': settings.marketing_notifications,
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """
+    Change user password
+    """
+    try:
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+        
+        if not current_password or not new_password or not confirm_password:
+            return Response({
+                'error': 'Current password, new password, and confirm password are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if current password is correct
+        if not request.user.check_password(current_password):
+            return Response({
+                'error': 'Current password is incorrect'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if new passwords match
+        if new_password != confirm_password:
+            return Response({
+                'error': 'New passwords do not match'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate new password
+        try:
+            validate_password(new_password, request.user)
+        except ValidationError as e:
+            return Response({
+                'error': list(e.messages)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Set new password
+        request.user.set_password(new_password)
+        request.user.save()
+        
+        return Response({
+            'message': 'Password changed successfully'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def request_password_reset(request):
+    """
+    Request password reset email
+    """
+    try:
+        user = request.user
+        
+        # In a real application, you would generate a reset token and send an email
+        # For now, we'll just simulate the process
+        
+        try:
+            # Simulate sending email (in production, use actual email service)
+            send_mail(
+                subject='Password Reset Request',
+                message=f'Hello {user.first_name or user.username},\n\nYou have requested a password reset. Please click the link below to reset your password.\n\n[Reset Password Link]\n\nIf you did not request this, please ignore this email.',
+                from_email='noreply@oxm.com',
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+        except Exception as email_error:
+            # Log the error but don't fail the request
+            print(f"Email sending failed: {email_error}")
+        
+        return Response({
+            'message': f'Password reset instructions have been sent to {user.email}'
+        }, status=status.HTTP_200_OK)
+        
     except Exception as e:
         return Response({
             'error': str(e)

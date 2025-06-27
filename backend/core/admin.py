@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, Category
+from .models import UserProfile, Category, UserSettings
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
@@ -15,6 +15,19 @@ class CategoryAdmin(admin.ModelAdmin):
     search_fields = ('name', 'description', 'user__username')
     readonly_fields = ('created_at', 'updated_at')
     ordering = ('name',)
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(user=request.user)
+
+@admin.register(UserSettings)
+class UserSettingsAdmin(admin.ModelAdmin):
+    list_display = ('user', 'language', 'currency', 'email_notifications', 'marketing_notifications', 'created_at', 'updated_at')
+    list_filter = ('language', 'currency', 'email_notifications', 'marketing_notifications', 'created_at', 'updated_at')
+    search_fields = ('user__username', 'user__email')
+    readonly_fields = ('created_at', 'updated_at')
     
     def get_queryset(self, request):
         qs = super().get_queryset(request)

@@ -28,6 +28,8 @@ interface UserProfile {
 interface GeneralSettings {
   language: string;
   currency: string;
+  email_notifications: boolean;
+  marketing_notifications: boolean;
 }
 
 interface SecuritySettings {
@@ -69,7 +71,9 @@ export default function SettingsPage() {
   // General settings state
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
     language: 'en',
-    currency: 'USD'
+    currency: 'USD',
+    email_notifications: true,
+    marketing_notifications: false
   });
 
   // Security settings state
@@ -82,6 +86,7 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchCategories();
     fetchProfile();
+    fetchSettings();
   }, []);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -119,6 +124,22 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const response = await ApiService.getSettings();
+      if (response.settings) {
+        setGeneralSettings({
+          language: response.settings.language || 'en',
+          currency: response.settings.currency || 'USD',
+          email_notifications: response.settings.email_notifications !== undefined ? response.settings.email_notifications : true,
+          marketing_notifications: response.settings.marketing_notifications !== undefined ? response.settings.marketing_notifications : false
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
     }
   };
 
@@ -204,14 +225,11 @@ export default function SettingsPage() {
     
     setLoading(true);
     try {
-      const response = await ApiService.createCategory({
-        name: newCategory.trim()
-      });
-      
+      const response = await ApiService.createCategory({ name: newCategory.trim() });
       if (response.category) {
         setCategories([...categories, response.category]);
         setNewCategory('');
-        console.log('Category added:', response.message);
+        console.log('Category added successfully');
         showNotification('success', 'Category added successfully!');
       }
     } catch (error) {
@@ -227,15 +245,15 @@ export default function SettingsPage() {
     try {
       const response = await ApiService.toggleCategory(id);
       if (response.category) {
-        setCategories(categories.map(cat =>
-          cat.id === id ? response.category : cat
+        setCategories(categories.map(cat => 
+          cat.id === id ? { ...cat, is_active: response.category.is_active } : cat
         ));
-        console.log('Category toggled:', response.message);
+        console.log('Category toggled successfully');
         showNotification('success', `Category ${response.category.is_active ? 'activated' : 'deactivated'} successfully!`);
       }
     } catch (error) {
       console.error('Error toggling category:', error);
-      showNotification('error', 'Error toggling category. Please try again.');
+      showNotification('error', 'Error updating category. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -274,11 +292,18 @@ export default function SettingsPage() {
   const handleGeneralSettingsSave = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('General settings saved:', generalSettings);
+      const response = await ApiService.updateSettings({
+        language: generalSettings.language,
+        currency: generalSettings.currency,
+        email_notifications: generalSettings.email_notifications,
+        marketing_notifications: generalSettings.marketing_notifications
+      });
+      
+      console.log('General settings saved:', response);
+      showNotification('success', 'Settings updated successfully!');
     } catch (error) {
       console.error('Error saving general settings:', error);
+      showNotification('error', 'Error saving settings. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -286,48 +311,39 @@ export default function SettingsPage() {
 
   const handlePasswordChange = async () => {
     if (securitySettings.newPassword !== securitySettings.confirmPassword) {
-      alert('New passwords do not match');
+      showNotification('error', 'New passwords do not match');
       return;
     }
     
     if (securitySettings.newPassword.length < 8) {
-      alert('Password must be at least 8 characters long');
+      showNotification('error', 'Password must be at least 8 characters long');
       return;
     }
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Password changed successfully');
+      const response = await ApiService.changePassword({
+        current_password: securitySettings.currentPassword,
+        new_password: securitySettings.newPassword,
+        confirm_password: securitySettings.confirmPassword
+      });
+      
+      console.log('Password changed successfully:', response);
       setSecuritySettings({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       });
-      alert('Password changed successfully!');
+      showNotification('success', 'Password changed successfully!');
     } catch (error) {
       console.error('Error changing password:', error);
-      alert('Error changing password. Please try again.');
+      showNotification('error', error instanceof Error ? error.message : 'Error changing password. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForgotPassword = async () => {
-    setLoading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Password reset email sent to:', user?.email);
-      alert(`Password reset instructions have been sent to ${user?.email}`);
-    } catch (error) {
-      console.error('Error sending password reset email:', error);
-      alert('Error sending password reset email. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const handleCustomDomainSave = async (settings: any) => {
     setLoading(true);
@@ -335,7 +351,7 @@ export default function SettingsPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       console.log('Custom domain settings saved:', settings);
-      alert('Custom domain settings saved successfully!');
+      showNotification('success', 'Custom domain settings saved successfully!');
     } catch (error) {
       console.error('Error saving custom domain settings:', error);
       throw error;
@@ -379,37 +395,26 @@ export default function SettingsPage() {
                 )}
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">{notification.message}</p>
-              </div>
-              <div className="ml-auto pl-3">
-                <div className="-mx-1.5 -my-1.5">
-                  <button
-                    onClick={() => setNotification({ isVisible: false, type: 'success', message: '' })}
-                    className="inline-flex rounded-md p-1.5 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/20"
-                  >
-                    <span className="sr-only">Dismiss</span>
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
+                <p className="text-sm font-medium">
+                  {notification.message}
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Tab Navigation */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl mb-6">
-          <div className="border-b border-white/20">
-            <nav className="flex space-x-8 px-6">
+        {/* Tabs */}
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+          <div className="border-b border-white/10">
+            <nav className="flex space-x-8 px-6 pt-6">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-all duration-200 cursor-pointer ${
                     activeTab === tab.id
                       ? 'border-blue-400 text-blue-400'
-                      : 'border-transparent text-gray-300 hover:text-white hover:border-gray-400'
+                      : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
                   }`}
                 >
                   {tab.label}
@@ -418,142 +423,170 @@ export default function SettingsPage() {
             </nav>
           </div>
 
-          {/* Tab Content */}
-          <div className="p-2 sm:p-6">
+          <div className="p-6">
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <div>
-                  {/* Store Branding */}
+                  {/* Company Images */}
                   <div className="mb-8">
+                    <h4 className="text-lg font-medium text-white mb-4">Company Images</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Store Logo Upload */}
+                      {/* Store Logo */}
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">
                           Store Logo
                         </label>
-                        <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-white/20 rounded-lg p-4 hover:border-white/40 transition-colors min-h-[120px]">
+                        <div className="w-full h-32 border-2 border-dashed border-white/20 rounded-lg flex items-center justify-center bg-white/5 backdrop-blur-sm hover:border-white/30 transition-all duration-200 cursor-pointer relative group"
+                             onClick={() => {
+                               const input = document.createElement('input');
+                               input.type = 'file';
+                               input.accept = 'image/*';
+                               input.onchange = (e: any) => {
+                                 const file = e.target.files[0];
+                                 if (file) handleImageUpload(file, 'logo');
+                               };
+                               input.click();
+                             }}>
                           {profile.store_logo ? (
-                            <div className="relative">
-                              <img
-                                src={profile.store_logo}
-                                alt="Store Logo"
-                                className="w-24 h-24 object-cover rounded-full border-2 border-white/20"
-                              />
-                              <button
-                                onClick={() => removeImage('logo')}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                              >
-                                ×
-                              </button>
-                            </div>
+                            <>
+                              <img src={profile.store_logo} alt="Store Logo" className="w-full h-full object-contain rounded-lg" />
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg">
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const input = document.createElement('input');
+                                      input.type = 'file';
+                                      input.accept = 'image/*';
+                                      input.onchange = (event: any) => {
+                                        const file = event.target.files[0];
+                                        if (file) handleImageUpload(file, 'logo');
+                                      };
+                                      input.click();
+                                    }}
+                                    className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeImage('logo');
+                                    }}
+                                    className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            </>
                           ) : (
                             <div className="text-center">
-                              <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
-                              <p className="text-sm text-gray-400">Upload Store Logo</p>
+                              <div className="mt-2 text-xs text-gray-400">
+                                Click to upload logo
+                              </div>
                             </div>
                           )}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                handleImageUpload(file, 'logo');
-                                e.target.value = ''; // Reset input
-                              }
-                            }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                            id="logo-upload"
-                          />
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">Recommended: 200x200px, PNG or JPG</p>
                       </div>
 
-                      {/* Banner Image Upload */}
+                      {/* Banner Image */}
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">
                           Banner Image
                         </label>
-                        <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-white/20 rounded-lg p-4 hover:border-white/40 transition-colors min-h-[120px]">
+                        <div className="w-full h-32 border-2 border-dashed border-white/20 rounded-lg flex items-center justify-center bg-white/5 backdrop-blur-sm hover:border-white/30 transition-all duration-200 cursor-pointer relative group"
+                             onClick={() => {
+                               const input = document.createElement('input');
+                               input.type = 'file';
+                               input.accept = 'image/*';
+                               input.onchange = (e: any) => {
+                                 const file = e.target.files[0];
+                                 if (file) handleImageUpload(file, 'banner');
+                               };
+                               input.click();
+                             }}>
                           {profile.banner_image ? (
-                            <div className="relative w-full">
-                              <img
-                                src={profile.banner_image}
-                                alt="Banner"
-                                className="w-full h-20 object-cover rounded-lg border border-white/20"
-                              />
-                              <button
-                                onClick={() => removeImage('banner')}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                              >
-                                ×
-                              </button>
-                            </div>
+                            <>
+                              <img src={profile.banner_image} alt="Banner" className="w-full h-full object-cover rounded-lg" />
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg">
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const input = document.createElement('input');
+                                      input.type = 'file';
+                                      input.accept = 'image/*';
+                                      input.onchange = (event: any) => {
+                                        const file = event.target.files[0];
+                                        if (file) handleImageUpload(file, 'banner');
+                                      };
+                                      input.click();
+                                    }}
+                                    className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeImage('banner');
+                                    }}
+                                    className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            </>
                           ) : (
                             <div className="text-center">
-                              <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
-                              <p className="text-sm text-gray-400">Upload Banner</p>
+                              <div className="mt-2 text-xs text-gray-400">
+                                Click to upload banner
+                              </div>
                             </div>
                           )}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                handleImageUpload(file, 'banner');
-                                e.target.value = ''; // Reset input
-                              }
-                            }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                            id="banner-upload"
-                          />
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">Recommended: 1200x300px, PNG or JPG</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Company Information */}
+                  {/* Company Address */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-white mb-4">Company Details</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Company Name
-                        </label>
-                        <input
-                          type="text"
-                          value={profile.company}
-                          onChange={(e) => setProfile({ ...profile, company: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                          placeholder="Enter your company name"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Company Address
-                        </label>
-                        <textarea
-                          value={profile.company_address}
-                          onChange={(e) => setProfile({ ...profile, company_address: e.target.value })}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm resize-none"
-                          placeholder="Enter your company address"
-                          rows={3}
-                        />
-                      </div>
+                    <h4 className="text-lg font-medium text-white mb-4">Company Address</h4>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Address
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={profile.company_address}
+                        onChange={(e) => setProfile({ ...profile, company_address: e.target.value })}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm resize-none"
+                        placeholder="Enter your company address"
+                      />
                     </div>
                   </div>
 
                   {/* Personal Information */}
                   <div className="mb-8">
                     <h4 className="text-lg font-medium text-white mb-4">Personal Information</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">
                           First Name
@@ -576,6 +609,18 @@ export default function SettingsPage() {
                           onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
                           className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
                           placeholder="Enter your last name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Company
+                        </label>
+                        <input
+                          type="text"
+                          value={profile.company}
+                          onChange={(e) => setProfile({ ...profile, company: e.target.value })}
+                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                          placeholder="Enter your company name"
                         />
                       </div>
                       <div>
@@ -691,9 +736,10 @@ export default function SettingsPage() {
 
             {/* General Tab */}
             {activeTab === 'general' && (
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {/* Preferences */}
                 <div className="mb-8">
+                  <h4 className="text-lg font-medium text-white mb-4">Preferences</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -705,9 +751,7 @@ export default function SettingsPage() {
                         className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white text-sm backdrop-blur-sm"
                       >
                         <option value="en" className="bg-gray-800 text-white">English</option>
-                        <option value="es" className="bg-gray-800 text-white">Spanish</option>
-                        <option value="fr" className="bg-gray-800 text-white">French</option>
-                        <option value="de" className="bg-gray-800 text-white">German</option>
+                        <option value="bn" className="bg-gray-800 text-white">Bangla</option>
                       </select>
                     </div>
                     <div>
@@ -727,6 +771,7 @@ export default function SettingsPage() {
                         <option value="AUD" className="bg-gray-800 text-white">AUD - Australian Dollar</option>
                         <option value="CHF" className="bg-gray-800 text-white">CHF - Swiss Franc</option>
                         <option value="CNY" className="bg-gray-800 text-white">CNY - Chinese Yuan</option>
+                        <option value="BDT" className="bg-gray-800 text-white">BDT - Bangladeshi Taka</option>
                       </select>
                     </div>
                   </div>
@@ -789,24 +834,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Forgot Password */}
-                  <div className="mb-6">
-                    <h4 className="text-lg font-medium text-white mb-4">Forgot Password</h4>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-400">
-                          Send a password reset link to your email: <span className="text-blue-400">{user?.email}</span>
-                        </p>
-                      </div>
-                      <button
-                        onClick={handleForgotPassword}
-                        disabled={loading}
-                        className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                      >
-                        {loading ? 'Sending...' : 'Send Reset Link'}
-                      </button>
-                    </div>
-                  </div>
+
                 </div>
 
                 {/* Custom Domain & DNS */}
@@ -865,7 +893,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleDeleteCancel}
                   disabled={loading}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-gray-300 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 transition-all duration-200"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   Cancel
                 </button>
