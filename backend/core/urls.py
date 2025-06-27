@@ -12,4 +12,7 @@ urlpatterns = [
     path('auth/profile/upload-banner/', views.upload_banner_image, name='upload-banner-image'),
     path('auth/profile/remove-logo/', views.remove_store_logo, name='remove-store-logo'),
     path('auth/profile/remove-banner/', views.remove_banner_image, name='remove-banner-image'),
+    path('categories/', views.categories, name='categories'),
+    path('categories/<int:category_id>/', views.category_detail, name='category-detail'),
+    path('categories/<int:category_id>/toggle/', views.toggle_category, name='toggle-category'),
 ]

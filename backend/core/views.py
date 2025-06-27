@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from django.db import IntegrityError
-from .models import UserProfile
+from .models import UserProfile, Category
 import json
 
 @api_view(['GET'])
@@ -336,6 +336,179 @@ def remove_banner_image(request):
     except UserProfile.DoesNotExist:
         return Response({
             'error': 'Profile not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def categories(request):
+    """
+    Get all categories or create a new category
+    """
+    if request.method == 'GET':
+        try:
+            user_categories = Category.objects.filter(user=request.user)
+            categories_data = []
+            
+            for category in user_categories:
+                categories_data.append({
+                    'id': category.id,
+                    'name': category.name,
+                    'description': category.description or '',
+                    'is_active': category.is_active,
+                    'created_at': category.created_at,
+                    'updated_at': category.updated_at,
+                })
+            
+            return Response({
+                'categories': categories_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'POST':
+        try:
+            name = request.data.get('name', '').strip()
+            description = request.data.get('description', '').strip()
+            
+            if not name:
+                return Response({
+                    'error': 'Category name is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if category with same name already exists for this user
+            if Category.objects.filter(user=request.user, name__iexact=name).exists():
+                return Response({
+                    'error': 'Category with this name already exists'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create new category
+            category = Category.objects.create(
+                name=name,
+                description=description,
+                user=request.user
+            )
+            
+            return Response({
+                'message': 'Category created successfully',
+                'category': {
+                    'id': category.id,
+                    'name': category.name,
+                    'description': category.description or '',
+                    'is_active': category.is_active,
+                    'created_at': category.created_at,
+                    'updated_at': category.updated_at,
+                }
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def category_detail(request, category_id):
+    """
+    Update or delete a specific category
+    """
+    try:
+        category = Category.objects.get(id=category_id, user=request.user)
+    except Category.DoesNotExist:
+        return Response({
+            'error': 'Category not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'PUT':
+        try:
+            # Update category fields
+            if 'name' in request.data:
+                name = request.data['name'].strip()
+                if not name:
+                    return Response({
+                        'error': 'Category name cannot be empty'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Check if another category with same name exists for this user
+                if Category.objects.filter(
+                    user=request.user, 
+                    name__iexact=name
+                ).exclude(id=category_id).exists():
+                    return Response({
+                        'error': 'Category with this name already exists'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                category.name = name
+            
+            if 'description' in request.data:
+                category.description = request.data['description'].strip()
+            
+            if 'is_active' in request.data:
+                category.is_active = bool(request.data['is_active'])
+            
+            category.save()
+            
+            return Response({
+                'message': 'Category updated successfully',
+                'category': {
+                    'id': category.id,
+                    'name': category.name,
+                    'description': category.description or '',
+                    'is_active': category.is_active,
+                    'created_at': category.created_at,
+                    'updated_at': category.updated_at,
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'DELETE':
+        try:
+            category.delete()
+            return Response({
+                'message': 'Category deleted successfully'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def toggle_category(request, category_id):
+    """
+    Toggle category active status
+    """
+    try:
+        category = Category.objects.get(id=category_id, user=request.user)
+        category.is_active = not category.is_active
+        category.save()
+        
+        return Response({
+            'message': f'Category {"activated" if category.is_active else "deactivated"} successfully',
+            'category': {
+                'id': category.id,
+                'name': category.name,
+                'description': category.description or '',
+                'is_active': category.is_active,
+                'created_at': category.created_at,
+                'updated_at': category.updated_at,
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Category.DoesNotExist:
+        return Response({
+            'error': 'Category not found'
         }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({

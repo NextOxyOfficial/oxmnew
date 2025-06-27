@@ -8,7 +8,10 @@ import { ApiService } from '@/lib/api';
 interface Category {
   id: number;
   name: string;
+  description?: string;
   is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface UserProfile {
@@ -94,10 +97,9 @@ export default function SettingsPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories');
-      if (response.ok) {
-        const data = await response.json();
-        setCategories(data);
+      const response = await ApiService.getCategories();
+      if (response.categories) {
+        setCategories(response.categories);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -184,28 +186,57 @@ export default function SettingsPage() {
     
     setLoading(true);
     try {
-      const newCat: Category = {
-        id: Date.now(),
-        name: newCategory.trim(),
-        is_active: true
-      };
-      setCategories([...categories, newCat]);
-      setNewCategory('');
+      const response = await ApiService.createCategory({
+        name: newCategory.trim()
+      });
+      
+      if (response.category) {
+        setCategories([...categories, response.category]);
+        setNewCategory('');
+        console.log('Category added:', response.message);
+      }
     } catch (error) {
       console.error('Error adding category:', error);
+      alert('Error adding category. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const toggleCategory = async (id: number) => {
-    setCategories(categories.map(cat =>
-      cat.id === id ? { ...cat, is_active: !cat.is_active } : cat
-    ));
+    setLoading(true);
+    try {
+      const response = await ApiService.toggleCategory(id);
+      if (response.category) {
+        setCategories(categories.map(cat =>
+          cat.id === id ? response.category : cat
+        ));
+        console.log('Category toggled:', response.message);
+      }
+    } catch (error) {
+      console.error('Error toggling category:', error);
+      alert('Error toggling category. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const deleteCategory = async (id: number) => {
-    setCategories(categories.filter(cat => cat.id !== id));
+    if (!confirm('Are you sure you want to delete this category?')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await ApiService.deleteCategory(id);
+      setCategories(categories.filter(cat => cat.id !== id));
+      console.log('Category deleted successfully');
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      alert('Error deleting category. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGeneralSettingsSave = async () => {
@@ -556,11 +587,15 @@ export default function SettingsPage() {
                               key={category.id}
                               className="flex items-center gap-2 p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200"
                             >
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                category.is_active
-                                  ? 'bg-green-500/20 text-green-300 border border-green-400/30'
-                                  : 'bg-gray-500/20 text-gray-300 border border-gray-400/30'
-                              }`}>
+                              <span 
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 ${
+                                  category.is_active
+                                    ? 'bg-green-500/20 text-green-300 border border-green-400/30 hover:bg-green-500/30'
+                                    : 'bg-gray-500/20 text-gray-300 border border-gray-400/30 hover:bg-gray-500/30'
+                                }`}
+                                onClick={() => toggleCategory(category.id)}
+                                title="Click to toggle active/inactive status"
+                              >
                                 {category.is_active ? 'Active' : 'Inactive'}
                               </span>
                               <span className="text-sm font-medium text-white whitespace-nowrap">{category.name}</span>

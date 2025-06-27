@@ -190,6 +190,34 @@ export class ApiService {
     return this.delete('/auth/profile/remove-banner/');
   }
 
+  // Category methods
+  static async getCategories() {
+    return this.get('/categories/');
+  }
+
+  static async createCategory(categoryData: {
+    name: string;
+    description?: string;
+  }) {
+    return this.post('/categories/', categoryData);
+  }
+
+  static async updateCategory(categoryId: number, categoryData: {
+    name?: string;
+    description?: string;
+    is_active?: boolean;
+  }) {
+    return this.put(`/categories/${categoryId}/`, categoryData);
+  }
+
+  static async deleteCategory(categoryId: number) {
+    return this.delete(`/categories/${categoryId}/`);
+  }
+
+  static async toggleCategory(categoryId: number) {
+    return this.put(`/categories/${categoryId}/toggle/`, {});
+  }
+
   // Check if user is authenticated
   static isAuthenticated(): boolean {
     return !!AuthToken.get();
