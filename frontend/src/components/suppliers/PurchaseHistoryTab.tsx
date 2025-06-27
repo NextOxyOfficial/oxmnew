@@ -14,6 +14,7 @@ interface Purchase {
   products: string;
   notes?: string;
   proof_document?: string;
+  proof_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -307,11 +308,11 @@ export default function PurchaseHistoryTab({
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    {purchase.proof_document ? (
+                    {purchase.proof_url ? (
                       <div className="flex items-center gap-2">
-                        {purchase.proof_document.toLowerCase().includes('.pdf') ? (
+                        {purchase.proof_url.toLowerCase().includes('.pdf') ? (
                           <a
-                            href={purchase.proof_document}
+                            href={purchase.proof_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors text-xs cursor-pointer"
@@ -323,7 +324,7 @@ export default function PurchaseHistoryTab({
                           </a>
                         ) : (
                           <button
-                            onClick={() => window.open(purchase.proof_document, '_blank')}
+                            onClick={() => window.open(purchase.proof_url, '_blank')}
                             className="flex items-center gap-1 px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20 transition-colors text-xs cursor-pointer"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

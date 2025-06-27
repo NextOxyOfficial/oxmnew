@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiService } from '@/lib/api';
 import { SuppliersTab, PurchaseHistoryTab, PaymentsTab, ProductsTab, CreatePurchaseModal, CreatePaymentModal } from '@/components/suppliers';
+import { ClientOnly } from '@/components';
 
 interface Purchase {
   id: number;
@@ -17,6 +18,7 @@ interface Purchase {
   products: string;
   notes?: string;
   proof_document?: string;
+  proof_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -187,18 +189,36 @@ export default function SuppliersPage() {
   // Fetch suppliers and purchases from API
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log('No user found, skipping data fetch');
+        return;
+      }
       
       try {
         setLoading(true);
-        const [suppliersResponse, purchasesResponse] = await Promise.all([
-          ApiService.getSuppliers(),
-          ApiService.getPurchases()
-        ]);
-        setSuppliers(suppliersResponse);
-        setPurchases(purchasesResponse);
+        console.log('Fetching suppliers and purchases for user:', user.username);
+        
+        // Fetch suppliers first
+        try {
+          const suppliersResponse = await ApiService.getSuppliers();
+          console.log('Suppliers fetched successfully:', suppliersResponse);
+          setSuppliers(suppliersResponse);
+        } catch (suppliersError) {
+          console.error('Error fetching suppliers:', suppliersError);
+          showNotification('error', 'Failed to load suppliers');
+        }
+
+        // Fetch purchases
+        try {
+          const purchasesResponse = await ApiService.getPurchases();
+          console.log('Purchases fetched successfully:', purchasesResponse);
+          setPurchases(purchasesResponse);
+        } catch (purchasesError) {
+          console.error('Error fetching purchases:', purchasesError);
+          showNotification('error', 'Failed to load purchases');
+        }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error in fetchData:', error);
         showNotification('error', 'Failed to load data');
       } finally {
         setLoading(false);
@@ -335,7 +355,10 @@ export default function SuppliersPage() {
         proof_document: purchaseForm.proofFile || undefined,
       });
 
-      setPurchases(prev => [...prev, newPurchase]);
+      // Add the new purchase to the state
+      setPurchases(prev => [newPurchase, ...prev]);
+      
+      // Reset form
       setPurchaseForm({
         date: new Date().toISOString().split('T')[0],
         amount: '',
@@ -345,9 +368,18 @@ export default function SuppliersPage() {
         proofFile: null,
         proof_document: ''
       });
+      
       setShowCreatePurchaseModal(false);
       setSelectedSupplierForAction(null);
       showNotification('success', 'Purchase order created successfully!');
+
+      // Refresh purchases list to make sure we have the latest data
+      try {
+        const updatedPurchases = await ApiService.getPurchases();
+        setPurchases(updatedPurchases);
+      } catch (refreshError) {
+        console.error('Failed to refresh purchases:', refreshError);
+      }
     } catch (error) {
       console.error('Error creating purchase:', error);
       showNotification('error', 'Failed to create purchase. Please try again.');
@@ -447,11 +479,18 @@ export default function SuppliersPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    // Use a consistent date format to avoid hydration mismatches
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC' // Use UTC to ensure consistency between server and client
+      });
+    } catch (error) {
+      return dateString; // Fallback to original string if parsing fails
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -557,151 +596,168 @@ export default function SuppliersPage() {
   ];
 
   return (
-    <div className="p-1 sm:p-6 space-y-6">
-      <div className="max-w-4xl">
-        {/* Notification */}
-        {notification.isVisible && (
-          <div className={`p-4 rounded-lg border ${
-            notification.type === 'success' 
-              ? 'bg-green-500/10 border-green-400/30 text-green-300' 
-              : 'bg-red-500/10 border-red-400/30 text-red-300'
-          }`}>
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                {notification.type === 'success' ? (
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                )}
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium">
-                  {notification.message}
-                </p>
+    <ClientOnly>
+      <div className="p-1 sm:p-6 space-y-6">
+        <div className="max-w-4xl">
+          {/* Notification */}
+          {notification.isVisible && (
+            <div className={`p-4 rounded-lg border ${
+              notification.type === 'success' 
+                ? 'bg-green-500/10 border-green-400/30 text-green-300' 
+                : 'bg-red-500/10 border-red-400/30 text-red-300'
+            }`}>
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  {notification.type === 'success' ? (
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium">
+                    {notification.message}
+                  </p>
+                </div>
               </div>
             </div>
+          )}
+
+          {/* Tabs */}
+          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
+            <div className="border-b border-slate-700/50">
+              <nav className="flex space-x-8 px-6 pt-6">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-all duration-200 cursor-pointer ${
+                      activeTab === tab.id
+                        ? 'border-cyan-400 text-cyan-400'
+                        : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            <div className="p-2 sm:p-6">
+              {/* Suppliers Tab */}
+              {activeTab === 'suppliers' && (
+                <SuppliersTab
+                  suppliers={suppliers}
+                  showCreateForm={showCreateForm}
+                  setShowCreateForm={setShowCreateForm}
+                  supplierForm={supplierForm}
+                  handleInputChange={handleInputChange}
+                  handleCreateSupplier={handleCreateSupplier}
+                  handleCancelSupplierForm={handleCancelSupplierForm}
+                  isEditing={!!editingSupplier}
+                  loading={loading}
+                  formatCurrency={formatCurrency}
+                  onCreatePurchase={handleCreatePurchaseFromSupplier}
+                  onCreatePayment={handleCreatePaymentFromSupplier}
+                  onEditSupplier={handleEditSupplier}
+                  onDeleteSupplier={handleDeleteSupplier}
+                />
+              )}
+
+              {/* Purchase History Tab */}
+              {activeTab === 'purchases' && (
+                <div>
+                  {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+                      <span className="ml-3 text-slate-400">Loading purchases...</span>
+                    </div>
+                  ) : (
+                    <PurchaseHistoryTab
+                      purchases={purchases}
+                      selectedSupplier={selectedSupplier}
+                      setSelectedSupplier={setSelectedSupplier}
+                      getFilteredPurchases={getFilteredPurchases}
+                      getUniqueSuppliers={getUniqueSuppliers}
+                      formatCurrency={formatCurrency}
+                      formatDate={formatDate}
+                      getStatusColor={getStatusColor}
+                    />
+                  )}
+                  
+                  {!loading && purchases.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-slate-400">No purchases found. Create your first purchase order!</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Payments Tab */}
+              {activeTab === 'payments' && (
+                <PaymentsTab
+                  payments={payments}
+                  selectedPaymentSupplier={selectedPaymentSupplier}
+                  setSelectedPaymentSupplier={setSelectedPaymentSupplier}
+                  getFilteredPayments={getFilteredPayments}
+                  getUniqueSuppliersFromPayments={getUniqueSuppliersFromPayments}
+                  formatCurrency={formatCurrency}
+                  formatDate={formatDate}
+                  getStatusColor={getStatusColor}
+                  getPaymentMethodIcon={getPaymentMethodIcon}
+                />
+              )}
+
+              {/* Products Tab */}
+              {activeTab === 'products' && (
+                <ProductsTab
+                  products={products}
+                  selectedProductSupplier={selectedProductSupplier}
+                  setSelectedProductSupplier={setSelectedProductSupplier}
+                  getFilteredProducts={getFilteredProducts}
+                  getUniqueSuppliersFromProducts={getUniqueSuppliersFromProducts}
+                  formatCurrency={formatCurrency}
+                  formatDate={formatDate}
+                />
+              )}
+            </div>
           </div>
-        )}
 
-        {/* Tabs */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-          <div className="border-b border-slate-700/50">
-            <nav className="flex space-x-8 px-6 pt-6">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-all duration-200 cursor-pointer ${
-                    activeTab === tab.id
-                      ? 'border-cyan-400 text-cyan-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
+          {/* Create Purchase Modal */}
+          <CreatePurchaseModal
+            isOpen={showCreatePurchaseModal}
+            onClose={() => {
+              setShowCreatePurchaseModal(false);
+              setSelectedSupplierForAction(null);
+            }}
+            supplier={selectedSupplierForAction}
+            purchaseForm={purchaseForm}
+            handleInputChange={handlePurchaseInputChange}
+            handleFileChange={handlePurchaseFileChange}
+            handleSubmit={handleCreatePurchase}
+            loading={loading}
+          />
 
-          <div className="p-2 sm:p-6">
-            {/* Suppliers Tab */}
-            {activeTab === 'suppliers' && (
-              <SuppliersTab
-                suppliers={suppliers}
-                showCreateForm={showCreateForm}
-                setShowCreateForm={setShowCreateForm}
-                supplierForm={supplierForm}
-                handleInputChange={handleInputChange}
-                handleCreateSupplier={handleCreateSupplier}
-                handleCancelSupplierForm={handleCancelSupplierForm}
-                isEditing={!!editingSupplier}
-                loading={loading}
-                formatCurrency={formatCurrency}
-                onCreatePurchase={handleCreatePurchaseFromSupplier}
-                onCreatePayment={handleCreatePaymentFromSupplier}
-                onEditSupplier={handleEditSupplier}
-                onDeleteSupplier={handleDeleteSupplier}
-              />
-            )}
-
-            {/* Purchase History Tab */}
-            {activeTab === 'purchases' && (
-              <PurchaseHistoryTab
-                purchases={purchases}
-                selectedSupplier={selectedSupplier}
-                setSelectedSupplier={setSelectedSupplier}
-                getFilteredPurchases={getFilteredPurchases}
-                getUniqueSuppliers={getUniqueSuppliers}
-                formatCurrency={formatCurrency}
-                formatDate={formatDate}
-                getStatusColor={getStatusColor}
-              />
-            )}
-
-            {/* Payments Tab */}
-            {activeTab === 'payments' && (
-              <PaymentsTab
-                payments={payments}
-                selectedPaymentSupplier={selectedPaymentSupplier}
-                setSelectedPaymentSupplier={setSelectedPaymentSupplier}
-                getFilteredPayments={getFilteredPayments}
-                getUniqueSuppliersFromPayments={getUniqueSuppliersFromPayments}
-                formatCurrency={formatCurrency}
-                formatDate={formatDate}
-                getStatusColor={getStatusColor}
-                getPaymentMethodIcon={getPaymentMethodIcon}
-              />
-            )}
-
-            {/* Products Tab */}
-            {activeTab === 'products' && (
-              <ProductsTab
-                products={products}
-                selectedProductSupplier={selectedProductSupplier}
-                setSelectedProductSupplier={setSelectedProductSupplier}
-                getFilteredProducts={getFilteredProducts}
-                getUniqueSuppliersFromProducts={getUniqueSuppliersFromProducts}
-                formatCurrency={formatCurrency}
-                formatDate={formatDate}
-              />
-            )}
-          </div>
+          {/* Create Payment Modal */}
+          <CreatePaymentModal
+            isOpen={showCreatePaymentModal}
+            onClose={() => {
+              setShowCreatePaymentModal(false);
+              setSelectedSupplierForAction(null);
+            }}
+            supplier={selectedSupplierForAction}
+            paymentForm={paymentForm}
+            handleInputChange={handlePaymentInputChange}
+            handleFileChange={handlePaymentFileChange}
+            handleSubmit={handleCreatePayment}
+            loading={loading}
+          />
         </div>
-
-        {/* Create Purchase Modal */}
-        <CreatePurchaseModal
-          isOpen={showCreatePurchaseModal}
-          onClose={() => {
-            setShowCreatePurchaseModal(false);
-            setSelectedSupplierForAction(null);
-          }}
-          supplier={selectedSupplierForAction}
-          purchaseForm={purchaseForm}
-          handleInputChange={handlePurchaseInputChange}
-          handleFileChange={handlePurchaseFileChange}
-          handleSubmit={handleCreatePurchase}
-          loading={loading}
-        />
-
-        {/* Create Payment Modal */}
-        <CreatePaymentModal
-          isOpen={showCreatePaymentModal}
-          onClose={() => {
-            setShowCreatePaymentModal(false);
-            setSelectedSupplierForAction(null);
-          }}
-          supplier={selectedSupplierForAction}
-          paymentForm={paymentForm}
-          handleInputChange={handlePaymentInputChange}
-          handleFileChange={handlePaymentFileChange}
-          handleSubmit={handleCreatePayment}
-          loading={loading}
-        />
       </div>
-    </div>
+    </ClientOnly>
   );
 }

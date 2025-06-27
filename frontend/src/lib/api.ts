@@ -34,6 +34,10 @@ export class ApiService {
     const url = `${API_BASE_URL}${endpoint}`;
     const token = AuthToken.get();
     
+    console.log(`Making API request to: ${url}`);
+    console.log('Request options:', options);
+    console.log('Auth token exists:', !!token);
+    
     const headers: HeadersInit = {};
     
     // Only set Content-Type for non-FormData requests
@@ -60,10 +64,13 @@ export class ApiService {
     try {
       const response = await fetch(url, config);
       
+      console.log(`Response status: ${response.status}`);
+      
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
           const errorData = await response.json();
+          console.log('Error response data:', errorData);
           errorMessage = errorData.error || errorData.detail || errorMessage;
         } catch (e) {
           // If response is not JSON, use status text
@@ -72,7 +79,9 @@ export class ApiService {
         throw new Error(errorMessage);
       }
       
-      return await response.json();
+      const result = await response.json();
+      console.log('API response data:', result);
+      return result;
     } catch (error) {
       console.error('API request failed:', error);
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
@@ -387,7 +396,15 @@ export class ApiService {
 
   // Purchase methods
   static async getPurchases() {
-    return this.get('/purchases/');
+    console.log('ApiService.getPurchases() called');
+    try {
+      const result = await this.get('/purchases/');
+      console.log('Purchases API response:', result);
+      return result;
+    } catch (error) {
+      console.error('Error in getPurchases:', error);
+      throw error;
+    }
   }
 
   static async createPurchase(purchaseData: {

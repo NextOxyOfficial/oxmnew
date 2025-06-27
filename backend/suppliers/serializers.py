@@ -35,17 +35,23 @@ class SupplierCreateSerializer(serializers.ModelSerializer):
 
 
 class PurchaseSerializer(serializers.ModelSerializer):
-    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    supplier = serializers.SerializerMethodField()
     proof_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Purchase
         fields = [
-            'id', 'supplier', 'supplier_name', 'date', 'amount', 'status', 
+            'id', 'supplier', 'date', 'amount', 'status', 
             'products', 'notes', 'proof_document', 'proof_url', 
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'supplier_name', 'proof_url']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'supplier', 'proof_url']
+
+    def get_supplier(self, obj):
+        return {
+            'id': obj.supplier.id,
+            'name': obj.supplier.name
+        }
 
     def get_proof_url(self, obj):
         if obj.proof_document:
