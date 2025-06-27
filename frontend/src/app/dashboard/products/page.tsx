@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Product } from "@/types/product";
 
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -8,69 +9,17 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState("name");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [stockToAdd, setStockToAdd] = useState("");
-  const [activeTab, setActiveTab] = useState("details");
-
-  // Product interface for better type safety
-  interface Product {
-    id: number;
-    name: string;
-    category: string;
-    stock: number;
-    buyPrice: number;
-    salePrice: number;
-    sold: number;
-  }
-
-  // Sample purchase history data
-  const getPurchaseHistory = (_productId: number) => {
-    return [
-      {
-        id: 1,
-        date: "2024-01-15",
-        quantity: 50,
-        unitPrice: 25.0,
-        user: "John Doe",
-        invoice: "INV-001",
-      },
-      {
-        id: 2,
-        date: "2024-01-10",
-        quantity: 30,
-        unitPrice: 24.5,
-        user: "Jane Smith",
-        invoice: "INV-002",
-      },
-      {
-        id: 3,
-        date: "2024-01-05",
-        quantity: 20,
-        unitPrice: 24.0,
-        user: "Mike Johnson",
-        invoice: "INV-003",
-      },
-    ];
-  };
 
   const handleProductClick = (product: Product) => {
+    console.log("Product clicked:", product.name);
     setSelectedProduct(product);
     setIsModalOpen(true);
-    setActiveTab("details");
-  };
-
-  const handleAddStock = async () => {
-    if (!selectedProduct || !stockToAdd) return;
-
-    // This would normally make an API call
-    console.log(`Adding ${stockToAdd} units to product ${selectedProduct.id}`);
-    setStockToAdd("");
-    // Refresh products list here
+    console.log("Modal should be open now");
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedProduct(null);
-    setStockToAdd("");
   };
 
   // Sample products data
@@ -783,233 +732,45 @@ export default function ProductsPage() {
 
       {/* Product Details Modal */}
       {isModalOpen && selectedProduct && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            {/* Background overlay */}
-            <div
-              className="fixed inset-0 bg-black bg-opacity-75 transition-opacity"
-              onClick={closeModal}
-            ></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Background overlay */}
+          <div
+            className="absolute inset-0 bg-black bg-opacity-75"
+            onClick={closeModal}
+          ></div>
 
-            {/* Modal panel */}
-            <div className="inline-block align-bottom bg-gray-900 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              {/* Modal header */}
-              <div className="bg-gray-800 px-6 py-4 border-b border-gray-700">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-white">
-                    {selectedProduct.name}
-                  </h3>
-                  <button
-                    onClick={closeModal}
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
+          {/* Modal panel */}
+          <div className="relative bg-gray-900 rounded-lg p-6 w-full max-w-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-white">{selectedProduct.name}</h3>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-white"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400">Category</label>
+                  <p className="text-white">{selectedProduct.category}</p>
                 </div>
-
-                {/* Tabs */}
-                <div className="flex space-x-4 mt-4">
-                  <button
-                    onClick={() => setActiveTab("details")}
-                    className={`text-sm font-medium transition-colors ${
-                      activeTab === "details"
-                        ? "text-blue-400 border-b-2 border-blue-400 pb-1"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Details
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("stock")}
-                    className={`text-sm font-medium transition-colors ${
-                      activeTab === "stock"
-                        ? "text-blue-400 border-b-2 border-blue-400 pb-1"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Add Stock
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("history")}
-                    className={`text-sm font-medium transition-colors ${
-                      activeTab === "history"
-                        ? "text-blue-400 border-b-2 border-blue-400 pb-1"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Purchase History
-                  </button>
+                <div>
+                  <label className="text-sm text-gray-400">Stock</label>
+                  <p className="text-white">{selectedProduct.stock} units</p>
                 </div>
-              </div>
-
-              {/* Modal content */}
-              <div className="px-6 py-4">
-                {activeTab === "details" && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm text-gray-400">
-                          Category
-                        </label>
-                        <p className="text-white">{selectedProduct.category}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400">
-                          Current Stock
-                        </label>
-                        <p className="text-white">
-                          {selectedProduct.stock} units
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400">
-                          Units Sold
-                        </label>
-                        <p className="text-green-400">
-                          {selectedProduct.sold} units
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400">
-                          Buy Price
-                        </label>
-                        <p className="text-red-400">
-                          ${selectedProduct.buyPrice}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400">
-                          Sale Price
-                        </label>
-                        <p className="text-green-400">
-                          ${selectedProduct.salePrice}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400">
-                          Profit per Unit
-                        </label>
-                        <p className="text-purple-400">
-                          $
-                          {selectedProduct.salePrice - selectedProduct.buyPrice}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-gray-700">
-                      <h4 className="text-sm font-medium text-gray-400 mb-2">
-                        Inventory Value
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs text-gray-500">
-                            Total Buy Value
-                          </label>
-                          <p className="text-red-400">
-                            $
-                            {(
-                              selectedProduct.buyPrice * selectedProduct.stock
-                            ).toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500">
-                            Total Sale Value
-                          </label>
-                          <p className="text-green-400">
-                            $
-                            {(
-                              selectedProduct.salePrice * selectedProduct.stock
-                            ).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "stock" && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">
-                        Add Stock Quantity
-                      </label>
-                      <input
-                        type="number"
-                        value={stockToAdd}
-                        onChange={(e) => setStockToAdd(e.target.value)}
-                        placeholder="Enter quantity to add"
-                        className="w-full bg-gray-800 border border-gray-600 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-3">
-                      <button
-                        onClick={closeModal}
-                        className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleAddStock}
-                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                      >
-                        Add Stock
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "history" && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-gray-400">
-                      Recent Purchases
-                    </h4>
-                    <div className="space-y-3">
-                      {getPurchaseHistory(selectedProduct.id).map(
-                        (purchase) => (
-                          <div
-                            key={purchase.id}
-                            className="bg-gray-800 rounded-lg p-3"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="text-white text-sm">
-                                  {purchase.date}
-                                </p>
-                                <p className="text-gray-400 text-xs">
-                                  Invoice: {purchase.invoice}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-white text-sm">
-                                  {purchase.quantity} units
-                                </p>
-                                <p className="text-green-400 text-xs">
-                                  ${purchase.unitPrice}/unit
-                                </p>
-                              </div>
-                            </div>
-                            <p className="text-gray-300 text-xs mt-2">
-                              by {purchase.user}
-                            </p>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <label className="text-sm text-gray-400">Buy Price</label>
+                  <p className="text-red-400">${selectedProduct.buyPrice}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400">Sale Price</label>
+                  <p className="text-green-400">${selectedProduct.salePrice}</p>
+                </div>
               </div>
             </div>
           </div>
