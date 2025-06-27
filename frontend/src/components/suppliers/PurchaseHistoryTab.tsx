@@ -9,6 +9,7 @@ interface Purchase {
   amount: number;
   status: 'pending' | 'completed' | 'cancelled';
   products: string[];
+  proofUrl?: string;
 }
 
 interface PurchaseHistoryTabProps {
@@ -83,6 +84,7 @@ export default function PurchaseHistoryTab({
                 <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">Products</th>
                 <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">Amount</th>
                 <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">Status</th>
+                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">Proof</th>
               </tr>
             </thead>
             <tbody>
@@ -101,6 +103,37 @@ export default function PurchaseHistoryTab({
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(purchase.status)}`}>
                       {purchase.status}
                     </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    {purchase.proofUrl ? (
+                      <div className="flex items-center gap-2">
+                        {purchase.proofUrl.toLowerCase().includes('.pdf') ? (
+                          <a
+                            href={purchase.proofUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors text-xs cursor-pointer"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            PDF
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => window.open(purchase.proofUrl, '_blank')}
+                            className="flex items-center gap-1 px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20 transition-colors text-xs cursor-pointer"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Image
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-500 text-xs">No proof</span>
+                    )}
                   </td>
                 </tr>
               ))}

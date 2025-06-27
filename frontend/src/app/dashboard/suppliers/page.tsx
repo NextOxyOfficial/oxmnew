@@ -11,6 +11,7 @@ interface Purchase {
   amount: number;
   status: 'pending' | 'completed' | 'cancelled';
   products: string[];
+  proofUrl?: string;
 }
 
 interface Payment {
@@ -21,6 +22,7 @@ interface Payment {
   method: 'cash' | 'card' | 'bank_transfer' | 'check';
   status: 'pending' | 'completed' | 'failed';
   reference: string;
+  proofUrl?: string;
 }
 
 interface Product {
@@ -80,7 +82,9 @@ export default function SuppliersPage() {
     amount: '',
     status: 'pending' as 'pending' | 'completed' | 'cancelled',
     products: '',
-    notes: ''
+    notes: '',
+    proofFile: null as File | null,
+    proofUrl: ''
   });
 
   const [paymentForm, setPaymentForm] = useState({
@@ -89,7 +93,9 @@ export default function SuppliersPage() {
     method: 'cash' as 'cash' | 'card' | 'bank_transfer' | 'check',
     status: 'pending' as 'pending' | 'completed' | 'failed',
     reference: '',
-    notes: ''
+    notes: '',
+    proofFile: null as File | null,
+    proofUrl: ''
   });
 
   // Mock data - replace with actual API calls
@@ -100,7 +106,8 @@ export default function SuppliersPage() {
       supplier: 'Tech Solutions Ltd',
       amount: 15000,
       status: 'completed',
-      products: ['Laptops', 'Keyboards', 'Mice']
+      products: ['Laptops', 'Keyboards', 'Mice'],
+      proofUrl: 'https://via.placeholder.com/400x300/0891b2/ffffff?text=Purchase+Receipt'
     },
     {
       id: 2,
@@ -108,7 +115,8 @@ export default function SuppliersPage() {
       supplier: 'Office Supplies Co',
       amount: 2500,
       status: 'pending',
-      products: ['Paper', 'Pens', 'Folders']
+      products: ['Paper', 'Pens', 'Folders'],
+      proofUrl: 'https://via.placeholder.com/400x300/eab308/ffffff?text=Invoice.pdf'
     },
     {
       id: 3,
@@ -128,7 +136,8 @@ export default function SuppliersPage() {
       amount: 15000,
       method: 'bank_transfer',
       status: 'completed',
-      reference: 'TXN20241220001'
+      reference: 'TXN20241220001',
+      proofUrl: 'https://via.placeholder.com/400x300/0891b2/ffffff?text=Bank+Transfer+Receipt'
     },
     {
       id: 2,
@@ -137,7 +146,8 @@ export default function SuppliersPage() {
       amount: 2500,
       method: 'card',
       status: 'pending',
-      reference: 'TXN20241218001'
+      reference: 'TXN20241218001',
+      proofUrl: 'https://via.placeholder.com/400x300/eab308/ffffff?text=Payment+Proof.pdf'
     },
     {
       id: 3,
@@ -242,12 +252,38 @@ export default function SuppliersPage() {
     }));
   };
 
+  const handlePurchaseFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (file) {
+      // Simulate file upload and get URL (in real app, upload to server/cloud storage)
+      const fileUrl = URL.createObjectURL(file);
+      setPurchaseForm(prev => ({
+        ...prev,
+        proofFile: file,
+        proofUrl: fileUrl
+      }));
+    }
+  };
+
   const handlePaymentInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setPaymentForm(prev => ({
       ...prev,
       [name]: value
     }));
+  };
+
+  const handlePaymentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (file) {
+      // Simulate file upload and get URL (in real app, upload to server/cloud storage)
+      const fileUrl = URL.createObjectURL(file);
+      setPaymentForm(prev => ({
+        ...prev,
+        proofFile: file,
+        proofUrl: fileUrl
+      }));
+    }
   };
 
   const handleCreateSupplier = async (e: React.FormEvent) => {
@@ -295,7 +331,8 @@ export default function SuppliersPage() {
         supplier: selectedSupplierForAction?.name || '',
         amount: parseFloat(purchaseForm.amount),
         status: purchaseForm.status,
-        products: purchaseForm.products.split(',').map(p => p.trim())
+        products: purchaseForm.products.split(',').map(p => p.trim()),
+        proofUrl: purchaseForm.proofUrl
       };
 
       setPurchases([...purchases, newPurchase]);
@@ -304,7 +341,9 @@ export default function SuppliersPage() {
         amount: '',
         status: 'pending',
         products: '',
-        notes: ''
+        notes: '',
+        proofFile: null,
+        proofUrl: ''
       });
       setShowCreatePurchaseModal(false);
       setSelectedSupplierForAction(null);
@@ -331,7 +370,8 @@ export default function SuppliersPage() {
         amount: parseFloat(paymentForm.amount),
         method: paymentForm.method,
         status: paymentForm.status,
-        reference: paymentForm.reference || `PAY-${Date.now()}`
+        reference: paymentForm.reference || `PAY-${Date.now()}`,
+        proofUrl: paymentForm.proofUrl
       };
 
       setPayments([...payments, newPayment]);
@@ -341,7 +381,9 @@ export default function SuppliersPage() {
         method: 'cash',
         status: 'pending',
         reference: '',
-        notes: ''
+        notes: '',
+        proofFile: null,
+        proofUrl: ''
       });
       setShowCreatePaymentModal(false);
       setSelectedSupplierForAction(null);
@@ -447,7 +489,9 @@ export default function SuppliersPage() {
       amount: '',
       status: 'pending',
       products: '',
-      notes: ''
+      notes: '',
+      proofFile: null,
+      proofUrl: ''
     });
     setShowCreatePurchaseModal(true);
   };
@@ -460,7 +504,9 @@ export default function SuppliersPage() {
       method: 'cash',
       status: 'pending',
       reference: '',
-      notes: ''
+      notes: '',
+      proofFile: null,
+      proofUrl: ''
     });
     setShowCreatePaymentModal(true);
   };
@@ -621,6 +667,7 @@ export default function SuppliersPage() {
           supplier={selectedSupplierForAction}
           purchaseForm={purchaseForm}
           handleInputChange={handlePurchaseInputChange}
+          handleFileChange={handlePurchaseFileChange}
           handleSubmit={handleCreatePurchase}
           loading={loading}
         />
@@ -635,6 +682,7 @@ export default function SuppliersPage() {
           supplier={selectedSupplierForAction}
           paymentForm={paymentForm}
           handleInputChange={handlePaymentInputChange}
+          handleFileChange={handlePaymentFileChange}
           handleSubmit={handleCreatePayment}
           loading={loading}
         />

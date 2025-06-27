@@ -1018,7 +1018,7 @@ export default function SettingsPage() {
 
       {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
               <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
@@ -1071,7 +1071,7 @@ export default function SettingsPage() {
 
       {/* Gift Delete Confirmation Modal */}
       {giftDeleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
               <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
@@ -1124,7 +1124,7 @@ export default function SettingsPage() {
 
       {/* Level Delete Confirmation Modal */}
       {levelDeleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
               <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>

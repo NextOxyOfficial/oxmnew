@@ -25,8 +25,11 @@ interface CreatePaymentModalProps {
     status: 'pending' | 'completed' | 'failed';
     reference: string;
     notes: string;
+    proofFile?: File | null;
+    proofUrl?: string;
   };
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   loading: boolean;
 }
@@ -37,6 +40,7 @@ export default function CreatePaymentModal({
   supplier,
   paymentForm,
   handleInputChange,
+  handleFileChange,
   handleSubmit,
   loading
 }: CreatePaymentModalProps) {
@@ -180,6 +184,34 @@ export default function CreatePaymentModal({
               className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
               placeholder="Additional notes (optional)"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Payment Proof / Receipt
+            </label>
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={handleFileChange}
+                className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-cyan-600 file:text-white hover:file:bg-cyan-700 file:cursor-pointer"
+              />
+              {paymentForm.proofFile && (
+                <div className="flex items-center gap-2 p-2 bg-slate-700/30 border border-slate-600/50 rounded-lg">
+                  <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-slate-300 text-sm">{paymentForm.proofFile.name}</span>
+                  <span className="text-slate-400 text-xs">
+                    ({(paymentForm.proofFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </span>
+                </div>
+              )}
+              <p className="text-xs text-slate-400">
+                Upload receipt, invoice, or payment proof (Images and PDF files accepted)
+              </p>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
