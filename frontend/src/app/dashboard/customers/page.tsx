@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, X } from "lucide-react";
 
 interface Customer {
   id: number;
@@ -28,6 +29,14 @@ export default function CustomersPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: ''
+  });
 
   // Ensure component is mounted before rendering dates
   useEffect(() => {
@@ -174,6 +183,51 @@ export default function CustomersPage() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleCreateCustomer = async () => {
+    if (!newCustomer.name || !newCustomer.email || !newCustomer.phone) {
+      alert("Please fill in all required fields (Name, Email, Phone)");
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Create new customer object
+      const customer: Customer = {
+        id: Date.now(), // Temporary ID generation
+        name: newCustomer.name,
+        email: newCustomer.email,
+        phone: newCustomer.phone,
+        address: newCustomer.address,
+        total_orders: 0,
+        total_spent: 0,
+        status: 'active',
+        created_at: new Date().toISOString()
+      };
+      
+      // Add to customers list
+      setCustomers(prev => [customer, ...prev]);
+      
+      // Reset form and close modal
+      setNewCustomer({ name: '', email: '', phone: '', address: '' });
+      setShowCreateModal(false);
+      
+      alert("Customer created successfully!");
+    } catch (error) {
+      alert("Failed to create customer. Please try again.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleCloseCreateModal = () => {
+    setNewCustomer({ name: '', email: '', phone: '', address: '' });
+    setShowCreateModal(false);
   };
 
   // Filter and sort customers
@@ -358,29 +412,41 @@ export default function CustomersPage() {
         {/* Controls and Filters */}
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg p-6 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            {/* Search */}
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <svg
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            {/* Left side - Add Customer Button and Search */}
+            <div className="flex flex-col sm:flex-row gap-4 flex-1">
+              {/* Add Customer Button */}
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer whitespace-nowrap flex items-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Customer</span>
+              </button>
+              
+              {/* Search */}
+              <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search customers..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm pl-10 pr-4"
                   />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search customers..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm pl-10 pr-4"
-                />
+                </div>
               </div>
             </div>
 
@@ -784,6 +850,102 @@ export default function CustomersPage() {
                 >
                   {isDeleting ? "Deleting..." : "Delete"}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Customer Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                  <h2 className="text-xl font-semibold text-slate-100">Create New Customer</h2>
+                  <button 
+                    onClick={handleCloseCreateModal}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-4">
+                  {/* Customer Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Customer Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={newCustomer.name}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter customer name"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      value={newCustomer.email}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter email address"
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      value={newCustomer.phone}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+
+                  {/* Address */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Address
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={newCustomer.address}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
+                      placeholder="Enter customer address (optional)"
+                    />
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={handleCloseCreateModal}
+                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateCustomer}
+                    disabled={isCreating || !newCustomer.name || !newCustomer.email || !newCustomer.phone}
+                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                  >
+                    {isCreating ? 'Creating...' : 'Register Customer'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
