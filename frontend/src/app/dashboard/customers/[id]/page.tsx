@@ -98,6 +98,7 @@ export default function CustomerDetailsPage() {
     address: ''
   });
   const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const [redeemingGiftIds, setRedeemingGiftIds] = useState<Set<number>>(new Set());
   const [notifyOrderId, setNotifyOrderId] = useState<number | null>(null);
   const [isNotifying, setIsNotifying] = useState(false);
   const [isSendingSMS, setIsSendingSMS] = useState(false);
@@ -310,6 +311,31 @@ export default function CustomerDetailsPage() {
       alert('Failed to add gift. Please try again.');
     } finally {
       setIsAddingGift(false);
+    }
+  };
+
+  const handleRedeemGift = async (giftId: number) => {
+    setRedeemingGiftIds(prev => new Set(prev).add(giftId));
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setGifts(prev => prev.map(gift => 
+        gift.id === giftId 
+          ? { ...gift, status: 'used' as const }
+          : gift
+      ));
+      
+      alert('Gift redeemed successfully!');
+    } catch (error) {
+      alert('Failed to redeem gift. Please try again.');
+    } finally {
+      setRedeemingGiftIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(giftId);
+        return newSet;
+      });
     }
   };
 
@@ -739,7 +765,7 @@ export default function CustomerDetailsPage() {
             {activeTab === 'gifts' && (
               <div className="space-y-6">
                 <div>
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="flex justify-between items-center mb-6">
                     <h4 className="text-lg font-medium text-slate-100">Gifts & Rewards</h4>
                     <div className="flex items-center space-x-3">
                       <select
@@ -764,29 +790,75 @@ export default function CustomerDetailsPage() {
                     </div>
                   </div>
                   
-                  <div className="grid gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {gifts.map((gift) => (
-                      <div key={gift.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h5 className="text-lg font-medium text-slate-100">{gift.name}</h5>
-                            <p className="text-slate-400 text-sm mb-2">{gift.description}</p>
-                            <div className="flex items-center gap-4">
-                              <span className="text-green-400 font-medium">${gift.value}</span>
+                      <div key={gift.id} className="bg-gradient-to-br from-purple-500/10 to-violet-600/10 border border-purple-500/30 rounded-lg p-5 relative overflow-hidden">
+                        {/* Gift Card Header */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 bg-purple-500/20 rounded-lg">
+                              <Gift className="h-6 w-6 text-purple-400" />
+                            </div>
+                            <div>
+                              <h5 className="text-lg font-semibold text-white">{gift.name}</h5>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                gift.status === 'active' ? 'bg-green-500/20 text-green-300 border border-green-400/30' :
+                                gift.status === 'used' ? 'bg-gray-500/20 text-gray-300 border border-gray-400/30' :
+                                'bg-red-500/20 text-red-300 border border-red-400/30'
+                              }`}>
+                                {gift.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Gift Details */}
+                        <div className="space-y-3 mb-4">
+                          <p className="text-slate-300 text-sm">{gift.description}</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <DollarSign className="h-4 w-4 text-green-400" />
+                              <span className="text-green-400 font-semibold text-lg">${gift.value}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="h-4 w-4 text-slate-400" />
                               <span className="text-slate-400 text-sm">{formatDate(gift.date_given)}</span>
                             </div>
                           </div>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            gift.status === 'active' ? 'bg-green-500/20 text-green-300 border border-green-400/30' :
-                            gift.status === 'used' ? 'bg-gray-500/20 text-gray-300 border border-gray-400/30' :
-                            'bg-red-500/20 text-red-300 border border-red-400/30'
-                          }`}>
-                            {gift.status}
-                          </span>
                         </div>
+
+                        {/* Redeem Button */}
+                        {gift.status === 'active' ? (
+                          <button
+                            onClick={() => handleRedeemGift(gift.id)}
+                            disabled={redeemingGiftIds.has(gift.id)}
+                            className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {redeemingGiftIds.has(gift.id) ? 'Redeeming...' : 'Redeem Gift'}
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="w-full px-4 py-2 bg-gray-500/20 text-gray-400 text-sm font-medium rounded-lg border border-gray-500/30 cursor-not-allowed"
+                          >
+                            {gift.status === 'used' ? 'Redeemed' : 'Expired'}
+                          </button>
+                        )}
+
+                        {/* Decorative elements */}
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-400/20 to-transparent rounded-full -translate-y-10 translate-x-10"></div>
+                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-purple-400/10 to-transparent rounded-full translate-y-8 -translate-x-8"></div>
                       </div>
                     ))}
                   </div>
+
+                  {gifts.length === 0 && (
+                    <div className="text-center py-12">
+                      <Gift className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-slate-400 mb-2">No Gifts Available</h3>
+                      <p className="text-slate-500">Add a gift to get started.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -795,24 +867,55 @@ export default function CustomerDetailsPage() {
             {activeTab === 'achievements' && (
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-lg font-medium text-slate-100 mb-4">Achievements</h4>
-                  <div className="grid gap-4">
+                  <h4 className="text-lg font-medium text-slate-100 mb-6">Achievements</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {achievements.map((achievement) => (
-                      <div key={achievement.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
-                        <div className="flex items-center gap-4">
-                          <div className="text-3xl">{achievement.icon}</div>
-                          <div className="flex-1">
-                            <h5 className="text-lg font-medium text-slate-100">{achievement.title}</h5>
-                            <p className="text-slate-400 text-sm mb-2">{achievement.description}</p>
-                            <div className="flex items-center gap-4">
-                              <span className="text-cyan-400 font-medium">{achievement.points} points</span>
-                              <span className="text-slate-400 text-sm">{formatDate(achievement.date_earned)}</span>
+                      <div key={achievement.id} className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 border border-amber-500/30 rounded-lg p-5 relative overflow-hidden">
+                        {/* Achievement Card Header */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 bg-amber-500/20 rounded-lg">
+                              <span className="text-2xl">{achievement.icon}</span>
+                            </div>
+                            <div>
+                              <h5 className="text-lg font-semibold text-white">{achievement.title}</h5>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <Trophy className="h-4 w-4 text-amber-400" />
+                                <span className="text-amber-400 font-medium text-sm">{achievement.points} points</span>
+                              </div>
                             </div>
                           </div>
                         </div>
+
+                        {/* Achievement Details */}
+                        <div className="space-y-3 mb-4">
+                          <p className="text-slate-300 text-sm">{achievement.description}</p>
+                          <div className="flex items-center space-x-2">
+                            <Calendar className="h-4 w-4 text-slate-400" />
+                            <span className="text-slate-400 text-sm">Earned on {formatDate(achievement.date_earned)}</span>
+                          </div>
+                        </div>
+
+                        {/* Achievement Badge */}
+                        <div className="flex items-center justify-center p-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg border border-amber-500/30">
+                          <Star className="h-5 w-5 text-amber-400 mr-2" />
+                          <span className="text-amber-300 font-medium text-sm">Achievement Unlocked</span>
+                        </div>
+
+                        {/* Decorative elements */}
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full -translate-y-10 translate-x-10"></div>
+                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-amber-400/10 to-transparent rounded-full translate-y-8 -translate-x-8"></div>
                       </div>
                     ))}
                   </div>
+
+                  {achievements.length === 0 && (
+                    <div className="text-center py-12">
+                      <Trophy className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-slate-400 mb-2">No Achievements Yet</h3>
+                      <p className="text-slate-500">Complete actions to earn achievements and points.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
