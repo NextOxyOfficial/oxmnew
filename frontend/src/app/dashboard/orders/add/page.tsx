@@ -288,25 +288,9 @@ export default function AddOrderPage() {
     setNewItem((prev) => {
       const updated = { ...prev, [field]: value };
 
-      // Auto-fill unit price when product or variant is selected
+      // Reset variant when product changes
       if (field === "product") {
-        const selectedProduct = products.find(
-          (p) => p.id === parseInt(value as string)
-        );
-        if (selectedProduct) {
-          updated.unit_price = selectedProduct.sell_price || 0;
-          updated.variant = ""; // Reset variant when product changes
-        }
-      } else if (field === "variant") {
-        const selectedProduct = products.find(
-          (p) => p.id === parseInt(prev.product)
-        );
-        const selectedVariant = selectedProduct?.variants?.find(
-          (v) => v.id === parseInt(value as string)
-        );
-        if (selectedVariant) {
-          updated.unit_price = selectedVariant.sell_price || 0;
-        }
+        updated.variant = "";
       }
 
       return updated;
@@ -315,8 +299,8 @@ export default function AddOrderPage() {
 
   // Add item to order
   const addItemToOrder = () => {
-    if (!newItem.product || newItem.quantity <= 0) {
-      setError("Please select a product and enter a valid quantity");
+    if (!newItem.product) {
+      setError("Please select a product");
       return;
     }
 
@@ -329,13 +313,17 @@ export default function AddOrderPage() {
       (v) => v.id === parseInt(newItem.variant)
     );
 
+    // Use default quantity of 1 and unit price from product/variant
+    const quantity = 1;
+    const unitPrice = selectedVariant ? selectedVariant.sell_price || 0 : selectedProduct.sell_price || 0;
+
     const item: OrderItem = {
       id: Date.now().toString(),
       product: parseInt(newItem.product),
       variant: newItem.variant ? parseInt(newItem.variant) : undefined,
-      quantity: newItem.quantity,
-      unit_price: newItem.unit_price,
-      total: newItem.quantity * newItem.unit_price,
+      quantity: quantity,
+      unit_price: unitPrice,
+      total: quantity * unitPrice,
       product_name: selectedProduct.name,
       variant_details: selectedVariant
         ? `${selectedVariant.color} - ${selectedVariant.size}${
@@ -466,7 +454,7 @@ export default function AddOrderPage() {
             {/* Customer Information */}
             <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
               <div className="sm:p-4 p-2">
-                <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-center gap-1 mb-4">
                   <button
                     onClick={() => router.back()}
                     className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
@@ -486,7 +474,7 @@ export default function AddOrderPage() {
                     </svg>
                   </button>
                   <h3 className="text-lg font-semibold text-slate-200">
-                    Customer Information
+                    Create New Order
                   </h3>
                 </div>
 
@@ -748,7 +736,7 @@ export default function AddOrderPage() {
                   <h4 className="text-sm font-medium text-slate-300 mb-3">
                     Add New Item
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-1.5">
                         Product
@@ -811,43 +799,6 @@ export default function AddOrderPage() {
                         </select>
                       </div>
                     )}
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Quantity
-                      </label>
-                      <input
-                        type="number"
-                        value={newItem.quantity}
-                        onChange={(e) =>
-                          handleNewItemChange(
-                            "quantity",
-                            parseInt(e.target.value) || 0
-                          )
-                        }
-                        min="1"
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Unit Price
-                      </label>
-                      <input
-                        type="number"
-                        value={newItem.unit_price}
-                        onChange={(e) =>
-                          handleNewItemChange(
-                            "unit_price",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        step="0.01"
-                        min="0"
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      />
-                    </div>
 
                     <div className="flex items-end">
                       <button
