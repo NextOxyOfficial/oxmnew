@@ -505,35 +505,56 @@ export default function CustomerDetailsPage() {
               <div className="space-y-6">
                 <div>
                   <h4 className="text-lg font-medium text-slate-100 mb-4">Purchase History</h4>
-                  <div className="max-w-4xl space-y-4">
-                    {orders.map((order) => (
-                      <div key={order.id} className="p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-4">
-                              <h4 className="text-sm font-medium text-slate-100">Order #{order.id}</h4>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                order.status === 'completed' ? 'bg-green-500/20 text-green-300 border border-green-400/30' :
-                                order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30' : 
-                                'bg-red-500/20 text-red-300 border border-red-400/30'
-                              }`}>
-                                {order.status}
-                              </span>
-                            </div>
-                            <div className="mt-1 text-sm text-slate-400">
-                              {formatDate(order.date)} • {order.items} items
-                            </div>
-                          </div>
-                          
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-green-300">${order.total.toFixed(2)}</p>
-                            <button className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors">
-                              View Details
-                            </button>
-                          </div>
+                  <div className="max-w-4xl">
+                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
+                      {/* Table Header */}
+                      <div className="px-6 py-3 bg-white/5 border-b border-white/10">
+                        <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                          <div className="col-span-2">Order ID</div>
+                          <div className="col-span-3">Date</div>
+                          <div className="col-span-2">Items</div>
+                          <div className="col-span-2">Status</div>
+                          <div className="col-span-2">Amount</div>
+                          <div className="col-span-1">Action</div>
                         </div>
                       </div>
-                    ))}
+                      
+                      {/* Table Body */}
+                      <div className="divide-y divide-white/5">
+                        {orders.map((order) => (
+                          <div key={order.id} className="px-6 py-4 hover:bg-white/5 transition-colors">
+                            <div className="grid grid-cols-12 gap-4 items-center">
+                              <div className="col-span-2">
+                                <p className="text-sm font-medium text-slate-100">#{order.id}</p>
+                              </div>
+                              <div className="col-span-3">
+                                <p className="text-sm text-slate-300">{formatDate(order.date)}</p>
+                              </div>
+                              <div className="col-span-2">
+                                <p className="text-sm text-slate-300">{order.items} items</p>
+                              </div>
+                              <div className="col-span-2">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  order.status === 'completed' ? 'bg-green-500/20 text-green-300 border border-green-400/30' :
+                                  order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30' : 
+                                  'bg-red-500/20 text-red-300 border border-red-400/30'
+                                }`}>
+                                  {order.status}
+                                </span>
+                              </div>
+                              <div className="col-span-2">
+                                <p className="text-sm font-semibold text-green-300">${order.total.toFixed(2)}</p>
+                              </div>
+                              <div className="col-span-1">
+                                <button className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors">
+                                  View
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -659,13 +680,31 @@ export default function CustomerDetailsPage() {
                   </div>
                   <div className="max-w-4xl">
                     {duePayments.length > 0 ? (
-                      <div className="space-y-4">
-                        {duePayments.map((due) => (
-                          <div key={due.id} className="p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-4">
-                                  <h4 className="text-sm font-medium text-slate-100">Order #{due.order_id}</h4>
+                      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
+                        {/* Table Header */}
+                        <div className="px-6 py-3 bg-white/5 border-b border-white/10">
+                          <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                            <div className="col-span-2">Order ID</div>
+                            <div className="col-span-2">Due Date</div>
+                            <div className="col-span-2">Status</div>
+                            <div className="col-span-2">Overdue</div>
+                            <div className="col-span-2">Amount</div>
+                            <div className="col-span-2">Action</div>
+                          </div>
+                        </div>
+                        
+                        {/* Table Body */}
+                        <div className="divide-y divide-white/5">
+                          {duePayments.map((due) => (
+                            <div key={due.id} className="px-6 py-4 hover:bg-white/5 transition-colors">
+                              <div className="grid grid-cols-12 gap-4 items-center">
+                                <div className="col-span-2">
+                                  <p className="text-sm font-medium text-slate-100">#{due.order_id}</p>
+                                </div>
+                                <div className="col-span-2">
+                                  <p className="text-sm text-slate-300">{formatDate(due.due_date)}</p>
+                                </div>
+                                <div className="col-span-2">
                                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                     due.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30' :
                                     due.status === 'overdue' ? 'bg-red-500/20 text-red-300 border border-red-400/30' : 
@@ -674,25 +713,27 @@ export default function CustomerDetailsPage() {
                                     {due.status}
                                   </span>
                                 </div>
-                                <div className="mt-1 text-sm text-slate-400">
-                                  Due: {formatDate(due.due_date)}
-                                  {due.days_overdue && due.days_overdue > 0 && (
-                                    <span className="text-red-300 ml-2">
-                                      ({due.days_overdue} days overdue)
+                                <div className="col-span-2">
+                                  {due.days_overdue && due.days_overdue > 0 ? (
+                                    <span className="text-red-300 text-sm font-medium">
+                                      {due.days_overdue} days
                                     </span>
+                                  ) : (
+                                    <span className="text-slate-400 text-sm">-</span>
                                   )}
                                 </div>
-                              </div>
-                              
-                              <div className="text-right">
-                                <p className="text-lg font-bold text-red-300">${due.amount.toFixed(2)}</p>
-                                <button className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors">
-                                  Mark as Paid
-                                </button>
+                                <div className="col-span-2">
+                                  <p className="text-sm font-semibold text-red-300">${due.amount.toFixed(2)}</p>
+                                </div>
+                                <div className="col-span-2">
+                                  <button className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors">
+                                    Mark as Paid
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-8 text-slate-400">
