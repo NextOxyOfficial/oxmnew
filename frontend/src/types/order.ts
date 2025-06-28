@@ -1,0 +1,61 @@
+// Order/Sale types for the application
+export interface Order {
+  id: number;
+  product: {
+    id: number;
+    name: string;
+    has_variants: boolean;
+  };
+  variant?: {
+    id: number;
+    color: string;
+    size: string;
+    custom_variant?: string;
+  };
+  quantity: number;
+  unit_price: number;
+  total_amount: number;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
+  notes?: string;
+  sale_date: string;
+}
+
+export interface OrderForm {
+  product: number | "";
+  variant: number | "";
+  quantity: number;
+  unit_price: number;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  notes: string;
+}
+
+export interface OrderStatistics {
+  total_orders: number;
+  total_revenue: number;
+  average_order_value: number;
+  orders_today: number;
+  orders_this_week: number;
+  orders_this_month: number;
+  top_products: Array<{
+    product_name: string;
+    total_quantity: number;
+    total_revenue: number;
+  }>;
+}
+
+export interface OrderFilters {
+  search: string;
+  customer_filter: "all" | "with_customer" | "without_customer";
+  date_from?: string;
+  date_to?: string;
+  product_id?: number;
+}
+
+export interface OrderSortOptions {
+  field: "date" | "product" | "customer" | "amount" | "quantity";
+  direction: "asc" | "desc";
+}
