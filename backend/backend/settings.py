@@ -38,8 +38,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'django_filters',
     'core',
     'suppliers',
+    'products',
 ]
 
 CORS_ALLOWED_ORIGINS = [

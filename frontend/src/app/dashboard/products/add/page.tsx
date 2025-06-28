@@ -1,14 +1,34 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ApiService } from "@/lib/api";
+
+interface Category {
+  id: number;
+  name: string;
+  description?: string;
+  is_active: boolean;
+}
+
+interface Supplier {
+  id: number;
+  name: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  contact_person?: string;
+  notes?: string;
+  is_active: boolean;
+}
 
 interface ColorSize {
   id: string;
   color: string;
   size: string;
   weight?: number;
-  weight_unit?: 'g' | 'kg' | 'lb' | 'oz';
+  weight_unit?: "g" | "kg" | "lb" | "oz";
   custom_variant?: string;
   buyPrice: number;
   sellPrice: number;
@@ -19,8 +39,8 @@ interface ProductFormData {
   name: string;
   buyPrice: number;
   sellPrice: number;
-  category: string;
-  supplier: string;
+  category: number | "";
+  supplier: number | "";
   location: string;
   details: string;
   photos: File[];
@@ -31,7 +51,7 @@ interface ProductFormData {
 export default function AddProductPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
     buyPrice: 0,
@@ -49,103 +69,159 @@ export default function AddProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [newVariant, setNewVariant] = useState({ 
-    color: "", 
-    size: "", 
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [newVariant, setNewVariant] = useState({
+    color: "",
+    size: "",
     weight: 0,
-    weight_unit: 'g' as 'g' | 'kg' | 'lb' | 'oz',
+    weight_unit: "g" as "g" | "kg" | "lb" | "oz",
     custom_variant: "",
-    buyPrice: 0, 
-    sellPrice: 0, 
-    stock: 0 
+    buyPrice: 0,
+    sellPrice: 0,
+    stock: 0,
   });
   const [customColor, setCustomColor] = useState("");
   const [customSize, setCustomSize] = useState("");
   const [customWeight, setCustomWeight] = useState("");
 
   // Calculate profit (for single pricing or average if variants exist)
-  const profit = formData.hasVariants 
-    ? formData.colorSizeVariants.length > 0 
-      ? formData.colorSizeVariants.reduce((sum, variant) => sum + (variant.sellPrice - variant.buyPrice), 0) / formData.colorSizeVariants.length
+  const profit = formData.hasVariants
+    ? formData.colorSizeVariants.length > 0
+      ? formData.colorSizeVariants.reduce(
+          (sum, variant) => sum + (variant.sellPrice - variant.buyPrice),
+          0
+        ) / formData.colorSizeVariants.length
       : 0
     : formData.sellPrice - formData.buyPrice;
 
   const profitMargin = formData.hasVariants
     ? formData.colorSizeVariants.length > 0
-      ? ((profit / (formData.colorSizeVariants.reduce((sum, variant) => sum + variant.sellPrice, 0) / formData.colorSizeVariants.length)) * 100).toFixed(1)
+      ? (
+          (profit /
+            (formData.colorSizeVariants.reduce(
+              (sum, variant) => sum + variant.sellPrice,
+              0
+            ) /
+              formData.colorSizeVariants.length)) *
+          100
+        ).toFixed(1)
       : "0"
-    : formData.sellPrice > 0 ? ((profit / formData.sellPrice) * 100).toFixed(1) : "0";
+    : formData.sellPrice > 0
+    ? ((profit / formData.sellPrice) * 100).toFixed(1)
+    : "0";
 
-  const suppliers = [
-    "Supplier A",
-    "Supplier B", 
-    "Supplier C",
-    "Local Store",
-    "Online Marketplace",
-    "Wholesale Distributor",
-    "Direct from Manufacturer",
-    "Other"
+  const commonColors = [
+    "Red",
+    "Blue",
+    "Green",
+    "Yellow",
+    "Black",
+    "White",
+    "Gray",
+    "Pink",
+    "Purple",
+    "Orange",
   ];
-
-  const categories = [
-    "Electronics",
-    "Furniture",
-    "Accessories",
-    "Clothing",
-    "Books",
-    "Sports & Outdoors",
-    "Home & Garden",
-    "Automotive",
-    "Health & Beauty",
-    "Toys & Games",
-    "Other"
-  ];
-
-  const commonColors = ["Red", "Blue", "Green", "Yellow", "Black", "White", "Gray", "Pink", "Purple", "Orange"];
   const commonSizes = ["XS", "S", "M", "L", "XL", "XXL", "One Size"];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  // Fetch categories and suppliers on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoadingData(true);
+        console.log("Fetching categories and suppliers...");
+        const [categoriesResponse, suppliersResponse] = await Promise.all([
+          ApiService.getCategories(),
+          ApiService.getSuppliers(),
+        ]);
+
+        console.log("Categories response:", categoriesResponse);
+        console.log("Suppliers response:", suppliersResponse);
+
+        // Handle categories response format {categories: [...]}
+        const processedCategories =
+          categoriesResponse?.categories || categoriesResponse || [];
+        const processedSuppliers = suppliersResponse || [];
+
+        console.log("Processed categories:", processedCategories);
+        console.log("Processed suppliers:", processedSuppliers);
+
+        setCategories(processedCategories);
+        setSuppliers(processedSuppliers);
+      } catch (error) {
+        console.error("Error fetching categories and suppliers:", error);
+        setErrors((prev) => ({
+          ...prev,
+          data: "Failed to load categories and suppliers. Please refresh the page.",
+        }));
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
-    
+
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
 
     if (name === "buyPrice" || name === "sellPrice") {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: parseFloat(value) || 0
+        [name]: parseFloat(value) || 0,
+      }));
+    } else if (name === "category" || name === "supplier") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value ? parseInt(value) : "",
       }));
     } else if (name === "hasVariants") {
       const hasVariants = value === "true";
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         hasVariants,
         // Reset pricing if switching to variants
         buyPrice: hasVariants ? 0 : prev.buyPrice,
-        sellPrice: hasVariants ? 0 : prev.sellPrice
+        sellPrice: hasVariants ? 0 : prev.sellPrice,
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: value
+        [name]: value,
       }));
     }
   };
 
-  const handleVariantChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleVariantChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    
-    if (name === "buyPrice" || name === "sellPrice" || name === "stock" || name === "weight") {
-      setNewVariant(prev => ({
+
+    if (
+      name === "buyPrice" ||
+      name === "sellPrice" ||
+      name === "stock" ||
+      name === "weight"
+    ) {
+      setNewVariant((prev) => ({
         ...prev,
-        [name]: parseFloat(value) || 0
+        [name]: parseFloat(value) || 0,
       }));
     } else {
-      setNewVariant(prev => ({
+      setNewVariant((prev) => ({
         ...prev,
-        [name]: value
+        [name]: value,
       }));
 
       // Clear custom inputs when user selects a different option
@@ -160,12 +236,27 @@ export default function AddProductPage() {
 
   const addVariant = () => {
     // Determine the actual color and size values
-    const actualColor = newVariant.color === "Custom" ? customColor : newVariant.color;
-    const actualSize = newVariant.size === "Custom" ? customSize : newVariant.size;
-    const actualWeight = customWeight ? parseFloat(customWeight) : (newVariant.weight > 0 ? newVariant.weight : undefined);
+    const actualColor =
+      newVariant.color === "Custom" ? customColor : newVariant.color;
+    const actualSize =
+      newVariant.size === "Custom" ? customSize : newVariant.size;
+    const actualWeight = customWeight
+      ? parseFloat(customWeight)
+      : newVariant.weight > 0
+      ? newVariant.weight
+      : undefined;
     const actualCustomVariant = newVariant.custom_variant || "";
 
-    if (!actualColor || !actualSize || newVariant.buyPrice <= 0 || newVariant.sellPrice <= 0) {
+    // Validation: require at least one identifying field (color, size, weight, or custom_variant)
+    // and valid pricing
+    const hasIdentifyingField =
+      actualColor || actualSize || actualWeight || actualCustomVariant;
+
+    if (
+      !hasIdentifyingField ||
+      newVariant.buyPrice <= 0 ||
+      newVariant.sellPrice <= 0
+    ) {
       return;
     }
 
@@ -178,24 +269,24 @@ export default function AddProductPage() {
       custom_variant: actualCustomVariant || undefined,
       buyPrice: newVariant.buyPrice,
       sellPrice: newVariant.sellPrice,
-      stock: newVariant.stock
+      stock: newVariant.stock,
     };
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      colorSizeVariants: [...prev.colorSizeVariants, variant]
+      colorSizeVariants: [...prev.colorSizeVariants, variant],
     }));
 
     // Reset form and custom inputs
-    setNewVariant({ 
-      color: "", 
-      size: "", 
+    setNewVariant({
+      color: "",
+      size: "",
       weight: 0,
-      weight_unit: 'g',
+      weight_unit: "g",
       custom_variant: "",
-      buyPrice: 0, 
-      sellPrice: 0, 
-      stock: 0 
+      buyPrice: 0,
+      sellPrice: 0,
+      stock: 0,
     });
     setCustomColor("");
     setCustomSize("");
@@ -203,28 +294,25 @@ export default function AddProductPage() {
   };
 
   const removeVariant = (id: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      colorSizeVariants: prev.colorSizeVariants.filter(variant => variant.id !== id)
-    }));
-  };
-
-  const updateVariant = (id: string, field: keyof ColorSize, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      colorSizeVariants: prev.colorSizeVariants.map(variant =>
-        variant.id === id ? { ...variant, [field]: value } : variant
-      )
+      colorSizeVariants: prev.colorSizeVariants.filter(
+        (variant) => variant.id !== id
+      ),
     }));
   };
 
   // Image compression utility function
-  const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.8): Promise<File> => {
+  const compressImage = (
+    file: File,
+    maxWidth: number = 800,
+    quality: number = 0.8
+  ): Promise<File> => {
     return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
       const img = new Image();
-      
+
       img.onload = () => {
         // Calculate new dimensions
         let { width, height } = img;
@@ -239,10 +327,10 @@ export default function AddProductPage() {
             height = maxWidth;
           }
         }
-        
+
         canvas.width = width;
         canvas.height = height;
-        
+
         // Draw and compress
         ctx?.drawImage(img, 0, 0, width, height);
         canvas.toBlob(
@@ -261,14 +349,14 @@ export default function AddProductPage() {
           quality
         );
       };
-      
+
       img.src = URL.createObjectURL(file);
     });
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     if (files.length === 0) return;
 
     setIsCompressing(true);
@@ -276,9 +364,9 @@ export default function AddProductPage() {
     // Check total number of photos limit
     const remainingSlots = 8 - formData.photos.length;
     if (files.length > remainingSlots) {
-      setErrors(prev => ({ 
-        ...prev, 
-        photo: `Can only add ${remainingSlots} more photo(s). Maximum 8 photos allowed.` 
+      setErrors((prev) => ({
+        ...prev,
+        photo: `Can only add ${remainingSlots} more photo(s). Maximum 8 photos allowed.`,
       }));
       setIsCompressing(false);
       return;
@@ -289,14 +377,20 @@ export default function AddProductPage() {
 
     for (const file of files) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setErrors(prev => ({ ...prev, photo: "Please select valid image files only" }));
+      if (!file.type.startsWith("image/")) {
+        setErrors((prev) => ({
+          ...prev,
+          photo: "Please select valid image files only",
+        }));
         continue;
       }
 
       // Validate file size (10MB max before compression)
       if (file.size > 10 * 1024 * 1024) {
-        setErrors(prev => ({ ...prev, photo: "Image size should be less than 10MB" }));
+        setErrors((prev) => ({
+          ...prev,
+          photo: "Image size should be less than 10MB",
+        }));
         continue;
       }
 
@@ -309,25 +403,31 @@ export default function AddProductPage() {
         const reader = new FileReader();
         reader.onload = () => {
           newPreviews.push(reader.result as string);
-          
+
           // Update state when all previews are ready
           if (newPreviews.length === validFiles.length) {
-            setFormData(prev => ({ ...prev, photos: [...prev.photos, ...validFiles] }));
-            setPhotoPreviews(prev => [...prev, ...newPreviews]);
+            setFormData((prev) => ({
+              ...prev,
+              photos: [...prev.photos, ...validFiles],
+            }));
+            setPhotoPreviews((prev) => [...prev, ...newPreviews]);
             setIsCompressing(false);
           }
         };
         reader.readAsDataURL(compressedFile);
       } catch (error) {
-        console.error('Error compressing image:', error);
-        setErrors(prev => ({ ...prev, photo: "Error processing image. Please try again." }));
+        console.error("Error compressing image:", error);
+        setErrors((prev) => ({
+          ...prev,
+          photo: "Error processing image. Please try again.",
+        }));
         setIsCompressing(false);
       }
     }
 
     // Clear photo error if files were processed
     if (validFiles.length > 0 && errors.photo) {
-      setErrors(prev => ({ ...prev, photo: "" }));
+      setErrors((prev) => ({ ...prev, photo: "" }));
     }
 
     // Reset input
@@ -337,11 +437,11 @@ export default function AddProductPage() {
   };
 
   const removePhoto = (index: number) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      photos: prev.photos.filter((_, i) => i !== index) 
+    setFormData((prev) => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index),
     }));
-    setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const validateForm = () => {
@@ -373,8 +473,11 @@ export default function AddProductPage() {
         newErrors.variants = "Please add at least one color/size variant";
       } else {
         // Validate each variant
-        const invalidVariant = formData.colorSizeVariants.find(variant => 
-          variant.buyPrice <= 0 || variant.sellPrice <= 0 || variant.sellPrice < variant.buyPrice
+        const invalidVariant = formData.colorSizeVariants.find(
+          (variant) =>
+            variant.buyPrice <= 0 ||
+            variant.sellPrice <= 0 ||
+            variant.sellPrice < variant.buyPrice
         );
         if (invalidVariant) {
           newErrors.variants = "All variants must have valid prices";
@@ -396,7 +499,7 @@ export default function AddProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -404,17 +507,54 @@ export default function AddProductPage() {
     setIsSubmitting(true);
 
     try {
-      // TODO: Implement actual API call
-      console.log("Submitting product:", formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      // Prepare data for API
+      const productData = {
+        name: formData.name,
+        category:
+          typeof formData.category === "number" ? formData.category : undefined,
+        supplier:
+          typeof formData.supplier === "number" ? formData.supplier : undefined,
+        location: formData.location,
+        details: formData.details,
+        hasVariants: formData.hasVariants,
+        buyPrice: formData.hasVariants ? undefined : formData.buyPrice,
+        sellPrice: formData.hasVariants ? undefined : formData.sellPrice,
+        colorSizeVariants: formData.hasVariants
+          ? formData.colorSizeVariants
+          : undefined,
+        photos: formData.photos.length > 0 ? formData.photos : undefined,
+      };
+
+      console.log("=== FORM SUBMISSION DEBUG ===");
+      console.log("Form data:", formData);
+      console.log("Prepared product data:", productData);
+      console.log("Form data types:", {
+        name: typeof formData.name,
+        category: typeof formData.category,
+        supplier: typeof formData.supplier,
+        buyPrice: typeof formData.buyPrice,
+        sellPrice: typeof formData.sellPrice,
+        hasVariants: typeof formData.hasVariants,
+      });
+
+      // Call API to create product
+      const result = await ApiService.createProduct(productData);
+      console.log("Product created successfully:", result);
+
       // Success - redirect back to products page
       router.push("/dashboard/products");
     } catch (error) {
       console.error("Error adding product:", error);
-      // Handle error
+      console.error(
+        "Error details:",
+        error instanceof Error ? error.message : error
+      );
+      // You can add toast notification here
+      setErrors({
+        submit: `Failed to create product: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -442,7 +582,7 @@ export default function AddProductPage() {
           height: 6px;
         }
       `}</style>
-      
+
       <div className="max-w-4xl">
         {/* Page Header */}
         <div className="mb-6">
@@ -451,8 +591,18 @@ export default function AddProductPage() {
               onClick={handleCancel}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
             >
-              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-6 h-6 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
             <div>
@@ -469,10 +619,19 @@ export default function AddProductPage() {
         {/* Form Container - matching settings page style */}
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
           <div className="sm:p-4 p-2">
+            {errors.data && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
+                <p className="text-red-400 text-sm">{errors.data}</p>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Product Name */}
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-1.5">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-slate-300 mb-1.5"
+                >
                   Product Name *
                 </label>
                 <input
@@ -481,7 +640,9 @@ export default function AddProductPage() {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className={`w-full bg-slate-800/50 border ${errors.name ? 'border-red-500' : 'border-slate-700/50'} text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                  className={`w-full bg-slate-800/50 border ${
+                    errors.name ? "border-red-500" : "border-slate-700/50"
+                  } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
                   placeholder="Enter product name"
                 />
                 {errors.name && (
@@ -491,7 +652,10 @@ export default function AddProductPage() {
 
               {/* Supplier */}
               <div>
-                <label htmlFor="supplier" className="block text-sm font-medium text-slate-300 mb-1.5">
+                <label
+                  htmlFor="supplier"
+                  className="block text-sm font-medium text-slate-300 mb-1.5"
+                >
                   Supplier *
                 </label>
                 <select
@@ -499,12 +663,25 @@ export default function AddProductPage() {
                   name="supplier"
                   value={formData.supplier}
                   onChange={handleInputChange}
-                  className={`w-full bg-slate-800/50 border ${errors.supplier ? 'border-red-500' : 'border-slate-700/50'} text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                  disabled={isLoadingData}
+                  className={`w-full bg-slate-800/50 border ${
+                    errors.supplier ? "border-red-500" : "border-slate-700/50"
+                  } text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                    isLoadingData ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
-                  <option value="" className="bg-slate-800">Select a supplier</option>
+                  <option value="" className="bg-slate-800">
+                    {isLoadingData
+                      ? "Loading suppliers..."
+                      : "Select a supplier"}
+                  </option>
                   {suppliers.map((supplier) => (
-                    <option key={supplier} value={supplier} className="bg-slate-800">
-                      {supplier}
+                    <option
+                      key={supplier.id}
+                      value={supplier.id}
+                      className="bg-slate-800"
+                    >
+                      {supplier.name}
                     </option>
                   ))}
                 </select>
@@ -521,29 +698,53 @@ export default function AddProductPage() {
                 <div className="flex gap-3">
                   {/* Upload Area - Left Side */}
                   <div className="flex-shrink-0 w-32">
-                    <div 
-                      className={`border-2 border-dashed ${errors.photo ? 'border-red-500' : 'border-slate-700/50'} rounded-lg p-3 text-center hover:border-slate-600 transition-all duration-200 cursor-pointer bg-slate-800/50 h-32 flex flex-col items-center justify-center ${formData.photos.length >= 8 || isCompressing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      onClick={() => !isCompressing && formData.photos.length < 8 && fileInputRef.current?.click()}
+                    <div
+                      className={`border-2 border-dashed ${
+                        errors.photo ? "border-red-500" : "border-slate-700/50"
+                      } rounded-lg p-3 text-center hover:border-slate-600 transition-all duration-200 cursor-pointer bg-slate-800/50 h-32 flex flex-col items-center justify-center ${
+                        formData.photos.length >= 8 || isCompressing
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        !isCompressing &&
+                        formData.photos.length < 8 &&
+                        fileInputRef.current?.click()
+                      }
                     >
                       {isCompressing ? (
                         <>
                           <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-1"></div>
-                          <p className="text-cyan-400 text-xs mb-1">Compressing...</p>
+                          <p className="text-cyan-400 text-xs mb-1">
+                            Compressing...
+                          </p>
                           <p className="text-gray-500 text-xs">Please wait</p>
                         </>
                       ) : (
                         <>
-                          <svg className="w-6 h-6 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          <svg
+                            className="w-6 h-6 text-gray-400 mb-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                            />
                           </svg>
                           <p className="text-gray-400 text-xs mb-1">
-                            {formData.photos.length >= 8 ? 'Max Reached' : 'Add Photos'}
+                            {formData.photos.length >= 8
+                              ? "Max Reached"
+                              : "Add Photos"}
                           </p>
                           <p className="text-gray-500 text-xs">Max 10MB each</p>
                         </>
                       )}
                     </div>
-                    
+
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -552,11 +753,13 @@ export default function AddProductPage() {
                       onChange={handlePhotoUpload}
                       className="hidden"
                     />
-                    
+
                     {errors.photo && (
-                      <p className="text-red-400 text-xs mt-1">{errors.photo}</p>
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.photo}
+                      </p>
                     )}
-                    
+
                     {!errors.photo && (
                       <p className="text-slate-500 text-xs mt-1 text-center">
                         Auto-compression enabled
@@ -569,7 +772,10 @@ export default function AddProductPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 relative z-10">
                         {photoPreviews.map((preview, index) => (
-                          <div key={index} className="relative flex-shrink-0 group">
+                          <div
+                            key={index}
+                            className="relative flex-shrink-0 group"
+                          >
                             <img
                               src={preview}
                               alt={`Product preview ${index + 1}`}
@@ -580,8 +786,18 @@ export default function AddProductPage() {
                               onClick={() => removePhoto(index)}
                               className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors opacity-0 group-hover:opacity-100 z-20 shadow-lg cursor-pointer"
                             >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              <svg
+                                className="w-3 h-3"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
                               </svg>
                             </button>
                           </div>
@@ -596,7 +812,10 @@ export default function AddProductPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Category */}
                 <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-slate-300 mb-1.5">
+                  <label
+                    htmlFor="category"
+                    className="block text-sm font-medium text-slate-300 mb-1.5"
+                  >
                     Category *
                   </label>
                   <select
@@ -604,23 +823,41 @@ export default function AddProductPage() {
                     name="category"
                     value={formData.category}
                     onChange={handleInputChange}
-                    className={`w-full bg-slate-800/50 border ${errors.category ? 'border-red-500' : 'border-slate-700/50'} text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                    disabled={isLoadingData}
+                    className={`w-full bg-slate-800/50 border ${
+                      errors.category ? "border-red-500" : "border-slate-700/50"
+                    } text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                      isLoadingData ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
-                    <option value="" className="bg-slate-800">Select a category</option>
+                    <option value="" className="bg-slate-800">
+                      {isLoadingData
+                        ? "Loading categories..."
+                        : "Select a category"}
+                    </option>
                     {categories.map((category) => (
-                      <option key={category} value={category} className="bg-slate-800">
-                        {category}
+                      <option
+                        key={category.id}
+                        value={category.id}
+                        className="bg-slate-800"
+                      >
+                        {category.name}
                       </option>
                     ))}
                   </select>
                   {errors.category && (
-                    <p className="text-red-400 text-sm mt-1">{errors.category}</p>
+                    <p className="text-red-400 text-sm mt-1">
+                      {errors.category}
+                    </p>
                   )}
                 </div>
 
                 {/* Location */}
                 <div>
-                  <label htmlFor="location" className="block text-sm font-medium text-slate-300 mb-1.5">
+                  <label
+                    htmlFor="location"
+                    className="block text-sm font-medium text-slate-300 mb-1.5"
+                  >
                     Location *
                   </label>
                   <input
@@ -629,11 +866,15 @@ export default function AddProductPage() {
                     name="location"
                     value={formData.location}
                     onChange={handleInputChange}
-                    className={`w-full bg-slate-800/50 border ${errors.location ? 'border-red-500' : 'border-slate-700/50'} text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                    className={`w-full bg-slate-800/50 border ${
+                      errors.location ? "border-red-500" : "border-slate-700/50"
+                    } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
                     placeholder="Enter storage location"
                   />
                   {errors.location && (
-                    <p className="text-red-400 text-sm mt-1">{errors.location}</p>
+                    <p className="text-red-400 text-sm mt-1">
+                      {errors.location}
+                    </p>
                   )}
                 </div>
               </div>
@@ -644,11 +885,13 @@ export default function AddProductPage() {
                   Pricing Type
                 </label>
                 <div className="grid grid-cols-2 gap-3">
-                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                    !formData.hasVariants 
-                      ? 'border-cyan-500 bg-cyan-500/10' 
-                      : 'border-slate-700/50 bg-slate-800/50 hover:border-slate-600'
-                  }`}>
+                  <label
+                    className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
+                      !formData.hasVariants
+                        ? "border-cyan-500 bg-cyan-500/10"
+                        : "border-slate-700/50 bg-slate-800/50 hover:border-slate-600"
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="hasVariants"
@@ -658,16 +901,22 @@ export default function AddProductPage() {
                       className="sr-only"
                     />
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-white">Single Price</div>
-                      <div className="text-xs text-gray-400">One buy/sell price for all items</div>
+                      <div className="text-sm font-medium text-white">
+                        Single Price
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        One buy/sell price for all items
+                      </div>
                     </div>
                   </label>
-                  
-                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                    formData.hasVariants 
-                      ? 'border-cyan-500 bg-cyan-500/10' 
-                      : 'border-slate-700/50 bg-slate-800/50 hover:border-slate-600'
-                  }`}>
+
+                  <label
+                    className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
+                      formData.hasVariants
+                        ? "border-cyan-500 bg-cyan-500/10"
+                        : "border-slate-700/50 bg-slate-800/50 hover:border-slate-600"
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="hasVariants"
@@ -677,8 +926,12 @@ export default function AddProductPage() {
                       className="sr-only"
                     />
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-white">By Variants</div>
-                      <div className="text-xs text-gray-400">Different prices for colors/sizes</div>
+                      <div className="text-sm font-medium text-white">
+                        By Variants
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Different prices for colors/sizes
+                      </div>
                     </div>
                   </label>
                 </div>
@@ -686,19 +939,26 @@ export default function AddProductPage() {
 
               {/* Pricing Section */}
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-slate-100">Pricing Information</h3>
-                
+                <h3 className="text-lg font-semibold text-slate-100">
+                  Pricing Information
+                </h3>
+
                 {!formData.hasVariants ? (
                   /* Single Pricing */
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {/* Buy Price */}
                       <div>
-                        <label htmlFor="buyPrice" className="block text-sm font-medium text-slate-300 mb-1.5">
+                        <label
+                          htmlFor="buyPrice"
+                          className="block text-sm font-medium text-slate-300 mb-1.5"
+                        >
                           Buy Price *
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">$</span>
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                            $
+                          </span>
                           <input
                             type="number"
                             id="buyPrice"
@@ -707,22 +967,33 @@ export default function AddProductPage() {
                             onChange={handleInputChange}
                             min="0"
                             step="0.01"
-                            className={`w-full bg-slate-800/50 border ${errors.buyPrice ? 'border-red-500' : 'border-slate-700/50'} text-white placeholder:text-gray-400 rounded-lg py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                            className={`w-full bg-slate-800/50 border ${
+                              errors.buyPrice
+                                ? "border-red-500"
+                                : "border-slate-700/50"
+                            } text-white placeholder:text-gray-400 rounded-lg py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
                             placeholder="0.00"
                           />
                         </div>
                         {errors.buyPrice && (
-                          <p className="text-red-400 text-sm mt-1">{errors.buyPrice}</p>
+                          <p className="text-red-400 text-sm mt-1">
+                            {errors.buyPrice}
+                          </p>
                         )}
                       </div>
 
                       {/* Sell Price */}
                       <div>
-                        <label htmlFor="sellPrice" className="block text-sm font-medium text-slate-300 mb-1.5">
+                        <label
+                          htmlFor="sellPrice"
+                          className="block text-sm font-medium text-slate-300 mb-1.5"
+                        >
                           Sell Price *
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">$</span>
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                            $
+                          </span>
                           <input
                             type="number"
                             id="sellPrice"
@@ -731,12 +1002,18 @@ export default function AddProductPage() {
                             onChange={handleInputChange}
                             min="0"
                             step="0.01"
-                            className={`w-full bg-slate-800/50 border ${errors.sellPrice ? 'border-red-500' : 'border-slate-700/50'} text-white placeholder:text-gray-400 rounded-lg py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                            className={`w-full bg-slate-800/50 border ${
+                              errors.sellPrice
+                                ? "border-red-500"
+                                : "border-slate-700/50"
+                            } text-white placeholder:text-gray-400 rounded-lg py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
                             placeholder="0.00"
                           />
                         </div>
                         {errors.sellPrice && (
-                          <p className="text-red-400 text-sm mt-1">{errors.sellPrice}</p>
+                          <p className="text-red-400 text-sm mt-1">
+                            {errors.sellPrice}
+                          </p>
                         )}
                       </div>
 
@@ -746,11 +1023,29 @@ export default function AddProductPage() {
                           Profit per Unit
                         </label>
                         <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 h-[42px] flex items-center justify-between">
-                          <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
-                            {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
+                          <p
+                            className={`text-sm font-bold ${
+                              profit > 0
+                                ? "text-green-400"
+                                : profit < 0
+                                ? "text-red-400"
+                                : "text-yellow-400"
+                            }`}
+                          >
+                            {profit > 0 ? "+" : profit < 0 ? "-" : ""}$
+                            {Math.abs(profit).toFixed(2)}
                           </p>
-                          <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
-                            {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(parseFloat(profitMargin)).toFixed(1)}%
+                          <p
+                            className={`text-xs ${
+                              profit > 0
+                                ? "text-green-400/70"
+                                : profit < 0
+                                ? "text-red-400/70"
+                                : "text-yellow-400/70"
+                            }`}
+                          >
+                            {profit > 0 ? "+" : profit < 0 ? "-" : ""}
+                            {Math.abs(parseFloat(profitMargin)).toFixed(1)}%
                           </p>
                         </div>
                       </div>
@@ -761,8 +1056,15 @@ export default function AddProductPage() {
                   <>
                     {/* Add New Variant */}
                     <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
-                      <h4 className="text-sm font-medium text-slate-300 mb-3">Add Product Variant</h4>
-                      
+                      <h4 className="text-sm font-medium text-slate-300 mb-1">
+                        Add Product Variant
+                      </h4>
+                      <p className="text-xs text-slate-400 mb-3">
+                        Fill at least one field (color, size, weight, or custom
+                        variant) to identify the variant. All fields are
+                        optional except pricing.
+                      </p>
+
                       <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
                         {/* Color */}
                         <div>
@@ -772,13 +1074,21 @@ export default function AddProductPage() {
                             onChange={handleVariantChange}
                             className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
                           >
-                            <option value="" className="bg-slate-800">Color</option>
+                            <option value="" className="bg-slate-800">
+                              Color
+                            </option>
                             {commonColors.map((color) => (
-                              <option key={color} value={color} className="bg-slate-800">
+                              <option
+                                key={color}
+                                value={color}
+                                className="bg-slate-800"
+                              >
                                 {color}
                               </option>
                             ))}
-                            <option value="Custom" className="bg-slate-800">Custom</option>
+                            <option value="Custom" className="bg-slate-800">
+                              Custom
+                            </option>
                           </select>
                         </div>
 
@@ -790,13 +1100,21 @@ export default function AddProductPage() {
                             onChange={handleVariantChange}
                             className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
                           >
-                            <option value="" className="bg-slate-800">Size</option>
+                            <option value="" className="bg-slate-800">
+                              Size
+                            </option>
                             {commonSizes.map((size) => (
-                              <option key={size} value={size} className="bg-slate-800">
+                              <option
+                                key={size}
+                                value={size}
+                                className="bg-slate-800"
+                              >
                                 {size}
                               </option>
                             ))}
-                            <option value="Custom" className="bg-slate-800">Custom</option>
+                            <option value="Custom" className="bg-slate-800">
+                              Custom
+                            </option>
                           </select>
                         </div>
 
@@ -822,10 +1140,18 @@ export default function AddProductPage() {
                             onChange={handleVariantChange}
                             className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
                           >
-                            <option value="g" className="bg-slate-800">g</option>
-                            <option value="kg" className="bg-slate-800">kg</option>
-                            <option value="lb" className="bg-slate-800">lb</option>
-                            <option value="oz" className="bg-slate-800">oz</option>
+                            <option value="g" className="bg-slate-800">
+                              g
+                            </option>
+                            <option value="kg" className="bg-slate-800">
+                              kg
+                            </option>
+                            <option value="lb" className="bg-slate-800">
+                              lb
+                            </option>
+                            <option value="oz" className="bg-slate-800">
+                              oz
+                            </option>
                           </select>
                         </div>
 
@@ -843,7 +1169,9 @@ export default function AddProductPage() {
                       </div>
 
                       {/* Custom Color, Size, and Weight Inputs */}
-                      {(newVariant.color === "Custom" || newVariant.size === "Custom" || customWeight) && (
+                      {(newVariant.color === "Custom" ||
+                        newVariant.size === "Custom" ||
+                        customWeight) && (
                         <div className="grid grid-cols-3 gap-2 mb-3">
                           {/* Custom Color Input */}
                           {newVariant.color === "Custom" && (
@@ -881,7 +1209,6 @@ export default function AddProductPage() {
                       )}
 
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
-
                         {/* Buy Price */}
                         <div>
                           <input
@@ -938,8 +1265,10 @@ export default function AddProductPage() {
                     {/* Variants List */}
                     {formData.colorSizeVariants.length > 0 && (
                       <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
-                        <h4 className="text-sm font-medium text-slate-300 mb-3">Product Variants ({formData.colorSizeVariants.length})</h4>
-                        
+                        <h4 className="text-sm font-medium text-slate-300 mb-3">
+                          Product Variants ({formData.colorSizeVariants.length})
+                        </h4>
+
                         {/* Headers */}
                         <div className="grid grid-cols-7 gap-2 text-xs text-slate-400 mb-2 px-2">
                           <span>Color</span>
@@ -950,30 +1279,55 @@ export default function AddProductPage() {
                           <span>Sell Price</span>
                           <span>Stock</span>
                         </div>
-                        
+
                         <div className="space-y-2 max-h-40 overflow-y-auto">
                           {formData.colorSizeVariants.map((variant) => (
-                            <div key={variant.id} className="flex items-center gap-2 bg-slate-700/30 rounded-lg p-2">
+                            <div
+                              key={variant.id}
+                              className="flex items-center gap-2 bg-slate-700/30 rounded-lg p-2"
+                            >
                               <div className="flex-1 grid grid-cols-7 gap-2 text-xs">
-                                <span className="text-white font-medium">{variant.color}</span>
-                                <span className="text-gray-300">{variant.size}</span>
+                                <span className="text-white font-medium">
+                                  {variant.color}
+                                </span>
+                                <span className="text-gray-300">
+                                  {variant.size}
+                                </span>
                                 <span className="text-purple-400">
-                                  {variant.weight && variant.weight_unit ? `${variant.weight}${variant.weight_unit}` : '-'}
+                                  {variant.weight && variant.weight_unit
+                                    ? `${variant.weight}${variant.weight_unit}`
+                                    : "-"}
                                 </span>
                                 <span className="text-orange-400 truncate">
-                                  {variant.custom_variant || '-'}
+                                  {variant.custom_variant || "-"}
                                 </span>
-                                <span className="text-red-400">${variant.buyPrice}</span>
-                                <span className="text-green-400">${variant.sellPrice}</span>
-                                <span className="text-cyan-400">{variant.stock} pcs</span>
+                                <span className="text-red-400">
+                                  ${variant.buyPrice}
+                                </span>
+                                <span className="text-green-400">
+                                  ${variant.sellPrice}
+                                </span>
+                                <span className="text-cyan-400">
+                                  {variant.stock} pcs
+                                </span>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => removeVariant(variant.id)}
                                 className="text-red-400 hover:text-red-300 p-1 cursor-pointer"
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
                                 </svg>
                               </button>
                             </div>
@@ -984,29 +1338,65 @@ export default function AddProductPage() {
                         <div className="mt-3 pt-3 border-t border-slate-700/50">
                           <div className="grid grid-cols-3 gap-3 text-center">
                             <div>
-                              <p className="text-xs text-slate-400 mb-1">Avg Profit/Unit</p>
+                              <p className="text-xs text-slate-400 mb-1">
+                                Avg Profit/Unit
+                              </p>
                               <div className="flex items-center justify-between">
-                                <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
-                                  {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
+                                <p
+                                  className={`text-sm font-bold ${
+                                    profit > 0
+                                      ? "text-green-400"
+                                      : profit < 0
+                                      ? "text-red-400"
+                                      : "text-yellow-400"
+                                  }`}
+                                >
+                                  {profit > 0 ? "+" : profit < 0 ? "-" : ""}$
+                                  {Math.abs(profit).toFixed(2)}
                                 </p>
-                                <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
-                                  {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(parseFloat(profitMargin)).toFixed(1)}%
+                                <p
+                                  className={`text-xs ${
+                                    profit > 0
+                                      ? "text-green-400/70"
+                                      : profit < 0
+                                      ? "text-red-400/70"
+                                      : "text-yellow-400/70"
+                                  }`}
+                                >
+                                  {profit > 0 ? "+" : profit < 0 ? "-" : ""}
+                                  {Math.abs(parseFloat(profitMargin)).toFixed(
+                                    1
+                                  )}
+                                  %
                                 </p>
                               </div>
                             </div>
                             <div>
-                              <p className="text-xs text-slate-400 mb-1">Avg Buy Price</p>
+                              <p className="text-xs text-slate-400 mb-1">
+                                Avg Buy Price
+                              </p>
                               <p className="text-sm font-bold text-slate-300">
-                                ${formData.colorSizeVariants.length > 0 
-                                  ? (formData.colorSizeVariants.reduce((sum, v) => sum + v.buyPrice, 0) / formData.colorSizeVariants.length).toFixed(2)
-                                  : '0.00'
-                                }
+                                $
+                                {formData.colorSizeVariants.length > 0
+                                  ? (
+                                      formData.colorSizeVariants.reduce(
+                                        (sum, v) => sum + v.buyPrice,
+                                        0
+                                      ) / formData.colorSizeVariants.length
+                                    ).toFixed(2)
+                                  : "0.00"}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-slate-400 mb-1">Total Stock</p>
+                              <p className="text-xs text-slate-400 mb-1">
+                                Total Stock
+                              </p>
                               <p className="text-sm font-bold text-cyan-400">
-                                {formData.colorSizeVariants.reduce((sum, v) => sum + v.stock, 0)} pcs
+                                {formData.colorSizeVariants.reduce(
+                                  (sum, v) => sum + v.stock,
+                                  0
+                                )}{" "}
+                                pcs
                               </p>
                             </div>
                           </div>
@@ -1023,7 +1413,10 @@ export default function AddProductPage() {
 
               {/* Details */}
               <div>
-                <label htmlFor="details" className="block text-sm font-medium text-slate-300 mb-1.5">
+                <label
+                  htmlFor="details"
+                  className="block text-sm font-medium text-slate-300 mb-1.5"
+                >
                   Product Details
                 </label>
                 <textarea
@@ -1037,6 +1430,13 @@ export default function AddProductPage() {
                 />
               </div>
 
+              {/* Submit Error */}
+              {errors.submit && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                  <p className="text-red-400 text-sm">{errors.submit}</p>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/50">
                 <button
@@ -1046,26 +1446,53 @@ export default function AddProductPage() {
                 >
                   Cancel
                 </button>
-                
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className={`px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
-                    isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    isSubmitting
+                      ? "opacity-50 cursor-not-allowed"
+                      : "cursor-pointer"
                   }`}
                 >
                   {isSubmitting ? (
                     <>
-                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       Adding Product...
                     </>
                   ) : (
                     <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
                       </svg>
                       Add Product
                     </>

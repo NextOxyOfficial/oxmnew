@@ -425,6 +425,222 @@ export class ApiService {
     return this.post(`/suppliers/${id}/deactivate/`, {});
   }
 
+  // Products methods
+  static async getProducts() {
+    return this.get("/products/");
+  }
+
+  static async getProduct(id: number) {
+    return this.get(`/products/${id}/`);
+  }
+
+  static async createProduct(productData: {
+    name: string;
+    category?: number;
+    supplier?: number;
+    location: string;
+    details?: string;
+    hasVariants: boolean;
+    buyPrice?: number;
+    sellPrice?: number;
+    colorSizeVariants?: Array<{
+      id?: string;
+      color: string;
+      size: string;
+      weight?: number;
+      weight_unit?: string;
+      custom_variant?: string;
+      buyPrice: number;
+      sellPrice: number;
+      stock: number;
+    }>;
+    photos?: File[];
+  }) {
+    console.log("=== API SERVICE CREATE PRODUCT ===");
+    console.log("Input productData:", productData);
+
+    const formData = new FormData();
+
+    // Add basic product data
+    formData.append("name", productData.name);
+    formData.append("location", productData.location);
+    formData.append("hasVariants", productData.hasVariants.toString());
+
+    if (productData.category) {
+      formData.append("category", productData.category.toString());
+      console.log("Added category:", productData.category);
+    }
+
+    if (productData.supplier) {
+      formData.append("supplier", productData.supplier.toString());
+      console.log("Added supplier:", productData.supplier);
+    }
+
+    if (productData.details) {
+      formData.append("details", productData.details);
+    }
+
+    if (!productData.hasVariants) {
+      if (productData.buyPrice) {
+        formData.append("buyPrice", productData.buyPrice.toString());
+        console.log("Added buyPrice:", productData.buyPrice);
+      }
+      if (productData.sellPrice) {
+        formData.append("sellPrice", productData.sellPrice.toString());
+        console.log("Added sellPrice:", productData.sellPrice);
+      }
+    }
+
+    // Add variants data as JSON string
+    if (productData.hasVariants && productData.colorSizeVariants) {
+      formData.append(
+        "colorSizeVariants",
+        JSON.stringify(productData.colorSizeVariants)
+      );
+      console.log("Added colorSizeVariants:", productData.colorSizeVariants);
+    }
+
+    // Add photos
+    if (productData.photos && productData.photos.length > 0) {
+      productData.photos.forEach((photo) => {
+        formData.append("photos", photo);
+      });
+      console.log("Added photos count:", productData.photos.length);
+    }
+
+    // Log FormData contents
+    console.log("FormData contents:");
+    for (let [key, value] of formData.entries()) {
+      console.log(`  ${key}:`, value);
+    }
+
+    console.log("Sending request to /products/");
+    return this.request("/products/", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  static async updateProduct(
+    id: number,
+    productData: {
+      name?: string;
+      category?: number;
+      supplier?: number;
+      location?: string;
+      details?: string;
+      hasVariants?: boolean;
+      buyPrice?: number;
+      sellPrice?: number;
+      is_active?: boolean;
+    }
+  ) {
+    return this.put(`/products/${id}/`, productData);
+  }
+
+  static async deleteProduct(id: number) {
+    return this.delete(`/products/${id}/`);
+  }
+
+  static async addProductVariant(
+    productId: number,
+    variantData: {
+      color: string;
+      size: string;
+      weight?: number;
+      weight_unit?: string;
+      custom_variant?: string;
+      buy_price: number;
+      sell_price: number;
+      stock: number;
+    }
+  ) {
+    return this.post(`/products/${productId}/add_variant/`, variantData);
+  }
+
+  static async updateProductVariant(
+    productId: number,
+    variantId: number,
+    variantData: {
+      color?: string;
+      size?: string;
+      weight?: number;
+      weight_unit?: string;
+      custom_variant?: string;
+      buy_price?: number;
+      sell_price?: number;
+      stock?: number;
+    }
+  ) {
+    return this.patch(
+      `/products/${productId}/variants/${variantId}/`,
+      variantData
+    );
+  }
+
+  static async deleteProductVariant(productId: number, variantId: number) {
+    return this.delete(`/products/${productId}/variants/${variantId}/`);
+  }
+
+  static async addProductPhotos(productId: number, photos: File[]) {
+    const formData = new FormData();
+    photos.forEach((photo) => {
+      formData.append("photos", photo);
+    });
+
+    return this.request(`/products/${productId}/add_photos/`, {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  static async deleteProductPhoto(productId: number, photoId: number) {
+    return this.delete(`/products/${productId}/photos/${photoId}/`);
+  }
+
+  static async adjustProductStock(
+    productId: number,
+    adjustmentData: {
+      variant_id?: number;
+      quantity: number;
+      reason?: string;
+      notes?: string;
+    }
+  ) {
+    return this.post(`/products/${productId}/adjust_stock/`, adjustmentData);
+  }
+
+  static async getProductStatistics() {
+    return this.get("/products/statistics/");
+  }
+
+  // Product Sales methods
+  static async getProductSales() {
+    return this.get("/sales/");
+  }
+
+  static async createProductSale(saleData: {
+    product: number;
+    variant?: number;
+    quantity: number;
+    unit_price: number;
+    customer_name?: string;
+    customer_phone?: string;
+    customer_email?: string;
+    notes?: string;
+  }) {
+    return this.post("/sales/", saleData);
+  }
+
+  static async getProductSaleStatistics() {
+    return this.get("/sales/statistics/");
+  }
+
+  // Stock Movement methods
+  static async getStockMovements() {
+    return this.get("/stock-movements/");
+  }
+
   // Purchase methods
   static async getPurchases() {
     console.log("ApiService.getPurchases() called");
