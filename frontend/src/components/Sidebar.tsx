@@ -13,6 +13,9 @@ import {
   Terminal,
   type LucideIcon,
   X,
+  Crown,
+  MessageCircle,
+  ShoppingCart,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -29,6 +32,7 @@ interface SidebarProps {
   systemStatus?: number;
   securityLevel?: number;
   networkStatus?: number;
+  smsCredits?: number;
 }
 
 export default function Sidebar({ 
@@ -37,7 +41,8 @@ export default function Sidebar({
   navigation, 
   systemStatus = 85, 
   securityLevel = 92, 
-  networkStatus = 78 
+  networkStatus = 78,
+  smsCredits = 1250
 }: SidebarProps) {
   // Remove the scrollbar styles effect since we're using a different design
   return (
@@ -54,7 +59,7 @@ export default function Sidebar({
         ></div>
         <div className="fixed top-16 bottom-0 left-0 flex w-64 flex-col transform transition-transform duration-300 ease-out">
           <div className="bg-slate-900 border border-slate-700/30 rounded-lg m-4 h-full flex flex-col">
-            <div className="p-4 flex-1">
+            <div className="p-3 flex-1">
               <div className="flex items-center justify-end mb-4">
                 <button
                   onClick={onClose}
@@ -63,6 +68,36 @@ export default function Sidebar({
                   <span className="sr-only">Close sidebar</span>
                   <X className="h-5 w-5" />
                 </button>
+              </div>
+
+              {/* Subscription & SMS Credits Section */}
+              <div className="mb-6">
+                {/* SMS Credits with Pro Badge */}
+                <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/10 border border-emerald-500/30 rounded-xl p-4 relative overflow-hidden">
+                  {/* Pro Badge */}
+                  <div className="absolute top-2 right-2">
+                    <div className="flex items-center gap-1 bg-gradient-to-r from-amber-400 to-orange-500 text-black px-2 py-1 rounded-full text-xs font-bold">
+                      <Crown className="h-3 w-3" />
+                      PRO
+                    </div>
+                  </div>
+                      <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-emerald-500/20 p-2">
+                      <MessageCircle className="h-5 w-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-emerald-400/70">{smsCredits.toLocaleString()} available</div>
+                        <Link href="/dashboard/subscriptions">
+                          <ShoppingCart className="h-4 w-4 text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors" />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                </div>
               </div>
               
               <nav className="space-y-1 mb-8">
@@ -94,7 +129,38 @@ export default function Sidebar({
       {/* Desktop sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:top-16 lg:bottom-0 z-40">
         <div className="bg-slate-900 border border-slate-700/30 rounded-lg my-6 mx-3 h-full flex flex-col">
-          <div className="p-4 flex-1">
+          <div className="p-3 flex-1">
+            {/* Subscription & SMS Credits Section */}
+            <div className="mb-6">
+              {/* SMS Credits with Pro Badge */}
+              <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/10 border border-emerald-500/30 rounded-xl py-5 px-2 relative overflow-hidden">
+                {/* Pro Badge */}
+                <div className="absolute top-2 right-2">
+                  <div className="flex items-center gap-1 bg-gradient-to-r from-amber-400 to-orange-500 text-black px-2 py-1 rounded-full text-xs font-bold">
+                    <Crown className="h-3 w-3" />
+                    PRO
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-emerald-500/20 p-2">
+                      <MessageCircle className="h-5 w-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-emerald-400/70">{smsCredits.toLocaleString()} available</div>
+                        <Link href="/dashboard/subscriptions">
+                          <ShoppingCart className="h-4 w-4 text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors" />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <nav className="space-y-1 mb-8">
               {navigation.map((item) => (
                 <NavItem

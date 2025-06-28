@@ -873,7 +873,22 @@ export default function CustomerDetailsPage() {
             {activeTab === 'achievements' && (
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-lg font-medium text-slate-100 mb-6">Achievements</h4>
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="text-lg font-medium text-slate-100">Achievements</h4>
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-lg px-3 py-2">
+                        <div className="flex items-center space-x-2">
+                          <Trophy className="h-4 w-4 text-amber-400" />
+                          <span className="text-amber-300 font-semibold text-sm">
+                            {achievements.reduce((total, achievement) => total + achievement.points, 0)} Total Points
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-slate-400">
+                        {achievements.length} achievements earned
+                      </div>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {achievements.map((achievement) => (
                       <div key={achievement.id} className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 border border-amber-500/30 rounded-lg p-5 relative overflow-hidden">

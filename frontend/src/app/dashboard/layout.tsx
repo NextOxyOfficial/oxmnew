@@ -245,6 +245,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           navigation={navigation}
+          smsCredits={1250}
         />
 
         {/* Main content */}
