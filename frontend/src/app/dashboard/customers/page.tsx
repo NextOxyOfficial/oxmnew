@@ -320,21 +320,13 @@ export default function CustomersPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
           {/* Total Customers */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-400 truncate">
-                  Total Customers
-                </p>
-                <p className="text-2xl font-bold text-white mt-1">
-                  {totalCustomers}
-                </p>
-              </div>
-              <div className="rounded-full bg-cyan-500/20 p-3 flex-shrink-0 ml-2">
+          <div className="bg-gradient-to-br from-cyan-500/15 to-cyan-600/8 border border-cyan-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+            <div className="flex items-center space-x-2">
+              <div className="rounded-md bg-cyan-500/20 p-1.5">
                 <svg
-                  className="w-6 h-6 text-cyan-500"
+                  className="h-7 w-7 text-cyan-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -347,23 +339,22 @@ export default function CustomersPage() {
                   />
                 </svg>
               </div>
+              <div>
+                <p className="text-sm text-cyan-300 font-medium">Total Customers</p>
+                <p className="text-base font-bold text-cyan-400">
+                  {totalCustomers}
+                </p>
+                <p className="text-xs text-cyan-500 opacity-80">All registered customers</p>
+              </div>
             </div>
           </div>
 
           {/* Active Customers */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-400 truncate">
-                  Active Customers
-                </p>
-                <p className="text-2xl font-bold text-green-500 mt-1">
-                  {activeCustomers}
-                </p>
-              </div>
-              <div className="rounded-full bg-green-500/20 p-3 flex-shrink-0 ml-2">
+          <div className="bg-gradient-to-br from-green-500/15 to-green-600/8 border border-green-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+            <div className="flex items-center space-x-2">
+              <div className="rounded-md bg-green-500/20 p-1.5">
                 <svg
-                  className="w-6 h-6 text-green-500"
+                  className="h-7 w-7 text-green-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -376,23 +367,22 @@ export default function CustomersPage() {
                   />
                 </svg>
               </div>
+              <div>
+                <p className="text-sm text-green-300 font-medium">Active Customers</p>
+                <p className="text-base font-bold text-green-400">
+                  {activeCustomers}
+                </p>
+                <p className="text-xs text-green-500 opacity-80">Recently active</p>
+              </div>
             </div>
           </div>
 
           {/* Total Revenue */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-400 truncate">
-                  Total Revenue
-                </p>
-                <p className="text-2xl font-bold text-yellow-500 mt-1">
-                  ${totalRevenue.toFixed(2)}
-                </p>
-              </div>
-              <div className="rounded-full bg-yellow-500/20 p-3 flex-shrink-0 ml-2">
+          <div className="bg-gradient-to-br from-yellow-500/15 to-yellow-600/8 border border-yellow-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+            <div className="flex items-center space-x-2">
+              <div className="rounded-md bg-yellow-500/20 p-1.5">
                 <svg
-                  className="w-6 h-6 text-yellow-500"
+                  className="h-7 w-7 text-yellow-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -404,6 +394,13 @@ export default function CustomersPage() {
                     d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
                   />
                 </svg>
+              </div>
+              <div>
+                <p className="text-sm text-yellow-300 font-medium">Total Revenue</p>
+                <p className="text-base font-bold text-yellow-400">
+                  ${totalRevenue.toFixed(2)}
+                </p>
+                <p className="text-xs text-yellow-500 opacity-80">From all customers</p>
               </div>
             </div>
           </div>
