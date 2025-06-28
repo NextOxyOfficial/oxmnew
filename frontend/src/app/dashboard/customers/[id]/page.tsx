@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, DollarSign, ShoppingBag, Star, Gift, Trophy, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, DollarSign, ShoppingBag, Star, Gift, Trophy, AlertTriangle, FileText, Receipt, X, Printer } from "lucide-react";
 
 interface Customer {
   id: number;
@@ -50,6 +50,7 @@ interface DuePayment {
   due_date: string;
   status: 'pending' | 'overdue' | 'paid';
   days_overdue?: number;
+  notes?: string;
 }
 
 export default function CustomerDetailsPage() {
@@ -70,6 +71,17 @@ export default function CustomerDetailsPage() {
   const [mounted, setMounted] = useState(false);
   const [selectedGift, setSelectedGift] = useState('');
   const [isAddingGift, setIsAddingGift] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [selectedDuePayment, setSelectedDuePayment] = useState<DuePayment | null>(null);
+  const [transactionForm, setTransactionForm] = useState({
+    type: 'due',
+    amount: '',
+    note: '',
+    notifyCustomer: false
+  });
 
   // Mock available gifts from settings (replace with actual API call)
   const availableGifts = [
@@ -138,8 +150,8 @@ export default function CustomerDetailsPage() {
         ];
 
         const mockDuePayments: DuePayment[] = [
-          { id: 1, order_id: 3, amount: 120.00, due_date: "2025-07-01", status: "pending", days_overdue: 0 },
-          { id: 2, order_id: 5, amount: 85.50, due_date: "2025-06-20", status: "overdue", days_overdue: 8 },
+          { id: 1, order_id: 3, amount: 120.00, due_date: "2025-07-01", status: "pending", days_overdue: 0, notes: "Customer requested extended payment terms" },
+          { id: 2, order_id: 5, amount: 85.50, due_date: "2025-06-20", status: "overdue", days_overdue: 8, notes: "Multiple payment reminders sent. Customer cited cash flow issues." },
         ];
 
         setCustomer(mockCustomer);
@@ -216,6 +228,55 @@ export default function CustomerDetailsPage() {
       alert('Failed to add gift. Please try again.');
     } finally {
       setIsAddingGift(false);
+    }
+  };
+
+  const handleShowInvoice = (order: Order) => {
+    setSelectedOrder(order);
+    setShowInvoiceModal(true);
+  };
+
+  const handleCloseInvoice = () => {
+    setShowInvoiceModal(false);
+    setSelectedOrder(null);
+  };
+
+  const handleShowTransactionModal = () => {
+    setShowTransactionModal(true);
+  };
+
+  const handleCloseTransactionModal = () => {
+    setShowTransactionModal(false);
+    setTransactionForm({
+      type: 'due',
+      amount: '',
+      note: '',
+      notifyCustomer: false
+    });
+  };
+
+  const handleShowNotes = (duePayment: DuePayment) => {
+    setSelectedDuePayment(duePayment);
+    setShowNotesModal(true);
+  };
+
+  const handleCloseNotes = () => {
+    setShowNotesModal(false);
+    setSelectedDuePayment(null);
+  };
+
+  const handleSubmitTransaction = async () => {
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Show success message
+      alert(`Transaction added successfully! ${transactionForm.notifyCustomer ? 'Customer will be notified via SMS.' : ''}`);
+      
+      // Close modal and reset form
+      handleCloseTransactionModal();
+    } catch (error) {
+      alert('Failed to add transaction. Please try again.');
     }
   };
 
@@ -304,62 +365,64 @@ export default function CustomerDetailsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">Total Orders</p>
-                <p className="text-2xl font-bold text-white mt-1">{customer.total_orders}</p>
+        <div className="max-w-5xl mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-400 text-sm">Total Orders</p>
+                  <p className="text-2xl font-bold text-white mt-1">{customer.total_orders}</p>
+                </div>
+                <ShoppingBag className="w-8 h-8 text-cyan-500" />
               </div>
-              <ShoppingBag className="w-8 h-8 text-cyan-500" />
             </div>
-          </div>
-          
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">
-                  {duePayments.reduce((sum, due) => sum + (due.status !== 'paid' ? due.amount : 0), 0) > 0 
-                    ? 'Due' 
-                    : 'Advance'
-                  }
-                </p>
-                <p className={`text-2xl font-bold mt-1 ${
+            
+            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-400 text-sm">
+                    {duePayments.reduce((sum, due) => sum + (due.status !== 'paid' ? due.amount : 0), 0) > 0 
+                      ? 'Due' 
+                      : 'Advance'
+                    }
+                  </p>
+                  <p className={`text-2xl font-bold mt-1 ${
+                    duePayments.reduce((sum, due) => sum + (due.status !== 'paid' ? due.amount : 0), 0) > 0 
+                      ? 'text-red-500' 
+                      : 'text-green-500'
+                  }`}>
+                    {duePayments.reduce((sum, due) => sum + (due.status !== 'paid' ? due.amount : 0), 0) > 0 
+                      ? `$${duePayments.reduce((sum, due) => sum + (due.status !== 'paid' ? due.amount : 0), 0).toFixed(2)}`
+                      : '$0.00'
+                    }
+                  </p>
+                </div>
+                <AlertTriangle className={`w-8 h-8 ${
                   duePayments.reduce((sum, due) => sum + (due.status !== 'paid' ? due.amount : 0), 0) > 0 
                     ? 'text-red-500' 
                     : 'text-green-500'
-                }`}>
-                  {duePayments.reduce((sum, due) => sum + (due.status !== 'paid' ? due.amount : 0), 0) > 0 
-                    ? `$${duePayments.reduce((sum, due) => sum + (due.status !== 'paid' ? due.amount : 0), 0).toFixed(2)}`
-                    : '$0.00'
-                  }
-                </p>
+                }`} />
               </div>
-              <AlertTriangle className={`w-8 h-8 ${
-                duePayments.reduce((sum, due) => sum + (due.status !== 'paid' ? due.amount : 0), 0) > 0 
-                  ? 'text-red-500' 
-                  : 'text-green-500'
-              }`} />
             </div>
-          </div>
-          
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">Active Gifts</p>
-                <p className="text-2xl font-bold text-purple-500 mt-1">{gifts.filter(g => g.status === 'active').length}</p>
+            
+            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-400 text-sm">Active Gifts</p>
+                  <p className="text-2xl font-bold text-purple-500 mt-1">{gifts.filter(g => g.status === 'active').length}</p>
+                </div>
+                <Gift className="w-8 h-8 text-purple-500" />
               </div>
-              <Gift className="w-8 h-8 text-purple-500" />
             </div>
-          </div>
-          
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">Achievements</p>
-                <p className="text-2xl font-bold text-yellow-500 mt-1">{achievements.length}</p>
+            
+            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-400 text-sm">Achievements</p>
+                  <p className="text-2xl font-bold text-yellow-500 mt-1">{achievements.length}</p>
+                </div>
+                <Trophy className="w-8 h-8 text-yellow-500" />
               </div>
-              <Trophy className="w-8 h-8 text-yellow-500" />
             </div>
           </div>
         </div>
@@ -515,7 +578,7 @@ export default function CustomerDetailsPage() {
                           <div className="col-span-2">Items</div>
                           <div className="col-span-2">Status</div>
                           <div className="col-span-2">Amount</div>
-                          <div className="col-span-1">Action</div>
+                          <div className="col-span-1">Details</div>
                         </div>
                       </div>
                       
@@ -546,8 +609,12 @@ export default function CustomerDetailsPage() {
                                 <p className="text-sm font-semibold text-green-300">${order.total.toFixed(2)}</p>
                               </div>
                               <div className="col-span-1">
-                                <button className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors">
-                                  View
+                                <button 
+                                  onClick={() => handleShowInvoice(order)}
+                                  className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors flex items-center space-x-1"
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  <span>Invoice</span>
                                 </button>
                               </div>
                             </div>
@@ -669,10 +736,7 @@ export default function CustomerDetailsPage() {
                   <div className="flex justify-between items-center mb-4">
                     <h4 className="text-lg font-medium text-slate-100">Due Payments</h4>
                     <button
-                      onClick={() => {
-                        // Add your transaction logic here
-                        alert('Add Transaction functionality would be implemented here');
-                      }}
+                      onClick={handleShowTransactionModal}
                       className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
                     >
                       Add Transaction
@@ -689,7 +753,7 @@ export default function CustomerDetailsPage() {
                             <div className="col-span-2">Status</div>
                             <div className="col-span-2">Overdue</div>
                             <div className="col-span-2">Amount</div>
-                            <div className="col-span-2">Action</div>
+                            <div className="col-span-2">Details</div>
                           </div>
                         </div>
                         
@@ -726,8 +790,12 @@ export default function CustomerDetailsPage() {
                                   <p className="text-sm font-semibold text-red-300">${due.amount.toFixed(2)}</p>
                                 </div>
                                 <div className="col-span-2">
-                                  <button className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors">
-                                    Mark as Paid
+                                  <button 
+                                    onClick={() => handleShowNotes(due)}
+                                    className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors flex items-center space-x-1"
+                                  >
+                                    <FileText className="w-3 h-3" />
+                                    <span>Notes</span>
                                   </button>
                                 </div>
                               </div>
@@ -749,6 +817,303 @@ export default function CustomerDetailsPage() {
           </div>
         </div>
         </div>
+
+        {/* Transaction Modal */}
+        {showTransactionModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                  <h2 className="text-xl font-semibold text-slate-100">Add Transaction</h2>
+                  <button 
+                    onClick={handleCloseTransactionModal}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-6">
+                  {/* Transaction Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Transaction Type
+                    </label>
+                    <select
+                      value={transactionForm.type}
+                      onChange={(e) => setTransactionForm({ ...transactionForm, type: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
+                    >
+                      <option value="due" className="bg-slate-800">Due</option>
+                      <option value="payment" className="bg-slate-800">Payment</option>
+                    </select>
+                  </div>
+
+                  {/* Amount */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Amount
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={transactionForm.amount}
+                      onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter amount"
+                    />
+                  </div>
+
+                  {/* Note */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Note
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={transactionForm.note}
+                      onChange={(e) => setTransactionForm({ ...transactionForm, note: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
+                      placeholder="Add a note for this transaction..."
+                    />
+                  </div>
+
+                  {/* Notify Customer */}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="notifyCustomer"
+                      checked={transactionForm.notifyCustomer}
+                      onChange={(e) => setTransactionForm({ ...transactionForm, notifyCustomer: e.target.checked })}
+                      className="h-4 w-4 text-cyan-400 bg-slate-800 border border-slate-600 rounded focus:ring-cyan-400 focus:ring-2"
+                    />
+                    <label htmlFor="notifyCustomer" className="ml-2 text-sm text-slate-300">
+                      Notify customer via SMS
+                    </label>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={handleCloseTransactionModal}
+                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitTransaction}
+                    disabled={!transactionForm.amount}
+                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                  >
+                    Add Transaction
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notes Modal */}
+        {showNotesModal && selectedDuePayment && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-lg w-full my-8">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                  <h2 className="text-xl font-semibold text-slate-100">Transaction Notes</h2>
+                  <button 
+                    onClick={handleCloseNotes}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-medium text-slate-100 mb-2">
+                      Order #{selectedDuePayment.order_id}
+                    </h3>
+                    <div className="flex items-center space-x-4 text-sm text-slate-400 mb-4">
+                      <span>Amount: ${selectedDuePayment.amount.toFixed(2)}</span>
+                      <span>Due: {formatDate(selectedDuePayment.due_date)}</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        selectedDuePayment.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30' :
+                        selectedDuePayment.status === 'overdue' ? 'bg-red-500/20 text-red-300 border border-red-400/30' : 
+                        'bg-green-500/20 text-green-300 border border-green-400/30'
+                      }`}>
+                        {selectedDuePayment.status}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Notes
+                    </label>
+                    <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 min-h-[100px]">
+                      {selectedDuePayment.notes ? (
+                        <p className="text-slate-300 text-sm leading-relaxed">{selectedDuePayment.notes}</p>
+                      ) : (
+                        <p className="text-slate-400 text-sm italic">No notes available for this transaction.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={handleCloseNotes}
+                    className="px-6 py-2 bg-slate-700 text-slate-100 text-sm font-medium rounded-lg hover:bg-slate-600 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Invoice Modal */}
+        {showInvoiceModal && selectedOrder && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full my-8">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">Invoice</h2>
+                <div className="flex items-center space-x-3">
+                  <button className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+                    <Printer className="w-4 h-4" />
+                    <span>Print</span>
+                  </button>
+                  <button 
+                    onClick={handleCloseInvoice}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6">
+                {/* Invoice Header */}
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="bg-red-600 text-white px-3 py-1 rounded font-bold text-lg">
+                        LYRICZ MOTORS
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600">Rider's Only</p>
+                  </div>
+                  <div className="text-right">
+                    <h3 className="text-lg font-semibold text-gray-900">INVOICE ID #{selectedOrder.id}688</h3>
+                    <p className="text-sm text-gray-600">{formatDate(selectedOrder.date)}, 05:21 PM</p>
+                  </div>
+                </div>
+
+                {/* Company and Customer Info */}
+                <div className="grid grid-cols-2 gap-8 mb-8">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Lyricz Motors</h4>
+                    <p className="text-sm text-gray-600">
+                      25/7 Chourhash, Dhaka Highway<br />
+                      Kushtia - 7000, Bangladesh<br />
+                      +8801932008050<br />
+                      support@lyriczmotors.com
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">{customer.name}</h4>
+                    <p className="text-sm text-gray-600">
+                      {customer.address || 'Address not provided'}<br />
+                      {customer.phone}<br />
+                      {customer.email}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Invoice Table */}
+                <div className="border border-gray-300 rounded-lg overflow-hidden mb-6">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 border-r border-gray-300">SL</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 border-r border-gray-300">Name</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 border-r border-gray-300">Unit</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 border-r border-gray-300">Price</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-300">
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">1</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">ACC CABLE FZ V3</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">1</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">TK 420.00</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">TK 420</td>
+                      </tr>
+                      <tr className="border-b border-gray-300">
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">2</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">CLUTCH CABLE FZ V3</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">1</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">TK 400.00</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">TK 400</td>
+                      </tr>
+                      <tr className="border-b border-gray-300">
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">3</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">DRUM RUBBER YAMAHA</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">1</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">TK 280.00</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">TK 280</td>
+                      </tr>
+                      <tr className="border-b border-gray-300">
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">4</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">BIKE REGULAR SERVICE - S1</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">1</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">TK 900.00</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">TK 900</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Invoice Summary */}
+                <div className="space-y-2 mb-6">
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="font-medium text-gray-900">VAT</span>
+                    <span className="text-gray-900">TK 0</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="font-medium text-gray-900">Discount</span>
+                    <span className="text-gray-900">TK 0.00</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="font-medium text-gray-900">Due</span>
+                    <span className="text-gray-900">TK 0.00</span>
+                  </div>
+                  <div className="flex justify-between py-3 bg-gray-50 px-4 rounded">
+                    <span className="font-bold text-gray-900">Total</span>
+                    <span className="font-bold text-gray-900">TK {selectedOrder.total.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="text-center text-sm text-gray-500 pt-4 border-t border-gray-200">
+                  Powered by oxymanager.com
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        )}
       </div>
     </div>
   );
