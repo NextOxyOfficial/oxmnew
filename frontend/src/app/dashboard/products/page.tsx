@@ -48,32 +48,21 @@ export default function ProductsPage() {
 
   // Get product totals using backend data structure
   const getProductTotals = (product: Product) => {
-    if (product.has_variants) {
-      // Use backend calculated totals for variant products
-      return {
-        buyPrice: Number(product.average_buy_price) || 0,
-        sellPrice: Number(product.average_sell_price) || 0,
-        totalBuyPrice: Number(product.total_buy_price) || 0,
-        totalSellPrice: Number(product.total_sell_price) || 0,
-        totalStock: Number(product.total_stock) || 0,
-        totalProfit: Number(product.total_profit) || 0,
-        totalQuantity: Number(product.total_quantity) || 0,
-      };
-    } else {
-      // Calculate for non-variant products
-      const buyPrice = getBuyPrice(product);
-      const sellPrice = getSellPrice(product);
-      const stock = Number(product.stock) || 0;
-      return {
-        buyPrice,
-        sellPrice,
-        totalBuyPrice: buyPrice * stock,
-        totalSellPrice: sellPrice * stock,
-        totalStock: stock,
-        totalProfit: (sellPrice - buyPrice) * stock,
-        totalQuantity: stock,
-      };
-    }
+    // Always use backend calculated totals when available
+    return {
+      buyPrice: product.has_variants
+        ? Number(product.average_buy_price) || 0
+        : getBuyPrice(product),
+      sellPrice: product.has_variants
+        ? Number(product.average_sell_price) || 0
+        : getSellPrice(product),
+      totalBuyPrice: Number(product.total_buy_price) || 0,
+      totalSellPrice: Number(product.total_sell_price) || 0,
+      totalStock: Number(product.total_stock) || Number(product.stock) || 0,
+      totalProfit: Number(product.total_profit) || 0,
+      totalQuantity:
+        Number(product.total_quantity) || Number(product.stock) || 0,
+    };
   };
 
   // Get display stock for product
@@ -624,6 +613,17 @@ export default function ProductsPage() {
                         const profit = sellPrice - buyPrice;
                         const profitMargin =
                           sellPrice > 0 ? (profit / sellPrice) * 100 : 0;
+                        const { totalProfit } = getProductTotals(product);
+
+                        // Debug: Log what we're getting
+                        console.log(
+                          "Debug - Product:",
+                          product.name,
+                          "totalProfit:",
+                          totalProfit,
+                          "product.total_profit:",
+                          product.total_profit
+                        );
 
                         return (
                           <div className="space-y-1">
@@ -649,8 +649,13 @@ export default function ProductsPage() {
                               }`}
                             >
                               {profit > 0 ? "+" : profit < 0 ? "-" : ""}
-                              {Math.abs(profitMargin).toFixed(1)}%
+                              {Math.abs(profitMargin).toFixed(1)}% margin
                             </p>
+                            <div className="mt-2 pt-1 border-t border-slate-600">
+                              <p className="text-sm font-semibold text-blue-400">
+                                Total: ${totalProfit.toFixed(2)}
+                              </p>
+                            </div>
                           </div>
                         );
                       })()}
@@ -1057,12 +1062,10 @@ export default function ProductsPage() {
                                 {profit > 0 ? "+" : profit < 0 ? "-" : ""}
                                 {Math.abs(profitMargin).toFixed(1)}% margin
                               </div>
-                              {/* Show total profit for variant products */}
-                              {product.has_variants && (
-                                <div className="text-xs text-purple-400/70">
-                                  Total: ${totals.totalProfit.toFixed(2)}
-                                </div>
-                              )}
+                              {/* Show total profit for all products */}
+                              <div className="text-xs text-cyan-400 font-medium">
+                                Total: ${totals.totalProfit.toFixed(2)}
+                              </div>
                             </div>
                           );
                         })()}
