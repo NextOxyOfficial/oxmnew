@@ -23,10 +23,7 @@ import {
   Smartphone,
   Mail,
   Diamond,
-  Gift,
-  Trophy,
-  FileText,
-  Truck
+  Truck,
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -70,21 +67,71 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: Settings,
       current: pathname === "/dashboard/settings",
     },
-    { name: "Reports", href: "/reports", icon: TrendingUp, current: pathname === "/reports" },
-    { name: "Customers", href: "/customers", icon: Users, current: pathname === "/customers" },
-    { name: "Banking", href: "/banking", icon: Building2, current: pathname === "/banking" },
-    { name: "Employees", href: "/employees", icon: Briefcase, current: pathname === "/employees" },
-    { name: "Lending", href: "/lending", icon: CreditCard, current: pathname === "/lending" },
-    { name: "Online Store", href: "/online-store", icon: Store, current: pathname === "/online-store" },
-    { name: "Notebook", href: "/notebook", icon: BookOpen, current: pathname === "/notebook" },
-    { name: "Scheduler", href: "/scheduler", icon: Clock, current: pathname === "/scheduler" },
-    { name: "SMS", href: "/sms", icon: Smartphone, current: pathname === "/sms" },
-    { name: "Email", href: "/email", icon: Mail, current: pathname === "/email" },
+    {
+      name: "Reports",
+      href: "/reports",
+      icon: TrendingUp,
+      current: pathname === "/reports",
+    },
+    {
+      name: "Customers",
+      href: "/customers",
+      icon: Users,
+      current: pathname === "/customers",
+    },
+    {
+      name: "Banking",
+      href: "/banking",
+      icon: Building2,
+      current: pathname === "/banking",
+    },
+    {
+      name: "Employees",
+      href: "/employees",
+      icon: Briefcase,
+      current: pathname === "/employees",
+    },
+    {
+      name: "Lending",
+      href: "/lending",
+      icon: CreditCard,
+      current: pathname === "/lending",
+    },
+    {
+      name: "Online Store",
+      href: "/online-store",
+      icon: Store,
+      current: pathname === "/online-store",
+    },
+    {
+      name: "Notebook",
+      href: "/notebook",
+      icon: BookOpen,
+      current: pathname === "/notebook",
+    },
+    {
+      name: "Scheduler",
+      href: "/scheduler",
+      icon: Clock,
+      current: pathname === "/scheduler",
+    },
+    {
+      name: "SMS",
+      href: "/sms",
+      icon: Smartphone,
+      current: pathname === "/sms",
+    },
+    {
+      name: "Email",
+      href: "/email",
+      icon: Mail,
+      current: pathname === "/email",
+    },
     {
       name: "Subscriptions",
-      href: "/subscriptions",
+      href: "/dashboard/subscriptions",
       icon: Diamond,
-      current: pathname === "/subscriptions",
+      current: pathname === "/dashboard/subscriptions",
     },
   ];
 
@@ -101,6 +148,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "Suppliers";
       case "/dashboard/settings":
         return "Settings";
+      case "/dashboard/subscriptions":
+        return "Subscriptions";
       case "/reports":
         return "Reports";
       case "/customers":
@@ -121,8 +170,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "SMS";
       case "/email":
         return "Email";
-      case "/subscriptions":
-        return "Subscriptions";
       default:
         return "Dashboard";
     }
@@ -130,24 +177,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Get breadcrumbs based on current path
   const getBreadcrumbs = () => {
-    const pathSegments = pathname.split('/').filter(Boolean);
+    const pathSegments = pathname.split("/").filter(Boolean);
     const breadcrumbs = [];
 
     if (pathSegments.length > 1) {
       // Add intermediate segments
       for (let i = 1; i < pathSegments.length; i++) {
         const segment = pathSegments[i];
-        const href = '/' + pathSegments.slice(0, i + 1).join('/');
-        
+        const href = "/" + pathSegments.slice(0, i + 1).join("/");
+
         // Convert segment to readable name
         const name = segment
-          .split('-')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-        
+          .split("-")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+
         breadcrumbs.push({
           name: name,
-          href: i === pathSegments.length - 1 ? undefined : href // Last item has no href
+          href: i === pathSegments.length - 1 ? undefined : href, // Last item has no href
         });
       }
     }
@@ -175,7 +222,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (!user) {
     // Redirect to login if not authenticated
-    router.push('/auth/login');
+    router.push("/auth/login");
     return null;
   }
 
