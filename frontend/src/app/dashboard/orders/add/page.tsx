@@ -768,6 +768,58 @@ export default function AddOrderPage() {
                                 {item.variant_details}
                               </div>
                             )}
+                            {/* Variant Selection for products with variants */}
+                            {(() => {
+                              const product = products.find(p => p.id === item.product);
+                              return product?.has_variants && product.variants && product.variants.length > 0 ? (
+                                <div className="mt-2">
+                                  <select
+                                    value={item.variant || ""}
+                                    onChange={(e) => {
+                                      const variantId = e.target.value ? parseInt(e.target.value) : undefined;
+                                      const selectedVariant = product.variants?.find(v => v.id === variantId);
+                                      const newUnitPrice = selectedVariant ? selectedVariant.sell_price || 0 : product.sell_price || 0;
+                                      
+                                      setOrderForm((prev) => ({
+                                        ...prev,
+                                        items: prev.items.map((orderItem) =>
+                                          orderItem.id === item.id
+                                            ? {
+                                                ...orderItem,
+                                                variant: variantId,
+                                                unit_price: newUnitPrice,
+                                                total: orderItem.quantity * newUnitPrice,
+                                                variant_details: selectedVariant
+                                                  ? `${selectedVariant.color} - ${selectedVariant.size}${
+                                                      selectedVariant.custom_variant
+                                                        ? ` - ${selectedVariant.custom_variant}`
+                                                        : ""
+                                                    }`
+                                                  : undefined,
+                                              }
+                                            : orderItem
+                                        ),
+                                      }));
+                                    }}
+                                    className="w-full bg-slate-700/50 border border-slate-600/50 text-white text-xs rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                                  >
+                                    <option value="" className="bg-slate-800">
+                                      Select variant
+                                    </option>
+                                    {product.variants.map((variant) => (
+                                      <option
+                                        key={variant.id}
+                                        value={variant.id}
+                                        className="bg-slate-800"
+                                      >
+                                        {variant.color} - {variant.size}
+                                        {variant.custom_variant && ` - ${variant.custom_variant}`}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ) : null;
+                            })()}
                           </div>
 
                           {/* Quantity */}
@@ -869,9 +921,6 @@ export default function AddOrderPage() {
 
                     {selectedProduct?.has_variants && (
                       <div className="flex-1">
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Variant
-                        </label>
                         <select
                           value={newItem.variant}
                           onChange={(e) =>
