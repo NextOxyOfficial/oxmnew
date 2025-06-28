@@ -352,85 +352,77 @@ export default function CustomerDetailsPage() {
           </button>
         </div>
 
-        {/* Customer Header with Total Spent */}
+        {/* Customer Header */}
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-2xl font-bold">
-                  {customer.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-100">{customer.name}</h1>
-                <div className="flex items-center gap-4 mt-2">
-                  <div className="flex items-center gap-1 text-slate-300">
-                    <Mail className="w-4 h-4" />
-                    <span className="text-sm">{customer.email}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-slate-300">
-                    <Phone className="w-4 h-4" />
-                    <span className="text-sm">{customer.phone}</span>
-                  </div>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <span className="text-white text-2xl font-bold">
+                {customer.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-100">{customer.name}</h1>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-1 text-slate-300">
+                  <Mail className="w-4 h-4" />
+                  <span className="text-sm">{customer.email}</span>
+                </div>
+                <div className="flex items-center gap-1 text-slate-300">
+                  <Phone className="w-4 h-4" />
+                  <span className="text-sm">{customer.phone}</span>
                 </div>
               </div>
-            </div>
-            <div className="text-right">
-              <p className="text-slate-400 text-sm">Total Spent</p>
-              <p className="text-3xl font-bold text-green-400">${customer.total_spent.toFixed(2)}</p>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 max-w-5xl">
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6 max-w-5xl">
+          <div className="bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/30 rounded-lg p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Total Orders</p>
-                <p className="text-2xl font-bold text-slate-100">{customer.total_orders}</p>
+                <p className="text-cyan-300/80 text-sm">Total Orders</p>
+                <p className="text-xl font-bold text-white mt-1">{customer.total_orders}</p>
               </div>
-              <ShoppingBag className="w-8 h-8 text-cyan-400" />
+              <ShoppingBag className="h-7 w-7 text-cyan-400" />
             </div>
           </div>
 
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+          <div className="bg-gradient-to-br from-green-500/10 to-emerald-600/10 border border-green-500/30 rounded-lg p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Customer Since</p>
-                <p className="text-lg font-semibold text-slate-100">{formatDate(customer.created_at)}</p>
+                <p className="text-green-300/80 text-sm">Total Spent</p>
+                <p className="text-xl font-bold text-green-400 mt-1">
+                  ${customer.total_spent.toFixed(2)}
+                </p>
               </div>
-              <Calendar className="w-8 h-8 text-blue-400" />
+              <DollarSign className="h-7 w-7 text-green-400" />
             </div>
           </div>
 
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+          <div className={`bg-gradient-to-br ${netAmount >= 0 ? 'from-red-500/10 to-pink-600/10 border-red-500/30' : 'from-green-500/10 to-emerald-600/10 border-green-500/30'} border rounded-lg p-3`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Status</p>
-                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium mt-1 ${
-                  customer.status === 'active' 
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                    : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                }`}>
-                  {customer.status}
-                </div>
-              </div>
-              <AlertTriangle className="w-8 h-8 text-yellow-400" />
-            </div>
-          </div>
-
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">
+                <p className={`${netAmount >= 0 ? 'text-red-300/80' : 'text-green-300/80'} text-sm`}>
                   {netAmount >= 0 ? 'Due Amount' : 'Advance Amount'}
                 </p>
-                <p className={`text-2xl font-bold ${netAmount >= 0 ? 'text-red-400' : 'text-green-400'}`}>
+                <p className={`text-xl font-bold ${netAmount >= 0 ? 'text-red-400' : 'text-green-400'} mt-1`}>
                   ${Math.abs(netAmount).toFixed(2)}
                 </p>
               </div>
-              <DollarSign className={`w-8 h-8 ${netAmount >= 0 ? 'text-red-400' : 'text-green-400'}`} />
+              <DollarSign className={`h-7 w-7 ${netAmount >= 0 ? 'text-red-400' : 'text-green-400'}`} />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-500/10 to-violet-600/10 border border-purple-500/30 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-300/80 text-sm">Active Gifts</p>
+                <p className="text-xl font-bold text-purple-400 mt-1">
+                  {gifts.filter(gift => gift.status === 'active').length}
+                </p>
+              </div>
+              <Gift className="h-7 w-7 text-purple-400" />
             </div>
           </div>
         </div>
