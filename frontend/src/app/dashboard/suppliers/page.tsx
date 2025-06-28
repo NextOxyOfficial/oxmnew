@@ -196,7 +196,15 @@ export default function SuppliersPage() {
         try {
           const suppliersResponse = await ApiService.getSuppliers();
           console.log('Suppliers fetched successfully:', suppliersResponse);
-          setSuppliers(suppliersResponse);
+          
+          // Ensure all suppliers have default values for orders and amount
+          const suppliersWithDefaults = suppliersResponse.map((supplier: any) => ({
+            ...supplier,
+            total_orders: supplier.total_orders ?? 0,
+            total_amount: supplier.total_amount ?? 0
+          }));
+          
+          setSuppliers(suppliersWithDefaults);
         } catch (suppliersError) {
           console.error('Error fetching suppliers:', suppliersError);
           showNotification('error', 'Failed to load suppliers');
@@ -294,6 +302,18 @@ export default function SuppliersPage() {
     setLoading(true);
 
     try {
+      // Check if supplier with same name already exists (case-insensitive)
+      const supplierExists = suppliers.some(supplier => 
+        supplier.name.toLowerCase().trim() === supplierForm.name.toLowerCase().trim() &&
+        (!editingSupplier || supplier.id !== editingSupplier.id)
+      );
+
+      if (supplierExists) {
+        showNotification('error', 'Supplier already exists with this name. Please use a different name.');
+        setLoading(false);
+        return;
+      }
+
       if (editingSupplier) {
         // Update existing supplier
         const updatedSupplier = await ApiService.updateSupplier(editingSupplier.id, {
@@ -319,7 +339,14 @@ export default function SuppliersPage() {
           email: supplierForm.email || undefined,
         });
 
-        setSuppliers(prev => [...prev, newSupplier]);
+        // Ensure new supplier has default values for orders and amount
+        const supplierWithDefaults = {
+          ...newSupplier,
+          total_orders: newSupplier.total_orders ?? 0,
+          total_amount: newSupplier.total_amount ?? 0
+        };
+
+        setSuppliers(prev => [...prev, supplierWithDefaults]);
         showNotification('success', 'Supplier created successfully!');
       }
 
@@ -489,11 +516,12 @@ export default function SuppliersPage() {
   };
 
   // Utility functions
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null | undefined) => {
+    const validAmount = amount ?? 0;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(amount);
+    }).format(validAmount);
   };
 
   const formatDate = (dateString: string) => {
