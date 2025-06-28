@@ -1,59 +1,64 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const BACKEND_BASE_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 // Auth token management
 export const AuthToken = {
   get: () => {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === "undefined") return null;
     try {
-      return localStorage.getItem('auth_token');
+      return localStorage.getItem("auth_token");
     } catch {
       return null;
     }
   },
   set: (token: string) => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     try {
-      localStorage.setItem('auth_token', token);
+      localStorage.setItem("auth_token", token);
     } catch {
       // Silently fail if localStorage is not available
     }
   },
   remove: () => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     try {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem("auth_token");
     } catch {
       // Silently fail if localStorage is not available
     }
-  }
+  },
 };
 
 export class ApiService {
   private static async request(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
     const token = AuthToken.get();
-    
+
     console.log(`Making API request to: ${url}`);
-    console.log('Request options:', options);
-    console.log('Auth token exists:', !!token);
-    
+    console.log("Request options:", options);
+    console.log("Auth token exists:", !!token);
+
     const headers: HeadersInit = {};
-    
+
     // Only set Content-Type for non-FormData requests
     if (!(options.body instanceof FormData)) {
-      (headers as Record<string, string>)['Content-Type'] = 'application/json';
+      (headers as Record<string, string>)["Content-Type"] = "application/json";
     }
-    
+
     // Add custom headers
     if (options.headers) {
       Object.assign(headers, options.headers);
     }
 
     // Only add Authorization header if token exists and not explicitly disabled
-    const skipAuth = options.headers && 'Authorization' in options.headers && (options.headers as any)['Authorization'] === null;
+    const skipAuth =
+      options.headers &&
+      "Authorization" in options.headers &&
+      (options.headers as any)["Authorization"] === null;
     if (token && !skipAuth) {
-      (headers as Record<string, string>)['Authorization'] = `Token ${token}`;
+      (headers as Record<string, string>)["Authorization"] = `Token ${token}`;
     }
 
     const config: RequestInit = {
@@ -63,14 +68,14 @@ export class ApiService {
 
     try {
       const response = await fetch(url, config);
-      
+
       console.log(`Response status: ${response.status}`);
-      
+
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
           const errorData = await response.json();
-          console.log('Error response data:', errorData);
+          console.log("Error response data:", errorData);
           errorMessage = errorData.error || errorData.detail || errorMessage;
         } catch (e) {
           // If response is not JSON, use status text
@@ -78,65 +83,70 @@ export class ApiService {
         }
         throw new Error(errorMessage);
       }
-      
+
       // Handle 204 No Content responses (like DELETE operations)
       if (response.status === 204) {
         return null;
       }
-      
+
       const result = await response.json();
-      console.log('API response data:', result);
+      console.log("API response data:", result);
       return result;
     } catch (error) {
-      console.error('API request failed:', error);
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        throw new Error('Unable to connect to server. Please check if the backend is running.');
+      console.error("API request failed:", error);
+      if (
+        error instanceof TypeError &&
+        error.message.includes("Failed to fetch")
+      ) {
+        throw new Error(
+          "Unable to connect to server. Please check if the backend is running."
+        );
       }
       throw error;
     }
   }
 
   static async get(endpoint: string) {
-    return this.request(endpoint, { method: 'GET' });
+    return this.request(endpoint, { method: "GET" });
   }
 
   static async post(endpoint: string, data: any) {
     return this.request(endpoint, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(data),
     });
   }
 
   static async put(endpoint: string, data: any) {
     return this.request(endpoint, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   static async patch(endpoint: string, data: any) {
     return this.request(endpoint, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(data),
     });
   }
 
   static async delete(endpoint: string) {
-    return this.request(endpoint, { method: 'DELETE' });
+    return this.request(endpoint, { method: "DELETE" });
   }
 
   // General API methods
   static async healthCheck() {
-    return this.request('/health/', { 
-      method: 'GET',
-      headers: { 'Authorization': null } as any // No auth needed
+    return this.request("/health/", {
+      method: "GET",
+      headers: { Authorization: null } as any, // No auth needed
     });
   }
 
   static async getApiRoot() {
-    return this.request('/', { 
-      method: 'GET',
-      headers: { 'Authorization': null } as any // No auth needed
+    return this.request("/", {
+      method: "GET",
+      headers: { Authorization: null } as any, // No auth needed
     });
   }
 
@@ -148,41 +158,41 @@ export class ApiService {
     first_name?: string;
     last_name?: string;
   }) {
-    const response = await this.request('/auth/register/', {
-      method: 'POST',
+    const response = await this.request("/auth/register/", {
+      method: "POST",
       body: JSON.stringify(userData),
     });
-    
+
     if (response.token) {
       AuthToken.set(response.token);
     }
-    
+
     return response;
   }
 
   static async login(credentials: { username: string; password: string }) {
-    const response = await this.request('/auth/login/', {
-      method: 'POST',
+    const response = await this.request("/auth/login/", {
+      method: "POST",
       body: JSON.stringify(credentials),
     });
-    
+
     if (response.token) {
       AuthToken.set(response.token);
     }
-    
+
     return response;
   }
 
   static async logout() {
     try {
-      await this.post('/auth/logout/', {});
+      await this.post("/auth/logout/", {});
     } finally {
       AuthToken.remove();
     }
   }
 
   static async getProfile() {
-    return this.get('/auth/profile/');
+    return this.get("/auth/profile/");
   }
 
   static async updateProfile(profileData: {
@@ -193,54 +203,57 @@ export class ApiService {
     company_address?: string;
     phone?: string;
   }) {
-    return this.put('/auth/profile/', profileData);
+    return this.put("/auth/profile/", profileData);
   }
 
   static async uploadStoreLogo(file: File) {
     const formData = new FormData();
-    formData.append('store_logo', file);
-    
-    return this.request('/auth/profile/upload-logo/', {
-      method: 'POST',
+    formData.append("store_logo", file);
+
+    return this.request("/auth/profile/upload-logo/", {
+      method: "POST",
       body: formData,
     });
   }
 
   static async uploadBannerImage(file: File) {
     const formData = new FormData();
-    formData.append('banner_image', file);
-    
-    return this.request('/auth/profile/upload-banner/', {
-      method: 'POST',
+    formData.append("banner_image", file);
+
+    return this.request("/auth/profile/upload-banner/", {
+      method: "POST",
       body: formData,
     });
   }
 
   static async removeStoreLogo() {
-    return this.delete('/auth/profile/remove-logo/');
+    return this.delete("/auth/profile/remove-logo/");
   }
 
   static async removeBannerImage() {
-    return this.delete('/auth/profile/remove-banner/');
+    return this.delete("/auth/profile/remove-banner/");
   }
 
   // Category methods
   static async getCategories() {
-    return this.get('/categories/');
+    return this.get("/categories/");
   }
 
   static async createCategory(categoryData: {
     name: string;
     description?: string;
   }) {
-    return this.post('/categories/', categoryData);
+    return this.post("/categories/", categoryData);
   }
 
-  static async updateCategory(categoryId: number, categoryData: {
-    name?: string;
-    description?: string;
-    is_active?: boolean;
-  }) {
+  static async updateCategory(
+    categoryId: number,
+    categoryData: {
+      name?: string;
+      description?: string;
+      is_active?: boolean;
+    }
+  ) {
     return this.put(`/categories/${categoryId}/`, categoryData);
   }
 
@@ -254,7 +267,7 @@ export class ApiService {
 
   // Settings methods
   static async getSettings() {
-    return this.get('/auth/settings/');
+    return this.get("/auth/settings/");
   }
 
   static async updateSettings(settingsData: {
@@ -263,7 +276,7 @@ export class ApiService {
     email_notifications?: boolean;
     marketing_notifications?: boolean;
   }) {
-    return this.put('/auth/settings/', settingsData);
+    return this.put("/auth/settings/", settingsData);
   }
 
   static async changePassword(passwordData: {
@@ -271,29 +284,29 @@ export class ApiService {
     new_password: string;
     confirm_password: string;
   }) {
-    return this.post('/auth/change-password/', passwordData);
+    return this.post("/auth/change-password/", passwordData);
   }
 
   static async requestPasswordReset() {
-    return this.post('/auth/request-password-reset/', {});
+    return this.post("/auth/request-password-reset/", {});
   }
 
   // Gift methods
   static async getGifts() {
-    return this.get('/gifts/');
+    return this.get("/gifts/");
   }
 
-  static async createGift(giftData: {
-    name: string;
-    is_active?: boolean;
-  }) {
-    return this.post('/gifts/', giftData);
+  static async createGift(giftData: { name: string; is_active?: boolean }) {
+    return this.post("/gifts/", giftData);
   }
 
-  static async updateGift(giftId: number, giftData: {
-    name?: string;
-    is_active?: boolean;
-  }) {
+  static async updateGift(
+    giftId: number,
+    giftData: {
+      name?: string;
+      is_active?: boolean;
+    }
+  ) {
     return this.put(`/gifts/${giftId}/`, giftData);
   }
 
@@ -307,26 +320,29 @@ export class ApiService {
 
   // Achievement methods
   static async getAchievements() {
-    return this.get('/achievements/');
+    return this.get("/achievements/");
   }
 
   static async createAchievement(achievementData: {
     name?: string;
-    type: 'orders' | 'amount';
+    type: "orders" | "amount";
     value: number;
     points: number;
     is_active?: boolean;
   }) {
-    return this.post('/achievements/', achievementData);
+    return this.post("/achievements/", achievementData);
   }
 
-  static async updateAchievement(achievementId: number, achievementData: {
-    name?: string;
-    type?: 'orders' | 'amount';
-    value?: number;
-    points?: number;
-    is_active?: boolean;
-  }) {
+  static async updateAchievement(
+    achievementId: number,
+    achievementData: {
+      name?: string;
+      type?: "orders" | "amount";
+      value?: number;
+      points?: number;
+      is_active?: boolean;
+    }
+  ) {
     return this.put(`/achievements/${achievementId}/`, achievementData);
   }
 
@@ -340,20 +356,20 @@ export class ApiService {
 
   // Level methods
   static async getLevels() {
-    return this.get('/levels/');
+    return this.get("/levels/");
   }
 
-  static async createLevel(levelData: {
-    name: string;
-    is_active?: boolean;
-  }) {
-    return this.post('/levels/', levelData);
+  static async createLevel(levelData: { name: string; is_active?: boolean }) {
+    return this.post("/levels/", levelData);
   }
 
-  static async updateLevel(levelId: number, levelData: {
-    name?: string;
-    is_active?: boolean;
-  }) {
+  static async updateLevel(
+    levelId: number,
+    levelData: {
+      name?: string;
+      is_active?: boolean;
+    }
+  ) {
     return this.put(`/levels/${levelId}/`, levelData);
   }
 
@@ -367,7 +383,7 @@ export class ApiService {
 
   // Suppliers methods
   static async getSuppliers() {
-    return this.get('/suppliers/');
+    return this.get("/suppliers/");
   }
 
   static async createSupplier(supplierData: {
@@ -379,18 +395,21 @@ export class ApiService {
     contact_person?: string;
     notes?: string;
   }) {
-    return this.post('/suppliers/', supplierData);
+    return this.post("/suppliers/", supplierData);
   }
 
-  static async updateSupplier(id: number, supplierData: {
-    name?: string;
-    address?: string;
-    phone?: string;
-    email?: string;
-    website?: string;
-    contact_person?: string;
-    notes?: string;
-  }) {
+  static async updateSupplier(
+    id: number,
+    supplierData: {
+      name?: string;
+      address?: string;
+      phone?: string;
+      email?: string;
+      website?: string;
+      contact_person?: string;
+      notes?: string;
+    }
+  ) {
     return this.put(`/suppliers/${id}/`, supplierData);
   }
 
@@ -408,13 +427,13 @@ export class ApiService {
 
   // Purchase methods
   static async getPurchases() {
-    console.log('ApiService.getPurchases() called');
+    console.log("ApiService.getPurchases() called");
     try {
-      const result = await this.get('/purchases/');
-      console.log('Purchases API response:', result);
+      const result = await this.get("/purchases/");
+      console.log("Purchases API response:", result);
       return result;
     } catch (error) {
-      console.error('Error in getPurchases:', error);
+      console.error("Error in getPurchases:", error);
       throw error;
     }
   }
@@ -423,73 +442,76 @@ export class ApiService {
     supplier: number;
     date: string;
     amount: number;
-    status: 'pending' | 'completed' | 'cancelled';
+    status: "pending" | "completed" | "cancelled";
     products: string;
     notes?: string;
     proof_document?: File;
   }) {
     const formData = new FormData();
-    formData.append('supplier', purchaseData.supplier.toString());
-    formData.append('date', purchaseData.date);
-    formData.append('amount', purchaseData.amount.toString());
-    formData.append('status', purchaseData.status);
-    formData.append('products', purchaseData.products);
-    
+    formData.append("supplier", purchaseData.supplier.toString());
+    formData.append("date", purchaseData.date);
+    formData.append("amount", purchaseData.amount.toString());
+    formData.append("status", purchaseData.status);
+    formData.append("products", purchaseData.products);
+
     if (purchaseData.notes) {
-      formData.append('notes', purchaseData.notes);
-    }
-    
-    if (purchaseData.proof_document) {
-      formData.append('proof_document', purchaseData.proof_document);
+      formData.append("notes", purchaseData.notes);
     }
 
-    return this.request('/purchases/', {
-      method: 'POST',
+    if (purchaseData.proof_document) {
+      formData.append("proof_document", purchaseData.proof_document);
+    }
+
+    return this.request("/purchases/", {
+      method: "POST",
       body: formData,
     });
   }
 
-  static async updatePurchase(id: number, purchaseData: {
-    supplier?: number;
-    date?: string;
-    amount?: number;
-    status?: 'pending' | 'completed' | 'cancelled';
-    products?: string;
-    notes?: string;
-    proof_document?: File;
-  }) {
+  static async updatePurchase(
+    id: number,
+    purchaseData: {
+      supplier?: number;
+      date?: string;
+      amount?: number;
+      status?: "pending" | "completed" | "cancelled";
+      products?: string;
+      notes?: string;
+      proof_document?: File;
+    }
+  ) {
     // If we have a file, use FormData
     if (purchaseData.proof_document) {
       const formData = new FormData();
-      
+
       if (purchaseData.supplier) {
-        formData.append('supplier', purchaseData.supplier.toString());
+        formData.append("supplier", purchaseData.supplier.toString());
       }
       if (purchaseData.date) {
-        formData.append('date', purchaseData.date);
+        formData.append("date", purchaseData.date);
       }
       if (purchaseData.amount) {
-        formData.append('amount', purchaseData.amount.toString());
+        formData.append("amount", purchaseData.amount.toString());
       }
       if (purchaseData.status) {
-        formData.append('status', purchaseData.status);
+        formData.append("status", purchaseData.status);
       }
       if (purchaseData.products) {
-        formData.append('products', purchaseData.products);
+        formData.append("products", purchaseData.products);
       }
       if (purchaseData.notes) {
-        formData.append('notes', purchaseData.notes);
+        formData.append("notes", purchaseData.notes);
       }
-      formData.append('proof_document', purchaseData.proof_document);
+      formData.append("proof_document", purchaseData.proof_document);
 
       return this.request(`/purchases/${id}/`, {
-        method: 'PUT',
+        method: "PUT",
         body: formData,
       });
     } else {
       // For simple updates like status, use JSON
       const updateData: any = {};
-      
+
       if (purchaseData.supplier) updateData.supplier = purchaseData.supplier;
       if (purchaseData.date) updateData.date = purchaseData.date;
       if (purchaseData.amount) updateData.amount = purchaseData.amount;
@@ -507,15 +529,15 @@ export class ApiService {
 
   // Payment methods
   static async getPayments() {
-    console.log('ApiService.getPayments() called');
-    console.log('API_BASE_URL:', API_BASE_URL);
-    console.log('Auth token:', AuthToken.get() ? 'exists' : 'missing');
+    console.log("ApiService.getPayments() called");
+    console.log("API_BASE_URL:", API_BASE_URL);
+    console.log("Auth token:", AuthToken.get() ? "exists" : "missing");
     try {
-      const result = await this.get('/payments/');
-      console.log('Payments API response:', result);
+      const result = await this.get("/payments/");
+      console.log("Payments API response:", result);
       return result;
     } catch (error) {
-      console.error('Error in getPayments:', error);
+      console.error("Error in getPayments:", error);
       throw error;
     }
   }
@@ -524,82 +546,85 @@ export class ApiService {
     supplier: number;
     date: string;
     amount: number;
-    method: 'cash' | 'card' | 'bank_transfer' | 'check';
-    status: 'pending' | 'completed' | 'failed';
+    method: "cash" | "card" | "bank_transfer" | "check";
+    status: "pending" | "completed" | "failed";
     reference?: string;
     notes?: string;
     proof_document?: File;
   }) {
     const formData = new FormData();
-    formData.append('supplier', paymentData.supplier.toString());
-    formData.append('date', paymentData.date);
-    formData.append('amount', paymentData.amount.toString());
-    formData.append('method', paymentData.method);
-    formData.append('status', paymentData.status);
-    
+    formData.append("supplier", paymentData.supplier.toString());
+    formData.append("date", paymentData.date);
+    formData.append("amount", paymentData.amount.toString());
+    formData.append("method", paymentData.method);
+    formData.append("status", paymentData.status);
+
     if (paymentData.reference) {
-      formData.append('reference', paymentData.reference);
-    }
-    
-    if (paymentData.notes) {
-      formData.append('notes', paymentData.notes);
-    }
-    
-    if (paymentData.proof_document) {
-      formData.append('proof_document', paymentData.proof_document);
+      formData.append("reference", paymentData.reference);
     }
 
-    return this.request('/payments/', {
-      method: 'POST',
+    if (paymentData.notes) {
+      formData.append("notes", paymentData.notes);
+    }
+
+    if (paymentData.proof_document) {
+      formData.append("proof_document", paymentData.proof_document);
+    }
+
+    return this.request("/payments/", {
+      method: "POST",
       body: formData,
     });
   }
 
-  static async updatePayment(id: number, paymentData: {
-    supplier?: number;
-    date?: string;
-    amount?: number;
-    method?: 'cash' | 'card' | 'bank_transfer' | 'check';
-    status?: 'pending' | 'completed' | 'failed';
-    reference?: string;
-    notes?: string;
-    proof_document?: File;
-  }) {
+  static async updatePayment(
+    id: number,
+    paymentData: {
+      supplier?: number;
+      date?: string;
+      amount?: number;
+      method?: "cash" | "card" | "bank_transfer" | "check";
+      status?: "pending" | "completed" | "failed";
+      reference?: string;
+      notes?: string;
+      proof_document?: File;
+    }
+  ) {
     // If we have a file, use FormData
     if (paymentData.proof_document) {
       const formData = new FormData();
-      
+
       if (paymentData.supplier) {
-        formData.append('supplier', paymentData.supplier.toString());
+        formData.append("supplier", paymentData.supplier.toString());
       }
       if (paymentData.date) {
-        formData.append('date', paymentData.date);
+        formData.append("date", paymentData.date);
       }
       if (paymentData.amount) {
-        formData.append('amount', paymentData.amount.toString());
+        formData.append("amount", paymentData.amount.toString());
       }
       if (paymentData.method) {
-        formData.append('method', paymentData.method);
+        formData.append("method", paymentData.method);
       }
       if (paymentData.status) {
-        formData.append('status', paymentData.status);
+        formData.append("status", paymentData.status);
       }
       if (paymentData.reference) {
-        formData.append('reference', paymentData.reference);
+        formData.append("reference", paymentData.reference);
       }
       if (paymentData.notes) {
-        formData.append('notes', paymentData.notes);
+        formData.append("notes", paymentData.notes);
       }
-      formData.append('proof_document', paymentData.proof_document);
+      formData.append("proof_document", paymentData.proof_document);
 
       return this.request(`/payments/${id}/`, {
-        method: 'PUT',
+        method: "PUT",
         body: formData,
       });
     } else {
       // For simple updates like status, use JSON
       const updateData: any = {};
-      
+
       if (paymentData.supplier) updateData.supplier = paymentData.supplier;
       if (paymentData.date) updateData.date = paymentData.date;
       if (paymentData.amount) updateData.amount = paymentData.amount;
@@ -623,8 +648,13 @@ export class ApiService {
 
   // Helper to get full URL for images
   static getImageUrl(relativePath: string): string {
-    if (!relativePath) return '';
-    if (relativePath.startsWith('http')) return relativePath;
+    if (!relativePath) return "";
+    if (relativePath.startsWith("http")) return relativePath;
     return `${BACKEND_BASE_URL}${relativePath}`;
+  }
+
+  static async sendSmsNotification(phone: string, message: string) {
+    const data = { phone, message };
+    return this.post("/send-sms/", data);
   }
 }

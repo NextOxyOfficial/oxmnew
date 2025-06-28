@@ -19,7 +19,8 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production-12345678901234567890')
+SECRET_KEY = config(
+    'SECRET_KEY', default='django-insecure-change-me-in-production-12345678901234567890')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
@@ -148,6 +149,9 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# sms settings
+API_SMS = 'SplZ3f60tlt69pkZAEc8WHk3MbHkGeLYtJ1jElCd'
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
