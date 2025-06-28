@@ -2,208 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Product } from "@/types/product";
-
-interface ProductDetailsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  product: Product;
-  onEdit: (product: Product) => void;
-  onDelete: (productId: number) => void;
-  isDeleting?: boolean;
-  isEditing?: boolean;
-}
-
-function ProductDetailsModal({
-  isOpen,
-  onClose,
-  product,
-  onEdit,
-  onDelete,
-  isDeleting = false,
-  isEditing = false
-}: ProductDetailsModalProps) {
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  if (!isOpen) return null;
-
-  const handleDelete = async () => {
-    await onDelete(product.id);
-    setShowDeleteConfirm(false);
-    onClose();
-  };
-
-  const profit = product.salePrice - product.buyPrice;
-  const profitMargin = ((profit / product.salePrice) * 100).toFixed(1);
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 w-full max-w-2xl my-auto shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h4 className="text-xl font-medium text-slate-100">Product Details</h4>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-300 cursor-pointer"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Product Info */}
-        <div className="space-y-6">
-          {/* Header with Product Name and Category */}
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <h5 className="text-lg font-semibold text-slate-100">{product.name}</h5>
-              <span className="bg-slate-700/50 text-slate-300 px-3 py-1 rounded-full text-sm font-medium">
-                {product.category}
-              </span>
-            </div>
-            <p className="text-slate-400 text-sm">Product ID: #{product.id}</p>
-          </div>
-
-          {/* Product Details Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
-              <h6 className="text-sm font-medium text-slate-300 mb-2">Current Stock</h6>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-cyan-300">{product.stock}</span>
-                <span className="text-slate-400 text-sm">units</span>
-                {product.stock < 5 && (
-                  <div className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 px-2 py-1 rounded text-xs">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    Low Stock
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
-              <h6 className="text-sm font-medium text-slate-300 mb-2">Units Sold</h6>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-green-300">{product.sold}</span>
-                <span className="text-slate-400 text-sm">units</span>
-              </div>
-            </div>
-
-            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
-              <h6 className="text-sm font-medium text-slate-300 mb-2">Buy Price</h6>
-              <p className="text-lg font-semibold text-red-300">${product.buyPrice}</p>
-            </div>
-
-            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
-              <h6 className="text-sm font-medium text-slate-300 mb-2">Sale Price</h6>
-              <p className="text-lg font-semibold text-green-300">${product.salePrice}</p>
-            </div>
-
-            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
-              <h6 className="text-sm font-medium text-slate-300 mb-2">Profit per Unit</h6>
-              <p className={`text-lg font-semibold ${profit > 0 ? 'text-green-300' : profit < 0 ? 'text-red-300' : 'text-yellow-300'}`}>
-                {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
-              </p>
-              <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
-                {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(parseFloat(profitMargin)).toFixed(1)}% margin
-              </p>
-            </div>
-
-            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
-              <h6 className="text-sm font-medium text-slate-300 mb-2">Total Inventory Value</h6>
-              <p className="text-lg font-semibold text-cyan-300">${product.buyPrice * product.stock}</p>
-              <p className="text-xs text-slate-400">At buy price</p>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-slate-700/50">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-600 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 cursor-pointer"
-            >
-              Close
-            </button>
-            
-            <button
-              onClick={() => onEdit(product)}
-              disabled={isEditing}
-              className={`px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
-                isEditing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-              }`}
-            >
-              {isEditing ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Opening Editor...
-                </>
-              ) : (
-                'Edit Product'
-              )}
-            </button>
-            
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 shadow-lg cursor-pointer"
-            >
-              Delete Product
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-60 p-4">
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 w-full max-w-md shadow-lg">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100/10 mb-4">
-                <svg className="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-slate-100 mb-2">Delete Product</h3>
-              <p className="text-sm text-slate-400 mb-6">
-                Are you sure you want to delete "{product.name}"? This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-2 border border-slate-600 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className={`flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
-                    isDeleting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                  }`}
-                >
-                  {isDeleting ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Deleting...
-                    </>
-                  ) : (
-                    'Delete'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+import { Product, StockEntry } from "@/types/product";
+import ProductDetailsModal from "@/components/ProductDetailsModal";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -215,6 +15,9 @@ export default function ProductsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isAddingStock, setIsAddingStock] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   const handleProductClick = (product: Product) => {
     console.log("Product clicked:", product.name);
@@ -241,6 +44,8 @@ export default function ProductsPage() {
   };
 
   const handleDeleteProduct = async (productId: number) => {
+    if (!productToDelete) return;
+    
     setIsDeleting(true);
     try {
       console.log("Delete product:", productId);
@@ -248,10 +53,50 @@ export default function ProductsPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       // For now, just close the modal
+      setShowDeleteModal(false);
+      setProductToDelete(null);
     } catch (error) {
       console.error("Error deleting product:", error);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const showDeleteConfirmation = (product: Product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setProductToDelete(null);
+  };
+
+  const handleAddStock = async (productId: number, stockData: {
+    quantity: number;
+    buy_price: number;
+    sell_price: number;
+    reason: string;
+    notes?: string;
+    variant_id?: number;
+  }) => {
+    setIsAddingStock(true);
+    try {
+      console.log("Add stock:", { productId, ...stockData });
+      // TODO: Implement add stock functionality
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // For demo purposes, we would update the product stock here
+      // This would typically involve calling an API and then updating the local state
+      
+      const profit = stockData.sell_price - stockData.buy_price;
+      console.log(`Added ${stockData.quantity} units to product ${productId} - Buy: $${stockData.buy_price}, Sell: $${stockData.sell_price}, Profit: $${profit.toFixed(2)} per unit`);
+    } catch (error) {
+      console.error("Error adding stock:", error);
+      throw error; // Re-throw to be handled by the modal
+    } finally {
+      setIsAddingStock(false);
     }
   };
 
@@ -269,107 +114,265 @@ export default function ProductsPage() {
   };
 
   // Sample products data
-  const products = [
+  const products: Product[] = [
     {
       id: 1,
       name: 'MacBook Pro 16"',
+      sku: 'MBP-16-001',
       category: "Electronics",
       stock: 25,
+      price: 2800,
+      cost: 2200,
+      status: 'active',
       buyPrice: 2200,
       salePrice: 2800,
       sold: 5,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-15T00:00:00Z',
+      variants: [
+        {
+          id: 1,
+          color: 'Space Gray',
+          stock: 15,
+          sku_suffix: 'SG'
+        },
+        {
+          id: 2,
+          color: 'Silver',
+          stock: 10,
+          sku_suffix: 'SL'
+        }
+      ]
     },
     {
       id: 2,
       name: "iPhone 15 Pro",
+      sku: 'IP-15P-001',
       category: "Electronics",
       stock: 40,
+      price: 1299,
+      cost: 999,
+      status: 'active',
       buyPrice: 999,
       salePrice: 1299,
       sold: 12,
+      created_at: '2024-01-05T00:00:00Z',
+      updated_at: '2024-01-20T00:00:00Z',
+      variants: [
+        {
+          id: 3,
+          color: 'Natural Titanium',
+          size: '128GB',
+          stock: 20,
+          sku_suffix: 'NT-128'
+        },
+        {
+          id: 4,
+          color: 'Blue Titanium',
+          size: '256GB',
+          stock: 20,
+          sku_suffix: 'BT-256'
+        }
+      ]
     },
     {
       id: 3,
       name: "Samsung Galaxy S24",
+      sku: 'SGS-24-001',
       category: "Electronics",
       stock: 30,
+      price: 1100,
+      cost: 850,
+      status: 'active',
       buyPrice: 850,
       salePrice: 1100,
       sold: 8,
+      created_at: '2024-01-10T00:00:00Z',
+      updated_at: '2024-01-25T00:00:00Z',
     },
     {
       id: 4,
       name: "Dell XPS 13",
+      sku: 'DXP-13-001',
       category: "Electronics",
       stock: 15,
+      price: 1500,
+      cost: 1200,
+      status: 'active',
       buyPrice: 1200,
       salePrice: 1500,
       sold: 3,
+      created_at: '2024-01-12T00:00:00Z',
+      updated_at: '2024-01-28T00:00:00Z',
     },
     {
       id: 5,
       name: "iPad Air",
+      sku: 'IPA-001',
       category: "Electronics",
       stock: 20,
+      price: 749,
+      cost: 599,
+      status: 'active',
       buyPrice: 599,
       salePrice: 749,
       sold: 7,
+      created_at: '2024-01-15T00:00:00Z',
+      updated_at: '2024-01-30T00:00:00Z',
     },
     {
       id: 6,
       name: "Office Chair",
+      sku: 'OFC-001',
       category: "Furniture",
       stock: 12,
+      price: 220,
+      cost: 150,
+      status: 'active',
       buyPrice: 150,
       salePrice: 220,
       sold: 4,
+      created_at: '2024-01-08T00:00:00Z',
+      updated_at: '2024-01-22T00:00:00Z',
+      variants: [
+        {
+          id: 5,
+          color: 'Black',
+          weight: 15,
+          weight_unit: 'kg',
+          stock: 7,
+          sku_suffix: 'BK'
+        },
+        {
+          id: 6,
+          color: 'Gray',
+          weight: 15,
+          weight_unit: 'kg',
+          stock: 5,
+          sku_suffix: 'GY'
+        }
+      ]
     },
     {
       id: 7,
       name: "Standing Desk",
+      sku: 'STD-001',
       category: "Furniture",
       stock: 8,
+      price: 450,
+      cost: 300,
+      status: 'active',
       buyPrice: 300,
       salePrice: 450,
       sold: 2,
+      created_at: '2024-01-18T00:00:00Z',
+      updated_at: '2024-02-02T00:00:00Z',
+      variants: [
+        {
+          id: 7,
+          size: 'Small (120cm)',
+          weight: 25,
+          weight_unit: 'kg',
+          stock: 4,
+          sku_suffix: 'S'
+        },
+        {
+          id: 8,
+          size: 'Large (160cm)',
+          weight: 35,
+          weight_unit: 'kg',
+          stock: 4,
+          sku_suffix: 'L'
+        }
+      ]
     },
     {
       id: 8,
       name: "Gaming Mouse",
+      sku: 'GM-001',
       category: "Accessories",
       stock: 50,
+      price: 75,
+      cost: 45,
+      status: 'active',
       buyPrice: 45,
       salePrice: 75,
       sold: 15,
+      created_at: '2024-01-20T00:00:00Z',
+      updated_at: '2024-02-05T00:00:00Z',
     },
     {
       id: 9,
       name: "Mechanical Keyboard",
+      sku: 'MK-001',
       category: "Accessories",
       stock: 35,
+      price: 120,
+      cost: 80,
+      status: 'active',
       buyPrice: 80,
       salePrice: 120,
       sold: 9,
+      created_at: '2024-01-22T00:00:00Z',
+      updated_at: '2024-02-08T00:00:00Z',
+      variants: [
+        {
+          id: 9,
+          custom_variant: 'Blue Switches',
+          stock: 20,
+          sku_suffix: 'BLU'
+        },
+        {
+          id: 10,
+          custom_variant: 'Red Switches',
+          stock: 15,
+          sku_suffix: 'RED'
+        }
+      ]
     },
     {
       id: 10,
       name: "Wireless Headphones",
+      sku: 'WH-001',
       category: "Electronics",
       stock: 22,
+      price: 299,
+      cost: 200,
+      status: 'active',
       buyPrice: 200,
       salePrice: 299,
       sold: 11,
+      created_at: '2024-01-25T00:00:00Z',
+      updated_at: '2024-02-10T00:00:00Z',
+      variants: [
+        {
+          id: 11,
+          color: 'Black',
+          weight: 250,
+          weight_unit: 'g',
+          stock: 12,
+          sku_suffix: 'BK'
+        },
+        {
+          id: 12,
+          color: 'White',
+          weight: 250,
+          weight_unit: 'g',
+          stock: 10,
+          sku_suffix: 'WH'
+        }
+      ]
     },
   ];
 
   // Calculate totals
   const totalProducts = products.length;
   const totalBuyPrice = products.reduce(
-    (sum, product) => sum + product.buyPrice * product.stock,
+    (sum, product) => sum + (product.buyPrice || product.cost) * product.stock,
     0
   );
   const totalSalePrice = products.reduce(
-    (sum, product) => sum + product.salePrice * product.stock,
+    (sum, product) => sum + (product.salePrice || product.price) * product.stock,
     0
   );
   const estimatedProfit = totalSalePrice - totalBuyPrice;
@@ -393,9 +396,9 @@ export default function ProductsPage() {
         case "stock-low":
           return a.stock - b.stock;
         case "price-high":
-          return b.salePrice - a.salePrice;
+          return (b.salePrice || b.price) - (a.salePrice || a.price);
         case "price-low":
-          return a.salePrice - b.salePrice;
+          return (a.salePrice || a.price) - (b.salePrice || b.price);
         default:
           return 0;
       }
@@ -808,8 +811,10 @@ export default function ProductsPage() {
                     <div>
                       <p className="text-xs text-slate-400">Profit per unit</p>
                       {(() => {
-                        const profit = product.salePrice - product.buyPrice;
-                        const profitMargin = product.salePrice > 0 ? ((profit / product.salePrice) * 100) : 0;
+                        const salePrice = product.salePrice || product.price;
+                        const buyPrice = product.buyPrice || product.cost;
+                        const profit = salePrice - buyPrice;
+                        const profitMargin = salePrice > 0 ? ((profit / salePrice) * 100) : 0;
                         return (
                           <div className="flex items-center gap-2">
                             <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
@@ -848,7 +853,7 @@ export default function ProductsPage() {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteProduct(product.id);
+                          showDeleteConfirmation(product);
                         }}
                         className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
                         title="Delete"
@@ -951,17 +956,17 @@ export default function ProductsPage() {
                       <td className="py-3 px-4">
                         <div className="space-y-1">
                           <div className="text-sm font-medium text-red-400">
-                            ${product.buyPrice}
+                            ${product.buyPrice || product.cost}
                           </div>
                           <div className="text-xs text-slate-400">
-                            ${product.salePrice} sale
+                            ${product.salePrice || product.price} sale
                           </div>
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         {(() => {
-                          const profit = product.salePrice - product.buyPrice;
-                          const profitMargin = product.salePrice > 0 ? ((profit / product.salePrice) * 100) : 0;
+                          const profit = (product.salePrice || product.price) - (product.buyPrice || product.cost);
+                          const profitMargin = (product.salePrice || product.price) > 0 ? ((profit / (product.salePrice || product.price)) * 100) : 0;
                           return (
                             <div className="space-y-1">
                               <span className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
@@ -1001,7 +1006,7 @@ export default function ProductsPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteProduct(product.id);
+                              showDeleteConfirmation(product);
                             }}
                             className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
                             title="Delete"
@@ -1066,11 +1071,83 @@ export default function ProductsPage() {
             isOpen={isModalOpen}
             onClose={closeModal}
             product={selectedProduct}
-            onEdit={() => handleEditProduct(selectedProduct)}
-            onDelete={() => handleDeleteProduct(selectedProduct.id)}
-            isDeleting={isDeleting}
-            isEditing={isEditing}
+            onAddStock={handleAddStock}
           />
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && productToDelete && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-screen items-center justify-center p-4">
+              <div className="fixed inset-0 bg-black bg-opacity-75 transition-opacity" onClick={cancelDelete} />
+              
+              <div className="relative w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl">
+                {/* Header */}
+                <div className="p-6 border-b border-slate-700/50">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.314 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Delete Product</h3>
+                      <p className="text-sm text-slate-400">This action cannot be undone</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-6">
+                  <p className="text-slate-300 mb-2">
+                    Are you sure you want to delete this product?
+                  </p>
+                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 mb-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium truncate">{productToDelete.name}</p>
+                        <p className="text-sm text-slate-400">SKU: {productToDelete.sku}</p>
+                        <p className="text-sm text-slate-400">{productToDelete.stock} units in stock</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-red-400 text-sm font-medium">
+                    ⚠️ This will permanently delete the product and all its associated data.
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={cancelDelete}
+                    className="px-4 py-2 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleDeleteProduct(productToDelete.id)}
+                    disabled={isDeleting}
+                    className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {isDeleting ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Deleting...</span>
+                      </div>
+                    ) : (
+                      'Delete Product'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -59,7 +59,7 @@ export default function Header({ user, onLogout, onMenuClick, title, breadcrumbs
                 <span className="font-medium">DASHBOARD</span>
               </Link>
               {breadcrumbs && breadcrumbs.map((item, index) => (
-                <React.Fragment key={index}>
+                <React.Fragment key={`${item.name}-${index}`}>
                   <span className="text-slate-500 mx-1">{'>'}</span>
                   {item.href ? (
                     <Link href={item.href} className="text-slate-400 hover:text-slate-200 transition-colors font-medium">
