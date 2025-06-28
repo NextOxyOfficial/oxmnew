@@ -16,6 +16,8 @@ import {
   Download,
   FileText,
   FileSpreadsheet,
+  Loader2,
+  Settings,
 } from "lucide-react";
 
 interface Account {
@@ -49,6 +51,7 @@ export default function BankingPage() {
   const [showCreateAccountModal, setShowCreateAccountModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"accounts" | "transactions">("accounts");
 
   // Initialize with default Primary account
@@ -74,6 +77,11 @@ export default function BankingPage() {
   const [customEndDate, setCustomEndDate] = useState("");
   const [tempStartDate, setTempStartDate] = useState("");
   const [tempEndDate, setTempEndDate] = useState("");
+  const [isAddingTransaction, setIsAddingTransaction] = useState(false);
+
+  // Settings modal states
+  const [editableAccounts, setEditableAccounts] = useState<Account[]>([]);
+  const [isSavingAccountNames, setIsSavingAccountNames] = useState(false);
 
   // Mock employee data
   const employees: Employee[] = [
@@ -126,31 +134,37 @@ export default function BankingPage() {
   const handleAddTransaction = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedAccountId && newTransaction.amount && newTransaction.purpose && newTransaction.verifiedBy) {
-      const transaction: Transaction = {
-        id: Math.random().toString(36).substr(2, 9),
-        accountId: selectedAccountId,
-        type: newTransaction.type,
-        amount: parseFloat(newTransaction.amount),
-        purpose: newTransaction.purpose,
-        verifiedBy: newTransaction.verifiedBy,
-        date: new Date().toISOString(),
-        status: "verified",
-      };
+      setIsAddingTransaction(true);
+      
+      // Simulate async operation
+      setTimeout(() => {
+        const transaction: Transaction = {
+          id: Math.random().toString(36).substr(2, 9),
+          accountId: selectedAccountId,
+          type: newTransaction.type,
+          amount: parseFloat(newTransaction.amount),
+          purpose: newTransaction.purpose,
+          verifiedBy: newTransaction.verifiedBy,
+          date: new Date().toISOString(),
+          status: "verified",
+        };
 
-      // Update account balance
-      setAccounts(accounts.map(account => {
-        if (account.id === selectedAccountId) {
-          const newBalance = newTransaction.type === "credit" 
-            ? account.balance + parseFloat(newTransaction.amount)
-            : account.balance - parseFloat(newTransaction.amount);
-          return { ...account, balance: newBalance };
-        }
-        return account;
-      }));
+        // Update account balance
+        setAccounts(accounts.map(account => {
+          if (account.id === selectedAccountId) {
+            const newBalance = newTransaction.type === "credit" 
+              ? account.balance + parseFloat(newTransaction.amount)
+              : account.balance - parseFloat(newTransaction.amount);
+            return { ...account, balance: newBalance };
+          }
+          return account;
+        }));
 
-      setTransactions([transaction, ...transactions]);
-      setNewTransaction({ type: "debit", amount: "", purpose: "", verifiedBy: "" });
-      setShowTransactionModal(false);
+        setTransactions([transaction, ...transactions]);
+        setNewTransaction({ type: "debit", amount: "", purpose: "", verifiedBy: "" });
+        setIsAddingTransaction(false);
+        setShowTransactionModal(false);
+      }, 800);
     }
   };
 
@@ -180,6 +194,28 @@ export default function BankingPage() {
     if (dateRange === "custom" && (!customStartDate || !customEndDate)) {
       setDateRange("all");
     }
+  };
+
+  const handleOpenSettings = () => {
+    setEditableAccounts([...accounts]);
+    setShowSettingsModal(true);
+  };
+
+  const handleSaveAccountNames = () => {
+    setIsSavingAccountNames(true);
+    
+    // Simulate async operation
+    setTimeout(() => {
+      setAccounts(editableAccounts);
+      setIsSavingAccountNames(false);
+      setShowSettingsModal(false);
+    }, 500);
+  };
+
+  const handleAccountNameChange = (accountId: string, newName: string) => {
+    setEditableAccounts(editableAccounts.map(account => 
+      account.id === accountId ? { ...account, name: newName } : account
+    ));
   };
 
   const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
@@ -383,7 +419,7 @@ export default function BankingPage() {
             <p className="text-slate-500 mb-4">Create your first account to get started</p>
             <button
               onClick={() => setShowCreateAccountModal(true)}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg"
+              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
             >
               Create First Account
             </button>
@@ -398,7 +434,7 @@ export default function BankingPage() {
                   <button
                     key={account.id}
                     onClick={() => setSelectedAccountId(account.id)}
-                    className={`px-6 py-4 font-medium transition-colors relative flex items-center space-x-3 ${
+                    className={`px-6 py-4 font-medium transition-colors relative flex items-center space-x-3 cursor-pointer ${
                       selectedAccountId === account.id
                         ? "text-cyan-400 bg-slate-800/50"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/30"
@@ -417,16 +453,29 @@ export default function BankingPage() {
                   </button>
                 ))}
                 
-                {/* Create Account Tab */}
+                {/* Create Account Tab - Only show if less than 4 accounts */}
+                {accounts.length < 4 && (
+                  <button
+                    onClick={() => setShowCreateAccountModal(true)}
+                    className="px-6 py-4 font-medium transition-colors relative flex items-center space-x-3 text-slate-400 hover:text-cyan-400 hover:bg-slate-800/30 border-l border-slate-700/50 cursor-pointer"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <div className="text-left">
+                      <div className="font-semibold">Create Account</div>
+                      <div className="text-sm text-slate-500">Add new account</div>
+                    </div>
+                  </button>
+                )}
+
+                {/* Spacer to push settings to the right */}
+                <div className="flex-1"></div>
+
+                {/* Settings Tab */}
                 <button
-                  onClick={() => setShowCreateAccountModal(true)}
-                  className="px-6 py-4 font-medium transition-colors relative flex items-center space-x-3 text-slate-400 hover:text-cyan-400 hover:bg-slate-800/30 border-l border-slate-700/50"
+                  onClick={handleOpenSettings}
+                  className="px-4 py-4 font-medium transition-colors relative flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:bg-slate-800/30 border-l border-slate-700/50 cursor-pointer"
                 >
-                  <Plus className="h-5 w-5" />
-                  <div className="text-left">
-                    <div className="font-semibold">Create Account</div>
-                    <div className="text-sm text-slate-500">Add new account</div>
-                  </div>
+                  <Settings className="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -492,7 +541,7 @@ export default function BankingPage() {
                       {/* Add Transaction Button */}
                       <button
                         onClick={() => setShowTransactionModal(true)}
-                        className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center gap-2 whitespace-nowrap lg:w-auto w-full justify-center"
+                        className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center gap-2 whitespace-nowrap lg:w-auto w-full justify-center cursor-pointer active:scale-95"
                       >
                         <Plus className="h-4 w-4" />
                         <span>Add Transaction</span>
@@ -514,7 +563,7 @@ export default function BankingPage() {
                       <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value)}
-                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[140px]"
+                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[140px] cursor-pointer"
                       >
                         <option value="all" className="bg-slate-800">All Types</option>
                         <option value="credit" className="bg-slate-800">Credit Only</option>
@@ -525,7 +574,7 @@ export default function BankingPage() {
                       <select
                         value={employeeFilter}
                         onChange={(e) => setEmployeeFilter(e.target.value)}
-                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[160px]"
+                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[160px] cursor-pointer"
                       >
                         <option value="all" className="bg-slate-800">All Employees</option>
                         {employees.map((employee) => (
@@ -539,7 +588,7 @@ export default function BankingPage() {
                       <select
                         value={dateRange}
                         onChange={(e) => handleDateRangeChange(e.target.value)}
-                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[140px]"
+                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[140px] cursor-pointer"
                       >
                         <option value="all" className="bg-slate-800">All Time</option>
                         <option value="today" className="bg-slate-800">Today</option>
@@ -556,7 +605,7 @@ export default function BankingPage() {
                           <span>{new Date(customStartDate).toLocaleDateString()} - {new Date(customEndDate).toLocaleDateString()}</span>
                           <button
                             onClick={() => setShowDateRangeModal(true)}
-                            className="text-cyan-400 hover:text-cyan-300 ml-1"
+                            className="text-cyan-400 hover:text-cyan-300 ml-1 cursor-pointer"
                           >
                             Edit
                           </button>
@@ -578,7 +627,7 @@ export default function BankingPage() {
                             setTempStartDate("");
                             setTempEndDate("");
                           }}
-                          className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-medium whitespace-nowrap"
+                          className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-medium whitespace-nowrap cursor-pointer"
                         >
                           Clear
                         </button>
@@ -604,7 +653,7 @@ export default function BankingPage() {
                       {accountTransactions.length === 0 && (
                         <button
                           onClick={() => setShowTransactionModal(true)}
-                          className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg"
+                          className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
                         >
                           Add First Transaction
                         </button>
@@ -693,14 +742,14 @@ export default function BankingPage() {
                                 <span className="text-xs text-slate-500">Export:</span>
                                 <button
                                   onClick={downloadCSV}
-                                  className="flex items-center space-x-1 px-2 py-1 bg-slate-700/50 border border-slate-600/50 text-slate-300 rounded hover:bg-slate-600/50 hover:text-white transition-all duration-200 text-xs"
+                                  className="flex items-center space-x-1 px-2 py-1 bg-slate-700/50 border border-slate-600/50 text-slate-300 rounded hover:bg-slate-600/50 hover:text-white transition-all duration-200 text-xs cursor-pointer"
                                 >
                                   <FileSpreadsheet className="h-3 w-3" />
                                   <span>CSV</span>
                                 </button>
                                 <button
                                   onClick={downloadPDF}
-                                  className="flex items-center space-x-1 px-2 py-1 bg-slate-700/50 border border-slate-600/50 text-slate-300 rounded hover:bg-slate-600/50 hover:text-white transition-all duration-200 text-xs"
+                                  className="flex items-center space-x-1 px-2 py-1 bg-slate-700/50 border border-slate-600/50 text-slate-300 rounded hover:bg-slate-600/50 hover:text-white transition-all duration-200 text-xs cursor-pointer"
                                 >
                                   <FileText className="h-3 w-3" />
                                   <span>PDF</span>
@@ -726,7 +775,7 @@ export default function BankingPage() {
                 <h2 className="text-xl font-semibold text-white">Create New Account</h2>
                 <button
                   onClick={() => setShowCreateAccountModal(false)}
-                  className="text-slate-400 hover:text-white transition-colors"
+                  className="text-slate-400 hover:text-white transition-colors cursor-pointer"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -766,13 +815,13 @@ export default function BankingPage() {
                   <button
                     type="button"
                     onClick={() => setShowCreateAccountModal(false)}
-                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-4 rounded-lg hover:bg-slate-600/50 transition-colors text-sm"
+                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-4 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium"
+                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium cursor-pointer"
                   >
                     Create Account
                   </button>
@@ -790,7 +839,7 @@ export default function BankingPage() {
                 <h2 className="text-xl font-semibold text-white">Add Transaction</h2>
                 <button
                   onClick={() => setShowTransactionModal(false)}
-                  className="text-slate-400 hover:text-white transition-colors"
+                  className="text-slate-400 hover:text-white transition-colors cursor-pointer"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -805,7 +854,7 @@ export default function BankingPage() {
                     <button
                       type="button"
                       onClick={() => setNewTransaction({...newTransaction, type: "debit"})}
-                      className={`p-3 rounded-lg border-2 transition-all flex items-center justify-center space-x-2 text-sm ${
+                      className={`p-3 rounded-lg border-2 transition-all flex items-center justify-center space-x-2 text-sm cursor-pointer ${
                         newTransaction.type === "debit"
                           ? "border-red-500/50 bg-red-500/10"
                           : "border-slate-600/50 hover:border-slate-500/50"
@@ -817,7 +866,7 @@ export default function BankingPage() {
                     <button
                       type="button"
                       onClick={() => setNewTransaction({...newTransaction, type: "credit"})}
-                      className={`p-3 rounded-lg border-2 transition-all flex items-center justify-center space-x-2 text-sm ${
+                      className={`p-3 rounded-lg border-2 transition-all flex items-center justify-center space-x-2 text-sm cursor-pointer ${
                         newTransaction.type === "credit"
                           ? "border-green-500/50 bg-green-500/10"
                           : "border-slate-600/50 hover:border-slate-500/50"
@@ -865,7 +914,7 @@ export default function BankingPage() {
                   <select
                     value={newTransaction.verifiedBy}
                     onChange={(e) => setNewTransaction({...newTransaction, verifiedBy: e.target.value})}
-                    className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
+                    className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm cursor-pointer"
                     required
                   >
                     <option value="" className="bg-slate-800">Select employee...</option>
@@ -881,15 +930,23 @@ export default function BankingPage() {
                   <button
                     type="button"
                     onClick={() => setShowTransactionModal(false)}
-                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-4 rounded-lg hover:bg-slate-600/50 transition-colors text-sm"
+                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-4 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium"
+                    disabled={isAddingTransaction}
+                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
                   >
-                    Add Transaction
+                    {isAddingTransaction ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Adding...</span>
+                      </>
+                    ) : (
+                      "Add Transaction"
+                    )}
                   </button>
                 </div>
               </form>
@@ -905,7 +962,7 @@ export default function BankingPage() {
                 <h2 className="text-xl font-semibold text-white">Select Date Range</h2>
                 <button
                   onClick={cancelCustomDateRange}
-                  className="text-slate-400 hover:text-white transition-colors"
+                  className="text-slate-400 hover:text-white transition-colors cursor-pointer"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -949,16 +1006,95 @@ export default function BankingPage() {
                   <button
                     type="button"
                     onClick={cancelCustomDateRange}
-                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-4 rounded-lg hover:bg-slate-600/50 transition-colors text-sm"
+                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-4 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={applyCustomDateRange}
                     disabled={!tempStartDate || !tempEndDate}
-                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Apply Filter
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Account Settings Modal */}
+        {showSettingsModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 w-full max-w-2xl mx-4 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-white">Account Settings</h2>
+                <button
+                  onClick={() => setShowSettingsModal(false)}
+                  className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="text-sm text-slate-400 mb-4">
+                  Manage your account names. Balances are view-only and updated through transactions.
+                </div>
+
+                {editableAccounts.map((account) => (
+                  <div key={account.id} className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between space-x-4">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                          Account Name
+                        </label>
+                        <input
+                          type="text"
+                          value={account.name}
+                          onChange={(e) => handleAccountNameChange(account.id, e.target.value)}
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
+                          placeholder="Enter account name..."
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                          Current Balance
+                        </label>
+                        <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg py-2 px-3 text-sm">
+                          <span className={`font-semibold ${account.balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {formatCurrency(account.balance)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-xs text-slate-500">
+                      Created: {new Date(account.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex space-x-3 mt-6 pt-4 border-t border-slate-700/50">
+                  <button
+                    type="button"
+                    onClick={() => setShowSettingsModal(false)}
+                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-4 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveAccountNames}
+                    disabled={isSavingAccountNames}
+                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {isSavingAccountNames ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
                   </button>
                 </div>
               </div>
