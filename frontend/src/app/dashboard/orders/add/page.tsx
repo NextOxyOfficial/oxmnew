@@ -888,7 +888,7 @@ export default function AddOrderPage() {
                   <h4 className="text-sm font-medium text-slate-300 mb-3">
                     Add New Item
                   </h4>
-                  <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex flex-col md:flex-row gap-4 items-end">
                     <div className="flex-1 md:flex-[2]">
                       <select
                         value={newItem.product}
@@ -946,7 +946,7 @@ export default function AddOrderPage() {
                       </div>
                     )}
 
-                    <div className="flex items-end">
+                    <div>
                       <button
                         onClick={addItemToOrder}
                         className="px-3 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap"
