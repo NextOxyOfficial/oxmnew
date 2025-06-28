@@ -1,4 +1,15 @@
 // Order/Sale types for the application
+
+// Customer interface
+export interface Customer {
+  id: number | string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  address?: string;
+}
+
 export interface Order {
   id: number;
   product: {

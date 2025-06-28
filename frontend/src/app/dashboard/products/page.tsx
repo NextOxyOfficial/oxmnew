@@ -615,16 +615,6 @@ export default function ProductsPage() {
                           sellPrice > 0 ? (profit / sellPrice) * 100 : 0;
                         const { totalProfit } = getProductTotals(product);
 
-                        // Debug: Log what we're getting
-                        console.log(
-                          "Debug - Product:",
-                          product.name,
-                          "totalProfit:",
-                          totalProfit,
-                          "product.total_profit:",
-                          product.total_profit
-                        );
-
                         return (
                           <div className="space-y-1">
                             <p
