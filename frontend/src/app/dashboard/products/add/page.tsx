@@ -44,6 +44,7 @@ export default function AddProductPage() {
 
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [newVariant, setNewVariant] = useState({ color: "", size: "", buyPrice: 0, sellPrice: 0, stock: 0 });
   const [customColor, setCustomColor] = useState("");
@@ -189,45 +190,121 @@ export default function AddProductPage() {
     }));
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+  // Image compression utility function
+  const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.8): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxWidth) {
+            width = (width * maxWidth) / height;
+            height = maxWidth;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: file.type,
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              resolve(file);
+            }
+          },
+          file.type,
+          quality
+        );
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    if (files.length === 0) return;
+
+    setIsCompressing(true);
+
+    // Check total number of photos limit
+    const remainingSlots = 8 - formData.photos.length;
+    if (files.length > remainingSlots) {
+      setErrors(prev => ({ 
+        ...prev, 
+        photo: `Can only add ${remainingSlots} more photo(s). Maximum 8 photos allowed.` 
+      }));
+      setIsCompressing(false);
+      return;
+    }
+
+    const validFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    for (const file of files) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        setErrors(prev => ({ ...prev, photo: "Please select a valid image file" }));
-        return;
+        setErrors(prev => ({ ...prev, photo: "Please select valid image files only" }));
+        continue;
       }
 
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors(prev => ({ ...prev, photo: "Image size should be less than 5MB" }));
-        return;
+      // Validate file size (10MB max before compression)
+      if (file.size > 10 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, photo: "Image size should be less than 10MB" }));
+        continue;
       }
 
-      // Check if we already have 5 photos (limit)
-      if (formData.photos.length >= 5) {
-        setErrors(prev => ({ ...prev, photo: "Maximum 5 photos allowed" }));
-        return;
-      }
+      try {
+        // Compress the image
+        const compressedFile = await compressImage(file, 800, 0.8);
+        validFiles.push(compressedFile);
 
-      setFormData(prev => ({ ...prev, photos: [...prev.photos, file] }));
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPhotoPreviews(prev => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-
-      // Clear photo error
-      if (errors.photo) {
-        setErrors(prev => ({ ...prev, photo: "" }));
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = () => {
+          newPreviews.push(reader.result as string);
+          
+          // Update state when all previews are ready
+          if (newPreviews.length === validFiles.length) {
+            setFormData(prev => ({ ...prev, photos: [...prev.photos, ...validFiles] }));
+            setPhotoPreviews(prev => [...prev, ...newPreviews]);
+            setIsCompressing(false);
+          }
+        };
+        reader.readAsDataURL(compressedFile);
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        setErrors(prev => ({ ...prev, photo: "Error processing image. Please try again." }));
+        setIsCompressing(false);
       }
+    }
 
-      // Reset input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+    // Clear photo error if files were processed
+    if (validFiles.length > 0 && errors.photo) {
+      setErrors(prev => ({ ...prev, photo: "" }));
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -320,7 +397,7 @@ export default function AddProductPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="sm:p-6 p-1 space-y-6">
       {/* Custom styles for scrollbar */}
       <style jsx>{`
         .scrollbar-thin {
@@ -363,7 +440,7 @@ export default function AddProductPage() {
 
         {/* Form Container - matching settings page style */}
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-          <div className="p-4">
+          <div className="sm:p-4 p-2">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Product Name */}
               <div>
@@ -411,34 +488,51 @@ export default function AddProductPage() {
               {/* Photo Upload */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Product Photos ({formData.photos.length}/5)
+                  Product Photos ({formData.photos.length}/8)
                 </label>
                 <div className="flex gap-3">
                   {/* Upload Area - Left Side */}
                   <div className="flex-shrink-0 w-32">
                     <div 
-                      className={`border-2 border-dashed ${errors.photo ? 'border-red-500' : 'border-slate-700/50'} rounded-lg p-3 text-center hover:border-slate-600 transition-all duration-200 cursor-pointer bg-slate-800/50 h-32 flex flex-col items-center justify-center ${formData.photos.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      onClick={() => formData.photos.length < 5 && fileInputRef.current?.click()}
+                      className={`border-2 border-dashed ${errors.photo ? 'border-red-500' : 'border-slate-700/50'} rounded-lg p-3 text-center hover:border-slate-600 transition-all duration-200 cursor-pointer bg-slate-800/50 h-32 flex flex-col items-center justify-center ${formData.photos.length >= 8 || isCompressing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={() => !isCompressing && formData.photos.length < 8 && fileInputRef.current?.click()}
                     >
-                      <svg className="w-6 h-6 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      <p className="text-gray-400 text-xs mb-1">
-                        {formData.photos.length >= 5 ? 'Max Reached' : 'Add Photo'}
-                      </p>
-                      <p className="text-gray-500 text-xs">Max 5MB</p>
+                      {isCompressing ? (
+                        <>
+                          <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-1"></div>
+                          <p className="text-cyan-400 text-xs mb-1">Compressing...</p>
+                          <p className="text-gray-500 text-xs">Please wait</p>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-6 h-6 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          <p className="text-gray-400 text-xs mb-1">
+                            {formData.photos.length >= 8 ? 'Max Reached' : 'Add Photos'}
+                          </p>
+                          <p className="text-gray-500 text-xs">Max 10MB each</p>
+                        </>
+                      )}
                     </div>
                     
                     <input
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handlePhotoUpload}
                       className="hidden"
                     />
                     
                     {errors.photo && (
                       <p className="text-red-400 text-xs mt-1">{errors.photo}</p>
+                    )}
+                    
+                    {!errors.photo && (
+                      <p className="text-slate-500 text-xs mt-1 text-center">
+                        Auto-compression enabled
+                      </p>
                     )}
                   </div>
 
@@ -623,11 +717,11 @@ export default function AddProductPage() {
                         <label className="block text-sm font-medium text-slate-300 mb-1.5">
                           Profit per Unit
                         </label>
-                        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 h-[42px] flex flex-col justify-center">
+                        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 h-[42px] flex items-center justify-between">
                           <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
                             {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
                           </p>
-                          <p className={`text-xs leading-none ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
+                          <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
                             {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(parseFloat(profitMargin)).toFixed(1)}%
                           </p>
                         </div>
@@ -679,29 +773,30 @@ export default function AddProductPage() {
                         </div>
                       </div>
 
-                      {/* Custom Color Input */}
-                      {newVariant.color === "Custom" && (
-                        <div className="mb-3">
-                          <input
-                            type="text"
-                            value={customColor}
-                            onChange={(e) => setCustomColor(e.target.value)}
-                            placeholder="Enter custom color"
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
-                        </div>
-                      )}
+                      {/* Custom Color and Size Inputs in one row */}
+                      {(newVariant.color === "Custom" || newVariant.size === "Custom") && (
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          {/* Custom Color Input */}
+                          {newVariant.color === "Custom" && (
+                            <input
+                              type="text"
+                              value={customColor}
+                              onChange={(e) => setCustomColor(e.target.value)}
+                              placeholder="Enter custom color"
+                              className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            />
+                          )}
 
-                      {/* Custom Size Input */}
-                      {newVariant.size === "Custom" && (
-                        <div className="mb-3">
-                          <input
-                            type="text"
-                            value={customSize}
-                            onChange={(e) => setCustomSize(e.target.value)}
-                            placeholder="Enter custom size"
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
+                          {/* Custom Size Input */}
+                          {newVariant.size === "Custom" && (
+                            <input
+                              type="text"
+                              value={customSize}
+                              onChange={(e) => setCustomSize(e.target.value)}
+                              placeholder="Enter custom size"
+                              className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            />
+                          )}
                         </div>
                       )}
 
@@ -793,12 +888,14 @@ export default function AddProductPage() {
                           <div className="grid grid-cols-3 gap-3 text-center">
                             <div>
                               <p className="text-xs text-slate-400 mb-1">Avg Profit/Unit</p>
-                              <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
-                                {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
-                              </p>
-                              <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
-                                {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(parseFloat(profitMargin)).toFixed(1)}%
-                              </p>
+                              <div className="flex items-center justify-between">
+                                <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+                                  {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
+                                </p>
+                                <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
+                                  {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(parseFloat(profitMargin)).toFixed(1)}%
+                                </p>
+                              </div>
                             </div>
                             <div>
                               <p className="text-xs text-slate-400 mb-1">Avg Buy Price</p>
