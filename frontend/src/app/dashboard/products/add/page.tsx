@@ -7,6 +7,9 @@ interface ColorSize {
   id: string;
   color: string;
   size: string;
+  weight?: number;
+  weight_unit?: 'g' | 'kg' | 'lb' | 'oz';
+  custom_variant?: string;
   buyPrice: number;
   sellPrice: number;
   stock: number;
@@ -46,9 +49,19 @@ export default function AddProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [newVariant, setNewVariant] = useState({ color: "", size: "", buyPrice: 0, sellPrice: 0, stock: 0 });
+  const [newVariant, setNewVariant] = useState({ 
+    color: "", 
+    size: "", 
+    weight: 0,
+    weight_unit: 'g' as 'g' | 'kg' | 'lb' | 'oz',
+    custom_variant: "",
+    buyPrice: 0, 
+    sellPrice: 0, 
+    stock: 0 
+  });
   const [customColor, setCustomColor] = useState("");
   const [customSize, setCustomSize] = useState("");
+  const [customWeight, setCustomWeight] = useState("");
 
   // Calculate profit (for single pricing or average if variants exist)
   const profit = formData.hasVariants 
@@ -124,7 +137,7 @@ export default function AddProductPage() {
   const handleVariantChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    if (name === "buyPrice" || name === "sellPrice" || name === "stock") {
+    if (name === "buyPrice" || name === "sellPrice" || name === "stock" || name === "weight") {
       setNewVariant(prev => ({
         ...prev,
         [name]: parseFloat(value) || 0
@@ -149,6 +162,8 @@ export default function AddProductPage() {
     // Determine the actual color and size values
     const actualColor = newVariant.color === "Custom" ? customColor : newVariant.color;
     const actualSize = newVariant.size === "Custom" ? customSize : newVariant.size;
+    const actualWeight = customWeight ? parseFloat(customWeight) : (newVariant.weight > 0 ? newVariant.weight : undefined);
+    const actualCustomVariant = newVariant.custom_variant || "";
 
     if (!actualColor || !actualSize || newVariant.buyPrice <= 0 || newVariant.sellPrice <= 0) {
       return;
@@ -158,6 +173,9 @@ export default function AddProductPage() {
       id: Date.now().toString(),
       color: actualColor,
       size: actualSize,
+      weight: actualWeight,
+      weight_unit: actualWeight ? newVariant.weight_unit : undefined,
+      custom_variant: actualCustomVariant || undefined,
       buyPrice: newVariant.buyPrice,
       sellPrice: newVariant.sellPrice,
       stock: newVariant.stock
@@ -169,9 +187,19 @@ export default function AddProductPage() {
     }));
 
     // Reset form and custom inputs
-    setNewVariant({ color: "", size: "", buyPrice: 0, sellPrice: 0, stock: 0 });
+    setNewVariant({ 
+      color: "", 
+      size: "", 
+      weight: 0,
+      weight_unit: 'g',
+      custom_variant: "",
+      buyPrice: 0, 
+      sellPrice: 0, 
+      stock: 0 
+    });
     setCustomColor("");
     setCustomSize("");
+    setCustomWeight("");
   };
 
   const removeVariant = (id: string) => {
@@ -733,9 +761,9 @@ export default function AddProductPage() {
                   <>
                     {/* Add New Variant */}
                     <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
-                      <h4 className="text-sm font-medium text-slate-300 mb-3">Add Color/Size Variant</h4>
+                      <h4 className="text-sm font-medium text-slate-300 mb-3">Add Product Variant</h4>
                       
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+                      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
                         {/* Color */}
                         <div>
                           <select
@@ -771,11 +799,52 @@ export default function AddProductPage() {
                             <option value="Custom" className="bg-slate-800">Custom</option>
                           </select>
                         </div>
+
+                        {/* Weight */}
+                        <div>
+                          <input
+                            type="number"
+                            name="weight"
+                            value={newVariant.weight || ""}
+                            onChange={handleVariantChange}
+                            placeholder="Weight"
+                            min="0"
+                            step="0.01"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          />
+                        </div>
+
+                        {/* Weight Unit */}
+                        <div>
+                          <select
+                            name="weight_unit"
+                            value={newVariant.weight_unit}
+                            onChange={handleVariantChange}
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          >
+                            <option value="g" className="bg-slate-800">g</option>
+                            <option value="kg" className="bg-slate-800">kg</option>
+                            <option value="lb" className="bg-slate-800">lb</option>
+                            <option value="oz" className="bg-slate-800">oz</option>
+                          </select>
+                        </div>
+
+                        {/* Custom Variant */}
+                        <div className="md:col-span-2">
+                          <input
+                            type="text"
+                            name="custom_variant"
+                            value={newVariant.custom_variant}
+                            onChange={handleVariantChange}
+                            placeholder="Custom variant (optional)"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          />
+                        </div>
                       </div>
 
-                      {/* Custom Color and Size Inputs in one row */}
-                      {(newVariant.color === "Custom" || newVariant.size === "Custom") && (
-                        <div className="grid grid-cols-2 gap-2 mb-3">
+                      {/* Custom Color, Size, and Weight Inputs */}
+                      {(newVariant.color === "Custom" || newVariant.size === "Custom" || customWeight) && (
+                        <div className="grid grid-cols-3 gap-2 mb-3">
                           {/* Custom Color Input */}
                           {newVariant.color === "Custom" && (
                             <input
@@ -797,6 +866,17 @@ export default function AddProductPage() {
                               className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
                             />
                           )}
+
+                          {/* Custom Weight Input */}
+                          <input
+                            type="number"
+                            value={customWeight}
+                            onChange={(e) => setCustomWeight(e.target.value)}
+                            placeholder="Custom weight"
+                            min="0"
+                            step="0.01"
+                            className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          />
                         </div>
                       )}
 
@@ -860,12 +940,29 @@ export default function AddProductPage() {
                       <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
                         <h4 className="text-sm font-medium text-slate-300 mb-3">Product Variants ({formData.colorSizeVariants.length})</h4>
                         
+                        {/* Headers */}
+                        <div className="grid grid-cols-7 gap-2 text-xs text-slate-400 mb-2 px-2">
+                          <span>Color</span>
+                          <span>Size</span>
+                          <span>Weight</span>
+                          <span>Custom</span>
+                          <span>Buy Price</span>
+                          <span>Sell Price</span>
+                          <span>Stock</span>
+                        </div>
+                        
                         <div className="space-y-2 max-h-40 overflow-y-auto">
                           {formData.colorSizeVariants.map((variant) => (
                             <div key={variant.id} className="flex items-center gap-2 bg-slate-700/30 rounded-lg p-2">
-                              <div className="flex-1 grid grid-cols-5 gap-2 text-xs">
+                              <div className="flex-1 grid grid-cols-7 gap-2 text-xs">
                                 <span className="text-white font-medium">{variant.color}</span>
                                 <span className="text-gray-300">{variant.size}</span>
+                                <span className="text-purple-400">
+                                  {variant.weight && variant.weight_unit ? `${variant.weight}${variant.weight_unit}` : '-'}
+                                </span>
+                                <span className="text-orange-400 truncate">
+                                  {variant.custom_variant || '-'}
+                                </span>
                                 <span className="text-red-400">${variant.buyPrice}</span>
                                 <span className="text-green-400">${variant.sellPrice}</span>
                                 <span className="text-cyan-400">{variant.stock} pcs</span>
