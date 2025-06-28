@@ -503,8 +503,22 @@ export default function CustomerDetailsPage() {
                       />
                     </div>
 
-                    {/* Address */}
+                    {/* Member Since */}
                     <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Member Since
+                      </label>
+                      <div className="w-full px-3 py-2 bg-slate-800/30 border border-slate-700/50 rounded-lg text-slate-400 text-sm">
+                        {new Date(customer.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Address */}
+                    <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-slate-300 mb-2">
                         Address
                       </label>
@@ -519,7 +533,7 @@ export default function CustomerDetailsPage() {
                   </div>
 
                   {/* Save Button */}
-                  <div className="flex justify-end">
+                  <div className="flex justify-end mt-1">
                     <button
                       onClick={handleSaveProfile}
                       disabled={isSaving}
