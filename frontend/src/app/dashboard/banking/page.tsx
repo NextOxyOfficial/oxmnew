@@ -463,7 +463,7 @@ export default function BankingPage() {
                     <button
                       key={account.id}
                       onClick={() => setSelectedAccountId(account.id)}
-                      className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer ${scheme.bg} ${scheme.text}`}
+                      className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[160px] ${scheme.bg} ${scheme.text}`}
                     >
                       <CreditCard className="h-4 w-4" />
                       <div className="text-left">
