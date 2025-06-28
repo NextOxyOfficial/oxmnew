@@ -73,15 +73,34 @@ export class ApiService {
 
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
+        let errorDetails = null;
         try {
           const errorData = await response.json();
           console.log("Error response data:", errorData);
+          errorDetails = errorData;
           errorMessage = errorData.error || errorData.detail || errorMessage;
+          
+          // If it's a validation error, show field-specific errors
+          if (response.status === 400 && errorData) {
+            const fieldErrors = [];
+            for (const [field, errors] of Object.entries(errorData)) {
+              if (Array.isArray(errors)) {
+                fieldErrors.push(`${field}: ${errors.join(', ')}`);
+              } else if (typeof errors === 'string') {
+                fieldErrors.push(`${field}: ${errors}`);
+              }
+            }
+            if (fieldErrors.length > 0) {
+              errorMessage = fieldErrors.join('; ');
+            }
+          }
         } catch (e) {
           // If response is not JSON, use status text
           errorMessage = response.statusText || errorMessage;
         }
-        throw new Error(errorMessage);
+        const error = new Error(errorMessage);
+        (error as any).details = errorDetails;
+        throw error;
       }
 
       // Handle 204 No Content responses (like DELETE operations)

@@ -46,30 +46,44 @@ class ProductViewSet(viewsets.ModelViewSet):
         """Create a new product with custom handling for FormData"""
         data = request.data.copy()
 
+        print("=== BACKEND CREATE PRODUCT DEBUG ===")
+        print("Original request.data keys:", list(request.data.keys()))
+        print("Original request.FILES keys:", list(request.FILES.keys()))
+
         # Handle photos from FormData
         photos = []
+        
+        # Check if photos are sent as a list with the same key
+        if 'photos' in request.FILES:
+            photos_files = request.FILES.getlist('photos')
+            photos.extend(photos_files)
+            print(f"Found {len(photos_files)} photos with key 'photos'")
+        
+        # Also check for photos with different keys (e.g., photos[0], photos[1], etc.)
         for key in request.FILES:
-            if key.startswith('photos'):
+            if key.startswith('photos') and key != 'photos':
                 photos.append(request.FILES[key])
+                print(f"Found photo with key '{key}'")
+
+        print(f"Total photos found: {len(photos)}")
 
         # Handle colorSizeVariants JSON string
         if 'colorSizeVariants' in data and isinstance(data['colorSizeVariants'], str):
             try:
                 data['colorSizeVariants'] = json.loads(
                     data['colorSizeVariants'])
-            except json.JSONDecodeError:
+                print("Parsed colorSizeVariants:", data['colorSizeVariants'])
+            except json.JSONDecodeError as e:
+                print("JSON decode error:", str(e))
                 return Response(
                     {'error': 'Invalid colorSizeVariants JSON'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # Add photos to data
-        if photos:
-            data['photos'] = photos
-
         # Convert string boolean values
         if 'hasVariants' in data:
             data['hasVariants'] = data['hasVariants'] in ['true', 'True', True]
+            print("Converted hasVariants:", data['hasVariants'])
 
         # Convert numeric fields
         numeric_fields = ['buyPrice', 'sellPrice']
@@ -77,15 +91,39 @@ class ProductViewSet(viewsets.ModelViewSet):
             if field in data and data[field]:
                 try:
                     data[field] = float(data[field])
+                    print(f"Converted {field}:", data[field])
                 except (ValueError, TypeError):
                     data[field] = 0
+                    print(f"Failed to convert {field}, set to 0")
 
+        print("Final data for serializer:", {k: v for k, v in data.items() if k != 'photos'})
+        print("Photos in data:", len(photos))
+
+        # Don't add photos to data - handle them separately
+        # Remove any photos from data to avoid validation issues
+        if 'photos' in data:
+            del data['photos']
+
+        # Create serializer without photos first
         serializer = self.get_serializer(data=data)
         if serializer.is_valid():
+            # Save the product first
             product = serializer.save()
+            
+            # Now handle photos separately
+            if photos:
+                for i, photo in enumerate(photos):
+                    ProductPhoto.objects.create(
+                        product=product,
+                        image=photo,
+                        order=i
+                    )
+            
             response_serializer = ProductDetailSerializer(
                 product, context={'request': request})
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            print("Serializer validation errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['post'])

@@ -372,67 +372,80 @@ export default function AddProductPage() {
       return;
     }
 
-    const validFiles: File[] = [];
-    const newPreviews: string[] = [];
+    try {
+      const validFiles: File[] = [];
+      const newPreviews: string[] = [];
 
-    for (const file of files) {
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        setErrors((prev) => ({
-          ...prev,
-          photo: "Please select valid image files only",
-        }));
-        continue;
+      // Process all files sequentially
+      for (const file of files) {
+        // Validate file type
+        if (!file.type.startsWith("image/")) {
+          setErrors((prev) => ({
+            ...prev,
+            photo: "Please select valid image files only",
+          }));
+          continue;
+        }
+
+        // Validate file size (10MB max before compression)
+        if (file.size > 10 * 1024 * 1024) {
+          setErrors((prev) => ({
+            ...prev,
+            photo: "Image size should be less than 10MB",
+          }));
+          continue;
+        }
+
+        try {
+          // Compress the image
+          const compressedFile = await compressImage(file, 800, 0.8);
+          validFiles.push(compressedFile);
+
+          // Create preview using Promise for FileReader
+          const preview = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(compressedFile);
+          });
+          
+          newPreviews.push(preview);
+        } catch (error) {
+          console.error("Error processing image:", error);
+          setErrors((prev) => ({
+            ...prev,
+            photo: "Error processing image. Please try again.",
+          }));
+          continue;
+        }
       }
 
-      // Validate file size (10MB max before compression)
-      if (file.size > 10 * 1024 * 1024) {
-        setErrors((prev) => ({
+      // Update state only once with all processed files
+      if (validFiles.length > 0) {
+        setFormData((prev) => ({
           ...prev,
-          photo: "Image size should be less than 10MB",
+          photos: [...prev.photos, ...validFiles],
         }));
-        continue;
+        setPhotoPreviews((prev) => [...prev, ...newPreviews]);
+        
+        // Clear photo error if files were processed successfully
+        if (errors.photo) {
+          setErrors((prev) => ({ ...prev, photo: "" }));
+        }
       }
-
-      try {
-        // Compress the image
-        const compressedFile = await compressImage(file, 800, 0.8);
-        validFiles.push(compressedFile);
-
-        // Create preview
-        const reader = new FileReader();
-        reader.onload = () => {
-          newPreviews.push(reader.result as string);
-
-          // Update state when all previews are ready
-          if (newPreviews.length === validFiles.length) {
-            setFormData((prev) => ({
-              ...prev,
-              photos: [...prev.photos, ...validFiles],
-            }));
-            setPhotoPreviews((prev) => [...prev, ...newPreviews]);
-            setIsCompressing(false);
-          }
-        };
-        reader.readAsDataURL(compressedFile);
-      } catch (error) {
-        console.error("Error compressing image:", error);
-        setErrors((prev) => ({
-          ...prev,
-          photo: "Error processing image. Please try again.",
-        }));
-        setIsCompressing(false);
+    } catch (error) {
+      console.error("Error uploading photos:", error);
+      setErrors((prev) => ({
+        ...prev,
+        photo: "Error processing images. Please try again.",
+      }));
+    } finally {
+      setIsCompressing(false);
+      
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
-    }
-
-    // Clear photo error if files were processed
-    if (validFiles.length > 0 && errors.photo) {
-      setErrors((prev) => ({ ...prev, photo: "" }));
-    }
-
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
     }
   };
 
