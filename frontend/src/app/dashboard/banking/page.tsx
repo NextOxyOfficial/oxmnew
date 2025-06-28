@@ -430,39 +430,65 @@ export default function BankingPage() {
             {/* Account Tabs */}
             <div className="border-b border-slate-700/50">
               <div className="flex flex-wrap">
-                {accounts.map((account) => (
-                  <button
-                    key={account.id}
-                    onClick={() => setSelectedAccountId(account.id)}
-                    className={`px-6 py-4 font-medium transition-colors relative flex items-center space-x-3 cursor-pointer ${
-                      selectedAccountId === account.id
-                        ? "text-cyan-400 bg-slate-800/50"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/30"
-                    }`}
-                  >
-                    <CreditCard className="h-5 w-5" />
-                    <div className="text-left">
-                      <div className="font-semibold">{account.name}</div>
-                      <div className={`text-sm ${selectedAccountId === account.id ? 'text-cyan-300' : 'text-slate-500'}`}>
-                        {formatCurrency(account.balance)}
+                {accounts.map((account, index) => {
+                  const colorSchemes = [
+                    { 
+                      bg: selectedAccountId === account.id ? "bg-gradient-to-r from-blue-500/20 to-blue-600/10" : "hover:bg-blue-500/10",
+                      text: selectedAccountId === account.id ? "text-blue-300" : "text-slate-400 hover:text-blue-300",
+                      accent: "text-blue-400",
+                      border: "border-b-2 border-blue-500"
+                    },
+                    { 
+                      bg: selectedAccountId === account.id ? "bg-gradient-to-r from-purple-500/20 to-purple-600/10" : "hover:bg-purple-500/10",
+                      text: selectedAccountId === account.id ? "text-purple-300" : "text-slate-400 hover:text-purple-300",
+                      accent: "text-purple-400",
+                      border: "border-b-2 border-purple-500"
+                    },
+                    { 
+                      bg: selectedAccountId === account.id ? "bg-gradient-to-r from-green-500/20 to-green-600/10" : "hover:bg-green-500/10",
+                      text: selectedAccountId === account.id ? "text-green-300" : "text-slate-400 hover:text-green-300",
+                      accent: "text-green-400",
+                      border: "border-b-2 border-green-500"
+                    },
+                    { 
+                      bg: selectedAccountId === account.id ? "bg-gradient-to-r from-orange-500/20 to-orange-600/10" : "hover:bg-orange-500/10",
+                      text: selectedAccountId === account.id ? "text-orange-300" : "text-slate-400 hover:text-orange-300",
+                      accent: "text-orange-400",
+                      border: "border-b-2 border-orange-500"
+                    }
+                  ];
+                  const scheme = colorSchemes[index % 4];
+                  
+                  return (
+                    <button
+                      key={account.id}
+                      onClick={() => setSelectedAccountId(account.id)}
+                      className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer ${scheme.bg} ${scheme.text}`}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      <div className="text-left">
+                        <div className="font-semibold text-sm">{account.name}</div>
+                        <div className={`text-xs ${selectedAccountId === account.id ? scheme.accent : 'text-slate-500'}`}>
+                          {formatCurrency(account.balance)}
+                        </div>
                       </div>
-                    </div>
-                    {selectedAccountId === account.id && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-500"></div>
-                    )}
-                  </button>
-                ))}
+                      {selectedAccountId === account.id && (
+                        <div className={`absolute bottom-0 left-0 right-0 h-1 ${scheme.border.replace('border-b-2', 'bg-gradient-to-r')}`}></div>
+                      )}
+                    </button>
+                  );
+                })}
                 
                 {/* Create Account Tab - Only show if less than 4 accounts */}
                 {accounts.length < 4 && (
                   <button
                     onClick={() => setShowCreateAccountModal(true)}
-                    className="px-6 py-4 font-medium transition-colors relative flex items-center space-x-3 text-slate-400 hover:text-cyan-400 hover:bg-slate-800/30 border-l border-slate-700/50 cursor-pointer"
+                    className="px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 text-slate-400 hover:text-cyan-300 hover:bg-gradient-to-r hover:from-cyan-500/10 hover:to-cyan-600/5 border-l border-slate-700/50 cursor-pointer"
                   >
-                    <Plus className="h-5 w-5" />
+                    <Plus className="h-4 w-4" />
                     <div className="text-left">
-                      <div className="font-semibold">Create Account</div>
-                      <div className="text-sm text-slate-500">Add new account</div>
+                      <div className="font-semibold text-sm">Create Account</div>
+                      <div className="text-xs text-slate-500">Add new account</div>
                     </div>
                   </button>
                 )}
@@ -473,9 +499,9 @@ export default function BankingPage() {
                 {/* Settings Tab */}
                 <button
                   onClick={handleOpenSettings}
-                  className="px-4 py-4 font-medium transition-colors relative flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:bg-slate-800/30 border-l border-slate-700/50 cursor-pointer"
+                  className="px-3 py-3 font-medium transition-all duration-200 relative flex items-center justify-center text-slate-400 hover:text-pink-300 hover:bg-gradient-to-r hover:from-pink-500/10 hover:to-pink-600/5 border-l border-slate-700/50 cursor-pointer"
                 >
-                  <Settings className="h-5 w-5" />
+                  <Settings className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -484,64 +510,61 @@ export default function BankingPage() {
             {selectedAccountId && (
               <div>
                 {/* Account Summary */}
-                <div className="p-6 border-b border-slate-700/50">
+                <div className="p-3 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/30 to-slate-700/20">
                   {/* Financial Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div className="bg-gradient-to-br from-green-500/15 to-green-600/8 border border-green-500/25 rounded-lg p-2.5 backdrop-blur-sm">
                       <div className="flex items-center space-x-2">
-                        <div className="rounded-full bg-green-500/20 p-2 flex-shrink-0">
-                          <ArrowDownLeft className="h-4 w-4 text-green-500" />
+                        <div className="rounded-md bg-green-500/20 p-1">
+                          <ArrowDownLeft className="h-3 w-3 text-green-400" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs text-slate-400">Total Credit</p>
-                          <p className="text-lg font-bold text-green-500 mt-0.5">
+                        <div>
+                          <p className="text-xs text-green-300 font-medium">Credits</p>
+                          <p className="text-sm font-bold text-green-400">
                             +{formatCurrency(getAccountSummary().totalCredit)}
                           </p>
                         </div>
                       </div>
-                      <p className="text-xs text-green-400 mt-1">Money received</p>
                     </div>
                     
-                    <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
+                    <div className="bg-gradient-to-br from-red-500/15 to-red-600/8 border border-red-500/25 rounded-lg p-2.5 backdrop-blur-sm">
                       <div className="flex items-center space-x-2">
-                        <div className="rounded-full bg-red-500/20 p-2 flex-shrink-0">
-                          <ArrowUpRight className="h-4 w-4 text-red-500" />
+                        <div className="rounded-md bg-red-500/20 p-1">
+                          <ArrowUpRight className="h-3 w-3 text-red-400" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs text-slate-400">Total Debit</p>
-                          <p className="text-lg font-bold text-red-500 mt-0.5">
+                        <div>
+                          <p className="text-xs text-red-300 font-medium">Debits</p>
+                          <p className="text-sm font-bold text-red-400">
                             -{formatCurrency(getAccountSummary().totalDebit)}
                           </p>
                         </div>
                       </div>
-                      <p className="text-xs text-red-400 mt-1">Money spent</p>
                     </div>
                     
-                    <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
+                    <div className="bg-gradient-to-br from-cyan-500/15 to-cyan-600/8 border border-cyan-500/25 rounded-lg p-2.5 backdrop-blur-sm">
                       <div className="flex items-center space-x-2">
-                        <div className="rounded-full bg-cyan-500/20 p-2 flex-shrink-0">
-                          <DollarSign className="h-4 w-4 text-cyan-500" />
+                        <div className="rounded-md bg-cyan-500/20 p-1">
+                          <DollarSign className="h-3 w-3 text-cyan-400" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs text-slate-400">Current Balance</p>
-                          <p className={`text-lg font-bold mt-0.5 ${selectedAccount && selectedAccount.balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        <div>
+                          <p className="text-xs text-cyan-300 font-medium">Balance</p>
+                          <p className={`text-sm font-bold ${selectedAccount && selectedAccount.balance >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
                             {selectedAccount ? formatCurrency(selectedAccount.balance) : '$0.00'}
                           </p>
                         </div>
                       </div>
-                      <p className="text-xs text-cyan-400 mt-1">Available funds</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Filters and Search */}
-                <div className="p-6 border-b border-slate-700/50 bg-slate-800/30">
-                  <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between space-y-4 xl:space-y-0 gap-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-4 flex-1">
+                <div className="p-4 border-b border-slate-700/50 bg-slate-800/10">
+                  <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between space-y-3 xl:space-y-0 gap-3">
+                    <div className="flex flex-col lg:flex-row lg:items-center space-y-2 lg:space-y-0 lg:space-x-3 flex-1">
                       {/* Add Transaction Button */}
                       <button
                         onClick={() => setShowTransactionModal(true)}
-                        className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center gap-2 whitespace-nowrap lg:w-auto w-full justify-center cursor-pointer active:scale-95"
+                        className="px-3 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center gap-2 whitespace-nowrap lg:w-auto w-full justify-center cursor-pointer active:scale-95"
                       >
                         <Plus className="h-4 w-4" />
                         <span>Add Transaction</span>
@@ -554,16 +577,16 @@ export default function BankingPage() {
                           placeholder="Search transactions..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-10 pr-4 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
+                          className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-9 pr-3 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
                         />
-                        <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                       </div>
 
                       {/* Type Filter */}
                       <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value)}
-                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[140px] cursor-pointer"
+                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[120px] cursor-pointer"
                       >
                         <option value="all" className="bg-slate-800">All Types</option>
                         <option value="credit" className="bg-slate-800">Credit Only</option>
@@ -574,7 +597,7 @@ export default function BankingPage() {
                       <select
                         value={employeeFilter}
                         onChange={(e) => setEmployeeFilter(e.target.value)}
-                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[160px] cursor-pointer"
+                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[140px] cursor-pointer"
                       >
                         <option value="all" className="bg-slate-800">All Employees</option>
                         {employees.map((employee) => (
@@ -588,7 +611,7 @@ export default function BankingPage() {
                       <select
                         value={dateRange}
                         onChange={(e) => handleDateRangeChange(e.target.value)}
-                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[140px] cursor-pointer"
+                        className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[120px] cursor-pointer"
                       >
                         <option value="all" className="bg-slate-800">All Time</option>
                         <option value="today" className="bg-slate-800">Today</option>
@@ -600,7 +623,7 @@ export default function BankingPage() {
 
                       {/* Custom Date Range Display */}
                       {dateRange === "custom" && customStartDate && customEndDate && (
-                        <div className="flex items-center space-x-2 text-xs text-slate-400 bg-slate-800/30 px-3 py-2 rounded-lg border border-slate-700/50">
+                        <div className="flex items-center space-x-2 text-xs text-slate-400 bg-slate-800/30 px-2 py-1.5 rounded-lg border border-slate-700/50">
                           <Calendar className="h-3 w-3" />
                           <span>{new Date(customStartDate).toLocaleDateString()} - {new Date(customEndDate).toLocaleDateString()}</span>
                           <button
@@ -639,12 +662,12 @@ export default function BankingPage() {
                 {/* Transaction History */}
                 <div>
                   {getFilteredTransactions().length === 0 ? (
-                    <div className="p-12 text-center">
-                      <DollarSign className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-slate-300 mb-2">
+                    <div className="p-8 text-center">
+                      <DollarSign className="h-10 w-10 text-slate-500 mx-auto mb-3" />
+                      <h4 className="text-base font-medium text-slate-300 mb-2">
                         {accountTransactions.length === 0 ? "No transactions yet" : "No transactions match your filters"}
                       </h4>
-                      <p className="text-slate-500 mb-4">
+                      <p className="text-slate-500 mb-3 text-sm">
                         {accountTransactions.length === 0 
                           ? "Add your first transaction to get started" 
                           : "Try adjusting your search or filter criteria"
@@ -653,7 +676,7 @@ export default function BankingPage() {
                       {accountTransactions.length === 0 && (
                         <button
                           onClick={() => setShowTransactionModal(true)}
-                          className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
+                          className="px-3 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
                         >
                           Add First Transaction
                         </button>
@@ -662,50 +685,50 @@ export default function BankingPage() {
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full">
-                        <thead className="bg-slate-800/50">
-                          <tr className="border-b border-slate-700/50">
-                            <th className="text-left py-3 px-6 text-slate-300 font-medium text-sm">Type</th>
-                            <th className="text-left py-3 px-6 text-slate-300 font-medium text-sm">Amount</th>
-                            <th className="text-left py-3 px-6 text-slate-300 font-medium text-sm">Purpose</th>
-                            <th className="text-left py-3 px-6 text-slate-300 font-medium text-sm">Verified By</th>
-                            <th className="text-left py-3 px-6 text-slate-300 font-medium text-sm">Date</th>
-                            <th className="text-left py-3 px-6 text-slate-300 font-medium text-sm">Status</th>
+                        <thead className="bg-slate-800/50 border-b border-slate-700/50">
+                          <tr>
+                            <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Type</th>
+                            <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Amount</th>
+                            <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Purpose</th>
+                            <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Verified By</th>
+                            <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Date</th>
+                            <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Status</th>
                           </tr>
                         </thead>
                         <tbody>
                           {getFilteredTransactions().map((transaction) => (
-                            <tr key={transaction.id} className="border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors">
-                              <td className="py-4 px-6">
-                                <div className="flex items-center space-x-3">
+                            <tr key={transaction.id} className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors">
+                              <td className="py-3 px-4">
+                                <div className="flex items-center space-x-2">
                                   {transaction.type === "credit" ? (
-                                    <ArrowDownLeft className="h-4 w-4 text-green-500" />
+                                    <ArrowDownLeft className="h-3.5 w-3.5 text-green-500" />
                                   ) : (
-                                    <ArrowUpRight className="h-4 w-4 text-red-500" />
+                                    <ArrowUpRight className="h-3.5 w-3.5 text-red-500" />
                                   )}
-                                  <span className={`font-medium capitalize text-sm ${
+                                  <span className={`font-medium capitalize text-xs ${
                                     transaction.type === "credit" ? "text-green-500" : "text-red-500"
                                   }`}>
                                     {transaction.type}
                                   </span>
                                 </div>
                               </td>
-                              <td className={`py-4 px-6 font-semibold text-sm ${
+                              <td className={`py-3 px-4 font-semibold text-sm ${
                                 transaction.type === "credit" ? "text-green-500" : "text-red-500"
                               }`}>
                                 {transaction.type === "credit" ? "+" : "-"}
                                 {formatCurrency(transaction.amount)}
                               </td>
-                              <td className="py-4 px-6 text-white text-sm">{transaction.purpose}</td>
-                              <td className="py-4 px-6 text-slate-400 text-sm">
-                                <div className="flex items-center space-x-2">
-                                  <User className="h-4 w-4" />
+                              <td className="py-3 px-4 text-white text-sm">{transaction.purpose}</td>
+                              <td className="py-3 px-4 text-slate-400 text-sm">
+                                <div className="flex items-center space-x-1.5">
+                                  <User className="h-3.5 w-3.5" />
                                   <span>{getEmployeeName(transaction.verifiedBy)}</span>
                                 </div>
                               </td>
-                              <td className="py-4 px-6 text-slate-400 text-sm">
+                              <td className="py-3 px-4 text-slate-400 text-sm">
                                 {new Date(transaction.date).toLocaleDateString()}
                               </td>
-                              <td className="py-4 px-6">
+                              <td className="py-3 px-4">
                                 <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30 flex items-center space-x-1 w-fit">
                                   <Check className="h-3 w-3" />
                                   <span>Verified</span>
@@ -717,8 +740,8 @@ export default function BankingPage() {
                       </table>
 
                       {/* Results Summary */}
-                      <div className="p-4 border-t border-slate-700/50 bg-slate-800/30">
-                        <div className="flex items-center justify-between text-sm text-slate-400">
+                      <div className="p-3 border-t border-slate-700/50 bg-gradient-to-r from-slate-800/20 to-slate-700/20">
+                        <div className="flex items-center justify-between text-xs text-slate-400">
                           <span>
                             Showing {getFilteredTransactions().length} of {accountTransactions.length} transactions
                             {(searchTerm || typeFilter !== "all" || employeeFilter !== "all" || dateRange !== "all" || customStartDate || customEndDate) && 
@@ -726,30 +749,30 @@ export default function BankingPage() {
                             }
                           </span>
                           {getFilteredTransactions().length > 0 && (
-                            <div className="flex items-center space-x-4">
-                              <span className="text-green-400">
-                                Credits: +{formatCurrency(getAccountSummary(true).totalCredit)}
+                            <div className="flex items-center space-x-3">
+                              <span className="text-green-400 text-xs">
+                                +{formatCurrency(getAccountSummary(true).totalCredit)}
                               </span>
-                              <span className="text-red-400">
-                                Debits: -{formatCurrency(getAccountSummary(true).totalDebit)}
+                              <span className="text-red-400 text-xs">
+                                -{formatCurrency(getAccountSummary(true).totalDebit)}
                               </span>
-                              <span className="text-cyan-400 font-medium">
+                              <span className="text-cyan-400 font-medium text-xs">
                                 Net: {formatCurrency(getAccountSummary(true).totalCredit - getAccountSummary(true).totalDebit)}
                               </span>
                               
                               {/* Export Options */}
-                              <div className="flex items-center space-x-2 ml-4 pl-4 border-l border-slate-600/50">
+                              <div className="flex items-center space-x-1.5 ml-3 pl-3 border-l border-slate-600/50">
                                 <span className="text-xs text-slate-500">Export:</span>
                                 <button
                                   onClick={downloadCSV}
-                                  className="flex items-center space-x-1 px-2 py-1 bg-slate-700/50 border border-slate-600/50 text-slate-300 rounded hover:bg-slate-600/50 hover:text-white transition-all duration-200 text-xs cursor-pointer"
+                                  className="flex items-center space-x-1 px-1.5 py-1 bg-slate-700/50 border border-slate-600/50 text-slate-300 rounded hover:bg-slate-600/50 hover:text-white transition-all duration-200 text-xs cursor-pointer"
                                 >
                                   <FileSpreadsheet className="h-3 w-3" />
                                   <span>CSV</span>
                                 </button>
                                 <button
                                   onClick={downloadPDF}
-                                  className="flex items-center space-x-1 px-2 py-1 bg-slate-700/50 border border-slate-600/50 text-slate-300 rounded hover:bg-slate-600/50 hover:text-white transition-all duration-200 text-xs cursor-pointer"
+                                  className="flex items-center space-x-1 px-1.5 py-1 bg-slate-700/50 border border-slate-600/50 text-slate-300 rounded hover:bg-slate-600/50 hover:text-white transition-all duration-200 text-xs cursor-pointer"
                                 >
                                   <FileText className="h-3 w-3" />
                                   <span>PDF</span>
@@ -769,21 +792,21 @@ export default function BankingPage() {
 
         {/* Create Account Modal */}
         {showCreateAccountModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 w-full max-w-md mx-4 backdrop-blur-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-white">Create New Account</h2>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-auto backdrop-blur-md">
+              <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+                <h2 className="text-lg font-semibold text-white">Create New Account</h2>
                 <button
                   onClick={() => setShowCreateAccountModal(false)}
-                  className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 hover:bg-slate-700/50 rounded-lg"
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleCreateAccount} className="space-y-4">
+              <form onSubmit={handleCreateAccount} className="p-4 space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     Account Name
                   </label>
                   <input
@@ -797,7 +820,7 @@ export default function BankingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     Initial Opening Balance ($)
                   </label>
                   <input
@@ -811,17 +834,17 @@ export default function BankingPage() {
                   />
                 </div>
 
-                <div className="flex space-x-3 mt-6">
+                <div className="flex space-x-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowCreateAccountModal(false)}
-                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-4 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
+                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-3 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium cursor-pointer"
+                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-3 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium cursor-pointer"
                   >
                     Create Account
                   </button>
@@ -833,53 +856,53 @@ export default function BankingPage() {
 
         {/* Add Transaction Modal */}
         {showTransactionModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 w-full max-w-md mx-4 backdrop-blur-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-white">Add Transaction</h2>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-auto backdrop-blur-md">
+              <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+                <h2 className="text-lg font-semibold text-white">Add Transaction</h2>
                 <button
                   onClick={() => setShowTransactionModal(false)}
-                  className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 hover:bg-slate-700/50 rounded-lg"
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleAddTransaction} className="space-y-4">
+              <form onSubmit={handleAddTransaction} className="p-4 space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     Transaction Type
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setNewTransaction({...newTransaction, type: "debit"})}
-                      className={`p-3 rounded-lg border-2 transition-all flex items-center justify-center space-x-2 text-sm cursor-pointer ${
+                      className={`p-2.5 rounded-lg border-2 transition-all flex items-center justify-center space-x-1.5 text-sm cursor-pointer ${
                         newTransaction.type === "debit"
                           ? "border-red-500/50 bg-red-500/10"
                           : "border-slate-600/50 hover:border-slate-500/50"
                       }`}
                     >
-                      <ArrowUpRight className="h-5 w-5 text-red-500" />
+                      <ArrowUpRight className="h-4 w-4 text-red-500" />
                       <span className="text-white">Debit</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setNewTransaction({...newTransaction, type: "credit"})}
-                      className={`p-3 rounded-lg border-2 transition-all flex items-center justify-center space-x-2 text-sm cursor-pointer ${
+                      className={`p-2.5 rounded-lg border-2 transition-all flex items-center justify-center space-x-1.5 text-sm cursor-pointer ${
                         newTransaction.type === "credit"
                           ? "border-green-500/50 bg-green-500/10"
                           : "border-slate-600/50 hover:border-slate-500/50"
                       }`}
                     >
-                      <ArrowDownLeft className="h-5 w-5 text-green-500" />
+                      <ArrowDownLeft className="h-4 w-4 text-green-500" />
                       <span className="text-white">Credit</span>
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     Amount ($)
                   </label>
                   <input
@@ -894,7 +917,7 @@ export default function BankingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     Purpose
                   </label>
                   <input
@@ -908,7 +931,7 @@ export default function BankingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     Verified By (Employee)
                   </label>
                   <select
@@ -926,22 +949,22 @@ export default function BankingPage() {
                   </select>
                 </div>
 
-                <div className="flex space-x-3 mt-6">
+                <div className="flex space-x-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowTransactionModal(false)}
-                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-4 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
+                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-3 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isAddingTransaction}
-                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-3 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     {isAddingTransaction ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         <span>Adding...</span>
                       </>
                     ) : (
@@ -1025,77 +1048,81 @@ export default function BankingPage() {
 
         {/* Account Settings Modal */}
         {showSettingsModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 w-full max-w-2xl mx-4 backdrop-blur-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-white">Account Settings</h2>
-                <button
-                  onClick={() => setShowSettingsModal(false)}
-                  className="text-slate-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="text-sm text-slate-400 mb-4">
-                  Manage your account names. Balances are view-only and updated through transactions.
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-screen flex items-center justify-center p-4">
+              <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto backdrop-blur-md">
+                <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+                  <h2 className="text-lg font-semibold text-white">Account Settings</h2>
+                  <button
+                    onClick={() => setShowSettingsModal(false)}
+                    className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 hover:bg-slate-700/50 rounded-lg"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
 
-                {editableAccounts.map((account) => (
-                  <div key={account.id} className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
-                    <div className="flex items-center justify-between space-x-4">
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Account Name
-                        </label>
-                        <input
-                          type="text"
-                          value={account.name}
-                          onChange={(e) => handleAccountNameChange(account.id, e.target.value)}
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
-                          placeholder="Enter account name..."
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Current Balance
-                        </label>
-                        <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg py-2 px-3 text-sm">
-                          <span className={`font-semibold ${account.balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            {formatCurrency(account.balance)}
-                          </span>
+                <div className="p-4">
+                  <div className="text-sm text-slate-400 mb-3">
+                    Manage your account names. Balances are view-only and updated through transactions.
+                  </div>
+
+                  <div className="space-y-3">
+                    {editableAccounts.map((account) => (
+                      <div key={account.id} className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
+                        <div className="flex items-center justify-between space-x-3">
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                              Account Name
+                            </label>
+                            <input
+                              type="text"
+                              value={account.name}
+                              onChange={(e) => handleAccountNameChange(account.id, e.target.value)}
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
+                              placeholder="Enter account name..."
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                              Current Balance
+                            </label>
+                            <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg py-2 px-3 text-sm">
+                              <span className={`font-semibold ${account.balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {formatCurrency(account.balance)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-slate-500">
+                          Created: {new Date(account.createdAt).toLocaleDateString()}
                         </div>
                       </div>
-                    </div>
-                    <div className="mt-3 text-xs text-slate-500">
-                      Created: {new Date(account.createdAt).toLocaleDateString()}
+                    ))}
+
+                    <div className="flex space-x-2 pt-3 border-t border-slate-700/50">
+                      <button
+                        type="button"
+                        onClick={() => setShowSettingsModal(false)}
+                        className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-3 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveAccountNames}
+                        disabled={isSavingAccountNames}
+                        className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-3 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        {isSavingAccountNames ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          "Save Changes"
+                        )}
+                      </button>
                     </div>
                   </div>
-                ))}
-
-                <div className="flex space-x-3 mt-6 pt-4 border-t border-slate-700/50">
-                  <button
-                    type="button"
-                    onClick={() => setShowSettingsModal(false)}
-                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-4 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveAccountNames}
-                    disabled={isSavingAccountNames}
-                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    {isSavingAccountNames ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </button>
                 </div>
               </div>
             </div>
