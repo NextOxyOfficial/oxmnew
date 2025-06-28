@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, DollarSign, ShoppingBag, Star, Gift, Trophy, AlertTriangle, FileText, Receipt, X, Printer } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, DollarSign, ShoppingBag, Star, Gift, Trophy, AlertTriangle, FileText, Receipt, X, Printer, StickyNote, MessageSquare } from "lucide-react";
 
 interface Customer {
   id: number;
@@ -100,6 +100,7 @@ export default function CustomerDetailsPage() {
   const [showNotifyModal, setShowNotifyModal] = useState(false);
   const [notifyOrderId, setNotifyOrderId] = useState<number | null>(null);
   const [isNotifying, setIsNotifying] = useState(false);
+  const [isSendingSMS, setIsSendingSMS] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -120,7 +121,7 @@ export default function CustomerDetailsPage() {
       
       // Mock data
       const mockCustomer: Customer = {
-        id: parseInt(customerId),
+        id: parseInt(customerId || '1'),
         name: "John Doe",
         email: "john.doe@email.com", 
         phone: "+1 (555) 123-4567",
@@ -215,6 +216,32 @@ export default function CustomerDetailsPage() {
   const handleCloseNotes = () => {
     setShowNotesModal(false);
     setSelectedDuePayment(null);
+  };
+
+  const handleSendSMS = async (message: string) => {
+    setIsSendingSMS(true);
+    try {
+      // Simulate SMS sending API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Show success message
+      alert(`SMS sent successfully to ${customer?.phone}!\nMessage: "${message}"`);
+    } catch (error) {
+      alert('Failed to send SMS. Please try again.');
+    } finally {
+      setIsSendingSMS(false);
+    }
+  };
+
+  const handleSendNotification = async (payment: DuePayment) => {
+    const message = `Hello ${customer?.name}, this is a reminder about your ${payment.type === 'due' ? 'due payment' : 'advance payment'} of $${Math.abs(payment.amount).toFixed(2)} for order #${payment.order_id}. Due date: ${formatDate(payment.due_date)}.`;
+    await handleSendSMS(message);
+  };
+
+  const handleSendOrderNotification = async (order: Order) => {
+    const statusMessage = order.status === 'completed' ? 'completed' : order.status === 'pending' ? 'is pending' : 'was cancelled';
+    const message = `Hello ${customer?.name}, your order #${order.id} ${statusMessage}. Order total: $${order.total.toFixed(2)}. Order date: ${formatDate(order.date)}. Thank you for your business!`;
+    await handleSendSMS(message);
   };
 
   const handleSubmitTransaction = async () => {
@@ -433,7 +460,7 @@ export default function CustomerDetailsPage() {
             {[
               { key: 'profile', label: 'Profile', icon: <Mail className="w-4 h-4" /> },
               { key: 'orders', label: 'Purchase History', icon: <ShoppingBag className="w-4 h-4" /> },
-              { key: 'due-payments', label: 'Due Payments', icon: <DollarSign className="w-4 h-4" /> },
+              { key: 'due-payments', label: 'Due/Payments', icon: <DollarSign className="w-4 h-4" /> },
               { key: 'gifts', label: 'Gifts & Rewards', icon: <Gift className="w-4 h-4" /> },
               { key: 'achievements', label: 'Achievements', icon: <Trophy className="w-4 h-4" /> },
             ].map((tab) => (
@@ -557,11 +584,11 @@ export default function CustomerDetailsPage() {
                       <div className="px-6 py-3 bg-white/5 border-b border-white/10">
                         <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
                           <div className="col-span-2">Order ID</div>
-                          <div className="col-span-3">Date</div>
+                          <div className="col-span-2">Date</div>
                           <div className="col-span-2">Items</div>
                           <div className="col-span-2">Status</div>
                           <div className="col-span-2">Amount</div>
-                          <div className="col-span-1">Details</div>
+                          <div className="col-span-2">Actions</div>
                         </div>
                       </div>
                       
@@ -573,7 +600,7 @@ export default function CustomerDetailsPage() {
                               <div className="col-span-2">
                                 <p className="text-sm font-medium text-slate-100">#{order.id}</p>
                               </div>
-                              <div className="col-span-3">
+                              <div className="col-span-2">
                                 <p className="text-sm text-slate-300">{formatDate(order.date)}</p>
                               </div>
                               <div className="col-span-2">
@@ -591,14 +618,25 @@ export default function CustomerDetailsPage() {
                               <div className="col-span-2">
                                 <p className="text-sm font-semibold text-green-300">${order.total.toFixed(2)}</p>
                               </div>
-                              <div className="col-span-1">
-                                <button 
-                                  onClick={() => handleShowInvoice(order)}
-                                  className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors flex items-center space-x-1 cursor-pointer"
-                                >
-                                  <FileText className="w-3 h-3" />
-                                  <span>Invoice</span>
-                                </button>
+                              <div className="col-span-2">
+                                <div className="flex items-center space-x-2">
+                                  <button 
+                                    onClick={() => handleShowInvoice(order)}
+                                    className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                    <span>Invoice</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleSendOrderNotification(order)}
+                                    disabled={isSendingSMS}
+                                    className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
+                                    title="Send SMS notification"
+                                  >
+                                    <MessageSquare className="w-4 h-4" />
+                                    <span>{isSendingSMS ? 'Sending...' : 'SMS'}</span>
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -633,7 +671,7 @@ export default function CustomerDetailsPage() {
                           <div className="col-span-3">Due Date</div>
                           <div className="col-span-2">Type</div>
                           <div className="col-span-2">Amount</div>
-                          <div className="col-span-3">Notes</div>
+                          <div className="col-span-3">Notes & Actions</div>
                         </div>
                       </div>
                       
@@ -662,16 +700,30 @@ export default function CustomerDetailsPage() {
                                 </p>
                               </div>
                               <div className="col-span-3">
-                                {payment.notes ? (
-                                  <button 
-                                    onClick={() => handleShowNotes(payment)}
-                                    className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
-                                  >
-                                    Notes
-                                  </button>
-                                ) : (
-                                  <span className="text-slate-500 text-sm">No notes</span>
-                                )}
+                                <div className="flex items-center space-x-2">
+                                  {payment.notes ? (
+                                    <>
+                                      <button 
+                                        onClick={() => handleShowNotes(payment)}
+                                        className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
+                                      >
+                                        <StickyNote className="w-4 h-4" />
+                                        <span>Notes</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleSendNotification(payment)}
+                                        disabled={isSendingSMS}
+                                        className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
+                                        title="Send SMS notification"
+                                      >
+                                        <MessageSquare className="w-4 h-4" />
+                                        <span>{isSendingSMS ? 'Sending...' : 'SMS'}</span>
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="text-slate-500 text-sm">No notes</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -858,8 +910,8 @@ export default function CustomerDetailsPage() {
                       onChange={(e) => setTransactionForm({ ...transactionForm, type: e.target.value as 'due' | 'advance' })}
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
                     >
-                      <option value="due">Due Payment</option>
-                      <option value="advance">Advance Payment</option>
+                      <option value="due">Due</option>
+                      <option value="advance">Payment</option>
                     </select>
                   </div>
 
@@ -952,10 +1004,22 @@ export default function CustomerDetailsPage() {
                     </p>
                   </div>
                   
-                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 mb-4">
                     <p className="text-slate-100 text-sm leading-relaxed">
                       {selectedDuePayment.notes || 'No notes available for this transaction.'}
                     </p>
+                  </div>
+
+                  {/* SMS Notification Button */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => handleSendNotification(selectedDuePayment)}
+                      disabled={isSendingSMS}
+                      className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>{isSendingSMS ? 'Sending SMS...' : 'Send SMS Reminder'}</span>
+                    </button>
                   </div>
                 </div>
               </div>
