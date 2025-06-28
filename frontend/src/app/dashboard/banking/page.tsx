@@ -516,10 +516,10 @@ export default function BankingPage() {
                     <div className="bg-gradient-to-br from-green-500/15 to-green-600/8 border border-green-500/25 rounded-lg p-2.5 backdrop-blur-sm">
                       <div className="flex items-center space-x-2">
                         <div className="rounded-md bg-green-500/20 p-1">
-                          <ArrowDownLeft className="h-3 w-3 text-green-400" />
+                          <ArrowDownLeft className="h-7 w-7 text-green-400" />
                         </div>
                         <div>
-                          <p className="text-xs text-green-300 font-medium">Credits</p>
+                          <p className="text-sm text-green-300 font-medium">Credits</p>
                           <p className="text-sm font-bold text-green-400">
                             +{formatCurrency(getAccountSummary().totalCredit)}
                           </p>
@@ -530,10 +530,10 @@ export default function BankingPage() {
                     <div className="bg-gradient-to-br from-red-500/15 to-red-600/8 border border-red-500/25 rounded-lg p-2.5 backdrop-blur-sm">
                       <div className="flex items-center space-x-2">
                         <div className="rounded-md bg-red-500/20 p-1">
-                          <ArrowUpRight className="h-3 w-3 text-red-400" />
+                          <ArrowUpRight className="h-7 w-7 text-red-400" />
                         </div>
                         <div>
-                          <p className="text-xs text-red-300 font-medium">Debits</p>
+                          <p className="text-sm text-red-300 font-medium">Debits</p>
                           <p className="text-sm font-bold text-red-400">
                             -{formatCurrency(getAccountSummary().totalDebit)}
                           </p>
@@ -544,10 +544,10 @@ export default function BankingPage() {
                     <div className="bg-gradient-to-br from-cyan-500/15 to-cyan-600/8 border border-cyan-500/25 rounded-lg p-2.5 backdrop-blur-sm">
                       <div className="flex items-center space-x-2">
                         <div className="rounded-md bg-cyan-500/20 p-1">
-                          <DollarSign className="h-3 w-3 text-cyan-400" />
+                          <DollarSign className="h-7 w-7 text-cyan-400" />
                         </div>
                         <div>
-                          <p className="text-xs text-cyan-300 font-medium">Balance</p>
+                          <p className="text-sm text-cyan-300 font-medium">Balance</p>
                           <p className={`text-sm font-bold ${selectedAccount && selectedAccount.balance >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
                             {selectedAccount ? formatCurrency(selectedAccount.balance) : '$0.00'}
                           </p>
