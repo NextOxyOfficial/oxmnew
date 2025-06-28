@@ -383,7 +383,10 @@ export default function SuppliersTab({
 
               {/* ...existing supplier info... */}
               <div className="space-y-2 text-xs">
-                <div key="phone" className="flex items-center gap-2">
+                <div
+                  key={`${supplier.id}-phone`}
+                  className="flex items-center gap-2"
+                >
                   <svg
                     className="w-3 h-3 text-slate-400"
                     fill="none"
@@ -401,7 +404,10 @@ export default function SuppliersTab({
                 </div>
 
                 {supplier.email && (
-                  <div key="email" className="flex items-center gap-2">
+                  <div
+                    key={`${supplier.id}-email`}
+                    className="flex items-center gap-2"
+                  >
                     <svg
                       className="w-3 h-3 text-slate-400"
                       fill="none"
@@ -420,7 +426,10 @@ export default function SuppliersTab({
                 )}
 
                 {supplier.website && (
-                  <div key="website" className="flex items-center gap-2">
+                  <div
+                    key={`${supplier.id}-website`}
+                    className="flex items-center gap-2"
+                  >
                     <svg
                       className="w-3 h-3 text-slate-400"
                       fill="none"
@@ -447,13 +456,13 @@ export default function SuppliersTab({
               </div>
 
               <div className="border-t border-slate-700/50 pt-3 grid grid-cols-2 gap-2 text-xs">
-                <div key="orders">
+                <div key={`${supplier.id}-orders`}>
                   <span className="text-slate-400">Purchase:</span>
                   <p className="text-slate-100 font-medium">
                     {supplier.total_orders ?? 0}
                   </p>
                 </div>
-                <div key="amount">
+                <div key={`${supplier.id}-amount`}>
                   <span className="text-slate-400">Amount:</span>
                   <p className="text-slate-100 font-medium">
                     {formatCurrency(supplier.total_amount)}

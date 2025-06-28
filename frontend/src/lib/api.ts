@@ -36,10 +36,6 @@ export class ApiService {
     const url = `${API_BASE_URL}${endpoint}`;
     const token = AuthToken.get();
 
-    console.log(`Making API request to: ${url}`);
-    console.log("Request options:", options);
-    console.log("Auth token exists:", !!token);
-
     const headers: HeadersInit = {};
 
     // Only set Content-Type for non-FormData requests
@@ -76,22 +72,21 @@ export class ApiService {
         let errorDetails = null;
         try {
           const errorData = await response.json();
-          console.log("Error response data:", errorData);
           errorDetails = errorData;
           errorMessage = errorData.error || errorData.detail || errorMessage;
-          
+
           // If it's a validation error, show field-specific errors
           if (response.status === 400 && errorData) {
             const fieldErrors = [];
             for (const [field, errors] of Object.entries(errorData)) {
               if (Array.isArray(errors)) {
-                fieldErrors.push(`${field}: ${errors.join(', ')}`);
-              } else if (typeof errors === 'string') {
+                fieldErrors.push(`${field}: ${errors.join(", ")}`);
+              } else if (typeof errors === "string") {
                 fieldErrors.push(`${field}: ${errors}`);
               }
             }
             if (fieldErrors.length > 0) {
-              errorMessage = fieldErrors.join('; ');
+              errorMessage = fieldErrors.join("; ");
             }
           }
         } catch (e) {
@@ -109,7 +104,6 @@ export class ApiService {
       }
 
       const result = await response.json();
-      console.log("API response data:", result);
       return result;
     } catch (error) {
       console.error("API request failed:", error);
@@ -475,9 +469,6 @@ export class ApiService {
     }>;
     photos?: File[];
   }) {
-    console.log("=== API SERVICE CREATE PRODUCT ===");
-    console.log("Input productData:", productData);
-
     const formData = new FormData();
 
     // Add basic product data
@@ -487,12 +478,10 @@ export class ApiService {
 
     if (productData.category) {
       formData.append("category", productData.category.toString());
-      console.log("Added category:", productData.category);
     }
 
     if (productData.supplier) {
       formData.append("supplier", productData.supplier.toString());
-      console.log("Added supplier:", productData.supplier);
     }
 
     if (productData.details) {
@@ -502,33 +491,29 @@ export class ApiService {
     if (!productData.hasVariants) {
       if (productData.buyPrice) {
         formData.append("buyPrice", productData.buyPrice.toString());
-        console.log("Added buyPrice:", productData.buyPrice);
       }
       if (productData.sellPrice) {
         formData.append("sellPrice", productData.sellPrice.toString());
-        console.log("Added sellPrice:", productData.sellPrice);
       }
     }
 
     // Add variants data as JSON string
     if (productData.hasVariants && productData.colorSizeVariants) {
       // Transform the variants to match backend field names
-      const transformedVariants = productData.colorSizeVariants.map((variant) => ({
-        color: variant.color || "",
-        size: variant.size || "",
-        weight: variant.weight,
-        weight_unit: variant.weight_unit,
-        custom_variant: variant.custom_variant,
-        buyPrice: variant.buyPrice,  // Backend expects camelCase for these
-        sellPrice: variant.sellPrice,
-        stock: variant.stock,
-      }));
-      
-      formData.append(
-        "colorSizeVariants",
-        JSON.stringify(transformedVariants)
+      const transformedVariants = productData.colorSizeVariants.map(
+        (variant) => ({
+          color: variant.color || "",
+          size: variant.size || "",
+          weight: variant.weight,
+          weight_unit: variant.weight_unit,
+          custom_variant: variant.custom_variant,
+          buyPrice: variant.buyPrice, // Backend expects camelCase for these
+          sellPrice: variant.sellPrice,
+          stock: variant.stock,
+        })
       );
-      console.log("Added colorSizeVariants:", transformedVariants);
+
+      formData.append("colorSizeVariants", JSON.stringify(transformedVariants));
     }
 
     // Add photos
@@ -536,16 +521,8 @@ export class ApiService {
       productData.photos.forEach((photo) => {
         formData.append("photos", photo);
       });
-      console.log("Added photos count:", productData.photos.length);
     }
 
-    // Log FormData contents
-    console.log("FormData contents:");
-    for (let [key, value] of formData.entries()) {
-      console.log(`  ${key}:`, value);
-    }
-
-    console.log("Sending request to /products/");
     return this.request("/products/", {
       method: "POST",
       body: formData,
@@ -674,10 +651,8 @@ export class ApiService {
 
   // Purchase methods
   static async getPurchases() {
-    console.log("ApiService.getPurchases() called");
     try {
       const result = await this.get("/purchases/");
-      console.log("Purchases API response:", result);
       return result;
     } catch (error) {
       console.error("Error in getPurchases:", error);
@@ -776,12 +751,8 @@ export class ApiService {
 
   // Payment methods
   static async getPayments() {
-    console.log("ApiService.getPayments() called");
-    console.log("API_BASE_URL:", API_BASE_URL);
-    console.log("Auth token:", AuthToken.get() ? "exists" : "missing");
     try {
       const result = await this.get("/payments/");
-      console.log("Payments API response:", result);
       return result;
     } catch (error) {
       console.error("Error in getPayments:", error);
