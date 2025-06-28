@@ -75,9 +75,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     },
     {
       name: "Customers",
-      href: "/customers",
+      href: "/dashboard/customers",
       icon: Users,
-      current: pathname === "/customers",
+      current: pathname === "/dashboard/customers",
     },
     {
       name: "Banking",
@@ -152,7 +152,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "Subscriptions";
       case "/reports":
         return "Reports";
-      case "/customers":
+      case "/dashboard/customers":
         return "Customers";
       case "/banking":
         return "Banking";
