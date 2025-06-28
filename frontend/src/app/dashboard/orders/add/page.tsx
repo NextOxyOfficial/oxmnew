@@ -40,7 +40,6 @@ interface OrderForm {
   subtotal: number;
   discount_percentage: number;
   discount_amount: number;
-  additional_cost: number;
   vat_percentage: number;
   vat_amount: number;
   total: number;
@@ -73,8 +72,7 @@ export default function AddOrderPage() {
     subtotal: 0,
     discount_percentage: 0,
     discount_amount: 0,
-    additional_cost: 0,
-    vat_percentage: 18, // Default VAT
+    vat_percentage: 0,
     vat_amount: 0,
     total: 0,
     due_date: "",
@@ -162,15 +160,13 @@ export default function AddOrderPage() {
   const calculateTotals = (
     items: OrderItem[],
     discountPercentage: number,
-    additionalCost: number,
     vatPercentage: number
   ) => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const discountAmount = (subtotal * discountPercentage) / 100;
     const afterDiscount = subtotal - discountAmount;
-    const withAdditionalCost = afterDiscount + additionalCost;
-    const vatAmount = (withAdditionalCost * vatPercentage) / 100;
-    const total = withAdditionalCost + vatAmount;
+    const vatAmount = (afterDiscount * vatPercentage) / 100;
+    const total = afterDiscount + vatAmount;
 
     return {
       subtotal,
@@ -185,7 +181,6 @@ export default function AddOrderPage() {
     const { subtotal, discountAmount, vatAmount, total } = calculateTotals(
       orderForm.items,
       orderForm.discount_percentage,
-      orderForm.additional_cost,
       orderForm.vat_percentage
     );
 
@@ -199,7 +194,6 @@ export default function AddOrderPage() {
   }, [
     orderForm.items,
     orderForm.discount_percentage,
-    orderForm.additional_cost,
     orderForm.vat_percentage,
   ]);
 
@@ -660,58 +654,82 @@ export default function AddOrderPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <>
+                      {/* Column Headers */}
+                      <div className="grid grid-cols-4 gap-4 pb-2 border-b border-slate-700/30 mb-2">
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                          Product
+                        </div>
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
+                          Quantity
+                        </div>
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
+                          Unit Price
+                        </div>
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
+                          Total
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
                       {orderForm.items.map((item) => (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between bg-slate-800/30 border border-slate-700/30 rounded-lg p-4"
+                          className="grid grid-cols-4 gap-4 items-center py-3 px-2 hover:bg-slate-800/20 rounded-lg transition-colors"
                         >
+                          {/* Product Name */}
                           <div className="flex-1">
-                            <div className="font-medium text-slate-100">
+                            <div className="font-medium text-slate-100 text-sm">
                               {item.product_name}
                             </div>
                             {item.variant_details && (
-                              <div className="text-sm text-slate-400">
+                              <div className="text-xs text-slate-400 mt-1">
                                 {item.variant_details}
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() =>
-                                  updateItemQuantity(item.id, item.quantity - 1)
-                                }
-                                className="w-8 h-8 rounded bg-slate-600 text-slate-300 hover:bg-slate-500 flex items-center justify-center transition-colors"
-                              >
-                                −
-                              </button>
-                              <span className="w-12 text-center text-slate-100">
-                                {item.quantity}
-                              </span>
-                              <button
-                                onClick={() =>
-                                  updateItemQuantity(item.id, item.quantity + 1)
-                                }
-                                className="w-8 h-8 rounded bg-slate-600 text-slate-300 hover:bg-slate-500 flex items-center justify-center transition-colors"
-                              >
-                                +
-                              </button>
+
+                          {/* Quantity */}
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() =>
+                                updateItemQuantity(item.id, item.quantity - 1)
+                              }
+                              className="w-6 h-6 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-xs"
+                            >
+                              −
+                            </button>
+                            <span className="w-8 text-center text-slate-100 font-medium text-sm">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() =>
+                                updateItemQuantity(item.id, item.quantity + 1)
+                              }
+                              className="w-6 h-6 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-xs"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {/* Unit Price */}
+                          <div className="text-center">
+                            <div className="text-sm text-slate-100">
+                              {formatCurrency(item.unit_price)}
                             </div>
-                            <div className="text-right">
-                              <div className="text-sm text-slate-400">
-                                {formatCurrency(item.unit_price)} each
-                              </div>
-                              <div className="font-medium text-slate-100">
-                                {formatCurrency(item.total)}
-                              </div>
+                          </div>
+
+                          {/* Total Price & Actions */}
+                          <div className="flex items-center justify-between">
+                            <div className="font-semibold text-slate-100 text-sm">
+                              {formatCurrency(item.total)}
                             </div>
                             <button
                               onClick={() => removeItem(item.id)}
-                              className="text-red-400 hover:text-red-300 ml-2 transition-colors"
+                              className="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/10 rounded transition-colors ml-2"
                             >
                               <svg
-                                className="w-5 h-5"
+                                className="w-4 h-4"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -728,6 +746,7 @@ export default function AddOrderPage() {
                         </div>
                       ))}
                     </div>
+                    </>
                   )}
                 </div>
 
@@ -736,11 +755,8 @@ export default function AddOrderPage() {
                   <h4 className="text-sm font-medium text-slate-300 mb-3">
                     Add New Item
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Product
-                      </label>
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 md:flex-[2]">
                       <select
                         value={newItem.product}
                         onChange={(e) =>
@@ -771,7 +787,7 @@ export default function AddOrderPage() {
                     </div>
 
                     {selectedProduct?.has_variants && (
-                      <div>
+                      <div className="flex-1">
                         <label className="block text-sm font-medium text-slate-300 mb-1.5">
                           Variant
                         </label>
@@ -803,7 +819,7 @@ export default function AddOrderPage() {
                     <div className="flex items-end">
                       <button
                         onClick={addItemToOrder}
-                        className="w-full px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg"
+                        className="px-3 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap"
                       >
                         Add Item
                       </button>
@@ -812,9 +828,10 @@ export default function AddOrderPage() {
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Right Column - Bill Summary */}
-            <div className="space-y-6">
+          {/* Right Column - Bill Summary */}
+          <div className="space-y-6">
               {/* Bill Summary */}
               <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
                 <div className="sm:p-4 p-2">
@@ -822,9 +839,9 @@ export default function AddOrderPage() {
                     Bill Summary
                   </h3>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {/* Subtotal */}
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
                       <span className="text-slate-400">Subtotal:</span>
                       <span className="text-slate-100">
                         {formatCurrency(orderForm.subtotal)}
@@ -832,17 +849,15 @@ export default function AddOrderPage() {
                     </div>
 
                     {/* Discount */}
-                    <div className="border-t border-slate-700/50 pt-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-slate-400">Discount:</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400">Discount:</span>
+                      <div className="flex items-center gap-2">
                         <span className="text-slate-100">
                           -{formatCurrency(orderForm.discount_amount)}
                         </span>
-                      </div>
-                      <div className="flex items-center gap-2">
                         <input
                           type="number"
-                          value={orderForm.discount_percentage}
+                          value={orderForm.discount_percentage === 0 ? "" : orderForm.discount_percentage}
                           onChange={(e) =>
                             setOrderForm((prev) => ({
                               ...prev,
@@ -850,7 +865,33 @@ export default function AddOrderPage() {
                                 parseFloat(e.target.value) || 0,
                             }))
                           }
-                          className="flex-1 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                          placeholder=""
+                          min="0"
+                          max="100"
+                          step="0.01"
+                        />
+                        <span className="text-slate-400 text-sm">%</span>
+                      </div>
+                    </div>
+
+                    {/* VAT */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400">VAT:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-100">
+                          {formatCurrency(orderForm.vat_amount)}
+                        </span>
+                        <input
+                          type="number"
+                          value={orderForm.vat_percentage === 0 ? "" : orderForm.vat_percentage}
+                          onChange={(e) =>
+                            setOrderForm((prev) => ({
+                              ...prev,
+                              vat_percentage: parseFloat(e.target.value) || 0,
+                            }))
+                          }
+                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
                           placeholder="0"
                           min="0"
                           max="100"
@@ -860,66 +901,12 @@ export default function AddOrderPage() {
                       </div>
                     </div>
 
-                    {/* Additional Cost */}
-                    <div className="border-t border-slate-700/50 pt-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-slate-400">Additional Cost:</span>
-                        <span className="text-slate-100">
-                          {formatCurrency(orderForm.additional_cost)}
-                        </span>
-                      </div>
-                      <input
-                        type="number"
-                        value={orderForm.additional_cost}
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            additional_cost: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        placeholder="0.00"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-
-                    {/* VAT */}
-                    <div className="border-t border-slate-700/50 pt-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-slate-400">VAT:</span>
-                        <span className="text-slate-100">
-                          {formatCurrency(orderForm.vat_amount)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={orderForm.vat_percentage}
-                          onChange={(e) =>
-                            setOrderForm((prev) => ({
-                              ...prev,
-                              vat_percentage: parseFloat(e.target.value) || 0,
-                            }))
-                          }
-                          className="flex-1 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                          placeholder="18"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                        />
-                        <span className="text-slate-400 text-sm">%</span>
-                      </div>
-                    </div>
-
                     {/* Total */}
-                    <div className="border-t border-slate-700/50 pt-4">
-                      <div className="flex justify-between text-lg font-semibold">
-                        <span className="text-slate-100">Total:</span>
-                        <span className="text-cyan-400">
-                          {formatCurrency(orderForm.total)}
-                        </span>
-                      </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
+                      <span className="text-slate-100 font-semibold">Total:</span>
+                      <span className="text-cyan-400 font-semibold text-lg">
+                        {formatCurrency(orderForm.total)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -993,6 +980,5 @@ export default function AddOrderPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }
