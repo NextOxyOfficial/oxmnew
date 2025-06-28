@@ -97,6 +97,9 @@ export default function CustomerDetailsPage() {
     phone: '',
     address: ''
   });
+  const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const [notifyOrderId, setNotifyOrderId] = useState<number | null>(null);
+  const [isNotifying, setIsNotifying] = useState(false);
 
   useEffect(() => {
     setMounted(true);
