@@ -67,6 +67,7 @@ export default function SubscriptionsPage() {
         { name: "Up to 50 products", included: true, limit: "50" },
         { name: "Up to 5 suppliers", included: true, limit: "5" },
         { name: "SMS Marketing", included: true },
+        { name: "Online Shop", included: false },
       ],
       buttonText: currentPlan === "free" ? "Current Plan" : "Downgrade",
       buttonAction: currentPlan === "free" ? () => {} : handleDowngradeToFree,
@@ -74,7 +75,7 @@ export default function SubscriptionsPage() {
     {
       id: "pro",
       name: "Pro",
-      price: billingPeriod === "monthly" ? 29 : 290,
+      price: billingPeriod === "monthly" ? 399 : 3990,
       period: billingPeriod === "monthly" ? "month" : "year",
       description: "For growing businesses that need more power",
       popular: true,
@@ -83,6 +84,7 @@ export default function SubscriptionsPage() {
         { name: "Unlimited products", included: true, limit: "Unlimited" },
         { name: "Unlimited suppliers", included: true, limit: "Unlimited" },
         { name: "SMS Marketing", included: true },
+        { name: "Online Shop", included: true },
       ],
       buttonText: currentPlan === "pro" ? "Current Plan" : "Upgrade to Pro",
       buttonAction: currentPlan === "pro" ? () => {} : handleUpgradeToPro,
@@ -291,7 +293,7 @@ export default function SubscriptionsPage() {
             >
               Yearly
               <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
-                Save 20%
+                Save 17%
               </span>
             </button>
           </div>
@@ -334,12 +336,12 @@ export default function SubscriptionsPage() {
                 <p className="text-slate-400 mb-4">{plan.description}</p>
                 <div className="mb-4">
                   <span className="text-4xl font-bold text-white">
-                    ${plan.price}
+                    ৳{plan.price}
                   </span>
                   <span className="text-slate-400 ml-1">/{plan.period}</span>
                   {billingPeriod === "yearly" && plan.id === "pro" && (
                     <div className="text-sm text-green-400 mt-1">
-                      Save $58 compared to monthly
+                      Save ৳798 compared to monthly (17% off)
                     </div>
                   )}
                 </div>
@@ -427,44 +429,203 @@ export default function SubscriptionsPage() {
           ))}
         </div>
 
-        {/* FAQ Section */}
-        <div className="mt-12 max-w-4xl mx-auto">
-          <h3 className="text-2xl font-bold text-white text-center mb-8">
-            Frequently Asked Questions
-          </h3>
-          <div className="space-y-4">
+        {/* SMS Packages Section */}
+        <div className="mt-12 max-w-7xl mx-auto">
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-slate-200 mb-2">
+              SMS Packages
+            </h3>
+            <p className="text-slate-400 text-sm">
+              Choose the perfect SMS package for your marketing campaigns
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* First Row - Smaller Packages */}
             {[
-              {
-                question: "Can I change my plan at any time?",
-                answer:
-                  "Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle.",
-              },
-              {
-                question: "What happens if I exceed my plan limits?",
-                answer:
-                  "For the free plan, you'll need to upgrade to Pro to add more customers, products, or suppliers. We'll notify you when you're approaching your limits.",
-              },
-              {
-                question: "Do you offer refunds?",
-                answer:
-                  "We offer a 30-day money-back guarantee for Pro subscriptions. Contact our support team for assistance.",
-              },
-              {
-                question: "Is SMS marketing included in both plans?",
-                answer:
-                  "Yes, SMS marketing is included in both Free and Pro plans. The Free plan includes basic SMS features, while Pro includes advanced automation.",
-              },
-            ].map((faq, index) => (
+              { sms: 33, price: 10.0, icon: "📱" },
+              { sms: 83, price: 25.0, icon: "💬" },
+              { sms: 166, price: 50.0, icon: "📨" },
+              { sms: 333, price: 100.0, icon: "📢" },
+            ].map((pkg, index) => (
               <div
                 key={index}
-                className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-6"
+                className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 hover:border-slate-600/50 transition-all duration-200"
               >
-                <h4 className="text-lg font-medium text-white mb-2">
-                  {faq.question}
-                </h4>
-                <p className="text-slate-400">{faq.answer}</p>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-slate-400 truncate">
+                      {pkg.sms} SMS
+                    </p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      ৳{pkg.price.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="rounded-full bg-orange-500/20 p-3 flex-shrink-0 ml-2">
+                    <svg
+                      className="w-6 h-6 text-orange-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <button className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 text-sm font-medium">
+                  Purchase Package
+                </button>
               </div>
             ))}
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Second Row - Larger Packages */}
+            {[
+              { sms: 690, price: 200.0, popular: false },
+              { sms: 1785, price: 500.0, popular: true },
+              { sms: 3700, price: 1000.0, popular: false },
+              { sms: 19230, price: 5000.0, popular: false },
+            ].map((pkg, index) => (
+              <div
+                key={index}
+                className={`relative bg-slate-900/50 border rounded-xl p-4 hover:border-slate-600/50 transition-all duration-200 ${
+                  pkg.popular
+                    ? "border-orange-500 shadow-orange-500/20 shadow-lg"
+                    : "border-slate-700/50"
+                }`}
+              >
+                {pkg.popular && (
+                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-1 rounded-full text-xs font-medium">
+                      Popular
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-slate-400 truncate">
+                      {pkg.sms.toLocaleString()} SMS
+                    </p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      ৳{pkg.price.toLocaleString()}
+                    </p>
+                  </div>
+                  <div
+                    className={`rounded-full p-3 flex-shrink-0 ml-2 ${
+                      pkg.popular ? "bg-orange-500/30" : "bg-orange-500/20"
+                    }`}
+                  >
+                    <svg
+                      className={`w-6 h-6 ${
+                        pkg.popular ? "text-orange-400" : "text-orange-500"
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-xs text-orange-400 mb-3">
+                  ৳{(pkg.price / pkg.sms).toFixed(2)} per SMS
+                </p>
+                <button
+                  className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-200 text-sm ${
+                    pkg.popular
+                      ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      : "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  }`}
+                >
+                  Purchase Package
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* SMS Package Features */}
+          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-lg font-medium text-white mb-4 flex items-center">
+                  <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center mr-3">
+                    <svg
+                      className="w-5 h-5 text-cyan-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                  Package Features
+                </h4>
+                <ul className="space-y-2 text-slate-400 text-sm">
+                  <li className="flex items-center">
+                    <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-3"></div>
+                    SMS credits never expire
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-3"></div>
+                    Send to any mobile number in Bangladesh
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-3"></div>
+                    Real-time delivery reports
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-lg font-medium text-white mb-4 flex items-center">
+                  <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center mr-3">
+                    <svg
+                      className="w-5 h-5 text-purple-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                  </div>
+                  Marketing Tools
+                </h4>
+                <ul className="space-y-2 text-slate-400 text-sm">
+                  <li className="flex items-center">
+                    <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-3"></div>
+                    Bulk SMS campaigns
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-3"></div>
+                    Customer segmentation
+                  </li>
+                  <li className="flex items-center">
+                    <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-3"></div>
+                    24/7 customer support
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
 
