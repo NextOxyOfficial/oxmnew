@@ -279,21 +279,13 @@ export default function ProductsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {/* Total Products */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-400 truncate">
-                  Total Products
-                </p>
-                <p className="text-2xl font-bold text-white mt-1">
-                  {totalProducts}
-                </p>
-              </div>
-              <div className="rounded-full bg-cyan-500/20 p-3 flex-shrink-0 ml-2">
+          <div className="bg-gradient-to-br from-cyan-500/15 to-cyan-600/8 border border-cyan-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+            <div className="flex items-center space-x-2">
+              <div className="rounded-md bg-cyan-500/20 p-1.5">
                 <svg
-                  className="w-6 h-6 text-cyan-500"
+                  className="h-7 w-7 text-cyan-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -306,24 +298,22 @@ export default function ProductsPage() {
                   />
                 </svg>
               </div>
+              <div>
+                <p className="text-sm text-cyan-300 font-medium">Total Products</p>
+                <p className="text-base font-bold text-cyan-400">
+                  {totalProducts}
+                </p>
+                <p className="text-xs text-cyan-500 opacity-80">Active inventory items</p>
+              </div>
             </div>
-            <p className="text-xs text-cyan-400 mt-2">Active inventory items</p>
           </div>
 
           {/* Total Buy Price */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-400 truncate">
-                  Total Buy Price
-                </p>
-                <p className="text-2xl font-bold text-white mt-1">
-                  ${totalBuyPrice.toLocaleString()}
-                </p>
-              </div>
-              <div className="rounded-full bg-red-500/20 p-3 flex-shrink-0 ml-2">
+          <div className="bg-gradient-to-br from-red-500/15 to-red-600/8 border border-red-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+            <div className="flex items-center space-x-2">
+              <div className="rounded-md bg-red-500/20 p-1.5">
                 <svg
-                  className="w-6 h-6 text-red-500"
+                  className="h-7 w-7 text-red-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -336,24 +326,22 @@ export default function ProductsPage() {
                   />
                 </svg>
               </div>
+              <div>
+                <p className="text-sm text-red-300 font-medium">Total Buy Price</p>
+                <p className="text-base font-bold text-red-400">
+                  ${totalBuyPrice.toLocaleString()}
+                </p>
+                <p className="text-xs text-red-500 opacity-80">Total investment</p>
+              </div>
             </div>
-            <p className="text-xs text-red-400 mt-2">Total investment</p>
           </div>
 
           {/* Total Sale Price */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-400 truncate">
-                  Total Sale Price
-                </p>
-                <p className="text-2xl font-bold text-white mt-1">
-                  ${totalSalePrice.toLocaleString()}
-                </p>
-              </div>
-              <div className="rounded-full bg-green-500/20 p-3 flex-shrink-0 ml-2">
+          <div className="bg-gradient-to-br from-green-500/15 to-green-600/8 border border-green-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+            <div className="flex items-center space-x-2">
+              <div className="rounded-md bg-green-500/20 p-1.5">
                 <svg
-                  className="w-6 h-6 text-green-500"
+                  className="h-7 w-7 text-green-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -366,24 +354,22 @@ export default function ProductsPage() {
                   />
                 </svg>
               </div>
+              <div>
+                <p className="text-sm text-green-300 font-medium">Total Sale Price</p>
+                <p className="text-base font-bold text-green-400">
+                  ${totalSalePrice.toLocaleString()}
+                </p>
+                <p className="text-xs text-green-500 opacity-80">Potential revenue</p>
+              </div>
             </div>
-            <p className="text-xs text-green-400 mt-2">Potential revenue</p>
           </div>
 
           {/* Estimated Profit */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-400 truncate">
-                  Estimated Profit
-                </p>
-                <p className="text-2xl font-bold text-white mt-1">
-                  ${estimatedProfit.toLocaleString()}
-                </p>
-              </div>
-              <div className="rounded-full bg-purple-500/20 p-3 flex-shrink-0 ml-2">
+          <div className="bg-gradient-to-br from-purple-500/15 to-purple-600/8 border border-purple-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+            <div className="flex items-center space-x-2">
+              <div className="rounded-md bg-purple-500/20 p-1.5">
                 <svg
-                  className="w-6 h-6 text-purple-500"
+                  className="h-7 w-7 text-purple-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -396,10 +382,14 @@ export default function ProductsPage() {
                   />
                 </svg>
               </div>
+              <div>
+                <p className="text-sm text-purple-300 font-medium">Estimated Profit</p>
+                <p className="text-base font-bold text-purple-400">
+                  ${estimatedProfit.toLocaleString()}
+                </p>
+                <p className="text-xs text-purple-500 opacity-80">If all sold at full price</p>
+              </div>
             </div>
-            <p className="text-xs text-purple-400 mt-2">
-              If all sold at full price
-            </p>
           </div>
         </div>
 
