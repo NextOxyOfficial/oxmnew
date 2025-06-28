@@ -10,6 +10,8 @@ interface ProductDetailsModalProps {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (productId: number) => void;
+  isDeleting?: boolean;
+  isEditing?: boolean;
 }
 
 function ProductDetailsModal({
@@ -17,7 +19,9 @@ function ProductDetailsModal({
   onClose,
   product,
   onEdit,
-  onDelete
+  onDelete,
+  isDeleting = false,
+  isEditing = false
 }: ProductDetailsModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -124,9 +128,22 @@ function ProductDetailsModal({
             
             <button
               onClick={() => onEdit(product)}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
+              disabled={isEditing}
+              className={`px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
+                isEditing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              }`}
             >
-              Edit Product
+              {isEditing ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Opening Editor...
+                </>
+              ) : (
+                'Edit Product'
+              )}
             </button>
             
             <button
@@ -162,9 +179,22 @@ function ProductDetailsModal({
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 shadow-lg cursor-pointer"
+                  disabled={isDeleting}
+                  className={`flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
+                    isDeleting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
                 >
-                  Delete
+                  {isDeleting ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
                 </button>
               </div>
             </div>
@@ -182,6 +212,9 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState("name");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleProductClick = (product: Product) => {
     console.log("Product clicked:", product.name);
@@ -190,20 +223,44 @@ export default function ProductsPage() {
     console.log("Modal should be open now");
   };
 
-  const handleEditProduct = (product: Product) => {
-    console.log("Edit product:", product.name);
-    // TODO: Implement edit functionality
-    setIsModalOpen(false);
+  const handleEditProduct = async (product: Product) => {
+    setIsEditing(true);
+    try {
+      console.log("Edit product:", product.name);
+      // TODO: Implement edit functionality
+      // Simulate navigation delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setIsModalOpen(false);
+      // Navigate to edit page (TODO: implement edit page)
+      // router.push(`/dashboard/products/edit/${product.id}`);
+    } catch (error) {
+      console.error("Error editing product:", error);
+    } finally {
+      setIsEditing(false);
+    }
   };
 
   const handleDeleteProduct = async (productId: number) => {
-    console.log("Delete product:", productId);
-    // TODO: Implement delete functionality
-    // For now, just close the modal
+    setIsDeleting(true);
+    try {
+      console.log("Delete product:", productId);
+      // TODO: Implement delete functionality
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      // For now, just close the modal
+    } catch (error) {
+      console.error("Error deleting product:", error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleAddProduct = () => {
-    router.push("/dashboard/products/add");
+    setIsNavigating(true);
+    // Add a small delay to show the spinner
+    setTimeout(() => {
+      router.push("/dashboard/products/add");
+    }, 300);
   };
 
   const closeModal = () => {
@@ -345,7 +402,7 @@ export default function ProductsPage() {
     });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="sm:p-6 p-1 space-y-6">
       <div className="max-w-7xl">
         {/* Page Header */}
         <div className="mb-6">
@@ -476,7 +533,7 @@ export default function ProductsPage() {
 
         {/* Products Table/List */}
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-          <div className="p-4">
+          <div className="sm:p-4 p-2 ">
             {/* Header and filters */}
             <div className="flex flex-col gap-4 mb-6">
               <h3 className="text-xl font-bold text-slate-200">Product Inventory</h3>
@@ -488,12 +545,27 @@ export default function ProductsPage() {
                   {/* Add Product Button */}
                   <button 
                     onClick={handleAddProduct}
-                    className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 flex-shrink-0"
+                    disabled={isNavigating}
+                    className={`px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 flex-shrink-0 ${
+                      isNavigating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Add Product
+                    {isNavigating ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Product
+                      </>
+                    )}
                   </button>
                   
                   {/* Search - Takes remaining space */}
@@ -573,12 +645,27 @@ export default function ProductsPage() {
                 {/* Add Product Button */}
                 <button 
                   onClick={handleAddProduct}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 flex-shrink-0"
+                  disabled={isNavigating}
+                  className={`px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 flex-shrink-0 ${
+                    isNavigating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Add Product
+                  {isNavigating ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Add Product
+                    </>
+                  )}
                 </button>
                 
                 {/* Search - Takes remaining space */}
@@ -655,7 +742,7 @@ export default function ProductsPage() {
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/70 transition-all duration-200"
+                  className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/70 transition-all duration-200 cursor-pointer"
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 min-w-0 pr-2">
@@ -724,19 +811,26 @@ export default function ProductsPage() {
                         const profit = product.salePrice - product.buyPrice;
                         const profitMargin = product.salePrice > 0 ? ((profit / product.salePrice) * 100) : 0;
                         return (
-                          <>
+                          <div className="flex items-center gap-2">
                             <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
                               {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
                             </p>
                             <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
                               {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(profitMargin).toFixed(1)}%
                             </p>
-                          </>
+                          </div>
                         );
                       })()}
                     </div>
                     <div className="flex space-x-1">
-                      <button className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditProduct(product);
+                        }}
+                        className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
+                        title="Edit"
+                      >
                         <svg
                           className="w-4 h-4"
                           fill="none"
@@ -751,7 +845,14 @@ export default function ProductsPage() {
                           />
                         </svg>
                       </button>
-                      <button className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProduct(product.id);
+                        }}
+                        className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
+                        title="Delete"
+                      >
                         <svg
                           className="w-4 h-4"
                           fill="none"
@@ -768,7 +869,7 @@ export default function ProductsPage() {
                       </button>
                       <button 
                         onClick={() => handleProductClick(product)}
-                        className="text-slate-300 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors"
+                        className="text-slate-300 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
                         title="View Details"
                       >
                         <svg
@@ -823,7 +924,7 @@ export default function ProductsPage() {
                   {filteredProducts.map((product) => (
                     <tr
                       key={product.id}
-                      className="border-b border-slate-700/30 hover:bg-slate-800/30 transition-colors"
+                      className="border-b border-slate-700/30 hover:bg-slate-800/30 transition-colors cursor-pointer"
                     >
                       <td className="py-3 px-4 max-w-xs">
                         <button
@@ -894,7 +995,11 @@ export default function ProductsPage() {
                       <td className="py-3 px-4">
                         <div className="flex space-x-2">
                           <button
-                            className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditProduct(product);
+                            }}
+                            className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
                             title="Edit"
                           >
                             <svg
@@ -912,7 +1017,11 @@ export default function ProductsPage() {
                             </svg>
                           </button>
                           <button
-                            className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteProduct(product.id);
+                            }}
+                            className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
                             title="Delete"
                           >
                             <svg
@@ -931,7 +1040,7 @@ export default function ProductsPage() {
                           </button>
                           <button
                             onClick={() => handleProductClick(product)}
-                            className="text-slate-300 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors"
+                            className="text-slate-300 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
                             title="View Details"
                           >
                             <svg
@@ -995,6 +1104,8 @@ export default function ProductsPage() {
             product={selectedProduct}
             onEdit={() => handleEditProduct(selectedProduct)}
             onDelete={() => handleDeleteProduct(selectedProduct.id)}
+            isDeleting={isDeleting}
+            isEditing={isEditing}
           />
         )}
       </div>
