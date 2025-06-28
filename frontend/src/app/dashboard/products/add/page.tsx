@@ -20,7 +20,7 @@ interface ProductFormData {
   supplier: string;
   location: string;
   details: string;
-  photo: File | null;
+  photos: File[];
   hasVariants: boolean;
   colorSizeVariants: ColorSize[];
 }
@@ -37,15 +37,17 @@ export default function AddProductPage() {
     supplier: "",
     location: "",
     details: "",
-    photo: null,
+    photos: [],
     hasVariants: false,
     colorSizeVariants: [],
   });
 
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [newVariant, setNewVariant] = useState({ color: "", size: "", buyPrice: 0, sellPrice: 0, stock: 0 });
+  const [customColor, setCustomColor] = useState("");
+  const [customSize, setCustomSize] = useState("");
 
   // Calculate profit (for single pricing or average if variants exist)
   const profit = formData.hasVariants 
@@ -131,18 +133,30 @@ export default function AddProductPage() {
         ...prev,
         [name]: value
       }));
+
+      // Clear custom inputs when user selects a different option
+      if (name === "color" && value !== "Custom") {
+        setCustomColor("");
+      }
+      if (name === "size" && value !== "Custom") {
+        setCustomSize("");
+      }
     }
   };
 
   const addVariant = () => {
-    if (!newVariant.color || !newVariant.size || newVariant.buyPrice <= 0 || newVariant.sellPrice <= 0) {
+    // Determine the actual color and size values
+    const actualColor = newVariant.color === "Custom" ? customColor : newVariant.color;
+    const actualSize = newVariant.size === "Custom" ? customSize : newVariant.size;
+
+    if (!actualColor || !actualSize || newVariant.buyPrice <= 0 || newVariant.sellPrice <= 0) {
       return;
     }
 
     const variant: ColorSize = {
       id: Date.now().toString(),
-      color: newVariant.color,
-      size: newVariant.size,
+      color: actualColor,
+      size: actualSize,
       buyPrice: newVariant.buyPrice,
       sellPrice: newVariant.sellPrice,
       stock: newVariant.stock
@@ -153,8 +167,10 @@ export default function AddProductPage() {
       colorSizeVariants: [...prev.colorSizeVariants, variant]
     }));
 
-    // Reset form
+    // Reset form and custom inputs
     setNewVariant({ color: "", size: "", buyPrice: 0, sellPrice: 0, stock: 0 });
+    setCustomColor("");
+    setCustomSize("");
   };
 
   const removeVariant = (id: string) => {
@@ -188,12 +204,18 @@ export default function AddProductPage() {
         return;
       }
 
-      setFormData(prev => ({ ...prev, photo: file }));
+      // Check if we already have 5 photos (limit)
+      if (formData.photos.length >= 5) {
+        setErrors(prev => ({ ...prev, photo: "Maximum 5 photos allowed" }));
+        return;
+      }
+
+      setFormData(prev => ({ ...prev, photos: [...prev.photos, file] }));
       
       // Create preview
       const reader = new FileReader();
       reader.onload = () => {
-        setPhotoPreview(reader.result as string);
+        setPhotoPreviews(prev => [...prev, reader.result as string]);
       };
       reader.readAsDataURL(file);
 
@@ -201,15 +223,20 @@ export default function AddProductPage() {
       if (errors.photo) {
         setErrors(prev => ({ ...prev, photo: "" }));
       }
+
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
-  const removePhoto = () => {
-    setFormData(prev => ({ ...prev, photo: null }));
-    setPhotoPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+  const removePhoto = (index: number) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      photos: prev.photos.filter((_, i) => i !== index) 
+    }));
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const validateForm = () => {
@@ -294,6 +321,23 @@ export default function AddProductPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Custom styles for scrollbar */}
+      <style jsx>{`
+        .scrollbar-thin {
+          scrollbar-width: thin;
+        }
+        .scrollbar-thumb-slate-600::-webkit-scrollbar-thumb {
+          background-color: #475569;
+          border-radius: 6px;
+        }
+        .scrollbar-track-slate-800::-webkit-scrollbar-track {
+          background-color: #1e293b;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+          height: 6px;
+        }
+      `}</style>
+      
       <div className="max-w-4xl">
         {/* Page Header */}
         <div className="mb-6">
@@ -367,55 +411,61 @@ export default function AddProductPage() {
               {/* Photo Upload */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Product Photo
+                  Product Photos ({formData.photos.length}/5)
                 </label>
-                <div className="space-y-2">
-                  {/* Upload Area */}
-                  <div 
-                    className={`border-2 border-dashed ${errors.photo ? 'border-red-500' : 'border-slate-700/50'} rounded-lg p-3 text-center hover:border-slate-600 transition-all duration-200 cursor-pointer bg-slate-800/50`}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {photoPreview ? (
-                      <div className="relative inline-block">
-                        <img
-                          src={photoPreview}
-                          alt="Product preview"
-                          className="max-h-24 rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removePhoto();
-                          }}
-                          className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="py-4">
-                        <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        <p className="text-gray-400 text-sm mb-1">Click to upload product photo</p>
-                        <p className="text-gray-500 text-xs">PNG, JPG, GIF up to 5MB</p>
-                      </div>
+                <div className="flex gap-3">
+                  {/* Upload Area - Left Side */}
+                  <div className="flex-shrink-0 w-32">
+                    <div 
+                      className={`border-2 border-dashed ${errors.photo ? 'border-red-500' : 'border-slate-700/50'} rounded-lg p-3 text-center hover:border-slate-600 transition-all duration-200 cursor-pointer bg-slate-800/50 h-32 flex flex-col items-center justify-center ${formData.photos.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={() => formData.photos.length < 5 && fileInputRef.current?.click()}
+                    >
+                      <svg className="w-6 h-6 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <p className="text-gray-400 text-xs mb-1">
+                        {formData.photos.length >= 5 ? 'Max Reached' : 'Add Photo'}
+                      </p>
+                      <p className="text-gray-500 text-xs">Max 5MB</p>
+                    </div>
+                    
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                    
+                    {errors.photo && (
+                      <p className="text-red-400 text-xs mt-1">{errors.photo}</p>
                     )}
                   </div>
-                  
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                  
-                  {errors.photo && (
-                    <p className="text-red-400 text-sm">{errors.photo}</p>
+
+                  {/* Photos Gallery - Right Side with Horizontal Scroll */}
+                  {photoPreviews.length > 0 && (
+                    <div className="flex-1 min-w-0">
+                      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 relative z-10">
+                        {photoPreviews.map((preview, index) => (
+                          <div key={index} className="relative flex-shrink-0 group">
+                            <img
+                              src={preview}
+                              alt={`Product preview ${index + 1}`}
+                              className="w-32 h-32 object-cover rounded-lg border border-slate-700/50"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removePhoto(index)}
+                              className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors opacity-0 group-hover:opacity-100 z-20 shadow-lg"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -642,6 +692,35 @@ export default function AddProductPage() {
                             <option value="Custom" className="bg-slate-800">Custom</option>
                           </select>
                         </div>
+                      </div>
+
+                      {/* Custom Color Input */}
+                      {newVariant.color === "Custom" && (
+                        <div className="mb-3">
+                          <input
+                            type="text"
+                            value={customColor}
+                            onChange={(e) => setCustomColor(e.target.value)}
+                            placeholder="Enter custom color"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          />
+                        </div>
+                      )}
+
+                      {/* Custom Size Input */}
+                      {newVariant.size === "Custom" && (
+                        <div className="mb-3">
+                          <input
+                            type="text"
+                            value={customSize}
+                            onChange={(e) => setCustomSize(e.target.value)}
+                            placeholder="Enter custom size"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          />
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
 
                         {/* Buy Price */}
                         <div>
@@ -685,13 +764,15 @@ export default function AddProductPage() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={addVariant}
-                        className="w-full px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-medium rounded-lg hover:bg-cyan-500/30 transition-colors"
-                      >
-                        Add Variant
-                      </button>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={addVariant}
+                          className="px-4 py-1.5 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-medium rounded-lg hover:bg-cyan-500/30 transition-colors"
+                        >
+                          Add Variant
+                        </button>
+                      </div>
                     </div>
 
                     {/* Variants List */}
@@ -772,11 +853,11 @@ export default function AddProductPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-3 border-t border-slate-700/50">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/50">
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="flex-1 px-4 py-2 border border-slate-600 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200"
+                  className="px-6 py-2 border border-slate-600 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200"
                 >
                   Cancel
                 </button>
@@ -784,7 +865,7 @@ export default function AddProductPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className={`flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
+                  className={`px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
                     isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
