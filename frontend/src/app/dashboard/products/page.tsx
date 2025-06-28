@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Product, StockEntry } from "@/types/product";
+import { Product, ProductVariant, StockEntry } from "@/types/product";
 import { ApiService } from "@/lib/api";
-import ProductDetailsModal from "@/components/ProductDetailsModal";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -15,14 +14,54 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [sortBy, setSortBy] = useState("name");
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isAddingStock, setIsAddingStock] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  // Helper function to get buy price
+  const getBuyPrice = (product: Product, variant?: ProductVariant) => {
+    if (variant) {
+      return Number(variant.buy_price) || 
+             Number(variant.cost) || 
+             Number(product.cost) || 
+             Number(product.buy_price) || 0;
+    }
+    return Number(product.cost) || Number(product.buy_price) || 0;
+  };
+
+  // Helper function to get sell price
+  const getSellPrice = (product: Product, variant?: ProductVariant) => {
+    if (variant) {
+      return Number(variant.sell_price) || 
+             Number(variant.price) || 
+             Number(product.price) || 
+             Number(product.sell_price) || 0;
+    }
+    return Number(product.price) || Number(product.sell_price) || 0;
+  };
+
+  // Helper function to calculate average prices for variant products
+  const getAveragePrices = (product: Product) => {
+    if (!product.has_variants || !product.variants || product.variants.length === 0) {
+      return {
+        buyPrice: getBuyPrice(product),
+        sellPrice: getSellPrice(product)
+      };
+    }
+
+    const buyPrices = product.variants.map(variant => getBuyPrice(product, variant)).filter(price => price > 0);
+    const sellPrices = product.variants.map(variant => getSellPrice(product, variant)).filter(price => price > 0);
+
+    const avgBuyPrice = buyPrices.length > 0 ? buyPrices.reduce((sum, price) => sum + price, 0) / buyPrices.length : 0;
+    const avgSellPrice = sellPrices.length > 0 ? sellPrices.reduce((sum, price) => sum + price, 0) / sellPrices.length : 0;
+
+    return {
+      buyPrice: avgBuyPrice,
+      sellPrice: avgSellPrice
+    };
+  };
 
   // Fetch products and categories on component mount
   useEffect(() => {
@@ -31,9 +70,7 @@ export default function ProductsPage() {
         setIsLoading(true);
         setError(null);
         
-        console.log("Fetching products...");
         const productsData = await ApiService.getProducts();
-        console.log("Products response:", productsData);
         
         // Handle different response formats
         const productsList = Array.isArray(productsData) ? productsData : productsData?.results || [];
@@ -47,9 +84,6 @@ export default function ProductsPage() {
         )] as string[];
         setCategories(uniqueCategories);
         
-        console.log("Loaded products:", productsList.length);
-        console.log("Unique categories:", uniqueCategories);
-        
       } catch (error) {
         console.error("Error fetching products:", error);
         setError(error instanceof Error ? error.message : "Failed to load products");
@@ -62,21 +96,17 @@ export default function ProductsPage() {
   }, []);
 
   const handleProductClick = (product: Product) => {
-    console.log("Product clicked:", product.name);
-    setSelectedProduct(product);
-    setIsModalOpen(true);
-    console.log("Modal should be open now");
+    // Navigate to dynamic product details page
+    router.push(`/dashboard/products/${product.id}`);
   };
 
   const handleEditProduct = async (product: Product) => {
     setIsEditing(true);
     try {
-      console.log("Edit product:", product.name);
       // TODO: Implement edit functionality
       // Simulate navigation delay
       await new Promise(resolve => setTimeout(resolve, 500));
       // When real edit API is implemented, call refreshProducts() here
-      setIsModalOpen(false);
       // Navigate to edit page (TODO: implement edit page)
       // router.push(`/dashboard/products/edit/${product.id}`);
     } catch (error) {
@@ -91,7 +121,6 @@ export default function ProductsPage() {
     
     setIsDeleting(true);
     try {
-      console.log("Delete product:", productId);
       // TODO: Implement delete functionality
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -116,35 +145,6 @@ export default function ProductsPage() {
     setProductToDelete(null);
   };
 
-  const handleAddStock = async (productId: number, stockData: {
-    quantity: number;
-    buy_price: number;
-    sell_price: number;
-    reason: string;
-    notes?: string;
-    variant_id?: number;
-  }) => {
-    setIsAddingStock(true);
-    try {
-      console.log("Add stock:", { productId, ...stockData });
-      // TODO: Implement add stock functionality
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // When real add stock API is implemented, call refreshProducts() here
-      // For demo purposes, we would update the product stock here
-      // This would typically involve calling an API and then updating the local state
-      
-      const profit = stockData.sell_price - stockData.buy_price;
-      console.log(`Added ${stockData.quantity} units to product ${productId} - Buy: $${stockData.buy_price}, Sell: $${stockData.sell_price}, Profit: $${Number(profit).toFixed(2)} per unit`);
-    } catch (error) {
-      console.error("Error adding stock:", error);
-      throw error; // Re-throw to be handled by the modal
-    } finally {
-      setIsAddingStock(false);
-    }
-  };
-
   const handleAddProduct = () => {
     setIsNavigating(true);
     // Add a small delay to show the spinner
@@ -153,17 +153,10 @@ export default function ProductsPage() {
     }, 300);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedProduct(null);
-  };
-
   // Calculate totals from dynamic data
   const totalProducts = products.length;
   const totalBuyPrice = products.reduce((sum, product) => {
-    const buyPrice = Number(product.has_variants 
-      ? product.average_buy_price || 0
-      : product.buy_price || 0);
+    const { buyPrice } = getAveragePrices(product);
     const stock = Number(product.has_variants 
       ? product.total_stock || 0
       : product.stock || 0);
@@ -171,9 +164,7 @@ export default function ProductsPage() {
   }, 0);
   
   const totalSalePrice = products.reduce((sum, product) => {
-    const sellPrice = Number(product.has_variants 
-      ? product.average_sell_price || 0
-      : product.sell_price || 0);
+    const { sellPrice } = getAveragePrices(product);
     const stock = Number(product.has_variants 
       ? product.total_stock || 0
       : product.stock || 0);
@@ -321,9 +312,7 @@ export default function ProductsPage() {
   const refreshProducts = async () => {
     try {
       setError(null);
-      console.log("Refreshing products...");
       const productsData = await ApiService.getProducts();
-      console.log("Products refreshed:", productsData);
       
       const productsList = Array.isArray(productsData) ? productsData : productsData?.results || [];
       setProducts(productsList);
@@ -744,39 +733,14 @@ export default function ProductsPage() {
                       </div>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400">Sold</p>
-                      <p className="text-sm font-medium text-green-400">
-                        {product.sold || 0} units
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400">Buy Price</p>
-                      <p className="text-sm font-medium text-red-400">
-                        ${product.has_variants ? Number(product.average_buy_price || 0).toFixed(2) : Number(product.buy_price || 0).toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400">Sale Price</p>
-                      <p className="text-sm font-medium text-green-400">
-                        ${product.has_variants ? Number(product.average_sell_price || 0).toFixed(2) : Number(product.sell_price || 0).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-slate-400">Profit per unit</p>
+                      <p className="text-xs text-slate-400">Profit/Unit</p>
                       {(() => {
-                        const salePrice = Number(product.has_variants 
-                          ? product.average_sell_price || 0
-                          : product.sell_price || 0);
-                        const buyPrice = Number(product.has_variants 
-                          ? product.average_buy_price || 0
-                          : product.buy_price || 0);
-                        const profit = salePrice - buyPrice;
-                        const profitMargin = salePrice > 0 ? ((profit / salePrice) * 100) : 0;
+                        const { buyPrice, sellPrice } = getAveragePrices(product);
+                        const profit = sellPrice - buyPrice;
+                        const profitMargin = sellPrice > 0 ? ((profit / sellPrice) * 100) : 0;
+                        
                         return (
-                          <div className="flex items-center gap-2">
+                          <div className="space-y-1">
                             <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
                               {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
                             </p>
@@ -787,60 +751,360 @@ export default function ProductsPage() {
                         );
                       })()}
                     </div>
-                    <div className="flex space-x-1">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditProduct(product);
-                        }}
-                        className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
-                        title="Edit"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          showDeleteConfirmation(product);
-                        }}
-                        className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
-                        title="Delete"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                      <button 
-                        onClick={() => handleProductClick(product)}
-                        className="bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/30 px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-xs font-medium"
-                        title="Add Stock"
-                      >
-                        Add Stock
-                      </button>
+                    <div>
+                      <p className="text-xs text-slate-400">Buy Price</p>
+                      <p className="text-sm font-medium text-red-400">
+                        ${(() => {
+                          if (product.has_variants && product.variants && product.variants.length > 0) {
+                            // Calculate average buy price from variants
+                            const validPrices = product.variants
+                              .map(variant => {
+                                const variantBuyPrice = variant.buy_price || variant.cost;
+                                const baseBuyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                                const priceAdjustment = Number(variant.price_adjustment) || 0;
+                                
+                                if (variantBuyPrice !== undefined && variantBuyPrice !== null) {
+                                  const price = Number(variantBuyPrice);
+                                  return !isNaN(price) ? price : null;
+                                }
+                                const calculatedPrice = baseBuyPrice + priceAdjustment;
+                                return calculatedPrice > 0 ? calculatedPrice : null;
+                              })
+                              .filter(price => price !== null);
+                            
+                            if (validPrices.length > 0) {
+                              const avgPrice = validPrices.reduce((sum, price) => sum + price, 0) / validPrices.length;
+                              return avgPrice.toFixed(2);
+                            }
+                          }
+                          
+                          // Fallback for non-variant products
+                          const buyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                          return buyPrice > 0 ? buyPrice.toFixed(2) : '0.00';
+                        })()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Sale Price</p>
+                      <p className="text-sm font-medium text-green-400">
+                        ${(() => {
+                          if (product.has_variants && product.variants && product.variants.length > 0) {
+                            // Calculate average sell price from variants
+                            const validPrices = product.variants
+                              .map(variant => {
+                                const variantSellPrice = variant.sell_price || variant.price;
+                                const baseSellPrice = Number(product.price) || Number(product.sell_price) || 0;
+                                const priceAdjustment = Number(variant.price_adjustment) || 0;
+                                
+                                if (variantSellPrice !== undefined && variantSellPrice !== null) {
+                                  const price = Number(variantSellPrice);
+                                  return !isNaN(price) ? price : null;
+                                }
+                                const calculatedPrice = baseSellPrice + priceAdjustment;
+                                return calculatedPrice > 0 ? calculatedPrice : null;
+                              })
+                              .filter(price => price !== null);
+                            
+                            if (validPrices.length > 0) {
+                              const avgPrice = validPrices.reduce((sum, price) => sum + price, 0) / validPrices.length;
+                              return avgPrice.toFixed(2);
+                            }
+                          }
+                          
+                          // Fallback for non-variant products
+                          const sellPrice = Number(product.price) || Number(product.sell_price) || 0;
+                          return sellPrice > 0 ? sellPrice.toFixed(2) : '0.00';
+                        })()}
+                      </p>
                     </div>
                   </div>
+
+
+
+                  {/* Show variants section only if variants exist and have data */}
+                  {product.variants && product.variants.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs text-slate-400 mb-2">Variants ({product.variants.length})</p>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {product.variants.slice(0, 3).map((variant, index) => (
+                          <div key={variant.id || index} className="bg-slate-700/30 rounded-lg p-2">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-1 mb-1">
+                                  {variant.color && (
+                                    <span className="text-xs text-blue-400">{variant.color}</span>
+                                  )}
+                                  {variant.size && (
+                                    <span className="text-xs text-green-400">{variant.size}</span>
+                                  )}
+                                  {variant.weight && (
+                                    <span className="text-xs text-purple-400">{variant.weight}{variant.weight_unit}</span>
+                                  )}
+                                  {variant.custom_variant && (
+                                    <span className="text-xs text-orange-400">{variant.custom_variant}</span>
+                                  )}
+                                  {!variant.color && !variant.size && !variant.weight && !variant.custom_variant && (
+                                    <span className="text-xs text-slate-400">Variant {index + 1}</span>
+                                  )}
+                                </div>
+                                
+                                <div className="grid grid-cols-3 gap-1 text-xs">
+                                  <div>
+                                    <span className="text-slate-500">Buy:</span>
+                                    <div className="text-red-400 font-medium">
+                                      ${(() => {
+                                        const buyPrice = Number(variant.buy_price) || 
+                                                        Number(variant.cost) || 
+                                                        Number(product.cost) || 
+                                                        Number(product.buy_price) || 0;
+                                        return buyPrice > 0 ? buyPrice.toFixed(2) : '0.00';
+                                      })()}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-500">Sell:</span>
+                                    <div className="text-green-400 font-medium">
+                                      ${(() => {
+                                        const sellPrice = Number(variant.sell_price) || 
+                                                         Number(variant.price) || 
+                                                         Number(product.price) || 
+                                                         Number(product.sell_price) || 0;
+                                        return sellPrice > 0 ? sellPrice.toFixed(2) : '0.00';
+                                      })()}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-500">Profit:</span>
+                                    <div className={`font-medium ${(() => {
+                                      const buyPrice = Number(variant.buy_price) || Number(variant.cost) || Number(product.cost) || Number(product.buy_price) || 0;
+                                      const sellPrice = Number(variant.sell_price) || Number(variant.price) || Number(product.price) || Number(product.sell_price) || 0;
+                                      const profit = sellPrice - buyPrice;
+                                      return profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400';
+                                    })()}`}>
+                                      {(() => {
+                                        const buyPrice = Number(variant.buy_price) || Number(variant.cost) || Number(product.cost) || Number(product.buy_price) || 0;
+                                        const sellPrice = Number(variant.sell_price) || Number(variant.price) || Number(product.price) || Number(product.sell_price) || 0;
+                                        const profit = sellPrice - buyPrice;
+                                        return (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2);
+                                      })()}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="text-right ml-2">
+                                <div className="text-xs text-cyan-400 font-medium">
+                                  {variant.stock || 0} units
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {product.variants.length > 3 && (
+                          <div className="text-xs text-slate-500 text-center py-1">
+                            +{product.variants.length - 3} more variants
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Overall profit summary for variant products */}
+                  {product.has_variants && product.variants && product.variants.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
+                      <div>
+                        <p className="text-xs text-slate-400">Average Profit</p>
+                        {(() => {
+                          let salePrice = 0;
+                          let buyPrice = 0;
+                          
+                          // Calculate average prices from variants
+                          const validBuyPrices = product.variants
+                            .map(variant => {
+                              const variantBuyPrice = variant.buy_price || variant.cost;
+                              const baseBuyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                              const priceAdjustment = Number(variant.price_adjustment) || 0;
+                              
+                              if (variantBuyPrice !== undefined && variantBuyPrice !== null) {
+                                const price = Number(variantBuyPrice);
+                                return !isNaN(price) ? price : null;
+                              }
+                              const calculatedPrice = baseBuyPrice + priceAdjustment;
+                              return calculatedPrice > 0 ? calculatedPrice : null;
+                            })
+                            .filter(price => price !== null);
+                          
+                          const validSellPrices = product.variants
+                            .map(variant => {
+                              const variantSellPrice = variant.sell_price || variant.price;
+                              const baseSellPrice = Number(product.price) || Number(product.sell_price) || 0;
+                              const priceAdjustment = Number(variant.price_adjustment) || 0;
+                              
+                              if (variantSellPrice !== undefined && variantSellPrice !== null) {
+                                const price = Number(variantSellPrice);
+                                return !isNaN(price) ? price : null;
+                              }
+                              const calculatedPrice = baseSellPrice + priceAdjustment;
+                              return calculatedPrice > 0 ? calculatedPrice : null;
+                            })
+                            .filter(price => price !== null);
+                          
+                          if (validBuyPrices.length > 0) {
+                            buyPrice = validBuyPrices.reduce((sum, price) => sum + price, 0) / validBuyPrices.length;
+                          }
+                          if (validSellPrices.length > 0) {
+                            salePrice = validSellPrices.reduce((sum, price) => sum + price, 0) / validSellPrices.length;
+                          }
+                          
+                          const profit = salePrice - buyPrice;
+                          const profitMargin = salePrice > 0 ? ((profit / salePrice) * 100) : 0;
+                          
+                          return (
+                            <div className="flex items-center gap-2">
+                              <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+                                {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
+                              </p>
+                              <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
+                                {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(profitMargin).toFixed(1)}%
+                              </p>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <div className="flex space-x-1">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditProduct(product);
+                          }}
+                          className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
+                          title="Edit"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showDeleteConfirmation(product);
+                          }}
+                          className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
+                          title="Delete"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => handleProductClick(product)}
+                          className="bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/30 px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-xs font-medium"
+                          title="Add Stock"
+                        >
+                          Add Stock
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Non-variant product profit */}
+                  {(!product.has_variants || !product.variants || product.variants.length === 0) && (
+                    <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
+                      <div>
+                        <p className="text-xs text-slate-400">Profit per unit</p>
+                        {(() => {
+                          const salePrice = Number(product.price) || Number(product.sell_price) || 0;
+                          const buyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                          const profit = salePrice - buyPrice;
+                          const profitMargin = salePrice > 0 ? ((profit / salePrice) * 100) : 0;
+                          
+                          return (
+                            <div className="flex items-center gap-2">
+                              <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+                                {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
+                              </p>
+                              <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
+                                {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(profitMargin).toFixed(1)}%
+                              </p>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <div className="flex space-x-1">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditProduct(product);
+                          }}
+                          className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
+                          title="Edit"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showDeleteConfirmation(product);
+                          }}
+                          className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
+                          title="Delete"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => handleProductClick(product)}
+                          className="bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/30 px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-xs font-medium"
+                          title="Add Stock"
+                        >
+                          Add Stock
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -938,23 +1202,119 @@ export default function ProductsPage() {
                       <td className="py-3 px-4">
                         <div className="space-y-1">
                           <div className="text-sm font-medium text-red-400">
-                            ${product.has_variants ? Number(product.average_buy_price || 0).toFixed(2) : Number(product.buy_price || 0).toFixed(2)}
+                            ${(() => {
+                              if (product.has_variants && product.variants && product.variants.length > 0) {
+                                // Calculate average buy price from variants
+                                const validPrices = product.variants
+                                  .map(variant => {
+                                    const variantBuyPrice = variant.buy_price || variant.cost;
+                                    const baseBuyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                                    const priceAdjustment = Number(variant.price_adjustment) || 0;
+                                    
+                                    if (variantBuyPrice !== undefined && variantBuyPrice !== null) {
+                                      const price = Number(variantBuyPrice);
+                                      return !isNaN(price) ? price : null;
+                                    }
+                                    const calculatedPrice = baseBuyPrice + priceAdjustment;
+                                    return calculatedPrice > 0 ? calculatedPrice : null;
+                                  })
+                                  .filter(price => price !== null);
+                                
+                                if (validPrices.length > 0) {
+                                  const avgPrice = validPrices.reduce((sum, price) => sum + price, 0) / validPrices.length;
+                                  return avgPrice.toFixed(2);
+                                }
+                              }
+                              
+                              // Fallback for non-variant products
+                              const buyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                              return buyPrice > 0 ? buyPrice.toFixed(2) : '0.00';
+                            })()}
                           </div>
                           <div className="text-xs text-slate-400">
-                            ${product.has_variants ? Number(product.average_sell_price || 0).toFixed(2) : Number(product.sell_price || 0).toFixed(2)} sale
+                            ${(() => {
+                              if (product.has_variants && product.variants && product.variants.length > 0) {
+                                // Calculate average sell price from variants
+                                const validPrices = product.variants
+                                  .map(variant => {
+                                    const variantSellPrice = variant.sell_price || variant.price;
+                                    const baseSellPrice = Number(product.price) || Number(product.sell_price) || 0;
+                                    const priceAdjustment = Number(variant.price_adjustment) || 0;
+                                    
+                                    if (variantSellPrice !== undefined && variantSellPrice !== null) {
+                                      const price = Number(variantSellPrice);
+                                      return !isNaN(price) ? price : null;
+                                    }
+                                    const calculatedPrice = baseSellPrice + priceAdjustment;
+                                    return calculatedPrice > 0 ? calculatedPrice : null;
+                                  })
+                                  .filter(price => price !== null);
+                                
+                                if (validPrices.length > 0) {
+                                  const avgPrice = validPrices.reduce((sum, price) => sum + price, 0) / validPrices.length;
+                                  return avgPrice.toFixed(2);
+                                }
+                              }
+                              
+                              // Fallback for non-variant products
+                              const sellPrice = Number(product.price) || Number(product.sell_price) || 0;
+                              return sellPrice > 0 ? sellPrice.toFixed(2) : '0.00';
+                            })()} sale
                           </div>
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         {(() => {
-                          const salePrice = Number(product.has_variants 
-                            ? product.average_sell_price || 0
-                            : product.sell_price || 0);
-                          const buyPrice = Number(product.has_variants 
-                            ? product.average_buy_price || 0
-                            : product.buy_price || 0);
+                          let salePrice = 0;
+                          let buyPrice = 0;
+                          
+                          if (product.has_variants && product.variants && product.variants.length > 0) {
+                            // Calculate average prices from variants
+                            const validBuyPrices = product.variants
+                              .map(variant => {
+                                const variantBuyPrice = variant.buy_price || variant.cost;
+                                const baseBuyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                                const priceAdjustment = Number(variant.price_adjustment) || 0;
+                                
+                                if (variantBuyPrice !== undefined && variantBuyPrice !== null) {
+                                  const price = Number(variantBuyPrice);
+                                  return !isNaN(price) ? price : null;
+                                }
+                                const calculatedPrice = baseBuyPrice + priceAdjustment;
+                                return calculatedPrice > 0 ? calculatedPrice : null;
+                              })
+                              .filter(price => price !== null);
+                            
+                            const validSellPrices = product.variants
+                              .map(variant => {
+                                const variantSellPrice = variant.sell_price || variant.price;
+                                const baseSellPrice = Number(product.price) || Number(product.sell_price) || 0;
+                                const priceAdjustment = Number(variant.price_adjustment) || 0;
+                                
+                                if (variantSellPrice !== undefined && variantSellPrice !== null) {
+                                  const price = Number(variantSellPrice);
+                                  return !isNaN(price) ? price : null;
+                                }
+                                const calculatedPrice = baseSellPrice + priceAdjustment;
+                                return calculatedPrice > 0 ? calculatedPrice : null;
+                              })
+                              .filter(price => price !== null);
+                            
+                            if (validBuyPrices.length > 0) {
+                              buyPrice = validBuyPrices.reduce((sum, price) => sum + price, 0) / validBuyPrices.length;
+                            }
+                            if (validSellPrices.length > 0) {
+                              salePrice = validSellPrices.reduce((sum, price) => sum + price, 0) / validSellPrices.length;
+                            }
+                          } else {
+                            // Non-variant products
+                            salePrice = Number(product.price) || Number(product.sell_price) || 0;
+                            buyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                          }
+                          
                           const profit = salePrice - buyPrice;
                           const profitMargin = salePrice > 0 ? ((profit / salePrice) * 100) : 0;
+                          
                           return (
                             <div className="space-y-1">
                               <span className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
@@ -1060,35 +1420,6 @@ export default function ProductsPage() {
             )}
           </div>
         </div>
-
-        {/* Product Details Modal */}
-        {isModalOpen && selectedProduct && (
-          <ProductDetailsModal
-            isOpen={isModalOpen}
-            onClose={closeModal}
-            product={{
-              id: selectedProduct.id,
-              name: selectedProduct.name,
-              sku: `PRD-${selectedProduct.id}`, // Generate SKU if not provided
-              category: selectedProduct.category_name || 'Uncategorized',
-              stock: selectedProduct.has_variants 
-                ? selectedProduct.total_stock || 0
-                : selectedProduct.stock,
-              price: selectedProduct.has_variants 
-                ? selectedProduct.average_sell_price || 0
-                : selectedProduct.sell_price || 0,
-              cost: selectedProduct.has_variants 
-                ? selectedProduct.average_buy_price || 0
-                : selectedProduct.buy_price || 0,
-              status: selectedProduct.is_active ? 'active' : 'inactive',
-              supplier: selectedProduct.supplier_name,
-              variants: selectedProduct.variants as any,
-              created_at: selectedProduct.created_at,
-              updated_at: selectedProduct.updated_at,
-            }}
-            onAddStock={handleAddStock}
-          />
-        )}
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && productToDelete && (

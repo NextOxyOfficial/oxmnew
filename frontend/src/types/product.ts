@@ -45,6 +45,10 @@ export interface ProductVariant {
   sell_price: number;
   stock: number;
   sku_suffix?: string;
+  // Additional pricing fields that might come from API
+  cost?: number;
+  price?: number;
+  price_adjustment?: number;
 }
 
 export interface ProductPhoto {

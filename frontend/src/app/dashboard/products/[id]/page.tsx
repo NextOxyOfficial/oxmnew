@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { X, Package, DollarSign, TrendingUp, Plus, History, Edit, Palette, Ruler, Weight, AlertCircle } from 'lucide-react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { useRouter, useParams } from "next/navigation";
+import { Package, Plus, History, Edit, Palette, Ruler, Weight, ArrowLeft } from 'lucide-react';
+import { ApiService } from "@/lib/api";
 
 interface Product {
   id: number;
@@ -9,13 +13,24 @@ interface Product {
   stock: number;
   price: number;
   cost: number;
-  status: 'active' | 'inactive' | 'out_of_stock';
+  status?: 'active' | 'inactive' | 'out_of_stock';
   image?: string;
   description?: string;
   supplier?: string;
   variants?: ProductVariant[];
   created_at: string;
   updated_at: string;
+  // Additional fields from API
+  category_name?: string;
+  supplier_name?: string;
+  buy_price?: number;
+  sell_price?: number;
+  has_variants?: boolean;
+  is_active?: boolean;
+  total_stock?: number;
+  average_buy_price?: number;
+  average_sell_price?: number;
+  sold?: number;
 }
 
 interface ProductVariant {
@@ -28,6 +43,11 @@ interface ProductVariant {
   stock: number;
   price_adjustment?: number;
   sku_suffix?: string;
+  // Additional pricing fields that might come from API
+  buy_price?: number;
+  sell_price?: number;
+  cost?: number;
+  price?: number;
 }
 
 interface StockEntry {
@@ -44,26 +64,14 @@ interface StockEntry {
   created_by: string;
 }
 
-interface ProductDetailsModalProps {
-  product: Product | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onAddStock: (productId: number, stockData: {
-    quantity: number;
-    buy_price: number;
-    sell_price: number;
-    reason: string;
-    notes?: string;
-    variant_id?: number;
-  }) => void;
-}
+export default function ProductDetailsPage() {
+  const router = useRouter();
+  const params = useParams();
+  const productId = params.id as string;
 
-const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
-  product,
-  isOpen,
-  onClose,
-  onAddStock,
-}) => {
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'addStock' | 'history'>('addStock');
   const [isSubmittingStock, setIsSubmittingStock] = useState(false);
   const [stockForm, setStockForm] = useState({
@@ -74,6 +82,33 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     notes: '',
     variant_id: '',
   });
+
+  // Fetch product details on component mount
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        console.log("Fetching product details for ID:", productId);
+        const productData = await ApiService.getProduct(parseInt(productId));
+        console.log("Product response:", productData);
+        console.log("Product variants:", productData?.variants);
+        
+        setProduct(productData);
+        
+      } catch (error) {
+        console.error("Error fetching product:", error);
+        setError(error instanceof Error ? error.message : "Failed to load product");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (productId) {
+      fetchProduct();
+    }
+  }, [productId]);
 
   // Mock stock history data - replace with actual API call
   const stockHistory: StockEntry[] = [
@@ -103,14 +138,91 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     }
   ];
 
-  if (!isOpen || !product) return null;
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 p-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-slate-700 rounded w-48 mb-6"></div>
+            <div className="bg-slate-900 rounded-xl p-6">
+              <div className="h-6 bg-slate-700 rounded w-64 mb-4"></div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="h-48 bg-slate-700 rounded"></div>
+                  <div className="h-4 bg-slate-700 rounded w-3/4"></div>
+                  <div className="h-4 bg-slate-700 rounded w-1/2"></div>
+                </div>
+                <div className="space-y-4">
+                  <div className="h-10 bg-slate-700 rounded"></div>
+                  <div className="h-32 bg-slate-700 rounded"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-950 p-4">
+        <div className="max-w-7xl mx-auto">
+          <button
+            onClick={() => router.push("/dashboard/products")}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6 group cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            Back to Products
+          </button>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
+            <div className="text-red-500 mb-4">
+              <Package className="w-12 h-12 mx-auto" />
+            </div>
+            <h3 className="text-lg font-semibold text-red-400 mb-2">Failed to Load Product</h3>
+            <p className="text-red-400/70 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors cursor-pointer"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-slate-950 p-4">
+        <div className="max-w-7xl mx-auto">
+          <button
+            onClick={() => router.push("/dashboard/products")}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6 group cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            Back to Products
+          </button>
+          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-8 text-center">
+            <h3 className="text-lg font-semibold text-slate-300 mb-2">Product Not Found</h3>
+            <p className="text-slate-400 mb-4">The requested product could not be found.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleStockSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingStock(true);
     
     try {
-      await onAddStock(product.id, {
+      // TODO: Implement actual API call for adding stock
+      console.log("Add stock:", {
+        productId: product.id,
         quantity: parseInt(stockForm.quantity),
         buy_price: parseFloat(stockForm.buy_price),
         sell_price: parseFloat(stockForm.sell_price),
@@ -118,6 +230,9 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
         notes: stockForm.notes || undefined,
         variant_id: stockForm.variant_id ? parseInt(stockForm.variant_id) : undefined,
       });
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       setStockForm({
         quantity: '',
@@ -128,6 +243,9 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
         variant_id: '',
       });
       setActiveTab('addStock');
+      
+      // TODO: Refresh product data after successful stock addition
+      
     } catch (error) {
       console.error('Error adding stock:', error);
     } finally {
@@ -135,7 +253,9 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
+    if (!status) return 'bg-gray-500/20 text-gray-400';
+    
     switch (status) {
       case 'active':
         return 'bg-green-500/20 text-green-400';
@@ -156,28 +276,29 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-2 sm:p-4">
-        <div className="fixed inset-0 bg-black bg-opacity-75 transition-opacity" onClick={onClose} />
-        
-        <div className="relative w-full max-w-7xl bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl mx-2">
+    <div className="min-h-screen bg-slate-950 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <button
+          onClick={() => router.push("/dashboard/products")}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6 group cursor-pointer"
+        >
+          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          Back to Products
+        </button>
+
+        <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-900 to-slate-800">
+          <div className="p-4 sm:p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-900 to-slate-800">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center">
                 <Package className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Product Details</h2>
+                <h1 className="text-xl font-bold text-white">Product Details</h1>
                 <p className="text-sm text-slate-400">Manage inventory and product information</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors text-gray-400 hover:text-white cursor-pointer"
-            >
-              <X className="w-6 h-6" />
-            </button>
           </div>
 
           <div className="flex flex-col lg:flex-row">
@@ -216,16 +337,26 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   <div>
                     <p className="text-slate-400 mb-1">Status</p>
                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(product.status)}`}>
-                      {product.status.replace('_', ' ').toUpperCase()}
+                      {product.status ? product.status.replace('_', ' ').toUpperCase() : 'UNKNOWN'}
                     </span>
                   </div>
                   <div>
                     <p className="text-slate-400 mb-1">Price</p>
-                    <p className="text-white font-bold">${Number(product.price).toFixed(2)}</p>
+                    <p className="text-white font-bold">
+                      ${(() => {
+                        const price = Number(product.price) || 0;
+                        return price > 0 ? price.toFixed(2) : 'N/A';
+                      })()}
+                    </p>
                   </div>
                   <div>
                     <p className="text-slate-400 mb-1">Cost</p>
-                    <p className="text-white font-bold">${Number(product.cost).toFixed(2)}</p>
+                    <p className="text-white font-bold">
+                      ${(() => {
+                        const cost = Number(product.cost) || 0;
+                        return cost > 0 ? cost.toFixed(2) : 'N/A';
+                      })()}
+                    </p>
                   </div>
                   <div>
                     <p className="text-slate-400 mb-1">Total Stock</p>
@@ -251,31 +382,128 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     <div className="space-y-2">
                       {product.variants.map((variant) => (
                         <div key={variant.id} className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
-                          <div className="flex justify-between items-center">
-                            <div className="space-y-1">
-                              {variant.color && (
-                                <div className="flex items-center space-x-2">
-                                  <Palette className="w-3 h-3 text-slate-400" />
-                                  <span className="text-sm text-blue-400">{variant.color}</span>
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1 flex-1">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                {variant.color && (
+                                  <div className="flex items-center space-x-1">
+                                    <Palette className="w-3 h-3 text-slate-400" />
+                                    <span className="text-sm text-blue-400">{variant.color}</span>
+                                  </div>
+                                )}
+                                {variant.size && (
+                                  <div className="flex items-center space-x-1">
+                                    <Ruler className="w-3 h-3 text-slate-400" />
+                                    <span className="text-sm text-green-400">{variant.size}</span>
+                                  </div>
+                                )}
+                                {variant.weight && (
+                                  <div className="flex items-center space-x-1">
+                                    <Weight className="w-3 h-3 text-slate-400" />
+                                    <span className="text-sm text-purple-400">{variant.weight}{variant.weight_unit}</span>
+                                  </div>
+                                )}
+                                {variant.custom_variant && (
+                                  <span className="text-sm text-orange-400">{variant.custom_variant}</span>
+                                )}
+                              </div>
+                              
+                              {/* Pricing Information */}
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                                <div>
+                                  <span className="text-slate-500">Buy Price:</span>
+                                  <div className="text-slate-300 font-medium">
+                                    ${(() => {
+                                      // Try multiple sources for buy price
+                                      const variantBuyPrice = variant.buy_price || variant.cost;
+                                      const baseBuyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                                      const priceAdjustment = Number(variant.price_adjustment) || 0;
+                                      
+                                      if (variantBuyPrice !== undefined && variantBuyPrice !== null) {
+                                        const price = Number(variantBuyPrice);
+                                        return !isNaN(price) ? price.toFixed(2) : 'N/A';
+                                      }
+                                      const calculatedPrice = baseBuyPrice + priceAdjustment;
+                                      return calculatedPrice > 0 ? calculatedPrice.toFixed(2) : 'N/A';
+                                    })()}
+                                  </div>
                                 </div>
-                              )}
-                              {variant.size && (
-                                <div className="flex items-center space-x-2">
-                                  <Ruler className="w-3 h-3 text-slate-400" />
-                                  <span className="text-sm text-green-400">{variant.size}</span>
+                                <div>
+                                  <span className="text-slate-500">Sell Price:</span>
+                                  <div className="text-slate-300 font-medium">
+                                    ${(() => {
+                                      // Try multiple sources for sell price
+                                      const variantSellPrice = variant.sell_price || variant.price;
+                                      const baseSellPrice = Number(product.price) || Number(product.sell_price) || 0;
+                                      const priceAdjustment = Number(variant.price_adjustment) || 0;
+                                      
+                                      if (variantSellPrice !== undefined && variantSellPrice !== null) {
+                                        const price = Number(variantSellPrice);
+                                        return !isNaN(price) ? price.toFixed(2) : 'N/A';
+                                      }
+                                      const calculatedPrice = baseSellPrice + priceAdjustment;
+                                      return calculatedPrice > 0 ? calculatedPrice.toFixed(2) : 'N/A';
+                                    })()}
+                                  </div>
                                 </div>
-                              )}
-                              {variant.weight && (
-                                <div className="flex items-center space-x-2">
-                                  <Weight className="w-3 h-3 text-slate-400" />
-                                  <span className="text-sm text-purple-400">{variant.weight}{variant.weight_unit}</span>
+                                <div>
+                                  <span className="text-slate-500">Profit:</span>
+                                  <div className={`font-medium ${(() => {
+                                    // Calculate profit with proper fallbacks
+                                    const variantBuyPrice = variant.buy_price || variant.cost;
+                                    const variantSellPrice = variant.sell_price || variant.price;
+                                    const baseBuyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                                    const baseSellPrice = Number(product.price) || Number(product.sell_price) || 0;
+                                    const priceAdjustment = Number(variant.price_adjustment) || 0;
+                                    
+                                    let buyPrice = baseBuyPrice + priceAdjustment;
+                                    let sellPrice = baseSellPrice + priceAdjustment;
+                                    
+                                    if (variantBuyPrice !== undefined && variantBuyPrice !== null) {
+                                      const price = Number(variantBuyPrice);
+                                      if (!isNaN(price)) buyPrice = price;
+                                    }
+                                    if (variantSellPrice !== undefined && variantSellPrice !== null) {
+                                      const price = Number(variantSellPrice);
+                                      if (!isNaN(price)) sellPrice = price;
+                                    }
+                                    
+                                    if ((buyPrice === 0 && sellPrice === 0) || isNaN(buyPrice) || isNaN(sellPrice)) return 'text-slate-500';
+                                    
+                                    const profit = sellPrice - buyPrice;
+                                    return profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400';
+                                  })()}`}>
+                                    {(() => {
+                                      // Calculate profit with proper fallbacks
+                                      const variantBuyPrice = variant.buy_price || variant.cost;
+                                      const variantSellPrice = variant.sell_price || variant.price;
+                                      const baseBuyPrice = Number(product.cost) || Number(product.buy_price) || 0;
+                                      const baseSellPrice = Number(product.price) || Number(product.sell_price) || 0;
+                                      const priceAdjustment = Number(variant.price_adjustment) || 0;
+                                      
+                                      let buyPrice = baseBuyPrice + priceAdjustment;
+                                      let sellPrice = baseSellPrice + priceAdjustment;
+                                      
+                                      if (variantBuyPrice !== undefined && variantBuyPrice !== null) {
+                                        const price = Number(variantBuyPrice);
+                                        if (!isNaN(price)) buyPrice = price;
+                                      }
+                                      if (variantSellPrice !== undefined && variantSellPrice !== null) {
+                                        const price = Number(variantSellPrice);
+                                        if (!isNaN(price)) sellPrice = price;
+                                      }
+                                      
+                                      if ((buyPrice === 0 && sellPrice === 0) || isNaN(buyPrice) || isNaN(sellPrice)) return 'N/A';
+                                      
+                                      const profit = sellPrice - buyPrice;
+                                      return (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2);
+                                    })()}
+                                  </div>
                                 </div>
-                              )}
-                              {variant.custom_variant && (
-                                <span className="text-sm text-orange-400">{variant.custom_variant}</span>
-                              )}
+                              </div>
                             </div>
-                            <div className="text-right">
+                            
+                            <div className="text-right ml-3">
                               <div className="font-semibold text-cyan-400 text-sm">
                                 {variant.stock} units
                               </div>
@@ -499,11 +727,11 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                         <button
                           type="submit"
                           disabled={isSubmittingStock}
-                          className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center min-w-[120px]"
                         >
                           {isSubmittingStock ? (
                             <div className="flex items-center space-x-2">
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                               <span>Adding...</span>
                             </div>
                           ) : (
@@ -585,6 +813,4 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
       </div>
     </div>
   );
-};
-
-export default ProductDetailsModal;
+}
