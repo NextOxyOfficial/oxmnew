@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Product } from "@/types/product";
 
 interface ProductDetailsModalProps {
@@ -171,6 +172,7 @@ function ProductDetailsModal({
 }
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [sortBy, setSortBy] = useState("name");
@@ -197,8 +199,7 @@ export default function ProductsPage() {
   };
 
   const handleAddProduct = () => {
-    console.log("Add new product");
-    // TODO: Implement add product functionality
+    router.push("/dashboard/products/add");
   };
 
   const closeModal = () => {
@@ -480,7 +481,10 @@ export default function ProductsPage() {
               {/* Top Row: Add Product Button + Search */}
               <div className="flex gap-4">
                 {/* Add Product Button */}
-                <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 flex-shrink-0">
+                <button 
+                  onClick={handleAddProduct}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 flex-shrink-0"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
@@ -562,7 +566,10 @@ export default function ProductsPage() {
             {/* Desktop Layout: Single row with all controls */}
             <div className="hidden lg:flex gap-4 items-center">
               {/* Add Product Button */}
-              <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 flex-shrink-0">
+              <button 
+                onClick={handleAddProduct}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 flex-shrink-0"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
