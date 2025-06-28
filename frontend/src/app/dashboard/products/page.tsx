@@ -16,6 +16,8 @@ export default function ProductsPage() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingStock, setIsAddingStock] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   const handleProductClick = (product: Product) => {
     console.log("Product clicked:", product.name);
@@ -42,6 +44,8 @@ export default function ProductsPage() {
   };
 
   const handleDeleteProduct = async (productId: number) => {
+    if (!productToDelete) return;
+    
     setIsDeleting(true);
     try {
       console.log("Delete product:", productId);
@@ -49,11 +53,23 @@ export default function ProductsPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       // For now, just close the modal
+      setShowDeleteModal(false);
+      setProductToDelete(null);
     } catch (error) {
       console.error("Error deleting product:", error);
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const showDeleteConfirmation = (product: Product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setProductToDelete(null);
   };
 
   const handleAddStock = async (productId: number, stockData: {
@@ -837,7 +853,7 @@ export default function ProductsPage() {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteProduct(product.id);
+                          showDeleteConfirmation(product);
                         }}
                         className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
                         title="Delete"
@@ -990,7 +1006,7 @@ export default function ProductsPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteProduct(product.id);
+                              showDeleteConfirmation(product);
                             }}
                             className="text-slate-300 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
                             title="Delete"
@@ -1057,6 +1073,81 @@ export default function ProductsPage() {
             product={selectedProduct}
             onAddStock={handleAddStock}
           />
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && productToDelete && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-screen items-center justify-center p-4">
+              <div className="fixed inset-0 bg-black bg-opacity-75 transition-opacity" onClick={cancelDelete} />
+              
+              <div className="relative w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl">
+                {/* Header */}
+                <div className="p-6 border-b border-slate-700/50">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.314 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Delete Product</h3>
+                      <p className="text-sm text-slate-400">This action cannot be undone</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-6">
+                  <p className="text-slate-300 mb-2">
+                    Are you sure you want to delete this product?
+                  </p>
+                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 mb-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium truncate">{productToDelete.name}</p>
+                        <p className="text-sm text-slate-400">SKU: {productToDelete.sku}</p>
+                        <p className="text-sm text-slate-400">{productToDelete.stock} units in stock</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-red-400 text-sm font-medium">
+                    ⚠️ This will permanently delete the product and all its associated data.
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={cancelDelete}
+                    className="px-4 py-2 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleDeleteProduct(productToDelete.id)}
+                    disabled={isDeleting}
+                    className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {isDeleting ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Deleting...</span>
+                      </div>
+                    ) : (
+                      'Delete Product'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
