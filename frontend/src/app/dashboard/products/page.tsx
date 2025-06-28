@@ -98,8 +98,12 @@ function ProductDetailsModal({
 
             <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
               <h6 className="text-sm font-medium text-slate-300 mb-2">Profit per Unit</h6>
-              <p className="text-lg font-semibold text-purple-300">${profit}</p>
-              <p className="text-xs text-slate-400">{profitMargin}% margin</p>
+              <p className={`text-lg font-semibold ${profit > 0 ? 'text-green-300' : profit < 0 ? 'text-red-300' : 'text-yellow-300'}`}>
+                {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
+              </p>
+              <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
+                {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(parseFloat(profitMargin)).toFixed(1)}% margin
+              </p>
             </div>
 
             <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
@@ -716,9 +720,20 @@ export default function ProductsPage() {
                   <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
                     <div>
                       <p className="text-xs text-slate-400">Profit per unit</p>
-                      <p className="text-sm font-bold text-purple-400">
-                        ${product.salePrice - product.buyPrice}
-                      </p>
+                      {(() => {
+                        const profit = product.salePrice - product.buyPrice;
+                        const profitMargin = product.salePrice > 0 ? ((profit / product.salePrice) * 100) : 0;
+                        return (
+                          <>
+                            <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+                              {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
+                            </p>
+                            <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
+                              {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(profitMargin).toFixed(1)}%
+                            </p>
+                          </>
+                        );
+                      })()}
                     </div>
                     <div className="flex space-x-1">
                       <button className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors">
@@ -836,9 +851,20 @@ export default function ProductsPage() {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm font-bold text-purple-400">
-                          ${product.salePrice - product.buyPrice}
-                        </span>
+                        {(() => {
+                          const profit = product.salePrice - product.buyPrice;
+                          const profitMargin = product.salePrice > 0 ? ((profit / product.salePrice) * 100) : 0;
+                          return (
+                            <div className="space-y-1">
+                              <span className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+                                {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
+                              </span>
+                              <div className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
+                                {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(profitMargin).toFixed(1)}%
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex space-x-2">

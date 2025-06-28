@@ -569,7 +569,7 @@ export default function AddProductPage() {
                 {!formData.hasVariants ? (
                   /* Single Pricing */
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {/* Buy Price */}
                       <div>
                         <label htmlFor="buyPrice" className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -617,34 +617,19 @@ export default function AddProductPage() {
                           <p className="text-red-400 text-sm mt-1">{errors.sellPrice}</p>
                         )}
                       </div>
-                    </div>
 
-                    {/* Profit Display */}
-                    <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-2.5">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
-                        <div>
-                          <p className="text-xs text-slate-400 mb-1">Profit per Unit</p>
-                          <p className={`text-base font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            ${profit.toFixed(2)}
+                      {/* Profit per Unit */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                          Profit per Unit
+                        </label>
+                        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 h-[42px] flex flex-col justify-center">
+                          <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+                            {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
                           </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-400 mb-1">Profit Margin</p>
-                          <p className={`text-base font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {profitMargin}%
+                          <p className={`text-xs leading-none ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
+                            {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(parseFloat(profitMargin)).toFixed(1)}%
                           </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-400 mb-1">Status</p>
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                            profit > 0 
-                              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                              : profit === 0 
-                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                              : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                          }`}>
-                            {profit > 0 ? 'Profitable' : profit === 0 ? 'Break Even' : 'Loss'}
-                          </span>
                         </div>
                       </div>
                     </div>
@@ -808,20 +793,26 @@ export default function AddProductPage() {
                           <div className="grid grid-cols-3 gap-3 text-center">
                             <div>
                               <p className="text-xs text-slate-400 mb-1">Avg Profit/Unit</p>
-                              <p className={`text-sm font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                ${profit.toFixed(2)}
+                              <p className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+                                {profit > 0 ? '+' : profit < 0 ? '-' : ''}${Math.abs(profit).toFixed(2)}
+                              </p>
+                              <p className={`text-xs ${profit > 0 ? 'text-green-400/70' : profit < 0 ? 'text-red-400/70' : 'text-yellow-400/70'}`}>
+                                {profit > 0 ? '+' : profit < 0 ? '-' : ''}{Math.abs(parseFloat(profitMargin)).toFixed(1)}%
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-slate-400 mb-1">Avg Margin</p>
-                              <p className={`text-sm font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                {profitMargin}%
+                              <p className="text-xs text-slate-400 mb-1">Avg Buy Price</p>
+                              <p className="text-sm font-bold text-slate-300">
+                                ${formData.colorSizeVariants.length > 0 
+                                  ? (formData.colorSizeVariants.reduce((sum, v) => sum + v.buyPrice, 0) / formData.colorSizeVariants.length).toFixed(2)
+                                  : '0.00'
+                                }
                               </p>
                             </div>
                             <div>
                               <p className="text-xs text-slate-400 mb-1">Total Stock</p>
                               <p className="text-sm font-bold text-cyan-400">
-                                {formData.colorSizeVariants.reduce((sum, v) => sum + v.stock, 0)}
+                                {formData.colorSizeVariants.reduce((sum, v) => sum + v.stock, 0)} pcs
                               </p>
                             </div>
                           </div>
