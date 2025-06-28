@@ -117,6 +117,7 @@ coverage/
 .nyc_output
 
 # IDE
+.vscode/*.json
 .vscode/settings.json
 .vscode/launch.json
 .idea/
