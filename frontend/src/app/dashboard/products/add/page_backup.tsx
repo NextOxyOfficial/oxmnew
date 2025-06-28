@@ -50,25 +50,37 @@ export default function AddProductPage() {
   // Calculate profit (for single pricing or average if variants exist)
   const profit = formData.hasVariants 
     ? formData.colorSizeVariants.length > 0 
-      ? formData.colorSizeVariants.reduce((sum, variant) => sum + (variant.sellPrice - variant.buyPrice), 0) / formData.colorSizeVariants.length
+      ? formData.colorSizeVariants.reduce((acc, variant) => acc + (variant.sellPrice - variant.buyPrice), 0) / formData.colorSizeVariants.length
       : 0
     : formData.sellPrice - formData.buyPrice;
-
+  
   const profitMargin = formData.hasVariants
     ? formData.colorSizeVariants.length > 0
-      ? ((profit / (formData.colorSizeVariants.reduce((sum, variant) => sum + variant.sellPrice, 0) / formData.colorSizeVariants.length)) * 100).toFixed(1)
+      ? (formData.colorSizeVariants.reduce((acc, variant) => acc + ((variant.sellPrice - variant.buyPrice) / variant.sellPrice * 100), 0) / formData.colorSizeVariants.length).toFixed(1)
       : "0"
     : formData.sellPrice > 0 ? ((profit / formData.sellPrice) * 100).toFixed(1) : "0";
 
   const suppliers = [
-    "Supplier A",
-    "Supplier B", 
-    "Supplier C",
-    "Local Store",
-    "Online Marketplace",
-    "Wholesale Distributor",
-    "Direct from Manufacturer",
+    "AliExpress Global",
+    "Amazon Wholesale",
+    "Local Supplier A",
+    "Local Supplier B",
+    "Alibaba Vendor",
+    "Direct Manufacturer",
+    "Wholesale Market",
     "Other"
+  ];
+
+  const commonColors = [
+    "Black", "White", "Red", "Blue", "Green", "Yellow", "Orange", "Purple", 
+    "Pink", "Brown", "Gray", "Navy", "Maroon", "Teal", "Olive", "Silver", "Gold"
+  ];
+
+  const commonSizes = [
+    "XS", "S", "M", "L", "XL", "XXL", "XXXL", 
+    "One Size", "Free Size",
+    "28", "30", "32", "34", "36", "38", "40", "42", "44", "46",
+    "6", "7", "8", "9", "10", "11", "12", "13"
   ];
 
   const categories = [
@@ -85,30 +97,26 @@ export default function AddProductPage() {
     "Other"
   ];
 
-  const commonColors = ["Red", "Blue", "Green", "Yellow", "Black", "White", "Gray", "Pink", "Purple", "Orange"];
-  const commonSizes = ["XS", "S", "M", "L", "XL", "XXL", "One Size"];
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
     
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: "" }));
     }
 
-    if (name === "buyPrice" || name === "sellPrice") {
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked,
+        // Reset variants if hasVariants is turned off
+        ...(name === "hasVariants" && !checked ? { colorSizeVariants: [] } : {})
+      }));
+    } else if (name === "buyPrice" || name === "sellPrice") {
       setFormData(prev => ({
         ...prev,
         [name]: parseFloat(value) || 0
-      }));
-    } else if (name === "hasVariants") {
-      const hasVariants = value === "true";
-      setFormData(prev => ({
-        ...prev,
-        hasVariants,
-        // Reset pricing if switching to variants
-        buyPrice: hasVariants ? 0 : prev.buyPrice,
-        sellPrice: hasVariants ? 0 : prev.sellPrice
       }));
     } else {
       setFormData(prev => ({
@@ -118,7 +126,7 @@ export default function AddProductPage() {
     }
   };
 
-  const handleVariantChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleVariantInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
     if (name === "buyPrice" || name === "sellPrice" || name === "stock") {
@@ -223,7 +231,6 @@ export default function AddProductPage() {
       newErrors.supplier = "Please select a supplier";
     }
 
-    // Validate pricing based on variant mode
     if (!formData.hasVariants) {
       if (formData.buyPrice <= 0) {
         newErrors.buyPrice = "Buy price must be greater than 0";
@@ -466,59 +473,30 @@ export default function AddProductPage() {
                 </div>
               </div>
 
-              {/* Variants Toggle */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Pricing Type
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                    !formData.hasVariants 
-                      ? 'border-cyan-500 bg-cyan-500/10' 
-                      : 'border-slate-700/50 bg-slate-800/50 hover:border-slate-600'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="hasVariants"
-                      value="false"
-                      checked={!formData.hasVariants}
-                      onChange={handleInputChange}
-                      className="sr-only"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-white">Single Price</div>
-                      <div className="text-xs text-gray-400">One buy/sell price for all items</div>
-                    </div>
-                  </label>
-                  
-                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                    formData.hasVariants 
-                      ? 'border-cyan-500 bg-cyan-500/10' 
-                      : 'border-slate-700/50 bg-slate-800/50 hover:border-slate-600'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="hasVariants"
-                      value="true"
-                      checked={formData.hasVariants}
-                      onChange={handleInputChange}
-                      className="sr-only"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-white">By Variants</div>
-                      <div className="text-xs text-gray-400">Different prices for colors/sizes</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
               {/* Pricing Section */}
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-slate-100">Pricing Information</h3>
-                
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-100">Pricing Information</h3>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="hasVariants"
+                      name="hasVariants"
+                      checked={formData.hasVariants}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-cyan-600 bg-slate-800 border-slate-600 rounded focus:ring-cyan-500 focus:ring-2"
+                    />
+                    <label htmlFor="hasVariants" className="text-sm text-slate-300">
+                      Multiple Colors/Sizes
+                    </label>
+                  </div>
+                </div>
+
                 {!formData.hasVariants ? (
-                  /* Single Pricing */
                   <>
+                    {!formData.hasVariants ? (
+                  <>
+                    {/* Single Pricing */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {/* Buy Price */}
                       <div>
@@ -569,7 +547,7 @@ export default function AddProductPage() {
                       </div>
                     </div>
 
-                    {/* Profit Display */}
+                    {/* Single Pricing Profit Display */}
                     <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-2.5">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
                         <div>
@@ -600,157 +578,158 @@ export default function AddProductPage() {
                     </div>
                   </>
                 ) : (
-                  /* Variant Pricing */
                   <>
-                    {/* Add New Variant */}
-                    <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
-                      <h4 className="text-sm font-medium text-slate-300 mb-3">Add Color/Size Variant</h4>
+                    {/* Variant Pricing */}
+                    <div className="space-y-3">
+                      <h4 className="text-base font-medium text-slate-200">Add Color/Size Variants</h4>
                       
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
-                        {/* Color */}
-                        <div>
-                          <select
-                            name="color"
-                            value={newVariant.color}
-                            onChange={handleVariantChange}
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          >
-                            <option value="" className="bg-slate-800">Color</option>
-                            {commonColors.map((color) => (
-                              <option key={color} value={color} className="bg-slate-800">
-                                {color}
-                              </option>
-                            ))}
-                            <option value="Custom" className="bg-slate-800">Custom</option>
-                          </select>
+                      {/* Add New Variant Form */}
+                      <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Color</label>
+                            <select
+                              name="color"
+                              value={newVariant.color}
+                              onChange={handleVariantInputChange}
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded text-sm py-1.5 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                            >
+                              <option value="">Select</option>
+                              {commonColors.map(color => (
+                                <option key={color} value={color}>{color}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Size</label>
+                            <select
+                              name="size"
+                              value={newVariant.size}
+                              onChange={handleVariantInputChange}
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded text-sm py-1.5 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                            >
+                              <option value="">Select</option>
+                              {commonSizes.map(size => (
+                                <option key={size} value={size}>{size}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Buy Price</label>
+                            <input
+                              type="number"
+                              name="buyPrice"
+                              value={newVariant.buyPrice || ""}
+                              onChange={handleVariantInputChange}
+                              min="0"
+                              step="0.01"
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded text-sm py-1.5 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Sell Price</label>
+                            <input
+                              type="number"
+                              name="sellPrice"
+                              value={newVariant.sellPrice || ""}
+                              onChange={handleVariantInputChange}
+                              min="0"
+                              step="0.01"
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded text-sm py-1.5 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Stock</label>
+                            <input
+                              type="number"
+                              name="stock"
+                              value={newVariant.stock || ""}
+                              onChange={handleVariantInputChange}
+                              min="0"
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded text-sm py-1.5 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                              placeholder="0"
+                            />
+                          </div>
                         </div>
-
-                        {/* Size */}
-                        <div>
-                          <select
-                            name="size"
-                            value={newVariant.size}
-                            onChange={handleVariantChange}
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          >
-                            <option value="" className="bg-slate-800">Size</option>
-                            {commonSizes.map((size) => (
-                              <option key={size} value={size} className="bg-slate-800">
-                                {size}
-                              </option>
-                            ))}
-                            <option value="Custom" className="bg-slate-800">Custom</option>
-                          </select>
-                        </div>
-
-                        {/* Buy Price */}
-                        <div>
-                          <input
-                            type="number"
-                            name="buyPrice"
-                            value={newVariant.buyPrice || ""}
-                            onChange={handleVariantChange}
-                            placeholder="Buy Price"
-                            min="0"
-                            step="0.01"
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
-                        </div>
-
-                        {/* Sell Price */}
-                        <div>
-                          <input
-                            type="number"
-                            name="sellPrice"
-                            value={newVariant.sellPrice || ""}
-                            onChange={handleVariantChange}
-                            placeholder="Sell Price"
-                            min="0"
-                            step="0.01"
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
-                        </div>
-
-                        {/* Stock */}
-                        <div>
-                          <input
-                            type="number"
-                            name="stock"
-                            value={newVariant.stock || ""}
-                            onChange={handleVariantChange}
-                            placeholder="Stock"
-                            min="0"
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
-                        </div>
+                        <button
+                          type="button"
+                          onClick={addVariant}
+                          className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white text-sm rounded transition-colors flex items-center gap-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          Add Variant
+                        </button>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={addVariant}
-                        className="w-full px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-medium rounded-lg hover:bg-cyan-500/30 transition-colors"
-                      >
-                        Add Variant
-                      </button>
-                    </div>
-
-                    {/* Variants List */}
-                    {formData.colorSizeVariants.length > 0 && (
-                      <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
-                        <h4 className="text-sm font-medium text-slate-300 mb-3">Product Variants ({formData.colorSizeVariants.length})</h4>
-                        
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {formData.colorSizeVariants.map((variant) => (
-                            <div key={variant.id} className="flex items-center gap-2 bg-slate-700/30 rounded-lg p-2">
-                              <div className="flex-1 grid grid-cols-5 gap-2 text-xs">
-                                <span className="text-white font-medium">{variant.color}</span>
-                                <span className="text-gray-300">{variant.size}</span>
-                                <span className="text-red-400">${variant.buyPrice}</span>
-                                <span className="text-green-400">${variant.sellPrice}</span>
-                                <span className="text-cyan-400">{variant.stock} pcs</span>
+                      {/* Existing Variants */}
+                      {formData.colorSizeVariants.length > 0 && (
+                        <div className="space-y-2">
+                          <h5 className="text-sm font-medium text-slate-300">Current Variants</h5>
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {formData.colorSizeVariants.map((variant) => (
+                              <div key={variant.id} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="text-slate-300 font-medium">{variant.color}</span>
+                                  <span className="text-slate-400">-</span>
+                                  <span className="text-slate-300 font-medium">{variant.size}</span>
+                                  <span className="text-slate-400 ml-auto">
+                                    Buy: ${variant.buyPrice} | Sell: ${variant.sellPrice} | Stock: {variant.stock}
+                                  </span>
+                                  <span className={`text-xs px-2 py-0.5 rounded ${
+                                    (variant.sellPrice - variant.buyPrice) > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                  }`}>
+                                    ${(variant.sellPrice - variant.buyPrice).toFixed(2)}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeVariant(variant.id)}
+                                    className="text-red-400 hover:text-red-300 p-1"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => removeVariant(variant.id)}
-                                className="text-red-400 hover:text-red-300 p-1"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
+                      )}
 
-                        {/* Average Profit Display for Variants */}
-                        <div className="mt-3 pt-3 border-t border-slate-700/50">
-                          <div className="grid grid-cols-3 gap-3 text-center">
+                      {/* Variants Summary */}
+                      {formData.colorSizeVariants.length > 0 && (
+                        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-2.5">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
                             <div>
-                              <p className="text-xs text-slate-400 mb-1">Avg Profit/Unit</p>
-                              <p className={`text-sm font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              <p className="text-xs text-slate-400 mb-1">Avg Profit per Unit</p>
+                              <p className={`text-base font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                 ${profit.toFixed(2)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-slate-400 mb-1">Avg Margin</p>
-                              <p className={`text-sm font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              <p className="text-xs text-slate-400 mb-1">Avg Profit Margin</p>
+                              <p className={`text-base font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                 {profitMargin}%
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-slate-400 mb-1">Total Stock</p>
-                              <p className="text-sm font-bold text-cyan-400">
-                                {formData.colorSizeVariants.reduce((sum, v) => sum + v.stock, 0)}
-                              </p>
+                              <p className="text-xs text-slate-400 mb-1">Total Variants</p>
+                              <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                                {formData.colorSizeVariants.length} variants
+                              </span>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {errors.variants && (
-                      <p className="text-red-400 text-sm">{errors.variants}</p>
-                    )}
+                      {errors.variants && (
+                        <p className="text-red-400 text-sm">{errors.variants}</p>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
