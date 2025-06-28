@@ -2,11 +2,55 @@
 export interface Product {
   id: number;
   name: string;
-  category: string;
+  category?: number;
+  category_name?: string;
+  supplier?: number;
+  supplier_name?: string;
+  location: string;
+  details?: string;
+  has_variants: boolean;
+  buy_price?: number;
+  sell_price?: number;
   stock: number;
-  buyPrice: number;
-  salePrice: number;
-  sold: number;
+  total_stock?: number;
+  average_buy_price?: number;
+  average_sell_price?: number;
+  profit_margin?: number;
+  variant_count?: number;
+  main_photo?: string;
+  variants?: ProductVariant[];
+  photos?: ProductPhoto[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  
+  // Legacy fields for backward compatibility
+  sku?: string;
+  price?: number;
+  cost?: number;
+  status?: string;
+  buyPrice?: number;
+  salePrice?: number;
+  sold?: number;
+}
+
+export interface ProductVariant {
+  id: number;
+  color?: string;
+  size?: string;
+  weight?: number;
+  weight_unit?: string;
+  custom_variant?: string;
+  buy_price: number;
+  sell_price: number;
+  stock: number;
+  sku_suffix?: string;
+}
+
+export interface ProductPhoto {
+  id: number;
+  image: string;
+  order: number;
 }
 
 // Product statistics interface

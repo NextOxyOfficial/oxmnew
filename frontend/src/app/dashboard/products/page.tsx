@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Product, StockEntry } from "@/types/product";
+import { ApiService } from "@/lib/api";
 import ProductDetailsModal from "@/components/ProductDetailsModal";
 
 export default function ProductsPage() {
   const router = useRouter();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [sortBy, setSortBy] = useState("name");
@@ -18,6 +23,43 @@ export default function ProductsPage() {
   const [isAddingStock, setIsAddingStock] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  // Fetch products and categories on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        console.log("Fetching products...");
+        const productsData = await ApiService.getProducts();
+        console.log("Products response:", productsData);
+        
+        // Handle different response formats
+        const productsList = Array.isArray(productsData) ? productsData : productsData?.results || [];
+        setProducts(productsList);
+        
+        // Extract unique categories from products
+        const uniqueCategories = [...new Set(
+          productsList
+            .map((product: Product) => product.category_name)
+            .filter(Boolean)
+        )] as string[];
+        setCategories(uniqueCategories);
+        
+        console.log("Loaded products:", productsList.length);
+        console.log("Unique categories:", uniqueCategories);
+        
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setError(error instanceof Error ? error.message : "Failed to load products");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleProductClick = (product: Product) => {
     console.log("Product clicked:", product.name);
@@ -33,6 +75,7 @@ export default function ProductsPage() {
       // TODO: Implement edit functionality
       // Simulate navigation delay
       await new Promise(resolve => setTimeout(resolve, 500));
+      // When real edit API is implemented, call refreshProducts() here
       setIsModalOpen(false);
       // Navigate to edit page (TODO: implement edit page)
       // router.push(`/dashboard/products/edit/${product.id}`);
@@ -52,6 +95,7 @@ export default function ProductsPage() {
       // TODO: Implement delete functionality
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
+      // When real delete API is implemented, call refreshProducts() here
       // For now, just close the modal
       setShowDeleteModal(false);
       setProductToDelete(null);
@@ -87,11 +131,12 @@ export default function ProductsPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // When real add stock API is implemented, call refreshProducts() here
       // For demo purposes, we would update the product stock here
       // This would typically involve calling an API and then updating the local state
       
       const profit = stockData.sell_price - stockData.buy_price;
-      console.log(`Added ${stockData.quantity} units to product ${productId} - Buy: $${stockData.buy_price}, Sell: $${stockData.sell_price}, Profit: $${profit.toFixed(2)} per unit`);
+      console.log(`Added ${stockData.quantity} units to product ${productId} - Buy: $${stockData.buy_price}, Sell: $${stockData.sell_price}, Profit: $${Number(profit).toFixed(2)} per unit`);
     } catch (error) {
       console.error("Error adding stock:", error);
       throw error; // Re-throw to be handled by the modal
@@ -113,268 +158,28 @@ export default function ProductsPage() {
     setSelectedProduct(null);
   };
 
-  // Sample products data
-  const products: Product[] = [
-    {
-      id: 1,
-      name: 'MacBook Pro 16"',
-      sku: 'MBP-16-001',
-      category: "Electronics",
-      stock: 25,
-      price: 2800,
-      cost: 2200,
-      status: 'active',
-      buyPrice: 2200,
-      salePrice: 2800,
-      sold: 5,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-15T00:00:00Z',
-      variants: [
-        {
-          id: 1,
-          color: 'Space Gray',
-          stock: 15,
-          sku_suffix: 'SG'
-        },
-        {
-          id: 2,
-          color: 'Silver',
-          stock: 10,
-          sku_suffix: 'SL'
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: "iPhone 15 Pro",
-      sku: 'IP-15P-001',
-      category: "Electronics",
-      stock: 40,
-      price: 1299,
-      cost: 999,
-      status: 'active',
-      buyPrice: 999,
-      salePrice: 1299,
-      sold: 12,
-      created_at: '2024-01-05T00:00:00Z',
-      updated_at: '2024-01-20T00:00:00Z',
-      variants: [
-        {
-          id: 3,
-          color: 'Natural Titanium',
-          size: '128GB',
-          stock: 20,
-          sku_suffix: 'NT-128'
-        },
-        {
-          id: 4,
-          color: 'Blue Titanium',
-          size: '256GB',
-          stock: 20,
-          sku_suffix: 'BT-256'
-        }
-      ]
-    },
-    {
-      id: 3,
-      name: "Samsung Galaxy S24",
-      sku: 'SGS-24-001',
-      category: "Electronics",
-      stock: 30,
-      price: 1100,
-      cost: 850,
-      status: 'active',
-      buyPrice: 850,
-      salePrice: 1100,
-      sold: 8,
-      created_at: '2024-01-10T00:00:00Z',
-      updated_at: '2024-01-25T00:00:00Z',
-    },
-    {
-      id: 4,
-      name: "Dell XPS 13",
-      sku: 'DXP-13-001',
-      category: "Electronics",
-      stock: 15,
-      price: 1500,
-      cost: 1200,
-      status: 'active',
-      buyPrice: 1200,
-      salePrice: 1500,
-      sold: 3,
-      created_at: '2024-01-12T00:00:00Z',
-      updated_at: '2024-01-28T00:00:00Z',
-    },
-    {
-      id: 5,
-      name: "iPad Air",
-      sku: 'IPA-001',
-      category: "Electronics",
-      stock: 20,
-      price: 749,
-      cost: 599,
-      status: 'active',
-      buyPrice: 599,
-      salePrice: 749,
-      sold: 7,
-      created_at: '2024-01-15T00:00:00Z',
-      updated_at: '2024-01-30T00:00:00Z',
-    },
-    {
-      id: 6,
-      name: "Office Chair",
-      sku: 'OFC-001',
-      category: "Furniture",
-      stock: 12,
-      price: 220,
-      cost: 150,
-      status: 'active',
-      buyPrice: 150,
-      salePrice: 220,
-      sold: 4,
-      created_at: '2024-01-08T00:00:00Z',
-      updated_at: '2024-01-22T00:00:00Z',
-      variants: [
-        {
-          id: 5,
-          color: 'Black',
-          weight: 15,
-          weight_unit: 'kg',
-          stock: 7,
-          sku_suffix: 'BK'
-        },
-        {
-          id: 6,
-          color: 'Gray',
-          weight: 15,
-          weight_unit: 'kg',
-          stock: 5,
-          sku_suffix: 'GY'
-        }
-      ]
-    },
-    {
-      id: 7,
-      name: "Standing Desk",
-      sku: 'STD-001',
-      category: "Furniture",
-      stock: 8,
-      price: 450,
-      cost: 300,
-      status: 'active',
-      buyPrice: 300,
-      salePrice: 450,
-      sold: 2,
-      created_at: '2024-01-18T00:00:00Z',
-      updated_at: '2024-02-02T00:00:00Z',
-      variants: [
-        {
-          id: 7,
-          size: 'Small (120cm)',
-          weight: 25,
-          weight_unit: 'kg',
-          stock: 4,
-          sku_suffix: 'S'
-        },
-        {
-          id: 8,
-          size: 'Large (160cm)',
-          weight: 35,
-          weight_unit: 'kg',
-          stock: 4,
-          sku_suffix: 'L'
-        }
-      ]
-    },
-    {
-      id: 8,
-      name: "Gaming Mouse",
-      sku: 'GM-001',
-      category: "Accessories",
-      stock: 50,
-      price: 75,
-      cost: 45,
-      status: 'active',
-      buyPrice: 45,
-      salePrice: 75,
-      sold: 15,
-      created_at: '2024-01-20T00:00:00Z',
-      updated_at: '2024-02-05T00:00:00Z',
-    },
-    {
-      id: 9,
-      name: "Mechanical Keyboard",
-      sku: 'MK-001',
-      category: "Accessories",
-      stock: 35,
-      price: 120,
-      cost: 80,
-      status: 'active',
-      buyPrice: 80,
-      salePrice: 120,
-      sold: 9,
-      created_at: '2024-01-22T00:00:00Z',
-      updated_at: '2024-02-08T00:00:00Z',
-      variants: [
-        {
-          id: 9,
-          custom_variant: 'Blue Switches',
-          stock: 20,
-          sku_suffix: 'BLU'
-        },
-        {
-          id: 10,
-          custom_variant: 'Red Switches',
-          stock: 15,
-          sku_suffix: 'RED'
-        }
-      ]
-    },
-    {
-      id: 10,
-      name: "Wireless Headphones",
-      sku: 'WH-001',
-      category: "Electronics",
-      stock: 22,
-      price: 299,
-      cost: 200,
-      status: 'active',
-      buyPrice: 200,
-      salePrice: 299,
-      sold: 11,
-      created_at: '2024-01-25T00:00:00Z',
-      updated_at: '2024-02-10T00:00:00Z',
-      variants: [
-        {
-          id: 11,
-          color: 'Black',
-          weight: 250,
-          weight_unit: 'g',
-          stock: 12,
-          sku_suffix: 'BK'
-        },
-        {
-          id: 12,
-          color: 'White',
-          weight: 250,
-          weight_unit: 'g',
-          stock: 10,
-          sku_suffix: 'WH'
-        }
-      ]
-    },
-  ];
-
-  // Calculate totals
+  // Calculate totals from dynamic data
   const totalProducts = products.length;
-  const totalBuyPrice = products.reduce(
-    (sum, product) => sum + (product.buyPrice || product.cost) * product.stock,
-    0
-  );
-  const totalSalePrice = products.reduce(
-    (sum, product) => sum + (product.salePrice || product.price) * product.stock,
-    0
-  );
+  const totalBuyPrice = products.reduce((sum, product) => {
+    const buyPrice = Number(product.has_variants 
+      ? product.average_buy_price || 0
+      : product.buy_price || 0);
+    const stock = Number(product.has_variants 
+      ? product.total_stock || 0
+      : product.stock || 0);
+    return sum + (buyPrice * stock);
+  }, 0);
+  
+  const totalSalePrice = products.reduce((sum, product) => {
+    const sellPrice = Number(product.has_variants 
+      ? product.average_sell_price || 0
+      : product.sell_price || 0);
+    const stock = Number(product.has_variants 
+      ? product.total_stock || 0
+      : product.stock || 0);
+    return sum + (sellPrice * stock);
+  }, 0);
+  
   const estimatedProfit = totalSalePrice - totalBuyPrice;
 
   // Filter and sort products
@@ -384,7 +189,7 @@ export default function ProductsPage() {
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
       const matchesCategory =
-        filterCategory === "all" || product.category === filterCategory;
+        filterCategory === "all" || product.category_name === filterCategory;
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
@@ -392,17 +197,150 @@ export default function ProductsPage() {
         case "name":
           return a.name.localeCompare(b.name);
         case "stock-high":
-          return b.stock - a.stock;
+          const aStock = a.has_variants ? a.total_stock || 0 : a.stock;
+          const bStock = b.has_variants ? b.total_stock || 0 : b.stock;
+          return bStock - aStock;
         case "stock-low":
-          return a.stock - b.stock;
+          const aStockLow = a.has_variants ? a.total_stock || 0 : a.stock;
+          const bStockLow = b.has_variants ? b.total_stock || 0 : b.stock;
+          return aStockLow - bStockLow;
         case "price-high":
-          return (b.salePrice || b.price) - (a.salePrice || a.price);
+          const aSellPrice = a.has_variants ? a.average_sell_price || 0 : a.sell_price || 0;
+          const bSellPrice = b.has_variants ? b.average_sell_price || 0 : b.sell_price || 0;
+          return bSellPrice - aSellPrice;
         case "price-low":
-          return (a.salePrice || a.price) - (b.salePrice || b.price);
+          const aSellPriceLow = a.has_variants ? a.average_sell_price || 0 : a.sell_price || 0;
+          const bSellPriceLow = b.has_variants ? b.average_sell_price || 0 : b.sell_price || 0;
+          return aSellPriceLow - bSellPriceLow;
         default:
           return 0;
       }
     });
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="sm:p-6 p-1 space-y-6">
+        <div className="max-w-7xl">
+          {/* Page Header */}
+          <div className="mb-6">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Products
+            </h1>
+            <p className="text-gray-400 text-sm sm:text-base mt-2">
+              Manage your inventory and track product performance
+            </p>
+          </div>
+
+          {/* Loading skeleton */}
+          <div className="space-y-6">
+            {/* Stats skeleton */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-slate-700 rounded mb-2"></div>
+                    <div className="h-8 bg-slate-700 rounded mb-2"></div>
+                    <div className="h-3 bg-slate-700 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Controls skeleton */}
+            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+              <div className="animate-pulse">
+                <div className="h-8 bg-slate-700 rounded mb-4"></div>
+                <div className="flex gap-4">
+                  <div className="h-10 bg-slate-700 rounded flex-1"></div>
+                  <div className="h-10 bg-slate-700 rounded w-40"></div>
+                  <div className="h-10 bg-slate-700 rounded w-40"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Products skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+                  <div className="animate-pulse">
+                    <div className="h-6 bg-slate-700 rounded mb-2"></div>
+                    <div className="h-4 bg-slate-700 rounded mb-2"></div>
+                    <div className="h-4 bg-slate-700 rounded mb-4"></div>
+                    <div className="flex justify-between">
+                      <div className="h-6 bg-slate-700 rounded w-20"></div>
+                      <div className="h-6 bg-slate-700 rounded w-16"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="sm:p-6 p-1 space-y-6">
+        <div className="max-w-7xl">
+          {/* Page Header */}
+          <div className="mb-6">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Products
+            </h1>
+            <p className="text-gray-400 text-sm sm:text-base mt-2">
+              Manage your inventory and track product performance
+            </p>
+          </div>
+
+          {/* Error message */}
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
+            <div className="text-red-500 mb-2">
+              <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-red-400 mb-2">Failed to Load Products</h3>
+            <p className="text-red-400/70 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Function to refresh products data
+  const refreshProducts = async () => {
+    try {
+      setError(null);
+      console.log("Refreshing products...");
+      const productsData = await ApiService.getProducts();
+      console.log("Products refreshed:", productsData);
+      
+      const productsList = Array.isArray(productsData) ? productsData : productsData?.results || [];
+      setProducts(productsList);
+      
+      // Update categories
+      const uniqueCategories = [...new Set(
+        productsList
+          .map((product: Product) => product.category_name)
+          .filter(Boolean)
+      )] as string[];
+      setCategories(uniqueCategories);
+      
+    } catch (error) {
+      console.error("Error refreshing products:", error);
+      setError(error instanceof Error ? error.message : "Failed to refresh products");
+    }
+  };
 
   return (
     <div className="sm:p-6 p-1 space-y-6">
@@ -523,7 +461,7 @@ export default function ProductsPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2v-14a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                   />
                 </svg>
               </div>
@@ -704,15 +642,11 @@ export default function ProductsPage() {
                   <option value="all" className="bg-slate-800">
                     All Categories
                   </option>
-                  <option value="Electronics" className="bg-slate-800">
-                    Electronics
-                  </option>
-                  <option value="Furniture" className="bg-slate-800">
-                    Furniture
-                  </option>
-                  <option value="Accessories" className="bg-slate-800">
-                    Accessories
-                  </option>
+                  {categories.map((category) => (
+                    <option key={category} value={category} className="bg-slate-800">
+                      {category}
+                    </option>
+                  ))}
                 </select>
 
                 {/* Sort */}
@@ -758,7 +692,7 @@ export default function ProductsPage() {
                         </h4>
                       </button>
                       <p className="text-slate-400 text-sm mt-1">
-                        {product.category}
+                        {product.category_name}
                       </p>
                     </div>
                   </div>
@@ -768,41 +702,63 @@ export default function ProductsPage() {
                       <p className="text-xs text-slate-400">Stock</p>
                       <div className="flex items-center space-x-1">
                         <p className="text-sm font-medium text-slate-100">
-                          {product.stock} units
+                          {product.has_variants ? (product.total_stock || 0) : product.stock} units
                         </p>
-                        {product.stock < 5 && (
-                          <div title="Low Stock Warning">
-                            <svg
-                              className="w-4 h-4 text-yellow-500"
-                              fill="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </div>
-                        )}
+                        {(() => {
+                          const stock = product.has_variants ? (product.total_stock || 0) : product.stock;
+                          if (stock === 0) {
+                            return (
+                              <div title="Out of Stock">
+                                <svg
+                                  className="w-5 h-5 text-red-500"
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </div>
+                            );
+                          } else if (stock < 5) {
+                            return (
+                              <div title="Low Stock Warning">
+                                <svg
+                                  className="w-5 h-5 text-yellow-500"
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </div>
                     <div>
                       <p className="text-xs text-slate-400">Sold</p>
                       <p className="text-sm font-medium text-green-400">
-                        {product.sold} units
+                        {product.sold || 0} units
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-400">Buy Price</p>
                       <p className="text-sm font-medium text-red-400">
-                        ${product.buyPrice}
+                        ${product.has_variants ? Number(product.average_buy_price || 0).toFixed(2) : Number(product.buy_price || 0).toFixed(2)}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-400">Sale Price</p>
                       <p className="text-sm font-medium text-green-400">
-                        ${product.salePrice}
+                        ${product.has_variants ? Number(product.average_sell_price || 0).toFixed(2) : Number(product.sell_price || 0).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -811,8 +767,12 @@ export default function ProductsPage() {
                     <div>
                       <p className="text-xs text-slate-400">Profit per unit</p>
                       {(() => {
-                        const salePrice = product.salePrice || product.price;
-                        const buyPrice = product.buyPrice || product.cost;
+                        const salePrice = Number(product.has_variants 
+                          ? product.average_sell_price || 0
+                          : product.sell_price || 0);
+                        const buyPrice = Number(product.has_variants 
+                          ? product.average_buy_price || 0
+                          : product.buy_price || 0);
                         const profit = salePrice - buyPrice;
                         const profitMargin = salePrice > 0 ? ((profit / salePrice) * 100) : 0;
                         return (
@@ -922,7 +882,7 @@ export default function ProductsPage() {
                             {product.name}
                           </div>
                           <div className="text-xs text-slate-400 mt-1">
-                            {product.category}
+                            {product.category_name}
                           </div>
                         </button>
                       </td>
@@ -930,43 +890,71 @@ export default function ProductsPage() {
                         <div className="space-y-1">
                           <div className="flex items-center space-x-2">
                             <span className="text-sm text-slate-100">
-                              {product.stock} units
+                              {product.has_variants ? (product.total_stock || 0) : product.stock} units
                             </span>
-                            {product.stock < 5 && (
-                              <div title="Low Stock Warning">
-                                <svg
-                                  className="w-4 h-4 text-yellow-500"
-                                  fill="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </div>
-                            )}
+                            {(() => {
+                              const stock = product.has_variants ? (product.total_stock || 0) : product.stock;
+                              if (stock === 0) {
+                                return (
+                                  <div title="Out of Stock">
+                                    <svg
+                                      className="w-5 h-5 text-red-500"
+                                      fill="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                  </div>
+                                );
+                              } else if (stock < 5) {
+                                return (
+                                  <div title="Low Stock Warning">
+                                    <svg
+                                      className="w-5 h-5 text-yellow-500"
+                                      fill="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                           <div className="text-xs text-slate-400">
-                            {product.sold} sold
+                            {product.sold || 0} sold
                           </div>
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="space-y-1">
                           <div className="text-sm font-medium text-red-400">
-                            ${product.buyPrice || product.cost}
+                            ${product.has_variants ? Number(product.average_buy_price || 0).toFixed(2) : Number(product.buy_price || 0).toFixed(2)}
                           </div>
                           <div className="text-xs text-slate-400">
-                            ${product.salePrice || product.price} sale
+                            ${product.has_variants ? Number(product.average_sell_price || 0).toFixed(2) : Number(product.sell_price || 0).toFixed(2)} sale
                           </div>
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         {(() => {
-                          const profit = (product.salePrice || product.price) - (product.buyPrice || product.cost);
-                          const profitMargin = (product.salePrice || product.price) > 0 ? ((profit / (product.salePrice || product.price)) * 100) : 0;
+                          const salePrice = Number(product.has_variants 
+                            ? product.average_sell_price || 0
+                            : product.sell_price || 0);
+                          const buyPrice = Number(product.has_variants 
+                            ? product.average_buy_price || 0
+                            : product.buy_price || 0);
+                          const profit = salePrice - buyPrice;
+                          const profitMargin = salePrice > 0 ? ((profit / salePrice) * 100) : 0;
                           return (
                             <div className="space-y-1">
                               <span className={`text-sm font-bold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
@@ -1040,26 +1028,34 @@ export default function ProductsPage() {
               </table>
             </div>
 
-            {/* Empty State */}
-            {filteredProducts.length === 0 && (
-              <div className="text-center py-12">
-                <svg
-                  className="w-12 h-12 text-slate-400 mx-auto mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                  />
-                </svg>
-                <p className="text-slate-400 text-lg">No products found</p>
-                <p className="text-slate-500 text-sm mt-1">
-                  Try adjusting your search or filters
-                </p>
+          {/* Empty State */}
+          {!isLoading && !error && filteredProducts.length === 0 && (
+            <div className="col-span-full">
+                <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-8 text-center">
+                  <div className="text-slate-500 mb-4">
+                    <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-300 mb-2">
+                    {searchTerm || filterCategory !== "all" ? "No products found" : "No products yet"}
+                  </h3>
+                  <p className="text-slate-400 mb-4">
+                    {searchTerm || filterCategory !== "all" 
+                      ? "Try adjusting your search criteria or filters." 
+                      : "Get started by adding your first product to the inventory."
+                    }
+                  </p>
+                  {(!searchTerm && filterCategory === "all") && (
+                    <button
+                      onClick={handleAddProduct}
+                      disabled={isNavigating}
+                      className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200"
+                    >
+                      Add Your First Product
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -1070,7 +1066,26 @@ export default function ProductsPage() {
           <ProductDetailsModal
             isOpen={isModalOpen}
             onClose={closeModal}
-            product={selectedProduct}
+            product={{
+              id: selectedProduct.id,
+              name: selectedProduct.name,
+              sku: `PRD-${selectedProduct.id}`, // Generate SKU if not provided
+              category: selectedProduct.category_name || 'Uncategorized',
+              stock: selectedProduct.has_variants 
+                ? selectedProduct.total_stock || 0
+                : selectedProduct.stock,
+              price: selectedProduct.has_variants 
+                ? selectedProduct.average_sell_price || 0
+                : selectedProduct.sell_price || 0,
+              cost: selectedProduct.has_variants 
+                ? selectedProduct.average_buy_price || 0
+                : selectedProduct.buy_price || 0,
+              status: selectedProduct.is_active ? 'active' : 'inactive',
+              supplier: selectedProduct.supplier_name,
+              variants: selectedProduct.variants as any,
+              created_at: selectedProduct.created_at,
+              updated_at: selectedProduct.updated_at,
+            }}
             onAddStock={handleAddStock}
           />
         )}
@@ -1087,7 +1102,7 @@ export default function ProductsPage() {
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
                       <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.314 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
                     <div>

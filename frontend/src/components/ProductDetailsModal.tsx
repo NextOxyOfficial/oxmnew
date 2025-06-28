@@ -221,11 +221,11 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   </div>
                   <div>
                     <p className="text-slate-400 mb-1">Price</p>
-                    <p className="text-white font-bold">${product.price.toFixed(2)}</p>
+                    <p className="text-white font-bold">${Number(product.price).toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-slate-400 mb-1">Cost</p>
-                    <p className="text-white font-bold">${product.cost.toFixed(2)}</p>
+                    <p className="text-white font-bold">${Number(product.cost).toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-slate-400 mb-1">Total Stock</p>
@@ -547,13 +547,13 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                                 {entry.cost_per_unit && (
                                   <div>
                                     <span className="text-slate-400">Cost per unit:</span>
-                                    <span className="text-white font-medium ml-1">${entry.cost_per_unit.toFixed(2)}</span>
+                                    <span className="text-white font-medium ml-1">${Number(entry.cost_per_unit).toFixed(2)}</span>
                                   </div>
                                 )}
                                 {entry.total_cost && (
                                   <div>
                                     <span className="text-slate-400">Total cost:</span>
-                                    <span className="text-white font-medium ml-1">${entry.total_cost.toFixed(2)}</span>
+                                    <span className="text-white font-medium ml-1">${Number(entry.total_cost).toFixed(2)}</span>
                                   </div>
                                 )}
                                 <div>
