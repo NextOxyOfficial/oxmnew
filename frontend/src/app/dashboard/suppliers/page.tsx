@@ -41,17 +41,6 @@ interface Payment {
   updated_at: string;
 }
 
-interface Product {
-  id: number;
-  name: string;
-  category: string;
-  supplier: string;
-  quantity: number;
-  unit_price: number;
-  total_value: number;
-  last_ordered: string;
-}
-
 interface Supplier {
   id: number;
   name: string;
@@ -75,7 +64,6 @@ export default function SuppliersPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState('all'); // For filtering purchases
   const [selectedPaymentSupplier, setSelectedPaymentSupplier] = useState('all'); // For filtering payments
-  const [selectedProductSupplier, setSelectedProductSupplier] = useState('all'); // For filtering products
   const [notification, setNotification] = useState<{
     isVisible: boolean;
     type: 'success' | 'error';
@@ -143,39 +131,6 @@ export default function SuppliersPage() {
 
   // Real payments state - will be populated from API
   const [payments, setPayments] = useState<Payment[]>([]);
-
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: 1,
-      name: 'Wireless Mouse',
-      category: 'Electronics',
-      supplier: 'Tech Solutions Ltd',
-      quantity: 50,
-      unit_price: 25.99,
-      total_value: 1299.50,
-      last_ordered: '2024-12-20'
-    },
-    {
-      id: 2,
-      name: 'Office Paper A4',
-      category: 'Stationery',
-      supplier: 'Office Supplies Co',
-      quantity: 200,
-      unit_price: 8.50,
-      total_value: 1700.00,
-      last_ordered: '2024-12-18'
-    },
-    {
-      id: 3,
-      name: 'Ergonomic Chair',
-      category: 'Furniture',
-      supplier: 'Furniture Express',
-      quantity: 12,
-      unit_price: 299.99,
-      total_value: 3599.88,
-      last_ordered: '2024-12-15'
-    }
-  ]);
 
   // Real suppliers state - will be populated from API
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -489,14 +444,6 @@ export default function SuppliersPage() {
     return payments.filter(payment => payment.supplier.name === selectedPaymentSupplier);
   };
 
-  // Filter products by selected supplier
-  const getFilteredProducts = () => {
-    if (selectedProductSupplier === 'all') {
-      return products;
-    }
-    return products.filter(product => product.supplier === selectedProductSupplier);
-  };
-
   // Get unique suppliers from purchases for dropdown
   const getUniqueSuppliers = () => {
     const uniqueSuppliers = [...new Set(purchases.map(purchase => purchase.supplier.name))];
@@ -506,12 +453,6 @@ export default function SuppliersPage() {
   // Get unique suppliers from payments for dropdown
   const getUniqueSuppliersFromPayments = () => {
     const uniqueSuppliers = [...new Set(payments.map(payment => payment.supplier.name))];
-    return uniqueSuppliers.sort();
-  };
-
-  // Get unique suppliers from products for dropdown
-  const getUniqueSuppliersFromProducts = () => {
-    const uniqueSuppliers = [...new Set(products.map(product => product.supplier))];
     return uniqueSuppliers.sort();
   };
 
@@ -859,11 +800,6 @@ export default function SuppliersPage() {
               {/* Products Tab */}
               {activeTab === 'products' && (
                 <ProductsTab
-                  products={products}
-                  selectedProductSupplier={selectedProductSupplier}
-                  setSelectedProductSupplier={setSelectedProductSupplier}
-                  getFilteredProducts={getFilteredProducts}
-                  getUniqueSuppliersFromProducts={getUniqueSuppliersFromProducts}
                   formatCurrency={formatCurrency}
                   formatDate={formatDate}
                 />

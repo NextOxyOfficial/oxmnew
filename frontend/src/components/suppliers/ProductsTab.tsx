@@ -1,42 +1,98 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { Product as BackendProduct } from '@/types/product';
+import { ApiService } from '@/lib/api';
 
-interface Product {
+interface Supplier {
   id: number;
   name: string;
-  category: string;
-  supplier: string;
-  quantity: number;
-  unit_price: number;
-  total_value: number;
-  last_ordered: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  contact_person?: string;
+  notes?: string;
+  is_active: boolean;
+  total_orders?: number;
+  total_amount?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ProductsTabProps {
-  products: Product[];
-  selectedProductSupplier: string;
-  setSelectedProductSupplier: (supplier: string) => void;
-  getFilteredProducts: () => Product[];
-  getUniqueSuppliersFromProducts: () => string[];
   formatCurrency: (amount: number) => string;
   formatDate: (dateString: string) => string;
 }
 
 export default function ProductsTab({
-  products,
-  selectedProductSupplier,
-  setSelectedProductSupplier,
-  getFilteredProducts,
-  getUniqueSuppliersFromProducts,
   formatCurrency,
   formatDate
 }: ProductsTabProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProductSupplier, setSelectedProductSupplier] = useState<string>('all');
+  const [products, setProducts] = useState<BackendProduct[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const filteredSuppliers = getUniqueSuppliersFromProducts().filter(supplier =>
+  // Fetch data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const [productsData, suppliersData] = await Promise.all([
+          ApiService.getProducts(),
+          ApiService.getSuppliers()
+        ]);
+        
+        const productsList = Array.isArray(productsData) ? productsData : productsData?.results || [];
+        const suppliersList = Array.isArray(suppliersData) ? suppliersData : suppliersData?.results || [];
+        
+        setProducts(productsList);
+        setSuppliers(suppliersList);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setError(error instanceof Error ? error.message : "Failed to load data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Get unique suppliers from products that have suppliers
+  const getUniqueSuppliersFromProducts = (): string[] => {
+    const supplierNames = products
+      .filter(product => product.supplier_name)
+      .map(product => product.supplier_name!)
+      .filter(Boolean);
+    return [...new Set(supplierNames)];
+  };
+
+  // Filter products by selected supplier
+  const getFilteredProducts = (): BackendProduct[] => {
+    if (selectedProductSupplier === 'all') {
+      return [];
+    }
+    return products.filter(product => product.supplier_name === selectedProductSupplier);
+  };
+
+  // Calculate total value for a product based on stock and price
+  const calculateProductValue = (product: BackendProduct): number => {
+    const stock = product.has_variants ? (product.total_stock || 0) : product.stock;
+    const price = product.has_variants 
+      ? (product.average_sell_price || product.sell_price || product.price || 0)
+      : (product.sell_price || product.price || 0);
+    return stock * Number(price);
+  };
+
+  const filteredSuppliers = getUniqueSuppliersFromProducts().filter((supplier: string) =>
     supplier.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -137,7 +193,7 @@ export default function ProductsTab({
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                 <span>Showing {getFilteredProducts().length} products for {selectedProductSupplier}</span>
                 <span className="text-cyan-400">
-                  Total Value: {formatCurrency(getFilteredProducts().reduce((sum, p) => sum + p.total_value, 0))}
+                  Total Value: {formatCurrency(getFilteredProducts().reduce((sum, product) => sum + calculateProductValue(product), 0))}
                 </span>
               </div>
             </div>
@@ -156,64 +212,100 @@ export default function ProductsTab({
             <p className="text-slate-400 text-sm">Choose a supplier from the dropdown above to view their product inventory</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {getFilteredProducts().map((product) => (
-              <div key={product.id} className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/50 transition-colors duration-200">
-                <div className="flex items-center justify-between">
-                  {/* Left side - Product Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h5 className="text-slate-100 font-medium text-sm">{product.name}</h5>
-                      <span className="bg-slate-700/50 text-slate-300 px-2 py-1 rounded-md text-xs">
-                        {product.category}
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                      <div>
-                        <span className="text-slate-400">Supplier</span>
-                        <p className="text-slate-100 font-medium">{product.supplier}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Unit Price</span>
-                        <p className="text-slate-100 font-medium">{formatCurrency(product.unit_price)}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Total Value</span>
-                        <p className="text-cyan-300 font-medium">{formatCurrency(product.total_value)}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Last Ordered</span>
-                        <p className="text-slate-100 font-medium">{formatDate(product.last_ordered)}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right side - Quantity Badge */}
-                  <div className="ml-6">
-                    <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 text-cyan-300 px-3 py-2 rounded-lg text-center">
-                      <div className="text-lg font-bold">{product.quantity}</div>
-                      <div className="text-xs text-cyan-400">in stock</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Empty State for when supplier is selected but no products found */}
-            {getFilteredProducts().length === 0 && (
+          <>
+            {isLoading ? (
               <div className="text-center py-8">
-                <div className="text-slate-400 mb-2">
+                <div className="animate-spin w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-slate-400">Loading products...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <div className="text-red-400 mb-4">
                   <svg className="w-8 h-8 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <p className="text-slate-400 text-sm">
-                  No products found for {selectedProductSupplier}
-                </p>
+                <p className="text-red-400 text-sm mb-4">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {getFilteredProducts().map((product) => (
+                  <div key={product.id} className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/50 transition-colors duration-200">
+                    <div className="flex items-center justify-between">
+                      {/* Left side - Product Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h5 className="text-slate-100 font-medium text-sm">{product.name}</h5>
+                          <span className="bg-slate-700/50 text-slate-300 px-2 py-1 rounded-md text-xs">
+                            {product.category_name || 'No Category'}
+                          </span>
+                          {product.has_variants && (
+                            <span className="bg-cyan-500/20 text-cyan-300 px-2 py-1 rounded-md text-xs">
+                              Has Variants
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                          <div>
+                            <span className="text-slate-400">Supplier</span>
+                            <p className="text-slate-100 font-medium">{product.supplier_name || 'No Supplier'}</p>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Unit Price</span>
+                            <p className="text-slate-100 font-medium">
+                              {formatCurrency(Number(product.has_variants 
+                                ? (product.average_sell_price || product.sell_price || product.price || 0)
+                                : (product.sell_price || product.price || 0)
+                              ))}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Total Value</span>
+                            <p className="text-cyan-300 font-medium">{formatCurrency(calculateProductValue(product))}</p>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Updated</span>
+                            <p className="text-slate-100 font-medium">{formatDate(product.updated_at)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right side - Stock Badge */}
+                      <div className="ml-6">
+                        <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 text-cyan-300 px-3 py-2 rounded-lg text-center">
+                          <div className="text-lg font-bold">
+                            {product.has_variants ? (product.total_stock || 0) : product.stock}
+                          </div>
+                          <div className="text-xs text-cyan-400">in stock</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Empty State for when supplier is selected but no products found */}
+                {getFilteredProducts().length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-slate-400 mb-2">
+                      <svg className="w-8 h-8 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                    <p className="text-slate-400 text-sm">
+                      No products found for {selectedProductSupplier}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>
