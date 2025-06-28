@@ -69,9 +69,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     },
     {
       name: "Reports",
-      href: "/reports",
+      href: "/dashboard/reports",
       icon: TrendingUp,
-      current: pathname === "/reports",
+      current: pathname === "/dashboard/reports",
     },
     {
       name: "Customers",
@@ -87,45 +87,45 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     },
     {
       name: "Employees",
-      href: "/employees",
+      href: "/dashboard/employees",
       icon: Briefcase,
-      current: pathname === "/employees",
+      current: pathname === "/dashboard/employees",
     },
     {
-      name: "Lending",
-      href: "/lending",
+      name: "Due Book",
+      href: "/dashboard/duebook",
       icon: CreditCard,
-      current: pathname === "/lending",
+      current: pathname === "/dashboard/duebook",
     },
     {
       name: "Online Store",
-      href: "/online-store",
+      href: "/dashboard/online-store",
       icon: Store,
-      current: pathname === "/online-store",
+      current: pathname === "/dashboard/online-store",
     },
     {
       name: "Notebook",
-      href: "/notebook",
+      href: "/dashboard/notebook",
       icon: BookOpen,
-      current: pathname === "/notebook",
+      current: pathname === "/dashboard/notebook",
     },
     {
       name: "Reminder",
-      href: "/scheduler",
+      href: "/dashboard/scheduler",
       icon: Clock,
-      current: pathname === "/scheduler",
+      current: pathname === "/dashboard/scheduler",
     },
     {
       name: "SMS",
-      href: "/sms",
+      href: "/dashboard/sms",
       icon: Smartphone,
-      current: pathname === "/sms",
+      current: pathname === "/dashboard/sms",
     },
     {
       name: "Email",
-      href: "/email",
+      href: "/dashboard/email",
       icon: Mail,
-      current: pathname === "/email",
+      current: pathname === "/dashboard/email",
     },
     {
       name: "Subscriptions",
@@ -156,19 +156,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "Customers";
       case "/dashboard/banking":
         return "Banking";
-      case "/employees":
+      case "/dashboard/reports":
+        return "Reports";
+      case "/dashboard/employees":
         return "Employees";
-      case "/lending":
-        return "Lending";
-      case "/online-store":
+      case "/dashboard/duebook":
+        return "Due Book";
+      case "/dashboard/online-store":
         return "Online Store";
-      case "/notebook":
+      case "/dashboard/notebook":
         return "Notebook";
-      case "/scheduler":
+      case "/dashboard/scheduler":
         return "Reminder";
-      case "/sms":
+      case "/dashboard/sms":
         return "SMS";
-      case "/email":
+      case "/dashboard/email":
         return "Email";
       default:
         return "Dashboard";

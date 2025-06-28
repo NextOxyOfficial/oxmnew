@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect } from "react";
+import { Fragment } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -17,17 +17,6 @@ import {
   MessageCircle,
   ShoppingCart,
 } from "lucide-react";
-
-// Add custom scrollbar hiding styles
-const scrollbarHideStyles = `
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-`;
 
 interface NavigationItem {
   name: string;
@@ -55,17 +44,6 @@ export default function Sidebar({
   networkStatus = 78,
   smsCredits = 1250
 }: SidebarProps) {
-  // Add styles to hide scrollbar
-  useEffect(() => {
-    const styleElement = document.createElement("style");
-    styleElement.textContent = scrollbarHideStyles;
-    document.head.appendChild(styleElement);
-    
-    return () => {
-      document.head.removeChild(styleElement);
-    };
-  }, []);
-
   return (
     <Fragment>
       {/* Mobile sidebar */}
@@ -121,7 +99,7 @@ export default function Sidebar({
                 </div>
               </div>
               
-              <nav className="space-y-1 mb-8 flex-1 overflow-y-auto scrollbar-hide">
+              <nav className="space-y-1 mb-8 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {navigation.map((item) => (
                   <NavItem
                     key={item.name}
@@ -173,7 +151,7 @@ export default function Sidebar({
               </div>
             </div>
 
-            <nav className="space-y-1 mb-8 flex-1 overflow-y-auto scrollbar-hide">
+            <nav className="space-y-1 mb-8 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {navigation.map((item) => (
                 <NavItem
                   key={item.name}
