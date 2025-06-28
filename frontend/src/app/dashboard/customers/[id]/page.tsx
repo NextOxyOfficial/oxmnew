@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, DollarSign, ShoppingBag, Star, Gift, Trophy, AlertTriangle, FileText, Receipt, X, Printer, StickyNote, MessageSquare } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, DollarSign, ShoppingBag, Star, Gift, Trophy, AlertTriangle, FileText, Receipt, X, Printer, StickyNote, MessageSquare, Coins } from "lucide-react";
 
 interface Customer {
   id: number;
@@ -243,6 +243,32 @@ export default function CustomerDetailsPage() {
     const statusMessage = order.status === 'completed' ? 'completed' : order.status === 'pending' ? 'is pending' : 'was cancelled';
     const message = `Hello ${customer?.name}, your order #${order.id} ${statusMessage}. Order total: $${order.total.toFixed(2)}. Order date: ${formatDate(order.date)}. Thank you for your business!`;
     await handleSendSMS(message);
+  };
+
+  const handleRedeemAchievement = async (achievement: Achievement) => {
+    try {
+      // Show confirmation
+      const confirmed = window.confirm(
+        `Are you sure you want to redeem ${achievement.points} points for "${achievement.title}"?`
+      );
+      
+      if (!confirmed) return;
+
+      // Here you would typically make an API call to redeem the achievement
+      // For now, we'll simulate the redemption by removing the achievement from the list
+      // and showing a success message
+      
+      setAchievements(prev => prev.filter(a => a.id !== achievement.id));
+      
+      // You could also add the points to a customer's account balance or gift credits
+      // For example: updateCustomerCredits(customer.id, achievement.points);
+      
+      alert(`Successfully redeemed ${achievement.points} points for "${achievement.title}"!`);
+      
+    } catch (error) {
+      console.error('Error redeeming achievement:', error);
+      alert('Failed to redeem achievement. Please try again.');
+    }
   };
 
   const handleSubmitTransaction = async () => {
@@ -917,10 +943,21 @@ export default function CustomerDetailsPage() {
                           </div>
                         </div>
 
-                        {/* Achievement Badge */}
-                        <div className="flex items-center justify-center p-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg border border-amber-500/30">
-                          <Star className="h-5 w-5 text-amber-400 mr-2" />
-                          <span className="text-amber-300 font-medium text-sm">Achievement Unlocked</span>
+                        {/* Achievement Badge and Redeem Button */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-center p-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg border border-amber-500/30">
+                            <Star className="h-5 w-5 text-amber-400 mr-2" />
+                            <span className="text-amber-300 font-medium text-sm">Achievement Unlocked</span>
+                          </div>
+                          
+                          {/* Redeem Button */}
+                          <button
+                            onClick={() => handleRedeemAchievement(achievement)}
+                            className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm flex items-center justify-center space-x-2"
+                          >
+                            <Coins className="h-4 w-4" />
+                            <span>Redeem {achievement.points} Points</span>
+                          </button>
                         </div>
 
                         {/* Decorative elements */}

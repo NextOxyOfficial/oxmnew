@@ -110,7 +110,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       current: pathname === "/notebook",
     },
     {
-      name: "Scheduler",
+      name: "Reminder",
       href: "/scheduler",
       icon: Clock,
       current: pathname === "/scheduler",
@@ -165,7 +165,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       case "/notebook":
         return "Notebook";
       case "/scheduler":
-        return "Scheduler";
+        return "Reminder";
       case "/sms":
         return "SMS";
       case "/email":

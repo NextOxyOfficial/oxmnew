@@ -18,6 +18,17 @@ import {
   ShoppingCart,
 } from "lucide-react";
 
+// Add custom scrollbar hiding styles
+const scrollbarHideStyles = `
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
 interface NavigationItem {
   name: string;
   href: string;
@@ -44,7 +55,17 @@ export default function Sidebar({
   networkStatus = 78,
   smsCredits = 1250
 }: SidebarProps) {
-  // Remove the scrollbar styles effect since we're using a different design
+  // Add styles to hide scrollbar
+  useEffect(() => {
+    const styleElement = document.createElement("style");
+    styleElement.textContent = scrollbarHideStyles;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
   return (
     <Fragment>
       {/* Mobile sidebar */}
@@ -58,8 +79,8 @@ export default function Sidebar({
           onClick={onClose}
         ></div>
         <div className="fixed top-16 bottom-0 left-0 flex w-64 flex-col transform transition-transform duration-300 ease-out">
-          <div className="bg-slate-900 border border-slate-700/30 rounded-lg m-4 h-full flex flex-col">
-            <div className="p-3 flex-1">
+          <div className="bg-slate-900 border border-slate-700/30 rounded-lg m-4 h-full flex flex-col overflow-hidden">
+            <div className="p-3 flex-1 flex flex-col overflow-y-auto">
               <div className="flex items-center justify-end mb-4">
                 <button
                   onClick={onClose}
@@ -100,7 +121,7 @@ export default function Sidebar({
                 </div>
               </div>
               
-              <nav className="space-y-1 mb-8">
+              <nav className="space-y-1 mb-8 flex-1 overflow-y-auto scrollbar-hide">
                 {navigation.map((item) => (
                   <NavItem
                     key={item.name}
@@ -112,15 +133,6 @@ export default function Sidebar({
                   />
                 ))}
               </nav>
-
-              <div className="mt-auto pt-6">
-                <div className="text-xs text-slate-500 mb-3 font-mono uppercase tracking-wider">SYSTEM STATUS</div>
-                <div className="space-y-4">
-                  <StatusItem label="Core Systems" value={systemStatus} color="cyan" />
-                  <StatusItem label="Security" value={securityLevel} color="green" />
-                  <StatusItem label="Network" value={networkStatus} color="blue" />
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -128,8 +140,8 @@ export default function Sidebar({
 
       {/* Desktop sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:top-16 lg:bottom-0 z-40">
-        <div className="bg-slate-900 border border-slate-700/30 rounded-lg my-6 mx-3 h-full flex flex-col">
-          <div className="p-3 flex-1">
+        <div className="bg-slate-900 border border-slate-700/30 rounded-lg my-6 mx-3 h-full flex flex-col overflow-hidden">
+          <div className="p-3 flex-1 flex flex-col overflow-y-auto">
             {/* Subscription & SMS Credits Section */}
             <div className="mb-6">
               {/* SMS Credits with Pro Badge */}
@@ -161,7 +173,7 @@ export default function Sidebar({
               </div>
             </div>
 
-            <nav className="space-y-1 mb-8">
+            <nav className="space-y-1 mb-8 flex-1 overflow-y-auto scrollbar-hide">
               {navigation.map((item) => (
                 <NavItem
                   key={item.name}
@@ -172,15 +184,6 @@ export default function Sidebar({
                 />
               ))}
             </nav>
-
-            <div className="mt-auto pt-6">
-              <div className="text-xs text-slate-500 mb-3 font-mono uppercase tracking-wider">SYSTEM STATUS</div>
-              <div className="space-y-4">
-                <StatusItem label="Core Systems" value={systemStatus} color="cyan" />
-                <StatusItem label="Security" value={securityLevel} color="green" />
-                <StatusItem label="Network" value={networkStatus} color="blue" />
-              </div>
-            </div>
           </div>
         </div>
       </div>
