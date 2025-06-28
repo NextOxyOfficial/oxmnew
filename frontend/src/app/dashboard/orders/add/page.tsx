@@ -327,37 +327,6 @@ export default function AddOrderPage() {
     <div className="sm:p-6 p-1 space-y-6">
       <div className="max-w-7xl">
         {/* Page Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <button
-              onClick={() => router.back()}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-            >
-              <svg
-                className="w-6 h-6 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                Create New Order
-              </h1>
-              <p className="text-gray-400 text-sm sm:text-base mt-2">
-                Add customer information and order items
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Error Message */}
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
@@ -371,9 +340,29 @@ export default function AddOrderPage() {
             {/* Customer Information */}
             <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
               <div className="sm:p-4 p-2">
-                <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                  Customer Information
-                </h3>
+                <div className="flex items-center gap-1 mb-4">
+                  <button
+                    onClick={() => router.back()}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <svg
+                      className="w-6 h-6 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                  </button>
+                  <h3 className="text-lg font-semibold text-slate-200">
+                    Customer Information
+                  </h3>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
