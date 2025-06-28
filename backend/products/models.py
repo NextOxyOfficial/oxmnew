@@ -81,6 +81,53 @@ class Product(models.Model):
         return 0
 
     @property
+    def total_buy_price(self):
+        """Calculate total buy price (buy_price * stock for each variant)"""
+        if self.has_variants:
+            total = 0
+            for variant in self.variants.all():
+                total += variant.buy_price * variant.stock
+            return total
+        return self.buy_price * self.stock
+
+    @property
+    def total_sell_price(self):
+        """Calculate total sell price (sell_price * stock for each variant)"""
+        if self.has_variants:
+            total = 0
+            for variant in self.variants.all():
+                total += variant.sell_price * variant.stock
+            return total
+        return self.sell_price * self.stock
+
+    @property
+    def total_profit(self):
+        """Calculate total profit (total_sell_price - total_buy_price)"""
+        return self.total_sell_price - self.total_buy_price
+
+    @property
+    def total_quantity(self):
+        """Calculate total quantity (alias for total_stock for consistency)"""
+        return self.total_stock
+
+    @property
+    def sold(self):
+        """Calculate total sold quantity from sales"""
+        from django.db.models import Sum
+        total_sold = 0
+        if self.has_variants:
+            # Sum sales from all variants
+            for variant in self.variants.all():
+                variant_sold = variant.sales.aggregate(
+                    total=Sum('quantity'))['total'] or 0
+                total_sold += variant_sold
+        else:
+            # Sum sales from main product
+            total_sold = self.sales.aggregate(
+                total=Sum('quantity'))['total'] or 0
+        return total_sold
+
+    @property
     def variant_count(self):
         """Get number of variants for this product"""
         return self.variants.count() if self.has_variants else 0

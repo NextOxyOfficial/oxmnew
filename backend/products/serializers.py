@@ -43,6 +43,13 @@ class ProductListSerializer(serializers.ModelSerializer):
     supplier_name = serializers.CharField(
         source='supplier.name', read_only=True)
     total_stock = serializers.ReadOnlyField()
+    average_buy_price = serializers.ReadOnlyField()
+    average_sell_price = serializers.ReadOnlyField()
+    total_buy_price = serializers.ReadOnlyField()
+    total_sell_price = serializers.ReadOnlyField()
+    total_profit = serializers.ReadOnlyField()
+    total_quantity = serializers.ReadOnlyField()
+    sold = serializers.ReadOnlyField()
     profit_margin = serializers.ReadOnlyField()
     variant_count = serializers.ReadOnlyField()
     main_photo = serializers.ReadOnlyField()
@@ -52,6 +59,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'category_name', 'supplier_name', 'location',
             'has_variants', 'buy_price', 'sell_price', 'stock', 'total_stock',
+            'average_buy_price', 'average_sell_price', 'total_buy_price',
+            'total_sell_price', 'total_profit', 'total_quantity', 'sold',
             'profit_margin', 'variant_count', 'main_photo', 'is_active',
             'created_at', 'updated_at'
         ]
@@ -70,6 +79,11 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     total_stock = serializers.ReadOnlyField()
     average_buy_price = serializers.ReadOnlyField()
     average_sell_price = serializers.ReadOnlyField()
+    total_buy_price = serializers.ReadOnlyField()
+    total_sell_price = serializers.ReadOnlyField()
+    total_profit = serializers.ReadOnlyField()
+    total_quantity = serializers.ReadOnlyField()
+    sold = serializers.ReadOnlyField()
     profit_margin = serializers.ReadOnlyField()
     variant_count = serializers.ReadOnlyField()
     main_photo = serializers.ReadOnlyField()
@@ -79,8 +93,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'category', 'category_name', 'supplier', 'supplier_name',
             'location', 'details', 'has_variants', 'buy_price', 'sell_price', 'stock',
-            'total_stock', 'average_buy_price', 'average_sell_price', 'profit_margin',
-            'variant_count', 'main_photo', 'variants', 'photos', 'is_active',
+            'total_stock', 'average_buy_price', 'average_sell_price', 'total_buy_price',
+            'total_sell_price', 'total_profit', 'total_quantity', 'sold',
+            'profit_margin', 'variant_count', 'main_photo', 'variants', 'photos', 'is_active',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -119,7 +134,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
 class ProductCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating products with variants and photos"""
-    colorSizeVariants = serializers.JSONField(required=False, write_only=True, allow_null=True)
+    colorSizeVariants = serializers.JSONField(
+        required=False, write_only=True, allow_null=True)
     photos = serializers.ListField(
         child=serializers.ImageField(),
         required=False,
@@ -143,7 +159,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         """Validate product creation data"""
         has_variants = data.get('has_variants', False)
         variants_data = data.get('colorSizeVariants', [])
-        
+
         print("=== SERIALIZER VALIDATION DEBUG ===")
         print("has_variants:", has_variants)
         print("variants_data type:", type(variants_data))
@@ -157,11 +173,12 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             # Validate each variant
             for i, variant_data in enumerate(variants_data):
                 print(f"Validating variant {i+1}:", variant_data)
-                
+
                 buy_price = variant_data.get('buyPrice', 0)
                 sell_price = variant_data.get('sellPrice', 0)
-                
-                print(f"Variant {i+1} - buyPrice: {buy_price}, sellPrice: {sell_price}")
+
+                print(
+                    f"Variant {i+1} - buyPrice: {buy_price}, sellPrice: {sell_price}")
 
                 # Check if variant has at least one identifying field
                 color = variant_data.get('color', '').strip()
@@ -206,19 +223,20 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         print("=== VALIDATING colorSizeVariants ===")
         print("Type:", type(value))
         print("Value:", value)
-        
+
         if value is None:
             return value
-            
+
         if not isinstance(value, list):
             print("ERROR: colorSizeVariants is not a list")
-            raise serializers.ValidationError("colorSizeVariants must be a list")
-            
+            raise serializers.ValidationError(
+                "colorSizeVariants must be a list")
+
         # Ensure it's not a nested array
         if value and isinstance(value[0], list):
             print("WARNING: Detected nested array, flattening...")
             value = value[0]
-            
+
         print("Final validated value:", value)
         return value
 
@@ -238,7 +256,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         """Create product with variants and photos"""
         variants_data = validated_data.pop('colorSizeVariants', [])
         photos_data = validated_data.pop('photos', [])
-        
+
         print("=== SERIALIZER CREATE DEBUG ===")
         print("variants_data type:", type(variants_data))
         print("variants_data content:", variants_data)
@@ -276,7 +294,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                 # Remove None values
                 variant_create_data = {
                     k: v for k, v in variant_create_data.items() if v is not None}
-                
+
                 print(f"Creating variant with data:", variant_create_data)
                 ProductVariant.objects.create(**variant_create_data)
 
