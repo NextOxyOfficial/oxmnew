@@ -758,19 +758,10 @@ export default function ProductsPage() {
                     Product Name
                   </th>
                   <th className="py-3 px-4 text-sm font-medium text-gray-300">
-                    Category
+                    Stock & Sold
                   </th>
                   <th className="py-3 px-4 text-sm font-medium text-gray-300">
-                    Stock
-                  </th>
-                  <th className="py-3 px-4 text-sm font-medium text-gray-300">
-                    Sold
-                  </th>
-                  <th className="py-3 px-4 text-sm font-medium text-gray-300">
-                    Buy Price
-                  </th>
-                  <th className="py-3 px-4 text-sm font-medium text-gray-300">
-                    Sale Price
+                    Buy & Sale Price
                   </th>
                   <th className="py-3 px-4 text-sm font-medium text-gray-300">
                     Profit/Unit
@@ -791,52 +782,50 @@ export default function ProductsPage() {
                         onClick={() => handleProductClick(product)}
                         className="text-left group"
                       >
-                        <span className="text-sm font-medium text-white line-clamp-2 leading-tight group-hover:text-blue-400 cursor-pointer transition-colors">
+                        <div className="text-sm font-medium text-white line-clamp-2 leading-tight group-hover:text-blue-400 cursor-pointer transition-colors">
                           {product.name}
-                        </span>
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {product.category}
+                        </div>
                       </button>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm text-gray-300">
-                        {product.category}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-white">
-                          {product.stock} units
-                        </span>
-                        {product.stock < 5 && (
-                          <div title="Low Stock Warning">
-                            <svg
-                              className="w-4 h-4 text-yellow-500"
-                              fill="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </div>
-                        )}
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-white">
+                            {product.stock} units
+                          </span>
+                          {product.stock < 5 && (
+                            <div title="Low Stock Warning">
+                              <svg
+                                className="w-4 h-4 text-yellow-500"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {product.sold} sold
+                        </div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-sm text-green-400">
-                        {product.sold} units
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm font-medium text-red-400">
-                        ${product.buyPrice}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm font-medium text-green-400">
-                        ${product.salePrice}
-                      </span>
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-red-400">
+                          ${product.buyPrice}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          ${product.salePrice} sale
+                        </div>
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm font-bold text-purple-400">
