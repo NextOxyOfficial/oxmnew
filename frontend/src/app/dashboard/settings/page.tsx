@@ -909,6 +909,17 @@ export default function SettingsPage() {
                       </select>
                     </div>
                   </div>
+                  
+                  {/* Save Button */}
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      onClick={handleGeneralSettingsSave}
+                      disabled={loading}
+                      className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                    >
+                      {loading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Security */}

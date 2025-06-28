@@ -29,8 +29,13 @@ export default function DueBookPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState("");
   const [dateFilterType, setDateFilterType] = useState<"all" | "due_today" | "due_this_week" | "custom">("all");
+  const [isMounted, setIsMounted] = useState(false);
 
   // Mock data for demonstration
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   useEffect(() => {
     const mockData: DueCustomer[] = [
       {
@@ -99,6 +104,8 @@ export default function DueBookPage() {
 
   // Filter customers based on search and date
   useEffect(() => {
+    if (!isMounted) return;
+    
     let filtered = dueCustomers;
 
     // Apply search filter
@@ -137,7 +144,7 @@ export default function DueBookPage() {
     }
 
     setFilteredCustomers(filtered);
-  }, [dueCustomers, searchTerm, dateFilterType, dateFilter]);
+  }, [dueCustomers, searchTerm, dateFilterType, dateFilter, isMounted]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -163,6 +170,8 @@ export default function DueBookPage() {
   };
 
   const exportToCSV = () => {
+    if (!isMounted) return;
+    
     const headers = ['Customer Name', 'Email', 'Phone', 'Due Amount', 'Number of Payments', 'Payment Details'];
     const csvData = filteredCustomers.map(customer => [
       customer.name,
@@ -189,6 +198,8 @@ export default function DueBookPage() {
   };
 
   const exportToPDF = () => {
+    if (!isMounted) return;
+    
     // Create a simple HTML structure for PDF
     const htmlContent = `
       <!DOCTYPE html>
