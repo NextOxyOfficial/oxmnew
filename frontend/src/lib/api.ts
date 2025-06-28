@@ -512,11 +512,23 @@ export class ApiService {
 
     // Add variants data as JSON string
     if (productData.hasVariants && productData.colorSizeVariants) {
+      // Transform the variants to match backend field names
+      const transformedVariants = productData.colorSizeVariants.map((variant) => ({
+        color: variant.color || "",
+        size: variant.size || "",
+        weight: variant.weight,
+        weight_unit: variant.weight_unit,
+        custom_variant: variant.custom_variant,
+        buyPrice: variant.buyPrice,  // Backend expects camelCase for these
+        sellPrice: variant.sellPrice,
+        stock: variant.stock,
+      }));
+      
       formData.append(
         "colorSizeVariants",
-        JSON.stringify(productData.colorSizeVariants)
+        JSON.stringify(transformedVariants)
       );
-      console.log("Added colorSizeVariants:", productData.colorSizeVariants);
+      console.log("Added colorSizeVariants:", transformedVariants);
     }
 
     // Add photos

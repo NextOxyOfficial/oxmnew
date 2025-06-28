@@ -70,13 +70,22 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Handle colorSizeVariants JSON string
         if 'colorSizeVariants' in data and isinstance(data['colorSizeVariants'], str):
             try:
-                data['colorSizeVariants'] = json.loads(
-                    data['colorSizeVariants'])
-                print("Parsed colorSizeVariants:", data['colorSizeVariants'])
+                parsed_variants = json.loads(data['colorSizeVariants'])
+                
+                # Handle case where the variants might be nested in another array
+                # This can happen if the data gets processed multiple times
+                if isinstance(parsed_variants, list) and len(parsed_variants) == 1 and isinstance(parsed_variants[0], list):
+                    print("Detected nested array in colorSizeVariants, flattening...")
+                    parsed_variants = parsed_variants[0]
+                
+                data['colorSizeVariants'] = parsed_variants
+                print("Parsed colorSizeVariants:", parsed_variants)
+                print("Type after parsing:", type(parsed_variants))
             except json.JSONDecodeError as e:
                 print("JSON decode error:", str(e))
+                print("Raw colorSizeVariants data:", repr(data['colorSizeVariants']))
                 return Response(
-                    {'error': 'Invalid colorSizeVariants JSON'},
+                    {'error': f'Invalid colorSizeVariants JSON: {str(e)}'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -98,20 +107,55 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         print("Final data for serializer:", {k: v for k, v in data.items() if k != 'photos'})
         print("Photos in data:", len(photos))
+        
+        # Debug colorSizeVariants specifically
+        if 'colorSizeVariants' in data:
+            print("=== colorSizeVariants DEBUG ===")
+            print("Type:", type(data['colorSizeVariants']))
+            print("Value:", data['colorSizeVariants'])
+            print("Is list?", isinstance(data['colorSizeVariants'], list))
+            if isinstance(data['colorSizeVariants'], list) and data['colorSizeVariants']:
+                print("First element type:", type(data['colorSizeVariants'][0]))
+                print("First element:", data['colorSizeVariants'][0])
+        else:
+            print("colorSizeVariants not in data")
 
         # Don't add photos to data - handle them separately
         # Remove any photos from data to avoid validation issues
         if 'photos' in data:
             del data['photos']
 
-        # Create serializer without photos first
-        serializer = self.get_serializer(data=data)
+        # Prepare clean data for serializer to avoid QueryDict nesting issues
+        serializer_data = {}
+        for key, value in data.items():
+            if key == 'colorSizeVariants' and isinstance(value, list):
+                # Ensure we pass the list directly, not nested
+                if value and isinstance(value[0], list):
+                    print("WARNING: Flattening nested colorSizeVariants before serializer")
+                    serializer_data[key] = value[0]
+                else:
+                    serializer_data[key] = value
+            else:
+                serializer_data[key] = value
+
+        print("=== SERIALIZER INPUT DATA ===")
+        print("serializer_data:", serializer_data)
+        if 'colorSizeVariants' in serializer_data:
+            print("colorSizeVariants type:", type(serializer_data['colorSizeVariants']))
+            print("colorSizeVariants value:", serializer_data['colorSizeVariants'])
+
+        # Create serializer with clean data
+        serializer = self.get_serializer(data=serializer_data)
+        print("Serializer data before validation:", serializer.initial_data)
+        
         if serializer.is_valid():
+            print("Serializer is valid, proceeding to save")
             # Save the product first
             product = serializer.save()
             
             # Now handle photos separately
             if photos:
+                print(f"Creating {len(photos)} ProductPhoto objects")
                 for i, photo in enumerate(photos):
                     ProductPhoto.objects.create(
                         product=product,
