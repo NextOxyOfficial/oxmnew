@@ -14,6 +14,15 @@ interface Customer {
   address?: string;
 }
 
+// Employee interface
+interface Employee {
+  id: number;
+  name: string;
+  email: string;
+  department?: string;
+  position?: string;
+}
+
 // Types for the order
 interface OrderItem {
   id: string;
@@ -42,18 +51,25 @@ interface OrderForm {
   discount_amount: number;
   vat_percentage: number;
   vat_amount: number;
+  due_amount: number;
   total: number;
   due_date: string;
   notes: string;
   status: "draft" | "pending" | "confirmed";
+  // Internal company fields (not shown on invoice)
+  employee_id?: number;
+  incentive_amount: number;
+  net_profit: number; // total - incentive_amount
 }
 
 export default function AddOrderPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customerType, setCustomerType] = useState<"existing" | "guest">("existing");
@@ -74,10 +90,15 @@ export default function AddOrderPage() {
     discount_amount: 0,
     vat_percentage: 0,
     vat_amount: 0,
+    due_amount: 0,
     total: 0,
     due_date: "",
     notes: "",
     status: "draft",
+    // Internal company fields
+    employee_id: undefined,
+    incentive_amount: 0,
+    net_profit: 0,
   });
 
   // State for adding new items
@@ -91,6 +112,7 @@ export default function AddOrderPage() {
   useEffect(() => {
     fetchProducts();
     fetchCustomers();
+    fetchEmployees();
     // Set default due date to 30 days from now
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30);
@@ -156,32 +178,88 @@ export default function AddOrderPage() {
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      setIsLoadingEmployees(true);
+      // Mock employee data - replace with actual API call when available
+      const mockEmployees: Employee[] = [
+        {
+          id: 1,
+          name: "Sarah Johnson",
+          email: "sarah@company.com",
+          department: "Sales",
+          position: "Sales Manager"
+        },
+        {
+          id: 2,
+          name: "Mike Chen",
+          email: "mike@company.com",
+          department: "Sales",
+          position: "Sales Representative"
+        },
+        {
+          id: 3,
+          name: "Emily Davis",
+          email: "emily@company.com",
+          department: "Sales",
+          position: "Account Executive"
+        },
+        {
+          id: 4,
+          name: "James Wilson",
+          email: "james@company.com",
+          department: "Sales",
+          position: "Sales Associate"
+        },
+        {
+          id: 5,
+          name: "Lisa Brown",
+          email: "lisa@company.com",
+          department: "Marketing",
+          position: "Marketing Coordinator"
+        }
+      ];
+      setEmployees(mockEmployees);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      setError("Failed to load employees");
+    } finally {
+      setIsLoadingEmployees(false);
+    }
+  };
+
   // Calculate totals
   const calculateTotals = (
     items: OrderItem[],
     discountPercentage: number,
-    vatPercentage: number
+    vatPercentage: number,
+    dueAmount: number,
+    incentiveAmount: number
   ) => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const discountAmount = (subtotal * discountPercentage) / 100;
     const afterDiscount = subtotal - discountAmount;
     const vatAmount = (afterDiscount * vatPercentage) / 100;
-    const total = afterDiscount + vatAmount;
+    const total = afterDiscount + vatAmount - dueAmount;
+    const netProfit = total - incentiveAmount;
 
     return {
       subtotal,
       discountAmount,
       vatAmount,
       total,
+      netProfit,
     };
   };
 
-  // Update totals when items, discount, or VAT changes
+  // Update totals when items, discount, VAT, due amount, or incentive changes
   useEffect(() => {
-    const { subtotal, discountAmount, vatAmount, total } = calculateTotals(
+    const { subtotal, discountAmount, vatAmount, total, netProfit } = calculateTotals(
       orderForm.items,
       orderForm.discount_percentage,
-      orderForm.vat_percentage
+      orderForm.vat_percentage,
+      orderForm.due_amount,
+      orderForm.incentive_amount
     );
 
     setOrderForm((prev) => ({
@@ -190,11 +268,14 @@ export default function AddOrderPage() {
       discount_amount: discountAmount,
       vat_amount: vatAmount,
       total,
+      net_profit: netProfit,
     }));
   }, [
     orderForm.items,
     orderForm.discount_percentage,
     orderForm.vat_percentage,
+    orderForm.due_amount,
+    orderForm.incentive_amount,
   ]);
 
   // Handle customer info changes
@@ -751,7 +832,7 @@ export default function AddOrderPage() {
                 </div>
 
                 {/* Add Item Form */}
-                <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-4">
+                <div>
                   <h4 className="text-sm font-medium text-slate-300 mb-3">
                     Add New Item
                   </h4>
@@ -852,9 +933,6 @@ export default function AddOrderPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400">Discount:</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-100">
-                          -{formatCurrency(orderForm.discount_amount)}
-                        </span>
                         <input
                           type="number"
                           value={orderForm.discount_percentage === 0 ? "" : orderForm.discount_percentage}
@@ -865,13 +943,16 @@ export default function AddOrderPage() {
                                 parseFloat(e.target.value) || 0,
                             }))
                           }
-                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           placeholder=""
                           min="0"
                           max="100"
                           step="0.01"
                         />
                         <span className="text-slate-400 text-sm">%</span>
+                        <span className="text-slate-100">
+                          -{formatCurrency(orderForm.discount_amount)}
+                        </span>
                       </div>
                     </div>
 
@@ -879,9 +960,6 @@ export default function AddOrderPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400">VAT:</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-100">
-                          {formatCurrency(orderForm.vat_amount)}
-                        </span>
                         <input
                           type="number"
                           value={orderForm.vat_percentage === 0 ? "" : orderForm.vat_percentage}
@@ -891,13 +969,41 @@ export default function AddOrderPage() {
                               vat_percentage: parseFloat(e.target.value) || 0,
                             }))
                           }
-                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           placeholder="0"
                           min="0"
                           max="100"
                           step="0.01"
                         />
                         <span className="text-slate-400 text-sm">%</span>
+                        <span className="text-slate-100">
+                          {formatCurrency(orderForm.vat_amount)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Due */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400">Due:</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={orderForm.due_amount === 0 ? "" : orderForm.due_amount}
+                          onChange={(e) =>
+                            setOrderForm((prev) => ({
+                              ...prev,
+                              due_amount: parseFloat(e.target.value) || 0,
+                            }))
+                          }
+                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="0"
+                          min="0"
+                          step="0.01"
+                        />
+                        <span className="text-slate-400 text-sm">$</span>
+                        <span className="text-slate-100">
+                          -{formatCurrency(orderForm.due_amount)}
+                        </span>
                       </div>
                     </div>
 
@@ -915,55 +1021,95 @@ export default function AddOrderPage() {
               {/* Order Settings */}
               <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
                 <div className="sm:p-4 p-2">
-                  <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                    Order Settings
-                  </h3>
-
                   <div className="space-y-4">
+                    {/* Incentive Section - Company Internal */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Due Date
-                      </label>
-                      <input
-                        type="date"
-                        value={orderForm.due_date}
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            due_date: e.target.value,
-                          }))
-                        }
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      />
-                    </div>
+                      <h4 className="text-sm font-medium text-slate-300 mb-3 text-orange-400">
+                        Sales Incentive (Internal)
+                      </h4>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                            Employee
+                          </label>
+                          <select
+                            value={orderForm.employee_id || ""}
+                            onChange={(e) =>
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                employee_id: e.target.value ? parseInt(e.target.value) : undefined,
+                              }))
+                            }
+                            disabled={isLoadingEmployees}
+                            className={`w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                              isLoadingEmployees ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                          >
+                            <option value="" className="bg-slate-800">
+                              {isLoadingEmployees ? "Loading employees..." : "Select employee (optional)"}
+                            </option>
+                            {employees.map((employee) => (
+                              <option
+                                key={employee.id}
+                                value={employee.id}
+                                className="bg-slate-800"
+                              >
+                                {employee.name} - {employee.position}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Notes
-                      </label>
-                      <textarea
-                        value={orderForm.notes}
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            notes: e.target.value,
-                          }))
-                        }
-                        rows={3}
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        placeholder="Order notes..."
-                      />
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                            Incentive Amount
+                          </label>
+                          <input
+                            type="number"
+                            value={orderForm.incentive_amount === 0 ? "" : orderForm.incentive_amount}
+                            onChange={(e) =>
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                incentive_amount: parseFloat(e.target.value) || 0,
+                              }))
+                            }
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+
+                        {/* Net Profit Display */}
+                        {orderForm.total > 0 && (
+                          <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-3">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm text-slate-400">Order Total:</span>
+                              <span className="text-sm text-slate-100">{formatCurrency(orderForm.total)}</span>
+                            </div>
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm text-slate-400">Incentive:</span>
+                              <span className="text-sm text-orange-400">-{formatCurrency(orderForm.incentive_amount)}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
+                              <span className="text-sm font-medium text-slate-300">Net Profit:</span>
+                              <span className="text-sm font-semibold text-green-400">{formatCurrency(orderForm.net_profit)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="space-y-3">
+              <div className="flex gap-3">
                 <button
                   onClick={() => handleSubmit("pending")}
                   disabled={isSubmitting || orderForm.items.length === 0}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
                 >
                   {isSubmitting ? "Creating..." : "Create Order"}
                 </button>
@@ -971,7 +1117,7 @@ export default function AddOrderPage() {
                 <button
                   onClick={() => handleSubmit("draft")}
                   disabled={isSubmitting || orderForm.items.length === 0}
-                  className="w-full px-6 py-3 bg-slate-600 text-slate-100 text-sm font-medium rounded-lg hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 transition-all duration-200"
+                  className="flex-1 px-6 py-3 bg-slate-600 text-slate-100 text-sm font-medium rounded-lg hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 transition-all duration-200"
                 >
                   Save as Draft
                 </button>
