@@ -5,6 +5,15 @@ import { useRouter } from "next/navigation";
 import { ApiService } from "@/lib/api";
 import { Product } from "@/types/product";
 
+// Customer interface
+interface Customer {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  address?: string;
+}
+
 // Types for the order
 interface OrderItem {
   id: string;
@@ -43,9 +52,13 @@ interface OrderForm {
 export default function AddOrderPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customerType, setCustomerType] = useState<"existing" | "guest">("existing");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
 
   // Order form state
   const [orderForm, setOrderForm] = useState<OrderForm>({
@@ -79,6 +92,7 @@ export default function AddOrderPage() {
 
   useEffect(() => {
     fetchProducts();
+    fetchCustomers();
     // Set default due date to 30 days from now
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30);
@@ -98,6 +112,49 @@ export default function AddOrderPage() {
       setError("Failed to load products");
     } finally {
       setIsLoadingProducts(false);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      setIsLoadingCustomers(true);
+      // Mock customer data - replace with actual API call when available
+      const mockCustomers: Customer[] = [
+        {
+          id: 1,
+          name: "John Doe",
+          email: "john@example.com",
+          phone: "+1 (555) 123-4567",
+          address: "123 Main St, New York, NY 10001"
+        },
+        {
+          id: 2,
+          name: "Jane Smith",
+          email: "jane@example.com",
+          phone: "+1 (555) 234-5678",
+          address: "456 Oak Ave, Los Angeles, CA 90210"
+        },
+        {
+          id: 3,
+          name: "Bob Wilson",
+          email: "bob@example.com",
+          phone: "+1 (555) 345-6789",
+          address: "789 Pine St, Chicago, IL 60601"
+        },
+        {
+          id: 4,
+          name: "Alice Johnson",
+          email: "alice@example.com",
+          phone: "+1 (555) 456-7890",
+          address: "321 Elm Dr, Miami, FL 33101"
+        }
+      ];
+      setCustomers(mockCustomers);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      setError("Failed to load customers");
+    } finally {
+      setIsLoadingCustomers(false);
     }
   };
 
@@ -153,6 +210,75 @@ export default function AddOrderPage() {
       customer: {
         ...prev.customer,
         [field]: value,
+      },
+    }));
+  };
+
+  // Handle customer selection
+  const handleCustomerSelection = (customerId: number) => {
+    if (customerId) {
+      setCustomerType("existing");
+      setSelectedCustomerId(customerId);
+      const selectedCustomer = customers.find(c => c.id === customerId);
+      if (selectedCustomer) {
+        setOrderForm((prev) => ({
+          ...prev,
+          customer: {
+            name: selectedCustomer.name,
+            email: selectedCustomer.email,
+            phone: selectedCustomer.phone,
+            address: selectedCustomer.address || "",
+            company: "",
+          },
+        }));
+      }
+    } else {
+      // If no customer selected, reset to neutral state (no customer type selected)
+      setCustomerType("existing");
+      setSelectedCustomerId(null);
+      setOrderForm((prev) => ({
+        ...prev,
+        customer: {
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          company: "",
+        },
+      }));
+    }
+  };
+
+  // Handle customer type change
+  const handleCustomerTypeChange = (type: "existing" | "guest") => {
+    setCustomerType(type);
+    if (type === "guest") {
+      setSelectedCustomerId(null);
+      setOrderForm((prev) => ({
+        ...prev,
+        customer: {
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          company: "",
+        },
+      }));
+    }
+  };
+
+  // Handle new customer selection
+  const handleGuestCustomer = () => {
+    setCustomerType("guest");
+    setSelectedCustomerId(null);
+    setOrderForm((prev) => ({
+      ...prev,
+      customer: {
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        company: "",
       },
     }));
   };
@@ -340,7 +466,7 @@ export default function AddOrderPage() {
             {/* Customer Information */}
             <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
               <div className="sm:p-4 p-2">
-                <div className="flex items-center gap-1 mb-4">
+                <div className="flex items-center gap-4 mb-4">
                   <button
                     onClick={() => router.back()}
                     className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
@@ -364,78 +490,152 @@ export default function AddOrderPage() {
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      Customer Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={orderForm.customer.name}
-                      onChange={(e) =>
-                        handleCustomerChange("name", e.target.value)
-                      }
-                      className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      placeholder="Enter customer name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      Company
-                    </label>
-                    <input
-                      type="text"
-                      value={orderForm.customer.company}
-                      onChange={(e) =>
-                        handleCustomerChange("company", e.target.value)
-                      }
-                      className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      placeholder="Company name (optional)"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={orderForm.customer.email}
-                      onChange={(e) =>
-                        handleCustomerChange("email", e.target.value)
-                      }
-                      className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      placeholder="customer@email.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      value={orderForm.customer.phone}
-                      onChange={(e) =>
-                        handleCustomerChange("phone", e.target.value)
-                      }
-                      className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      placeholder="Phone number"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      Address
-                    </label>
-                    <textarea
-                      value={orderForm.customer.address}
-                      onChange={(e) =>
-                        handleCustomerChange("address", e.target.value)
-                      }
-                      rows={2}
-                      className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      placeholder="Customer address"
-                    />
+                {/* Customer Selection Row */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Customer Selection
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    {/* Customer Dropdown */}
+                    <div className="flex-1">
+                      <select
+                        value={selectedCustomerId || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value) {
+                            handleCustomerSelection(parseInt(value));
+                          } else {
+                            handleCustomerSelection(0); // This will trigger guest mode
+                          }
+                        }}
+                        disabled={isLoadingCustomers}
+                        className={`w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                          isLoadingCustomers ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        <option value="" className="bg-slate-800">
+                          {isLoadingCustomers ? "Loading customers..." : "Select a customer"}
+                        </option>
+                        {customers.map((customer) => (
+                          <option
+                            key={customer.id}
+                            value={customer.id}
+                            className="bg-slate-800"
+                          >
+                            {customer.name} ({customer.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* New Customer Checkbox */}
+                    <div className="flex items-center">
+                      <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={customerType === "guest"}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleGuestCustomer();
+                            } else {
+                              // If unchecked, switch to existing customer mode and clear form
+                              setCustomerType("existing");
+                              setSelectedCustomerId(null);
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                customer: {
+                                  name: "",
+                                  email: "",
+                                  phone: "",
+                                  address: "",
+                                  company: "",
+                                },
+                              }));
+                            }
+                          }}
+                          className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2 rounded"
+                        />
+                        <span className="text-slate-300">New Customer</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
+
+                {/* New Customer Form */}
+                {customerType === "guest" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Customer Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={orderForm.customer.name}
+                        onChange={(e) =>
+                          handleCustomerChange("name", e.target.value)
+                        }
+                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                        placeholder="Enter customer name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Company
+                      </label>
+                      <input
+                        type="text"
+                        value={orderForm.customer.company}
+                        onChange={(e) =>
+                          handleCustomerChange("company", e.target.value)
+                        }
+                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                        placeholder="Company name (optional)"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={orderForm.customer.email}
+                        onChange={(e) =>
+                          handleCustomerChange("email", e.target.value)
+                        }
+                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                        placeholder="customer@email.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={orderForm.customer.phone}
+                        onChange={(e) =>
+                          handleCustomerChange("phone", e.target.value)
+                        }
+                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                        placeholder="Phone number"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Address
+                      </label>
+                      <textarea
+                        value={orderForm.customer.address}
+                        onChange={(e) =>
+                          handleCustomerChange("address", e.target.value)
+                        }
+                        rows={2}
+                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                        placeholder="Customer address"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
