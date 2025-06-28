@@ -52,7 +52,7 @@ export class ApiService {
     const skipAuth =
       options.headers &&
       "Authorization" in options.headers &&
-      (options.headers as any)["Authorization"] === null;
+      (options.headers as Record<string, unknown>)["Authorization"] === null;
     if (token && !skipAuth) {
       (headers as Record<string, string>)["Authorization"] = `Token ${token}`;
     }
@@ -64,8 +64,6 @@ export class ApiService {
 
     try {
       const response = await fetch(url, config);
-
-      console.log(`Response status: ${response.status}`);
 
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
@@ -89,12 +87,12 @@ export class ApiService {
               errorMessage = fieldErrors.join("; ");
             }
           }
-        } catch (e) {
+        } catch {
           // If response is not JSON, use status text
           errorMessage = response.statusText || errorMessage;
         }
         const error = new Error(errorMessage);
-        (error as any).details = errorDetails;
+        (error as Error & { details?: unknown }).details = errorDetails;
         throw error;
       }
 
@@ -123,21 +121,21 @@ export class ApiService {
     return this.request(endpoint, { method: "GET" });
   }
 
-  static async post(endpoint: string, data: any) {
+  static async post(endpoint: string, data: unknown) {
     return this.request(endpoint, {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  static async put(endpoint: string, data: any) {
+  static async put(endpoint: string, data: unknown) {
     return this.request(endpoint, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
-  static async patch(endpoint: string, data: any) {
+  static async patch(endpoint: string, data: unknown) {
     return this.request(endpoint, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -152,14 +150,14 @@ export class ApiService {
   static async healthCheck() {
     return this.request("/health/", {
       method: "GET",
-      headers: { Authorization: null } as any, // No auth needed
+      headers: { Authorization: null as unknown as string }, // No auth needed
     });
   }
 
   static async getApiRoot() {
     return this.request("/", {
       method: "GET",
-      headers: { Authorization: null } as any, // No auth needed
+      headers: { Authorization: null as unknown as string }, // No auth needed
     });
   }
 
@@ -732,7 +730,7 @@ export class ApiService {
       });
     } else {
       // For simple updates like status, use JSON
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
 
       if (purchaseData.supplier) updateData.supplier = purchaseData.supplier;
       if (purchaseData.date) updateData.date = purchaseData.date;
@@ -841,7 +839,7 @@ export class ApiService {
       });
     } else {
       // For simple updates like status, use JSON
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
 
       if (paymentData.supplier) updateData.supplier = paymentData.supplier;
       if (paymentData.date) updateData.date = paymentData.date;
