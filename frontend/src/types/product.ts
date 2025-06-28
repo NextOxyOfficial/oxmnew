@@ -23,7 +23,13 @@ export interface Product {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  
+
+  // Backend calculated totals for variant products
+  total_buy_price?: number;
+  total_sell_price?: number;
+  total_profit?: number;
+  total_quantity?: number;
+
   // Legacy fields for backward compatibility
   sku?: string;
   price?: number;
