@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, DollarSign, User, Award, ClipboardList, FileText, X, Upload, Download, Trash2, Star, Gift, TrendingUp, Clock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, DollarSign, User, Award, ClipboardList, FileText, X, Upload, Download, Trash2, Star, Gift, TrendingUp, Clock, CheckCircle2, StickyNote, MessageSquare } from "lucide-react";
 
 interface Employee {
   id: number;
@@ -95,6 +95,14 @@ export default function EmployeeDetailsPage() {
   });
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [showIncentiveModal, setShowIncentiveModal] = useState(false);
+  const [newIncentive, setNewIncentive] = useState({
+    title: '',
+    description: '',
+    amount: '',
+    type: 'bonus' as 'bonus' | 'commission' | 'achievement' | 'performance'
+  });
+  const [isAddingIncentive, setIsAddingIncentive] = useState(false);
   const [newDocument, setNewDocument] = useState({
     name: '',
     category: 'other' as Document['category'],
@@ -271,6 +279,38 @@ export default function EmployeeDetailsPage() {
       alert('Document deleted successfully!');
     } catch (error) {
       alert('Failed to delete document. Please try again.');
+    }
+  };
+
+  const handleAddIncentive = async () => {
+    if (!newIncentive.title || !newIncentive.amount) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    setIsAddingIncentive(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const incentive: Incentive = {
+        id: Date.now(),
+        title: newIncentive.title,
+        description: newIncentive.description,
+        amount: parseFloat(newIncentive.amount),
+        date_awarded: new Date().toISOString(),
+        type: newIncentive.type,
+        status: 'pending'
+      };
+
+      setIncentives(prev => [incentive, ...prev]);
+      setNewIncentive({ title: '', description: '', amount: '', type: 'bonus' });
+      setShowIncentiveModal(false);
+      alert('Incentive added successfully!');
+    } catch (error) {
+      alert('Failed to add incentive. Please try again.');
+    } finally {
+      setIsAddingIncentive(false);
     }
   };
 
@@ -650,7 +690,10 @@ export default function EmployeeDetailsPage() {
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <h4 className="text-lg font-medium text-slate-100">Incentives & Bonuses</h4>
-                    <button className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer">
+                    <button 
+                      onClick={() => setShowIncentiveModal(true)}
+                      className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
+                    >
                       Add Incentive
                     </button>
                   </div>
@@ -662,12 +705,10 @@ export default function EmployeeDetailsPage() {
                           {/* Table Header */}
                           <div className="px-6 py-3 bg-white/5 border-b border-white/10">
                             <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
-                              <div className="col-span-2">Date</div>
-                              <div className="col-span-2">Type</div>
-                              <div className="col-span-2">Status</div>
-                              <div className="col-span-2">Amount</div>
-                              <div className="col-span-2">Note</div>
-                              <div className="col-span-2">Actions</div>
+                              <div className="col-span-3">Date</div>
+                              <div className="col-span-3">Type</div>
+                              <div className="col-span-3">Amount</div>
+                              <div className="col-span-3">Actions</div>
                             </div>
                           </div>
                           
@@ -676,10 +717,10 @@ export default function EmployeeDetailsPage() {
                             {incentives.map((incentive) => (
                               <div key={incentive.id} className="px-6 py-4 hover:bg-white/5 transition-colors">
                                 <div className="grid grid-cols-12 gap-4 items-center">
-                                  <div className="col-span-2">
+                                  <div className="col-span-3">
                                     <p className="text-sm font-medium text-slate-100">{formatDate(incentive.date_awarded)}</p>
                                   </div>
-                                  <div className="col-span-2">
+                                  <div className="col-span-3">
                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                       incentive.type === 'bonus' ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30' :
                                       incentive.type === 'commission' ? 'bg-purple-500/20 text-purple-300 border border-purple-400/30' :
@@ -689,32 +730,22 @@ export default function EmployeeDetailsPage() {
                                       {incentive.type}
                                     </span>
                                   </div>
-                                  <div className="col-span-2">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(incentive.status)}`}>
-                                      {incentive.status}
-                                    </span>
-                                  </div>
-                                  <div className="col-span-2">
+                                  <div className="col-span-3">
                                     <p className="text-sm font-semibold text-green-300">{formatCurrency(incentive.amount)}</p>
                                   </div>
-                                  <div className="col-span-2">
-                                    <p className="text-sm text-slate-300 truncate" title={`${incentive.title}: ${incentive.description}`}>
-                                      {incentive.title}
-                                    </p>
-                                  </div>
-                                  <div className="col-span-2">
+                                  <div className="col-span-3">
                                     <div className="flex items-center space-x-2">
-                                      <button className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.014 8.014 0 01-4.24-1.2L3 21l2.2-5.76A8.014 8.014 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+                                      <button className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50" title="Send SMS notification">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-square w-4 h-4" aria-hidden="true">
+                                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                                         </svg>
                                         <span>SMS</span>
                                       </button>
-                                      <button className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        <span>Edit</span>
+                                      <button 
+                                        className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer" 
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
                                       </button>
                                     </div>
                                   </div>
@@ -1031,6 +1062,106 @@ export default function EmployeeDetailsPage() {
                     className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                   >
                     {uploadingFile ? 'Uploading...' : 'Upload Document'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Incentive Modal */}
+        {showIncentiveModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                  <h2 className="text-xl font-semibold text-slate-100">Add Incentive</h2>
+                  <button 
+                    onClick={() => setShowIncentiveModal(false)}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-4">
+                  {/* Incentive Title */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Incentive Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={newIncentive.title}
+                      onChange={(e) => setNewIncentive({ ...newIncentive, title: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter incentive title"
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={newIncentive.description}
+                      onChange={(e) => setNewIncentive({ ...newIncentive, description: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
+                      placeholder="Enter description (optional)"
+                    />
+                  </div>
+
+                  {/* Amount */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Amount *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newIncentive.amount}
+                      onChange={(e) => setNewIncentive({ ...newIncentive, amount: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter amount"
+                    />
+                  </div>
+
+                  {/* Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Type *
+                    </label>
+                    <select
+                      value={newIncentive.type}
+                      onChange={(e) => setNewIncentive({ ...newIncentive, type: e.target.value as 'bonus' | 'commission' | 'achievement' | 'performance' })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
+                    >
+                      <option value="bonus">Bonus</option>
+                      <option value="commission">Commission</option>
+                      <option value="achievement">Achievement</option>
+                      <option value="performance">Performance</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={() => setShowIncentiveModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddIncentive}
+                    disabled={isAddingIncentive || !newIncentive.title || !newIncentive.amount}
+                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                  >
+                    {isAddingIncentive ? 'Adding...' : 'Add Incentive'}
                   </button>
                 </div>
               </div>
