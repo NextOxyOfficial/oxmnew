@@ -1167,47 +1167,27 @@ export default function AddOrderPage() {
                     </div>
 
                     {/* Due */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Due:</span>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            value={orderForm.due_amount === 0 ? "" : orderForm.due_amount}
-                            onChange={(e) =>
-                              setOrderForm((prev) => ({
-                                ...prev,
-                                due_amount: parseFloat(e.target.value) || 0,
-                              }))
-                            }
-                            className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder="0"
-                            min="0"
-                            step="0.01"
-                          />
-                          <span className="text-slate-400 text-sm">$</span>
-                          <span className="text-slate-100">
-                            {orderForm.apply_due_to_total ? "-" : ""}{formatCurrency(orderForm.due_amount)}
-                          </span>
-                        </div>
-                      </div>
-                      {/* Checkbox to include due in total */}
-                      <div className="flex items-center gap-2 ml-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400">Due:</span>
+                      <div className="flex items-center gap-2">
                         <input
-                          type="checkbox"
-                          id="apply-due-to-total"
-                          checked={orderForm.apply_due_to_total}
+                          type="number"
+                          value={orderForm.due_amount === 0 ? "" : orderForm.due_amount}
                           onChange={(e) =>
                             setOrderForm((prev) => ({
                               ...prev,
-                              apply_due_to_total: e.target.checked,
+                              due_amount: parseFloat(e.target.value) || 0,
                             }))
                           }
-                          className="w-3 h-3 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-1 rounded"
+                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="0"
+                          min="0"
+                          step="0.01"
                         />
-                        <label htmlFor="apply-due-to-total" className="text-xs text-slate-400 cursor-pointer">
-                          Apply due amount to total
-                        </label>
+                        <span className="text-slate-400 text-sm">$</span>
+                        <span className="text-slate-100">
+                          -{formatCurrency(orderForm.due_amount)}
+                        </span>
                       </div>
                     </div>
 
