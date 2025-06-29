@@ -7,10 +7,8 @@ import {
   Mail,
   Phone,
   MapPin,
-  Calendar,
   DollarSign,
   ShoppingBag,
-  Star,
   Gift,
   Trophy,
   FileText,
@@ -1138,15 +1136,16 @@ export default function CustomerDetailsPage() {
             {activeTab === "achievements" && (
               <div className="space-y-6">
                 <div>
-                  <div className="flex items-center justify-between mb-6">
-                    <h4 className="text-lg font-medium text-slate-100">
-                      Achievements
+                  {/* Points Summary and Redeem Section */}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Customer Achievements
                     </h4>
-                    <div className="flex items-center space-x-3">
-                      <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
+                      <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
-                          <Trophy className="h-4 w-4 text-amber-400" />
-                          <span className="text-amber-300 font-semibold text-sm">
+                          <Trophy className="h-5 w-5 text-amber-400" />
+                          <span className="text-amber-300 font-semibold">
                             {achievements.reduce(
                               (total, achievement) =>
                                 total + achievement.points,
@@ -1155,6 +1154,9 @@ export default function CustomerDetailsPage() {
                             Total Points
                           </span>
                         </div>
+                        <span className="text-slate-400 text-sm">
+                          {achievements.length} achievements earned
+                        </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <input
@@ -1167,7 +1169,7 @@ export default function CustomerDetailsPage() {
                             (total, achievement) => total + achievement.points,
                             0
                           )}
-                          className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm w-32"
+                          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 backdrop-blur-sm"
                         />
                         <button
                           onClick={handleRedeemPoints}
@@ -1178,83 +1180,69 @@ export default function CustomerDetailsPage() {
                           }
                           className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                         >
-                          {isRedeeming ? "Redeeming..." : "Redeem"}
+                          {isRedeeming ? "Redeeming..." : "Redeem Points"}
                         </button>
                       </div>
-                      <div className="text-sm text-slate-400">
-                        {achievements.length} achievements earned
-                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {achievements.map((achievement) => (
-                      <div
-                        key={achievement.id}
-                        className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 border border-amber-500/30 rounded-lg p-5 relative overflow-hidden"
-                      >
-                        {/* Achievement Card Header */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-amber-500/20 rounded-lg">
-                              <span className="text-2xl">
-                                {achievement.icon}
-                              </span>
-                            </div>
-                            <div>
-                              <h5 className="text-lg font-semibold text-white">
-                                {achievement.title}
-                              </h5>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Trophy className="h-4 w-4 text-amber-400" />
-                                <span className="text-amber-400 font-medium text-sm">
-                                  {achievement.points} points
-                                </span>
+
+                  {/* Achievements List */}
+                  <div className="mb-8">
+                    <div className="max-w-4xl">
+                      {achievements.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400">
+                          <Trophy className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-slate-400 mb-2">
+                            No Achievements Yet
+                          </h3>
+                          <p className="text-slate-500">
+                            Complete actions to earn achievements and points.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                          {achievements.map((achievement) => (
+                            <div
+                              key={achievement.id}
+                              className="group bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-all duration-200"
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 bg-amber-500/20 border border-amber-500/30 rounded-lg flex items-center justify-center text-lg">
+                                    {achievement.icon}
+                                  </div>
+                                  <div>
+                                    <h5 className="font-medium text-white text-sm leading-tight">
+                                      {achievement.title}
+                                    </h5>
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full text-xs font-medium">
+                                        ⭐ {achievement.points} pts
+                                      </span>
+                                      <span className="px-2 py-0.5 bg-green-500/20 text-green-300 rounded-full text-xs font-medium">
+                                        Completed
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="bg-slate-900/30 rounded p-2">
+                                <div className="text-xs text-slate-300 mb-1">
+                                  <strong>Description:</strong>{" "}
+                                  {achievement.description}
+                                </div>
+                                <div className="text-xs text-slate-300">
+                                  <strong>Earned:</strong>{" "}
+                                  {formatDate(achievement.date_earned)}
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
-
-                        {/* Achievement Details */}
-                        <div className="space-y-3 mb-4">
-                          <p className="text-slate-300 text-sm">
-                            {achievement.description}
-                          </p>
-                          <div className="flex items-center space-x-2">
-                            <Calendar className="h-4 w-4 text-slate-400" />
-                            <span className="text-slate-400 text-sm">
-                              Earned on {formatDate(achievement.date_earned)}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Achievement Badge */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-center p-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg border border-amber-500/30">
-                            <Star className="h-5 w-5 text-amber-400 mr-2" />
-                            <span className="text-amber-300 font-medium text-sm">
-                              Achievement Unlocked
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Decorative elements */}
-                        <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full -translate-y-10 translate-x-10"></div>
-                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-amber-400/10 to-transparent rounded-full translate-y-8 -translate-x-8"></div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {achievements.length === 0 && (
-                    <div className="text-center py-12">
-                      <Trophy className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-slate-400 mb-2">
-                        No Achievements Yet
-                      </h3>
-                      <p className="text-slate-500">
-                        Complete actions to earn achievements and points.
-                      </p>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             )}
