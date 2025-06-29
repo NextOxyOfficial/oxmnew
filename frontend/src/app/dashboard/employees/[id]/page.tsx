@@ -103,6 +103,9 @@ export default function EmployeeDetailsPage() {
     type: 'bonus' as 'bonus' | 'commission' | 'achievement' | 'performance'
   });
   const [isAddingIncentive, setIsAddingIncentive] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [incentiveToDelete, setIncentiveToDelete] = useState<number | null>(null);
+  const [isDeletingIncentive, setIsDeletingIncentive] = useState(false);
   const [newDocument, setNewDocument] = useState({
     name: '',
     category: 'other' as Document['category'],
@@ -312,6 +315,30 @@ export default function EmployeeDetailsPage() {
     } finally {
       setIsAddingIncentive(false);
     }
+  };
+
+  const handleDeleteIncentive = async () => {
+    if (!incentiveToDelete) return;
+
+    setIsDeletingIncentive(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setIncentives(prev => prev.filter(incentive => incentive.id !== incentiveToDelete));
+      setShowDeleteModal(false);
+      setIncentiveToDelete(null);
+      alert('Incentive deleted successfully!');
+    } catch (error) {
+      alert('Failed to delete incentive. Please try again.');
+    } finally {
+      setIsDeletingIncentive(false);
+    }
+  };
+
+  const openDeleteModal = (incentiveId: number) => {
+    setIncentiveToDelete(incentiveId);
+    setShowDeleteModal(true);
   };
 
   const getPriorityColor = (priority: Task['priority']) => {
@@ -742,6 +769,7 @@ export default function EmployeeDetailsPage() {
                                         <span>SMS</span>
                                       </button>
                                       <button 
+                                        onClick={() => openDeleteModal(incentive.id)}
                                         className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer" 
                                         title="Delete"
                                       >
@@ -1162,6 +1190,64 @@ export default function EmployeeDetailsPage() {
                     className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                   >
                     {isAddingIncentive ? 'Adding...' : 'Add Incentive'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Incentive Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                  <h2 className="text-xl font-semibold text-slate-100">Delete Incentive</h2>
+                  <button 
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setIncentiveToDelete(null);
+                    }}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="p-3 bg-red-500/20 rounded-full">
+                      <Trash2 className="w-6 h-6 text-red-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-slate-100">Are you sure?</h3>
+                      <p className="text-sm text-slate-400 mt-1">
+                        This action cannot be undone. This will permanently delete the incentive from the employee's record.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setIncentiveToDelete(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteIncentive}
+                    disabled={isDeletingIncentive}
+                    className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                  >
+                    {isDeletingIncentive ? 'Deleting...' : 'Delete Incentive'}
                   </button>
                 </div>
               </div>
