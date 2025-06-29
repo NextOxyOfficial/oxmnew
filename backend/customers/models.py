@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator, MinValueValidator
 from django.db.models import Sum, Count, F
+from django.utils import timezone
 from decimal import Decimal
 from core.models import Gift, Achievement, Level
 from products.models import Product, ProductVariant
@@ -225,27 +226,33 @@ class CustomerAchievement(models.Model):
 
 
 class CustomerLevel(models.Model):
-    """Track customer levels"""
+    """Track level assignments for customers"""
     customer = models.ForeignKey(
         Customer, on_delete=models.CASCADE, related_name='customer_levels')
     level = models.ForeignKey(Level, on_delete=models.CASCADE)
-    assigned_date = models.DateTimeField(auto_now_add=True)
+    assigned_date = models.DateTimeField(default=timezone.now)
     is_current = models.BooleanField(default=True)
     notes = models.TextField(blank=True, null=True)
+
+    # Metadata
     assigned_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='assigned_levels')
+        User, on_delete=models.CASCADE, related_name='assigned_customer_levels')
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-assigned_date']
+        unique_together = ['customer', 'level', 'is_current']
 
     def __str__(self):
         return f"{self.customer.name} - {self.level.name}"
 
     def save(self, *args, **kwargs):
+        # Ensure only one current level per customer
         if self.is_current:
-            # Make all other levels for this customer non-current
             CustomerLevel.objects.filter(
-                customer=self.customer).update(is_current=False)
+                customer=self.customer, is_current=True
+            ).update(is_current=False)
         super().save(*args, **kwargs)
 
 

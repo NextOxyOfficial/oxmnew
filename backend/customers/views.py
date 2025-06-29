@@ -205,7 +205,7 @@ class TransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
 @permission_classes([IsAuthenticated])
 def available_gifts(request):
     """Get all available gifts that can be assigned to customers"""
-    gifts = Gift.objects.filter(user=request.user, is_active=True)
+    gifts = Gift.objects.filter(is_active=True).order_by('name')
     serializer = GiftForCustomerSerializer(gifts, many=True)
     return Response(serializer.data)
 
@@ -215,7 +215,7 @@ def available_gifts(request):
 def available_achievements(request):
     """Get all available achievements that can be earned by customers"""
     achievements = Achievement.objects.filter(
-        user=request.user, is_active=True)
+        is_active=True).order_by('name')
     serializer = AchievementForCustomerSerializer(achievements, many=True)
     return Response(serializer.data)
 
@@ -224,7 +224,7 @@ def available_achievements(request):
 @permission_classes([IsAuthenticated])
 def available_levels(request):
     """Get all available levels that can be assigned to customers"""
-    levels = Level.objects.filter(user=request.user, is_active=True)
+    levels = Level.objects.filter(is_active=True).order_by('name')
     serializer = LevelForCustomerSerializer(levels, many=True)
     return Response(serializer.data)
 

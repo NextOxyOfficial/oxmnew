@@ -118,7 +118,7 @@ class CustomerLevelSerializer(serializers.ModelSerializer):
             'id', 'customer', 'customer_name', 'level', 'level_name',
             'assigned_date', 'is_current', 'notes', 'assigned_by', 'assigned_by_name'
         ]
-        read_only_fields = ['assigned_date']
+        read_only_fields = ['assigned_date', 'assigned_by', 'assigned_by_name']
 
 
 class DuePaymentSerializer(serializers.ModelSerializer):
@@ -168,26 +168,27 @@ class SMSLogSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'sent_at']
 
 
-# Specific serializers for frontend data structure
+# Serializers for available data (for dropdowns, etc.)
 class GiftForCustomerSerializer(serializers.ModelSerializer):
-    """Serializer for gifts that can be assigned to customers"""
+    """Serializer for gifts available for assignment to customers"""
     class Meta:
         model = Gift
-        fields = ['id', 'name', 'is_active']
+        fields = ['id', 'name', 'is_active', 'created_at', 'updated_at']
 
 
 class AchievementForCustomerSerializer(serializers.ModelSerializer):
-    """Serializer for achievements that can be earned by customers"""
+    """Serializer for achievements available for assignment to customers"""
     class Meta:
         model = Achievement
-        fields = ['id', 'name', 'type', 'value', 'points', 'is_active']
+        fields = ['id', 'name', 'type', 'value', 'points',
+                  'is_active', 'created_at', 'updated_at']
 
 
 class LevelForCustomerSerializer(serializers.ModelSerializer):
-    """Serializer for levels that can be assigned to customers"""
+    """Serializer for levels available for assignment to customers"""
     class Meta:
         model = Level
-        fields = ['id', 'name', 'is_active', 'created_at']
+        fields = ['id', 'name', 'is_active', 'created_at', 'updated_at']
 
 
 # Detailed customer serializer for individual customer page

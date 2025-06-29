@@ -77,7 +77,6 @@ interface DuePayment {
 interface AvailableGift {
   id: number;
   name: string;
-  value: number;
 }
 
 interface TransactionForm {
@@ -120,6 +119,7 @@ export default function CustomerDetailsPage() {
     useState<DuePayment | null>(null);
   const [availableGifts, setAvailableGifts] = useState<AvailableGift[]>([]);
   const [selectedGift, setSelectedGift] = useState("");
+  const [giftValue, setGiftValue] = useState("");
   const [isAddingGift, setIsAddingGift] = useState(false);
   const [transactionForm, setTransactionForm] = useState<TransactionForm>({
     type: "due",
@@ -227,7 +227,6 @@ export default function CustomerDetailsPage() {
         const formattedAvailableGifts = availableGiftsData.map((gift) => ({
           id: gift.id,
           name: gift.name,
-          value: 0, // Value will be set when adding
         }));
         setAvailableGifts(formattedAvailableGifts);
 
@@ -428,7 +427,13 @@ export default function CustomerDetailsPage() {
   };
 
   const handleAddGift = async () => {
-    if (!selectedGift || !customer) return;
+    if (!selectedGift || !customer || !giftValue) return;
+
+    const value = parseFloat(giftValue);
+    if (isNaN(value) || value <= 0) {
+      alert("Please enter a valid gift value greater than 0.");
+      return;
+    }
 
     setIsAddingGift(true);
     try {
@@ -436,7 +441,7 @@ export default function CustomerDetailsPage() {
       const newGift = await customersAPI.addCustomerGift({
         customer: customer.id,
         gift: parseInt(selectedGift),
-        value: 0, // This might need to be set from the selected gift
+        value: value,
         description: `Manually added gift`,
       });
 
@@ -452,6 +457,7 @@ export default function CustomerDetailsPage() {
 
       setGifts((prev) => [formattedGift, ...prev]);
       setSelectedGift("");
+      setGiftValue("");
       alert("Gift added successfully!");
     } catch (error) {
       console.error("Failed to add gift:", error);
@@ -1130,11 +1136,11 @@ export default function CustomerDetailsPage() {
                     <h4 className="text-lg font-medium text-slate-100 mb-4">
                       Add New Gift
                     </h4>
-                    <div className="flex gap-3 max-w-md">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-2xl">
                       <select
                         value={selectedGift}
                         onChange={(e) => setSelectedGift(e.target.value)}
-                        className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm cursor-pointer"
+                        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm cursor-pointer"
                       >
                         <option value="" className="bg-slate-800">
                           Select a gift...
@@ -1145,13 +1151,22 @@ export default function CustomerDetailsPage() {
                             value={gift.id.toString()}
                             className="bg-slate-800"
                           >
-                            {gift.name} (${gift.value})
+                            {gift.name}
                           </option>
                         ))}
                       </select>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={giftValue}
+                        onChange={(e) => setGiftValue(e.target.value)}
+                        placeholder="Gift value ($)"
+                        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                      />
                       <button
                         onClick={handleAddGift}
-                        disabled={!selectedGift || isAddingGift}
+                        disabled={!selectedGift || !giftValue || isAddingGift}
                         className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                       >
                         {isAddingGift ? "Adding..." : "Add Gift"}
@@ -1462,55 +1477,6 @@ export default function CustomerDetailsPage() {
                           </button>
                         </div>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Available Levels Section */}
-                  <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">
-                      Available Levels
-                    </h4>
-                    <div className="max-w-4xl">
-                      {availableLevels.filter((level) => level.is_active)
-                        .length === 0 ? (
-                        <div className="text-center py-8 text-slate-400">
-                          <p>
-                            No active levels found. Levels can be managed in
-                            Settings.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {availableLevels
-                            .filter((level) => level.is_active)
-                            .map((level) => (
-                              <div
-                                key={level.id}
-                                className={`p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200 ${
-                                  customerLevel?.level.id === level.id
-                                    ? "ring-2 ring-cyan-400 border-cyan-400/50"
-                                    : ""
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                                    <Star className="w-5 h-5 text-white" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <h5 className="font-medium text-white text-sm leading-tight">
-                                      {level.name}
-                                    </h5>
-                                    {customerLevel?.level.id === level.id && (
-                                      <span className="inline-flex items-center px-2 py-0.5 bg-cyan-500/20 text-cyan-300 rounded-full text-xs font-medium mt-1">
-                                        Current Level
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
