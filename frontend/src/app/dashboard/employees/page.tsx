@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Download } from "lucide-react";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Employee {
   id: number;
@@ -18,6 +20,10 @@ interface Employee {
   status: 'active' | 'inactive';
   tasks_assigned: number;
   tasks_completed: number;
+  bank_name?: string;
+  account_number?: string;
+  routing_number?: string;
+  bank_branch?: string;
 }
 
 export default function EmployeesPage() {
@@ -85,7 +91,11 @@ export default function EmployeesPage() {
             photo: "/avatars/alice.jpg",
             status: "active",
             tasks_assigned: 24,
-            tasks_completed: 22
+            tasks_completed: 22,
+            bank_name: "Brac Bank Limited",
+            account_number: "1234567890",
+            routing_number: "021000021",
+            bank_branch: "Kushtia"
           },
           {
             id: 2,
@@ -99,7 +109,11 @@ export default function EmployeesPage() {
             hiring_date: "2022-08-10",
             status: "active",
             tasks_assigned: 18,
-            tasks_completed: 17
+            tasks_completed: 17,
+            bank_name: "Dutch Bangla Bank Limited",
+            account_number: "9876543210",
+            routing_number: "011401533",
+            bank_branch: "Dhaka"
           },
           {
             id: 3,
@@ -112,7 +126,11 @@ export default function EmployeesPage() {
             hiring_date: "2023-06-20",
             status: "active",
             tasks_assigned: 16,
-            tasks_completed: 14
+            tasks_completed: 14,
+            bank_name: "Eastern Bank Limited",
+            account_number: "5555667788",
+            routing_number: "121000248",
+            bank_branch: "Chittagong"
           },
           {
             id: 4,
@@ -126,7 +144,11 @@ export default function EmployeesPage() {
             hiring_date: "2023-03-05",
             status: "inactive",
             tasks_assigned: 12,
-            tasks_completed: 10
+            tasks_completed: 10,
+            bank_name: "Islami Bank Bangladesh Limited",
+            account_number: "1122334455",
+            routing_number: "021000089",
+            bank_branch: "Sylhet"
           },
           {
             id: 5,
@@ -139,7 +161,11 @@ export default function EmployeesPage() {
             hiring_date: "2022-11-01",
             status: "active",
             tasks_assigned: 20,
-            tasks_completed: 19
+            tasks_completed: 19,
+            bank_name: "Prime Bank Limited",
+            account_number: "9988776655",
+            routing_number: "054001725",
+            bank_branch: "Rajshahi"
           }
         ];
 
@@ -280,6 +306,73 @@ export default function EmployeesPage() {
           return 0;
       }
     });
+
+    // Download employees list as PDF
+    const downloadEmployeesList = () => {
+      const doc = new jsPDF();
+      
+      // Add title
+      doc.setFontSize(18);
+      doc.text('Employee List Report', 14, 22);
+      
+      // Add generation date
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 32);
+      
+      // Prepare table data
+      const tableHeaders = [
+        '#',
+        'Name',
+        'Phone',
+        'Role',
+        'Department',
+        'Salary',
+        'Status',
+        'Bank Account',
+        'Account Number'
+      ];
+
+      const tableData = filteredEmployees.map(emp => [
+        emp.id,
+        emp.name,
+        emp.phone,
+        emp.role,
+        emp.department,
+        `$${emp.salary}`,
+        emp.status.charAt(0).toUpperCase() + emp.status.slice(1),
+        `${emp.bank_name || 'N/A'} - ${emp.bank_branch || 'N/A'}`,
+        emp.account_number || 'N/A'
+      ]);
+
+      // Add table
+      autoTable(doc, {
+        head: [tableHeaders],
+        body: tableData,
+        startY: 40,
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [59, 130, 246], // Blue header
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: {
+          fillColor: [248, 249, 250] // Light gray for alternate rows
+        },
+        margin: { top: 40, right: 14, bottom: 20, left: 14 },
+        theme: 'striped'
+      });
+
+      // Add footer with total count
+      const finalY = (doc as any).lastAutoTable.finalY || 40;
+      doc.setFontSize(10);
+      doc.text(`Total Employees: ${filteredEmployees.length}`, 14, finalY + 15);
+      
+      // Save the PDF
+      doc.save(`employees_list_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
 
   // Loading state
   if (isLoading) {
@@ -443,6 +536,15 @@ export default function EmployeesPage() {
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Employee</span>
+              </button>
+
+              {/* Download Button */}
+              <button
+                onClick={downloadEmployeesList}
+                className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg cursor-pointer whitespace-nowrap flex items-center space-x-2"
+              >
+                <Download className="w-4 h-4" />
+                <span>PDF</span>
               </button>
               
               {/* Search */}
