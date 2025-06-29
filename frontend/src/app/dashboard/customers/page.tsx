@@ -2,19 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Search, Filter, ArrowUpDown } from "lucide-react";
+import { customersAPI, type Customer } from "@/lib/api/customers";
 
-interface Customer {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  address?: string;
-  total_orders: number;
-  total_spent: number;
-  last_order_date?: string;
-  status: 'active' | 'inactive';
-  created_at: string;
+// Import dev auth helper in development
+if (process.env.NODE_ENV === "development") {
+  import("@/lib/dev-auth");
 }
 
 export default function CustomersPage() {
@@ -27,15 +20,19 @@ export default function CustomersPage() {
   const [sortBy, setSortBy] = useState("name");
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
+    null
+  );
   const [mounted, setMounted] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: ''
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    status: "active" as const,
+    notes: "",
   });
 
   // Ensure component is mounted before rendering dates
@@ -45,101 +42,90 @@ export default function CustomersPage() {
 
   // Helper function for consistent date formatting
   const formatDate = (dateString: string) => {
-    if (!mounted) return ''; // Return empty string during SSR
+    if (!mounted) return ""; // Return empty string during SSR
     try {
       return new Date(dateString).toLocaleDateString();
-    } catch {
-      return dateString;
+    } catch (error) {
+      return "Invalid Date";
     }
   };
 
-  // Mock data for demonstration - replace with actual API call
+  // Fetch customers from API
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const fetchedCustomers = await customersAPI.getCustomers({
+          search: searchTerm || undefined,
+          status: filterStatus === "all" ? undefined : filterStatus,
+          ordering:
+            sortBy === "name"
+              ? "name"
+              : sortBy === "created_at"
+              ? "-created_at"
+              : "-total_spent",
+        });
 
-        // Mock customer data
-        const mockCustomers: Customer[] = [
-          {
-            id: 1,
-            name: "John Doe",
-            email: "john.doe@email.com",
-            phone: "+1 (555) 123-4567",
-            address: "123 Main St, City, State 12345",
-            total_orders: 15,
-            total_spent: 1250.75,
-            last_order_date: "2025-06-25",
-            status: "active",
-            created_at: "2024-01-15"
-          },
-          {
-            id: 2,
-            name: "Jane Smith",
-            email: "jane.smith@email.com",
-            phone: "+1 (555) 987-6543",
-            address: "456 Oak Ave, City, State 67890",
-            total_orders: 8,
-            total_spent: 850.30,
-            last_order_date: "2025-06-20",
-            status: "active",
-            created_at: "2024-03-10"
-          },
-          {
-            id: 3,
-            name: "Bob Johnson",
-            email: "bob.johnson@email.com",
-            phone: "+1 (555) 456-7890",
-            total_orders: 3,
-            total_spent: 320.50,
-            last_order_date: "2025-05-15",
-            status: "inactive",
-            created_at: "2024-05-20"
-          },
-          {
-            id: 4,
-            name: "Alice Brown",
-            email: "alice.brown@email.com",
-            phone: "+1 (555) 321-0987",
-            address: "789 Pine Rd, City, State 13579",
-            total_orders: 22,
-            total_spent: 2150.80,
-            last_order_date: "2025-06-28",
-            status: "active",
-            created_at: "2023-11-05"
-          },
-          {
-            id: 5,
-            name: "Charlie Wilson",
-            email: "charlie.wilson@email.com",
-            phone: "+1 (555) 654-3210",
-            total_orders: 1,
-            total_spent: 45.99,
-            last_order_date: "2025-04-10",
-            status: "inactive",
-            created_at: "2025-04-10"
-          }
-        ];
-
-        setCustomers(mockCustomers);
+        setCustomers(fetchedCustomers);
       } catch (err) {
-        setError("Failed to load customers. Please try again.");
+        console.error("Error fetching customers:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch customers"
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchCustomers();
-  }, []);
+  }, [searchTerm, filterStatus, sortBy]);
+
+  const handleCreateCustomer = async (
+    customerData: Omit<
+      Customer,
+      | "id"
+      | "total_orders"
+      | "total_spent"
+      | "last_order_date"
+      | "active_gifts_count"
+      | "total_points"
+      | "current_level"
+      | "created_at"
+      | "updated_at"
+    >
+  ) => {
+    try {
+      setIsLoading(true);
+      const newCustomer = await customersAPI.createCustomer(customerData);
+      setCustomers((prev) => [newCustomer, ...prev]);
+      setShowCreateModal(false);
+      setNewCustomer({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        status: "active" as const,
+        notes: "",
+      });
+    } catch (err) {
+      console.error("Error creating customer:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to create customer"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Calculate stats
   const totalCustomers = customers.length;
-  const activeCustomers = customers.filter(c => c.status === 'active').length;
-  const totalRevenue = customers.reduce((sum, customer) => sum + customer.total_spent, 0);
+  const activeCustomers = customers.filter((c) => c.status === "active").length;
+  const totalRevenue = customers.reduce(
+    (sum, customer) => sum + customer.total_spent,
+    0
+  );
 
   // Handle view customer details
   const handleViewCustomer = (customer: Customer) => {
@@ -149,7 +135,9 @@ export default function CustomersPage() {
   // Handle edit customer
   const handleEditCustomer = (customer: Customer) => {
     // For now, just show an alert - can be replaced with navigation to edit form
-    alert(`Edit customer: ${customer.name}\nThis would navigate to the edit form.`);
+    alert(
+      `Edit customer: ${customer.name}\nThis would navigate to the edit form.`
+    );
   };
 
   // Handle delete customer
@@ -168,24 +156,39 @@ export default function CustomersPage() {
 
     try {
       setIsDeleting(true);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
+      await customersAPI.deleteCustomer(customerToDelete.id);
+      setCustomers((prev) => prev.filter((c) => c.id !== customerToDelete.id));
+      setCustomerToDelete(null);
+      setShowDeleteModal(false);
+
       // Remove customer from list
-      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
-      
+      setCustomers((prev) => prev.filter((c) => c.id !== customerToDelete.id));
+
       // Close modal
       setShowDeleteModal(false);
       setCustomerToDelete(null);
-    } catch (error) {
+    } catch (err) {
+      console.error("Error deleting customer:", err);
       alert("Failed to delete customer. Please try again.");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const handleCreateCustomer = async () => {
+  const handleCloseCreateModal = () => {
+    setNewCustomer({
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      status: "active" as const,
+      notes: "",
+    });
+    setShowCreateModal(false);
+  };
+
+  const handleCreateButtonClick = async () => {
     if (!newCustomer.name || !newCustomer.email || !newCustomer.phone) {
       alert("Please fill in all required fields (Name, Email, Phone)");
       return;
@@ -193,50 +196,32 @@ export default function CustomersPage() {
 
     try {
       setIsCreating(true);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Create new customer object
-      const customer: Customer = {
-        id: Date.now(), // Temporary ID generation
+      await handleCreateCustomer({
         name: newCustomer.name,
         email: newCustomer.email,
         phone: newCustomer.phone,
         address: newCustomer.address,
-        total_orders: 0,
-        total_spent: 0,
-        status: 'active',
-        created_at: new Date().toISOString()
-      };
-      
-      // Add to customers list
-      setCustomers(prev => [customer, ...prev]);
-      
-      // Reset form and close modal
-      setNewCustomer({ name: '', email: '', phone: '', address: '' });
-      setShowCreateModal(false);
-      
+        status: newCustomer.status,
+        notes: newCustomer.notes,
+      });
       alert("Customer created successfully!");
-    } catch (error) {
+    } catch (err) {
+      console.error("Error creating customer:", err);
       alert("Failed to create customer. Please try again.");
     } finally {
       setIsCreating(false);
     }
   };
 
-  const handleCloseCreateModal = () => {
-    setNewCustomer({ name: '', email: '', phone: '', address: '' });
-    setShowCreateModal(false);
-  };
-
   // Filter and sort customers
   const filteredCustomers = customers
     .filter((customer) => {
-      const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           customer.phone.includes(searchTerm);
-      const matchesStatus = filterStatus === "all" || customer.status === filterStatus;
+      const matchesSearch =
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phone.includes(searchTerm);
+      const matchesStatus =
+        filterStatus === "all" || customer.status === filterStatus;
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
@@ -252,7 +237,10 @@ export default function CustomersPage() {
         case "spent-low":
           return a.total_spent - b.total_spent;
         case "recent":
-          return new Date(b.last_order_date || 0).getTime() - new Date(a.last_order_date || 0).getTime();
+          return (
+            new Date(b.last_order_date || 0).getTime() -
+            new Date(a.last_order_date || 0).getTime()
+          );
         default:
           return 0;
       }
@@ -340,11 +328,15 @@ export default function CustomersPage() {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-cyan-300 font-medium">Total Customers</p>
+                <p className="text-sm text-cyan-300 font-medium">
+                  Total Customers
+                </p>
                 <p className="text-base font-bold text-cyan-400">
                   {totalCustomers}
                 </p>
-                <p className="text-xs text-cyan-500 opacity-80">All registered customers</p>
+                <p className="text-xs text-cyan-500 opacity-80">
+                  All registered customers
+                </p>
               </div>
             </div>
           </div>
@@ -368,11 +360,15 @@ export default function CustomersPage() {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-green-300 font-medium">Active Customers</p>
+                <p className="text-sm text-green-300 font-medium">
+                  Active Customers
+                </p>
                 <p className="text-base font-bold text-green-400">
                   {activeCustomers}
                 </p>
-                <p className="text-xs text-green-500 opacity-80">Recently active</p>
+                <p className="text-xs text-green-500 opacity-80">
+                  Recently active
+                </p>
               </div>
             </div>
           </div>
@@ -396,11 +392,15 @@ export default function CustomersPage() {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-yellow-300 font-medium">Total Revenue</p>
+                <p className="text-sm text-yellow-300 font-medium">
+                  Total Revenue
+                </p>
                 <p className="text-base font-bold text-yellow-400">
                   ${totalRevenue.toFixed(2)}
                 </p>
-                <p className="text-xs text-yellow-500 opacity-80">From all customers</p>
+                <p className="text-xs text-yellow-500 opacity-80">
+                  From all customers
+                </p>
               </div>
             </div>
           </div>
@@ -419,7 +419,7 @@ export default function CustomersPage() {
                 <Plus className="w-4 h-4" />
                 <span>Add Customer</span>
               </button>
-              
+
               {/* Search */}
               <div className="flex-1 max-w-md">
                 <div className="relative">
@@ -513,14 +513,18 @@ export default function CustomersPage() {
                           {customer.name}
                         </h4>
                       </button>
-                      <p className="text-slate-400 text-sm mt-1">{customer.email}</p>
+                      <p className="text-slate-400 text-sm mt-1">
+                        {customer.email}
+                      </p>
                       <p className="text-slate-400 text-sm">{customer.phone}</p>
                     </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      customer.status === 'active' 
-                        ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                        : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                    }`}>
+                    <div
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        customer.status === "active"
+                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
+                      }`}
+                    >
                       {customer.status}
                     </div>
                   </div>
@@ -543,7 +547,10 @@ export default function CustomersPage() {
                   {customer.last_order_date && (
                     <div className="mt-2 pt-2 border-t border-slate-700/50">
                       <p className="text-xs text-slate-400">
-                        Last Order: {customer.last_order_date ? formatDate(customer.last_order_date) : 'No orders'}
+                        Last Order:{" "}
+                        {customer.last_order_date
+                          ? formatDate(customer.last_order_date)
+                          : "No orders"}
                       </p>
                     </div>
                   )}
@@ -676,8 +683,12 @@ export default function CustomersPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="space-y-1">
-                          <div className="text-sm text-slate-300">{customer.email}</div>
-                          <div className="text-sm text-slate-400">{customer.phone}</div>
+                          <div className="text-sm text-slate-300">
+                            {customer.email}
+                          </div>
+                          <div className="text-sm text-slate-400">
+                            {customer.phone}
+                          </div>
                           {customer.address && (
                             <div className="text-xs text-slate-400 line-clamp-1">
                               {customer.address}
@@ -696,11 +707,13 @@ export default function CustomersPage() {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                          customer.status === 'active' 
-                            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                            : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                        }`}>
+                        <div
+                          className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                            customer.status === "active"
+                              ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                              : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
+                          }`}
+                        >
                           {customer.status}
                         </div>
                       </td>
@@ -710,7 +723,9 @@ export default function CustomersPage() {
                             {formatDate(customer.last_order_date)}
                           </div>
                         ) : (
-                          <div className="text-sm text-slate-500">No orders</div>
+                          <div className="text-sm text-slate-500">
+                            No orders
+                          </div>
                         )}
                       </td>
                       <td className="py-3 px-4">
@@ -815,7 +830,8 @@ export default function CustomersPage() {
                   No customers found
                 </h3>
                 <p className="text-slate-400 mb-4">
-                  Try adjusting your search criteria or check back later for new customers.
+                  Try adjusting your search criteria or check back later for new
+                  customers.
                 </p>
               </div>
             )}
@@ -831,7 +847,8 @@ export default function CustomersPage() {
               </h3>
               <p className="text-slate-300 mb-4">
                 Are you sure you want to delete &quot;{customerToDelete.name}
-                &quot;? This action cannot be undone and will remove all customer data including order history.
+                &quot;? This action cannot be undone and will remove all
+                customer data including order history.
               </p>
               <div className="flex space-x-3">
                 <button
@@ -859,8 +876,10 @@ export default function CustomersPage() {
               <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                  <h2 className="text-xl font-semibold text-slate-100">Create New Customer</h2>
-                  <button 
+                  <h2 className="text-xl font-semibold text-slate-100">
+                    Create New Customer
+                  </h2>
+                  <button
                     onClick={handleCloseCreateModal}
                     className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
                   >
@@ -878,7 +897,9 @@ export default function CustomersPage() {
                     <input
                       type="text"
                       value={newCustomer.name}
-                      onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                      onChange={(e) =>
+                        setNewCustomer({ ...newCustomer, name: e.target.value })
+                      }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                       placeholder="Enter customer name"
                     />
@@ -892,7 +913,12 @@ export default function CustomersPage() {
                     <input
                       type="email"
                       value={newCustomer.email}
-                      onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                      onChange={(e) =>
+                        setNewCustomer({
+                          ...newCustomer,
+                          email: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                       placeholder="Enter email address"
                     />
@@ -906,7 +932,12 @@ export default function CustomersPage() {
                     <input
                       type="tel"
                       value={newCustomer.phone}
-                      onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                      onChange={(e) =>
+                        setNewCustomer({
+                          ...newCustomer,
+                          phone: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                       placeholder="Enter phone number"
                     />
@@ -920,7 +951,12 @@ export default function CustomersPage() {
                     <textarea
                       rows={3}
                       value={newCustomer.address}
-                      onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                      onChange={(e) =>
+                        setNewCustomer({
+                          ...newCustomer,
+                          address: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
                       placeholder="Enter customer address (optional)"
                     />
@@ -936,11 +972,16 @@ export default function CustomersPage() {
                     Cancel
                   </button>
                   <button
-                    onClick={handleCreateCustomer}
-                    disabled={isCreating || !newCustomer.name || !newCustomer.email || !newCustomer.phone}
+                    onClick={handleCreateButtonClick}
+                    disabled={
+                      isCreating ||
+                      !newCustomer.name ||
+                      !newCustomer.email ||
+                      !newCustomer.phone
+                    }
                     className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                   >
-                    {isCreating ? 'Creating...' : 'Register Customer'}
+                    {isCreating ? "Creating..." : "Register Customer"}
                   </button>
                 </div>
               </div>

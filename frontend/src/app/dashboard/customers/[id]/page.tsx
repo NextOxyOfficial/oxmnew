@@ -18,6 +18,12 @@ import {
   MessageSquare,
   Star, // Add Star icon for levels
 } from "lucide-react";
+import { customersAPI } from "@/lib/api/customers";
+
+// Import dev auth helper in development
+if (process.env.NODE_ENV === "development") {
+  import("@/lib/dev-auth");
+}
 
 interface Customer {
   id: number;
@@ -28,8 +34,9 @@ interface Customer {
   total_orders: number;
   total_spent: number;
   last_order_date?: string;
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "blocked";
   created_at: string;
+  total_points?: number;
 }
 
 interface Order {
@@ -134,10 +141,12 @@ export default function CustomerDetailsPage() {
   const [isSendingSMS, setIsSendingSMS] = useState(false);
   const [redeemAmount, setRedeemAmount] = useState("");
   const [isRedeeming, setIsRedeeming] = useState(false);
-  
+
   // Level-related state
   const [availableLevels, setAvailableLevels] = useState<Level[]>([]);
-  const [customerLevel, setCustomerLevel] = useState<CustomerLevel | null>(null);
+  const [customerLevel, setCustomerLevel] = useState<CustomerLevel | null>(
+    null
+  );
   const [selectedLevel, setSelectedLevel] = useState("");
   const [isAssigningLevel, setIsAssigningLevel] = useState(false);
   const [levelNotes, setLevelNotes] = useState("");
@@ -157,138 +166,106 @@ export default function CustomerDetailsPage() {
     };
 
     const fetchCustomerData = async () => {
-      const customerId = getCustomerId();
+      try {
+        setIsLoading(true);
+        const customerId = parseInt(getCustomerId() || "1");
 
-      // Mock data
-      const mockCustomer: Customer = {
-        id: parseInt(customerId || "1"),
-        name: "John Doe",
-        email: "john.doe@email.com",
-        phone: "+1 (555) 123-4567",
-        address: "123 Main St, City, State 12345",
-        total_orders: 12,
-        total_spent: 1250.75,
-        last_order_date: "2025-06-25",
-        status: "active",
-        created_at: "2024-01-15",
-      };
+        // Fetch customer data
+        const customerData = await customersAPI.getCustomer(customerId);
+        setCustomer(customerData);
+        setCustomerForm({
+          name: customerData.name,
+          email: customerData.email,
+          phone: customerData.phone,
+          address: customerData.address || "",
+        });
 
-      const mockOrders: Order[] = [
-        {
-          id: 1001,
-          date: "2025-06-25",
-          total: 89.99,
-          status: "completed",
-          items: 3,
-        },
-        {
-          id: 1002,
-          date: "2025-06-20",
-          total: 156.5,
-          status: "completed",
-          items: 5,
-        },
-        {
-          id: 1003,
-          date: "2025-06-15",
-          total: 45.25,
-          status: "pending",
-          items: 2,
-        },
-      ];
+        // Set customer level from customer data
+        if (customerData.current_level) {
+          setCustomerLevel(customerData.current_level);
+        }
 
-      const mockDuePayments: DuePayment[] = [
-        {
-          id: 1,
-          order_id: 1003,
-          amount: 45.25,
-          due_date: "2025-07-01",
-          type: "due",
-          notes: "Pending payment for order #1003",
-        },
-        {
-          id: 2,
-          order_id: 1004,
-          amount: -25.0,
-          due_date: "2025-06-30",
-          type: "advance",
-          notes: "Advance payment for future order",
-        },
-      ];
+        // Fetch orders for this customer
+        const ordersData = await customersAPI.getOrders({
+          customer: customerId,
+        });
+        const formattedOrders = ordersData.map((order) => ({
+          id: order.id,
+          date: order.created_at,
+          total: order.total_amount,
+          status: order.status as "completed" | "pending" | "cancelled",
+          items: order.items_count,
+        }));
+        setOrders(formattedOrders);
 
-      const mockGifts: Gift[] = [
-        {
-          id: 1,
-          name: "Welcome Bonus",
-          description: "New customer welcome gift",
-          date_given: "2024-01-15",
-          value: 10,
-          status: "used",
-        },
-        {
-          id: 2,
-          name: "Loyalty Reward",
-          description: "10 orders milestone reward",
-          date_given: "2025-06-01",
-          value: 25,
-          status: "active",
-        },
-      ];
+        // Fetch due payments for this customer
+        const duePaymentsData = await customersAPI.getDuePayments(customerId);
+        const formattedDuePayments = duePaymentsData.map((payment) => ({
+          id: payment.id,
+          order_id: payment.order || 0,
+          amount: payment.amount,
+          due_date: payment.due_date,
+          type: payment.payment_type as "due" | "advance",
+          notes: payment.notes,
+        }));
+        setDuePayments(formattedDuePayments);
 
-      const mockAchievements: Achievement[] = [
-        {
-          id: 1,
-          title: "First Purchase",
-          description: "Made your first purchase",
-          icon: "🎉",
-          date_earned: "2024-01-15",
-          points: 100,
-        },
-        {
-          id: 2,
-          title: "Loyal Customer",
-          description: "10+ orders completed",
-          icon: "🏆",
-          date_earned: "2025-06-01",
-          points: 500,
-        },
-      ];
+        // Fetch gifts for this customer
+        const giftsData = await customersAPI.getCustomerGifts(customerId);
+        const formattedGifts = giftsData.map((gift) => ({
+          id: gift.id,
+          name: gift.gift_name,
+          description: gift.description || "",
+          date_given: gift.created_at,
+          value: gift.value,
+          status: gift.status as "active" | "used" | "expired",
+        }));
+        setGifts(formattedGifts);
 
-      const mockAvailableGifts: AvailableGift[] = [
-        { id: 1, name: "Discount Voucher 10%", value: 10 },
-        { id: 2, name: "Free Shipping", value: 5 },
-        { id: 3, name: "Bonus Points", value: 20 },
-      ];
+        // Fetch available gifts and levels
+        const availableGiftsData = await customersAPI.getAvailableGifts();
+        const formattedAvailableGifts = availableGiftsData.map((gift) => ({
+          id: gift.id,
+          name: gift.name,
+          value: 0, // Value will be set when adding
+        }));
+        setAvailableGifts(formattedAvailableGifts);
 
-      const mockAvailableLevels: Level[] = [
-        { id: 1, name: "Bronze", is_active: true, created_at: "2024-01-01" },
-        { id: 2, name: "Silver", is_active: true, created_at: "2024-01-01" },
-        { id: 3, name: "Gold", is_active: true, created_at: "2024-01-01" },
-        { id: 4, name: "Platinum", is_active: true, created_at: "2024-01-01" },
-      ];
+        const availableLevelsData = await customersAPI.getAvailableLevels();
+        const formattedLevels = availableLevelsData.map((level) => ({
+          id: level.id,
+          name: level.name,
+          is_active: level.is_active,
+          created_at: level.created_at,
+        }));
+        setAvailableLevels(formattedLevels);
 
-      const mockCustomerLevel: CustomerLevel = {
-        id: 1,
-        level: { id: 2, name: "Silver", is_active: true, created_at: "2024-01-01" },
-        assigned_date: "2024-03-15",
-        notes: "Upgraded to Silver level due to consistent purchases and loyalty",
-      };
-
-      setCustomer(mockCustomer);
-      setCustomerForm({
-        name: mockCustomer.name,
-        email: mockCustomer.email,
-        phone: mockCustomer.phone,
-        address: mockCustomer.address || "",
-      });
-      setOrders(mockOrders);
-      setDuePayments(mockDuePayments);
-      setGifts(mockGifts);
-      setAchievements(mockAchievements);
-      setAvailableGifts(mockAvailableGifts);
-      setAvailableLevels(mockAvailableLevels);
-      setCustomerLevel(mockCustomerLevel);
-      setIsLoading(false);
+        // Mock achievements for now (no backend endpoint yet)
+        const mockAchievements: Achievement[] = [
+          {
+            id: 1,
+            title: "First Purchase",
+            description: "Made your first purchase",
+            icon: "🎉",
+            date_earned: "2024-01-15",
+            points: 100,
+          },
+          {
+            id: 2,
+            title: "Loyal Customer",
+            description: "10+ orders completed",
+            icon: "🏆",
+            date_earned: "2025-06-01",
+            points: 500,
+          },
+        ];
+        setAchievements(mockAchievements);
+      } catch (error) {
+        console.error("Failed to fetch customer data:", error);
+        // Show error to user or fallback to mock data
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchCustomerData();
@@ -335,17 +312,18 @@ export default function CustomerDetailsPage() {
   };
 
   const handleSendSMS = async (message: string) => {
+    if (!customer) return;
+
     setIsSendingSMS(true);
     try {
-      // Simulate SMS sending API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Send SMS via API
+      await customersAPI.sendSMS(customer.id, message);
 
-      // Show success message
       alert(
-        `SMS sent successfully to ${customer?.phone}!\nMessage: "${message}"`
+        `SMS sent successfully to ${customer.phone}!\nMessage: "${message}"`
       );
-    } catch {
-      console.error("Failed to send SMS");
+    } catch (error) {
+      console.error("Failed to send SMS:", error);
       alert("Failed to send SMS. Please try again.");
     } finally {
       setIsSendingSMS(false);
@@ -377,11 +355,23 @@ export default function CustomerDetailsPage() {
   };
 
   const handleSubmitTransaction = async () => {
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (!customer) return;
 
-      // Show success message
+    try {
+      const transactionData = {
+        customer: customer.id,
+        transaction_type:
+          transactionForm.type === "due"
+            ? ("payment" as const)
+            : ("adjustment" as const),
+        amount: parseFloat(transactionForm.amount),
+        notes: transactionForm.note,
+        notify_customer: transactionForm.notifyCustomer,
+      };
+
+      // Create transaction via API
+      await customersAPI.createTransaction(transactionData);
+
       alert(
         `Transaction added successfully! ${
           transactionForm.notifyCustomer
@@ -390,9 +380,26 @@ export default function CustomerDetailsPage() {
         }`
       );
 
+      // Refresh customer data to get updated balances
+      const updatedCustomer = await customersAPI.getCustomer(customer.id);
+      setCustomer(updatedCustomer);
+
+      // Refresh due payments
+      const duePaymentsData = await customersAPI.getDuePayments(customer.id);
+      const formattedDuePayments = duePaymentsData.map((payment) => ({
+        id: payment.id,
+        order_id: payment.order || 0,
+        amount: payment.amount,
+        due_date: payment.due_date,
+        type: payment.payment_type as "due" | "advance",
+        notes: payment.notes,
+      }));
+      setDuePayments(formattedDuePayments);
+
       // Close modal and reset form
       handleCloseTransactionModal();
-    } catch {
+    } catch (error) {
+      console.error("Failed to add transaction:", error);
       alert("Failed to add transaction. Please try again.");
     }
   };
@@ -400,22 +407,20 @@ export default function CustomerDetailsPage() {
   const handleSaveProfile = async () => {
     setIsSaving(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!customer) return;
 
-      // Update customer data
-      if (customer) {
-        setCustomer({
-          ...customer,
-          name: customerForm.name,
-          email: customerForm.email,
-          phone: customerForm.phone,
-          address: customerForm.address,
-        });
-      }
+      // Update customer via API
+      const updatedCustomer = await customersAPI.updateCustomer(customer.id, {
+        name: customerForm.name,
+        email: customerForm.email,
+        phone: customerForm.phone,
+        address: customerForm.address,
+      });
 
+      setCustomer(updatedCustomer);
       alert("Profile updated successfully!");
-    } catch {
+    } catch (error) {
+      console.error("Failed to update profile:", error);
       alert("Failed to update profile. Please try again.");
     } finally {
       setIsSaving(false);
@@ -423,28 +428,33 @@ export default function CustomerDetailsPage() {
   };
 
   const handleAddGift = async () => {
-    if (!selectedGift) return;
+    if (!selectedGift || !customer) return;
 
     setIsAddingGift(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Add gift via API
+      const newGift = await customersAPI.addCustomerGift({
+        customer: customer.id,
+        gift: parseInt(selectedGift),
+        value: 0, // This might need to be set from the selected gift
+        description: `Manually added gift`,
+      });
 
-      const gift = availableGifts.find((g) => g.id.toString() === selectedGift);
-      if (gift) {
-        const newGift: Gift = {
-          id: Date.now(),
-          name: gift.name,
-          description: `Manually added gift: ${gift.name}`,
-          date_given: new Date().toISOString(),
-          value: gift.value,
-          status: "active",
-        };
-        setGifts((prev) => [newGift, ...prev]);
-        setSelectedGift("");
-        alert("Gift added successfully!");
-      }
-    } catch {
+      // Add the new gift to the state
+      const formattedGift: Gift = {
+        id: newGift.id,
+        name: newGift.gift_name,
+        description: newGift.description || "",
+        date_given: newGift.created_at,
+        value: newGift.value,
+        status: newGift.status as "active" | "used" | "expired",
+      };
+
+      setGifts((prev) => [formattedGift, ...prev]);
+      setSelectedGift("");
+      alert("Gift added successfully!");
+    } catch (error) {
+      console.error("Failed to add gift:", error);
       alert("Failed to add gift. Please try again.");
     } finally {
       setIsAddingGift(false);
@@ -455,8 +465,8 @@ export default function CustomerDetailsPage() {
     setRedeemingGiftIds((prev) => new Set(prev).add(giftId));
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Redeem gift via API
+      await customersAPI.redeemGift(giftId);
 
       setGifts((prev) =>
         prev.map((gift) =>
@@ -465,7 +475,8 @@ export default function CustomerDetailsPage() {
       );
 
       alert("Gift redeemed successfully!");
-    } catch {
+    } catch (error) {
+      console.error("Failed to redeem gift:", error);
       alert("Failed to redeem gift. Please try again.");
     } finally {
       setRedeemingGiftIds((prev) => {
@@ -477,11 +488,10 @@ export default function CustomerDetailsPage() {
   };
 
   const handleRedeemPoints = async () => {
+    if (!customer) return;
+
     const amount = parseFloat(redeemAmount);
-    const totalPoints = achievements.reduce(
-      (total, achievement) => total + achievement.points,
-      0
-    );
+    const totalPoints = customer.total_points || 0;
 
     if (!amount || amount <= 0) {
       alert("Please enter a valid amount to redeem.");
@@ -497,14 +507,17 @@ export default function CustomerDetailsPage() {
 
     setIsRedeeming(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Redeem points via API
+      await customersAPI.redeemPoints(customer.id, amount);
 
-      // Here you would typically call an API to process the redemption
-      // For now, we'll just show a success message
       alert(`Successfully redeemed ${amount} points!`);
       setRedeemAmount("");
-    } catch {
+
+      // Refresh customer data to get updated points
+      const updatedCustomer = await customersAPI.getCustomer(customer.id);
+      setCustomer(updatedCustomer);
+    } catch (error) {
+      console.error("Failed to redeem points:", error);
       alert("Failed to redeem points. Please try again.");
     } finally {
       setIsRedeeming(false);
@@ -513,27 +526,35 @@ export default function CustomerDetailsPage() {
 
   // Level assignment handlers
   const handleAssignLevel = async () => {
-    if (!selectedLevel) return;
+    if (!selectedLevel || !customer) return;
 
     setIsAssigningLevel(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Assign level via API
+      const newCustomerLevel = await customersAPI.assignLevel({
+        customer: customer.id,
+        level: parseInt(selectedLevel),
+        notes: levelNotes || undefined,
+      });
 
-      const level = availableLevels.find((l) => l.id.toString() === selectedLevel);
+      // Update the customer level in state
+      const level = availableLevels.find(
+        (l) => l.id.toString() === selectedLevel
+      );
       if (level) {
-        const newCustomerLevel: CustomerLevel = {
-          id: Date.now(),
+        const formattedCustomerLevel: CustomerLevel = {
+          id: newCustomerLevel.id,
           level: level,
-          assigned_date: new Date().toISOString(),
-          notes: levelNotes || `Assigned ${level.name} level`,
+          assigned_date: newCustomerLevel.assigned_date,
+          notes: newCustomerLevel.notes,
         };
-        setCustomerLevel(newCustomerLevel);
+        setCustomerLevel(formattedCustomerLevel);
         setSelectedLevel("");
         setLevelNotes("");
         alert("Level assigned successfully!");
       }
-    } catch {
+    } catch (error) {
+      console.error("Failed to assign level:", error);
       alert("Failed to assign level. Please try again.");
     } finally {
       setIsAssigningLevel(false);
@@ -544,7 +565,7 @@ export default function CustomerDetailsPage() {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+
       setCustomerLevel(null);
       alert("Level removed successfully!");
     } catch {
@@ -1353,7 +1374,8 @@ export default function CustomerDetailsPage() {
                                 {customerLevel.level.name} Level
                               </h3>
                               <p className="text-slate-300 text-sm mb-2">
-                                Assigned on {formatDate(customerLevel.assigned_date)}
+                                Assigned on{" "}
+                                {formatDate(customerLevel.assigned_date)}
                               </p>
                               {customerLevel.notes && (
                                 <p className="text-slate-400 text-sm italic">
@@ -1376,7 +1398,8 @@ export default function CustomerDetailsPage() {
                             No Level Assigned
                           </h3>
                           <p className="text-slate-500">
-                            This customer doesn&apos;t have a level assigned yet.
+                            This customer doesn&apos;t have a level assigned
+                            yet.
                           </p>
                         </div>
                       )}
@@ -1448,9 +1471,13 @@ export default function CustomerDetailsPage() {
                       Available Levels
                     </h4>
                     <div className="max-w-4xl">
-                      {availableLevels.filter((level) => level.is_active).length === 0 ? (
+                      {availableLevels.filter((level) => level.is_active)
+                        .length === 0 ? (
                         <div className="text-center py-8 text-slate-400">
-                          <p>No active levels found. Levels can be managed in Settings.</p>
+                          <p>
+                            No active levels found. Levels can be managed in
+                            Settings.
+                          </p>
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
