@@ -45,6 +45,12 @@ interface CustomerInfo {
   company?: string;
 }
 
+interface PaymentEntry {
+  id: string;
+  method: "Cash" | "Cheque" | "Bkash" | "Nagad" | "Bank";
+  amount: number;
+}
+
 interface OrderForm {
   customer: CustomerInfo;
   items: OrderItem[];
@@ -61,6 +67,10 @@ interface OrderForm {
   due_date: string;
   notes: string;
   status: "draft" | "pending" | "confirmed";
+  // Payment information
+  payments: PaymentEntry[];
+  total_payment_received: number;
+  remaining_balance: number; // total - total_payment_received
   // Internal company fields (not shown on invoice)
   employee_id?: number;
   incentive_amount: number;
@@ -112,6 +122,10 @@ export default function AddOrderPage() {
     due_date: "",
     notes: "",
     status: "draft",
+    // Payment information
+    payments: [],
+    total_payment_received: 0,
+    remaining_balance: 0,
     // Internal company fields
     employee_id: undefined,
     incentive_amount: 0,
@@ -261,7 +275,8 @@ export default function AddOrderPage() {
     applyDueToTotal: boolean,
     previousDue: number,
     applyPreviousDueToTotal: boolean,
-    incentiveAmount: number
+    incentiveAmount: number,
+    payments: PaymentEntry[]
   ) => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const totalBuyPrice = items.reduce((sum, item) => sum + (item.buy_price * item.quantity), 0);
@@ -273,6 +288,8 @@ export default function AddOrderPage() {
     const total = afterDiscount + vatAmount - (applyDueToTotal ? dueAmount : 0) + (applyPreviousDueToTotal ? previousDue : 0);
     const grossProfit = totalSellPrice - totalBuyPrice;
     const netProfit = total - incentiveAmount;
+    const totalPaymentReceived = payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const remainingBalance = total - totalPaymentReceived;
 
     return {
       subtotal,
@@ -282,13 +299,15 @@ export default function AddOrderPage() {
       netProfit,
       totalBuyPrice,
       totalSellPrice,
-      grossProfit
+      grossProfit,
+      totalPaymentReceived,
+      remainingBalance
     };
   };
 
-  // Update totals when items, discount, VAT, due amount, apply_due_to_total, previous due, apply_previous_due_to_total, or incentive changes
+  // Update totals when items, discount, VAT, due amount, apply_due_to_total, previous due, apply_previous_due_to_total, payments, or incentive changes
   useEffect(() => {
-    const { subtotal, discountAmount, vatAmount, total, netProfit, totalBuyPrice, totalSellPrice, grossProfit } = calculateTotals(
+    const { subtotal, discountAmount, vatAmount, total, netProfit, totalBuyPrice, totalSellPrice, grossProfit, totalPaymentReceived, remainingBalance } = calculateTotals(
       orderForm.items,
       orderForm.discount_percentage,
       orderForm.vat_percentage,
@@ -296,7 +315,8 @@ export default function AddOrderPage() {
       orderForm.apply_due_to_total,
       orderForm.previous_due,
       orderForm.apply_previous_due_to_total,
-      orderForm.incentive_amount
+      orderForm.incentive_amount,
+      orderForm.payments
     );
 
     setOrderForm((prev) => ({
@@ -309,6 +329,8 @@ export default function AddOrderPage() {
       total_buy_price: totalBuyPrice,
       total_sell_price: totalSellPrice,
       gross_profit: grossProfit,
+      total_payment_received: totalPaymentReceived,
+      remaining_balance: remainingBalance,
     }));
   }, [
     orderForm.items,
@@ -319,6 +341,7 @@ export default function AddOrderPage() {
     orderForm.previous_due,
     orderForm.apply_previous_due_to_total,
     orderForm.incentive_amount,
+    orderForm.payments,
   ]);
 
   // Handle customer info changes
@@ -530,6 +553,38 @@ export default function AddOrderPage() {
     }));
   };
 
+  // Payment management functions
+  const addPayment = () => {
+    const newPayment: PaymentEntry = {
+      id: Date.now().toString(),
+      method: "Cash",
+      amount: 0,
+    };
+    
+    setOrderForm((prev) => ({
+      ...prev,
+      payments: [...prev.payments, newPayment],
+    }));
+  };
+
+  const removePayment = (paymentId: string) => {
+    setOrderForm((prev) => ({
+      ...prev,
+      payments: prev.payments.filter(payment => payment.id !== paymentId),
+    }));
+  };
+
+  const updatePayment = (paymentId: string, field: keyof PaymentEntry, value: string | number) => {
+    setOrderForm((prev) => ({
+      ...prev,
+      payments: prev.payments.map(payment =>
+        payment.id === paymentId
+          ? { ...payment, [field]: value }
+          : payment
+      ),
+    }));
+  };
+
   // Handle form submission
   const handleSubmit = async (status: "draft" | "pending") => {
     if (orderForm.items.length === 0) {
@@ -553,6 +608,11 @@ export default function AddOrderPage() {
 
       // Create individual sales for each item
       for (const item of orderForm.items) {
+        // Build payment summary for notes
+        const paymentSummary = orderForm.payments.length > 0
+          ? `\nPayments:\n${orderForm.payments.map(p => `- ${p.method}: ${formatCurrency(p.amount)}`).join('\n')}\nTotal Paid: ${formatCurrency(orderForm.total_payment_received)}\nRemaining Balance: ${formatCurrency(orderForm.remaining_balance)}`
+          : '\nNo payments recorded';
+
         const saleData = {
           product: item.product,
           variant: item.variant,
@@ -567,7 +627,7 @@ export default function AddOrderPage() {
             orderForm.customer.company
               ? `Company: ${orderForm.customer.company}\n`
               : ""
-          }Order Notes: ${orderForm.notes}`,
+          }Order Notes: ${orderForm.notes}${paymentSummary}`,
         };
 
         await ApiService.createProductSale(saleData);
@@ -1296,6 +1356,104 @@ export default function AddOrderPage() {
                       <span className="text-cyan-400 font-semibold text-lg">
                         {formatCurrency(orderForm.total)}
                       </span>
+                    </div>
+
+                    {/* Payment Section */}
+                    <div className="space-y-3 pt-3 border-t border-slate-700/30 mt-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-slate-300">Payment Information</h4>
+                        <button
+                          type="button"
+                          onClick={addPayment}
+                          className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors px-2 py-1 rounded hover:bg-slate-800/30"
+                        >
+                          + Add Payment
+                        </button>
+                      </div>
+                      
+                      {/* Payment Entries */}
+                      {orderForm.payments.length > 0 && (
+                        <div className="space-y-2">
+                          {orderForm.payments.map((payment, index) => (
+                            <div key={payment.id} className="flex items-center gap-2 p-2 bg-slate-800/30 rounded-lg">
+                              <select
+                                value={payment.method}
+                                onChange={(e) =>
+                                  updatePayment(payment.id, "method", e.target.value as PaymentEntry["method"])
+                                }
+                                className="bg-slate-800/50 border border-slate-700/50 text-white text-xs rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                              >
+                                <option value="Cash" className="bg-slate-800">Cash</option>
+                                <option value="Cheque" className="bg-slate-800">Cheque</option>
+                                <option value="Bkash" className="bg-slate-800">Bkash</option>
+                                <option value="Nagad" className="bg-slate-800">Nagad</option>
+                                <option value="Bank" className="bg-slate-800">Bank</option>
+                              </select>
+                              
+                              <input
+                                type="number"
+                                value={payment.amount === 0 ? "" : payment.amount}
+                                onChange={(e) =>
+                                  updatePayment(payment.id, "amount", parseFloat(e.target.value) || 0)
+                                }
+                                className="flex-1 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                placeholder="0.00"
+                                min="0"
+                                step="0.01"
+                              />
+                              
+                              {orderForm.payments.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removePayment(payment.id)}
+                                  className="text-red-400 hover:text-red-300 transition-colors p-1 rounded hover:bg-red-900/20"
+                                  title="Remove payment"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Payment Summary */}
+                      {orderForm.payments.length > 0 && (
+                        <div className="space-y-2 pt-2 border-t border-slate-700/30">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 text-sm">Total Paid:</span>
+                            <span className="text-slate-100 font-medium">
+                              {orderForm.total_payment_received === 0 ? "Paid" : formatCurrency(orderForm.total_payment_received)}
+                            </span>
+                          </div>
+                          
+                          {orderForm.remaining_balance !== 0 && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-300 font-medium">Remaining Balance:</span>
+                              <span className={`font-semibold ${orderForm.remaining_balance > 0 ? 'text-red-400' : orderForm.remaining_balance < 0 ? 'text-orange-400' : 'text-green-400'}`}>
+                                {formatCurrency(orderForm.remaining_balance)}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {orderForm.remaining_balance < 0 && (
+                            <div className="text-xs text-orange-400 mt-1">
+                              * Overpayment of {formatCurrency(Math.abs(orderForm.remaining_balance))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Empty state */}
+                      {orderForm.payments.length === 0 && (
+                        <div className="text-center py-4 text-slate-400 text-sm">
+                          No payments added yet
+                          <br />
+                          <span className="text-xs">Click "Add Payment" to record payments</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
