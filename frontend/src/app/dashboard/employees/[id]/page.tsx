@@ -126,6 +126,16 @@ export default function EmployeeDetailsPage() {
     category: 'other' as Document['category'],
     file: null as File | null
   });
+  const [showAssignTaskModal, setShowAssignTaskModal] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+    due_date: '',
+    project: '',
+    assigned_by: 'Admin' // This would typically come from the logged-in user
+  });
+  const [isAssigningTask, setIsAssigningTask] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -470,6 +480,56 @@ export default function EmployeeDetailsPage() {
       alert('Failed to mark task as completed. Please try again.');
     } finally {
       setMarkingTaskDone(null);
+    }
+  };
+
+  const handleAssignTask = async () => {
+    if (!newTask.title || !newTask.due_date) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    setIsAssigningTask(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const task: Task = {
+        id: Date.now(),
+        title: newTask.title,
+        description: newTask.description,
+        priority: newTask.priority,
+        status: 'pending',
+        assigned_date: new Date().toISOString(),
+        due_date: newTask.due_date,
+        assigned_by: newTask.assigned_by,
+        project: newTask.project || undefined
+      };
+
+      setTasks(prev => [task, ...prev]);
+      
+      // Update employee's task assigned count
+      if (employee) {
+        setEmployee(prev => prev ? {
+          ...prev,
+          tasks_assigned: prev.tasks_assigned + 1
+        } : null);
+      }
+
+      setNewTask({
+        title: '',
+        description: '',
+        priority: 'medium',
+        due_date: '',
+        project: '',
+        assigned_by: 'Admin'
+      });
+      setShowAssignTaskModal(false);
+      alert('Task assigned successfully!');
+    } catch (error) {
+      alert('Failed to assign task. Please try again.');
+    } finally {
+      setIsAssigningTask(false);
     }
   };
 
@@ -1143,7 +1203,10 @@ export default function EmployeeDetailsPage() {
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <h4 className="text-lg font-medium text-slate-100">Assigned Tasks</h4>
-                    <button className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer">
+                    <button 
+                      onClick={() => setShowAssignTaskModal(true)}
+                      className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
+                    >
                       Assign Task
                     </button>
                   </div>
@@ -1769,6 +1832,132 @@ export default function EmployeeDetailsPage() {
                     className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                   >
                     {isDeletingSalary ? 'Deleting...' : 'Delete Record'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Assign Task Modal */}
+        {showAssignTaskModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                  <h2 className="text-xl font-semibold text-slate-100">Assign New Task</h2>
+                  <button 
+                    onClick={() => setShowAssignTaskModal(false)}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-4">
+                  {/* Task Title */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Task Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={newTask.title}
+                      onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter task title"
+                    />
+                  </div>
+
+                  {/* Task Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={newTask.description}
+                      onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
+                      placeholder="Enter task description"
+                    />
+                  </div>
+
+                  {/* Priority and Due Date */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Priority *
+                      </label>
+                      <select
+                        value={newTask.priority}
+                        onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as 'low' | 'medium' | 'high' | 'urgent' })}
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Due Date *
+                      </label>
+                      <input
+                        type="date"
+                        value={newTask.due_date}
+                        onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Project */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Project (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={newTask.project}
+                      onChange={(e) => setNewTask({ ...newTask, project: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter project name"
+                    />
+                  </div>
+
+                  {/* Assigned By */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Assigned By
+                    </label>
+                    <input
+                      type="text"
+                      value={newTask.assigned_by}
+                      onChange={(e) => setNewTask({ ...newTask, assigned_by: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter your name"
+                    />
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={() => setShowAssignTaskModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAssignTask}
+                    disabled={isAssigningTask || !newTask.title || !newTask.due_date}
+                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                  >
+                    {isAssigningTask ? 'Assigning...' : 'Assign Task'}
                   </button>
                 </div>
               </div>
