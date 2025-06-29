@@ -102,6 +102,8 @@ export default function CustomerDetailsPage() {
   const [notifyOrderId, setNotifyOrderId] = useState<number | null>(null);
   const [isNotifying, setIsNotifying] = useState(false);
   const [isSendingSMS, setIsSendingSMS] = useState(false);
+  const [redeemAmount, setRedeemAmount] = useState('');
+  const [isRedeeming, setIsRedeeming] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -362,6 +364,36 @@ export default function CustomerDetailsPage() {
         newSet.delete(giftId);
         return newSet;
       });
+    }
+  };
+
+  const handleRedeemPoints = async () => {
+    const amount = parseFloat(redeemAmount);
+    const totalPoints = achievements.reduce((total, achievement) => total + achievement.points, 0);
+    
+    if (!amount || amount <= 0) {
+      alert('Please enter a valid amount to redeem.');
+      return;
+    }
+    
+    if (amount > totalPoints) {
+      alert('Insufficient points. You cannot redeem more than your total points.');
+      return;
+    }
+    
+    setIsRedeeming(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Here you would typically call an API to process the redemption
+      // For now, we'll just show a success message
+      alert(`Successfully redeemed ${amount} points!`);
+      setRedeemAmount('');
+    } catch (error) {
+      alert('Failed to redeem points. Please try again.');
+    } finally {
+      setIsRedeeming(false);
     }
   };
 
@@ -910,6 +942,24 @@ export default function CustomerDetailsPage() {
                           </span>
                         </div>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="number"
+                          value={redeemAmount}
+                          onChange={(e) => setRedeemAmount(e.target.value)}
+                          placeholder="Amount to redeem"
+                          min="1"
+                          max={achievements.reduce((total, achievement) => total + achievement.points, 0)}
+                          className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm w-32"
+                        />
+                        <button
+                          onClick={handleRedeemPoints}
+                          disabled={!redeemAmount || isRedeeming || parseFloat(redeemAmount) <= 0}
+                          className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                        >
+                          {isRedeeming ? 'Redeeming...' : 'Redeem'}
+                        </button>
+                      </div>
                       <div className="text-sm text-slate-400">
                         {achievements.length} achievements earned
                       </div>
@@ -943,21 +993,12 @@ export default function CustomerDetailsPage() {
                           </div>
                         </div>
 
-                        {/* Achievement Badge and Redeem Button */}
+                        {/* Achievement Badge */}
                         <div className="space-y-3">
                           <div className="flex items-center justify-center p-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg border border-amber-500/30">
                             <Star className="h-5 w-5 text-amber-400 mr-2" />
                             <span className="text-amber-300 font-medium text-sm">Achievement Unlocked</span>
                           </div>
-                          
-                          {/* Redeem Button */}
-                          <button
-                            onClick={() => handleRedeemAchievement(achievement)}
-                            className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm flex items-center justify-center space-x-2"
-                          >
-                            <Coins className="h-4 w-4" />
-                            <span>Redeem {achievement.points} Points</span>
-                          </button>
                         </div>
 
                         {/* Decorative elements */}
