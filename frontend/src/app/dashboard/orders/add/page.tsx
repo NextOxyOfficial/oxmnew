@@ -31,6 +31,7 @@ interface OrderItem {
   variant?: number;
   quantity: number;
   unit_price: number;
+  buy_price: number;
   total: number;
   product_name: string;
   variant_details?: string;
@@ -64,6 +65,9 @@ interface OrderForm {
   employee_id?: number;
   incentive_amount: number;
   net_profit: number; // total - incentive_amount
+  total_buy_price: number; // Total cost price of all items
+  total_sell_price: number; // Total selling price of all items (before discounts)
+  gross_profit: number; // total_sell_price - total_buy_price
 }
 
 export default function AddOrderPage() {
@@ -112,6 +116,9 @@ export default function AddOrderPage() {
     employee_id: undefined,
     incentive_amount: 0,
     net_profit: 0,
+    total_buy_price: 0,
+    total_sell_price: 0,
+    gross_profit: 0,
   });
 
   // State for adding new items
@@ -257,11 +264,14 @@ export default function AddOrderPage() {
     incentiveAmount: number
   ) => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+    const totalBuyPrice = items.reduce((sum, item) => sum + (item.buy_price * item.quantity), 0);
+    const totalSellPrice = subtotal; // Sell price is the same as subtotal before discounts
     const discountAmount = (subtotal * discountPercentage) / 100;
     const afterDiscount = subtotal - discountAmount;
     const vatAmount = (afterDiscount * vatPercentage) / 100;
     // Only subtract due amount if checkbox is checked, only add previous due if checkbox is checked
     const total = afterDiscount + vatAmount - (applyDueToTotal ? dueAmount : 0) + (applyPreviousDueToTotal ? previousDue : 0);
+    const grossProfit = totalSellPrice - totalBuyPrice;
     const netProfit = total - incentiveAmount;
 
     return {
@@ -270,12 +280,15 @@ export default function AddOrderPage() {
       vatAmount,
       total,
       netProfit,
+      totalBuyPrice,
+      totalSellPrice,
+      grossProfit
     };
   };
 
   // Update totals when items, discount, VAT, due amount, apply_due_to_total, previous due, apply_previous_due_to_total, or incentive changes
   useEffect(() => {
-    const { subtotal, discountAmount, vatAmount, total, netProfit } = calculateTotals(
+    const { subtotal, discountAmount, vatAmount, total, netProfit, totalBuyPrice, totalSellPrice, grossProfit } = calculateTotals(
       orderForm.items,
       orderForm.discount_percentage,
       orderForm.vat_percentage,
@@ -293,6 +306,9 @@ export default function AddOrderPage() {
       vat_amount: vatAmount,
       total,
       net_profit: netProfit,
+      total_buy_price: totalBuyPrice,
+      total_sell_price: totalSellPrice,
+      gross_profit: grossProfit,
     }));
   }, [
     orderForm.items,
@@ -443,6 +459,7 @@ export default function AddOrderPage() {
     // Use default quantity of 1 and unit price from product/variant
     const quantity = 1;
     const unitPrice = selectedVariant ? selectedVariant.sell_price || 0 : selectedProduct.sell_price || 0;
+    const buyPrice = selectedVariant ? selectedVariant.buy_price || 0 : selectedProduct.buy_price || 0;
 
     const item: OrderItem = {
       id: Date.now().toString(),
@@ -450,6 +467,7 @@ export default function AddOrderPage() {
       variant: newItem.variant ? parseInt(newItem.variant) : undefined,
       quantity: quantity,
       unit_price: unitPrice,
+      buy_price: buyPrice,
       total: quantity * unitPrice,
       product_name: selectedProduct.name,
       variant_details: selectedVariant
@@ -914,6 +932,7 @@ export default function AddOrderPage() {
                                       const variantId = e.target.value ? parseInt(e.target.value) : undefined;
                                       const selectedVariant = product.variants?.find(v => v.id === variantId);
                                       const newUnitPrice = selectedVariant ? selectedVariant.sell_price || 0 : product.sell_price || 0;
+                                      const newBuyPrice = selectedVariant ? selectedVariant.buy_price || 0 : product.buy_price || 0;
                                       
                                       setOrderForm((prev) => ({
                                         ...prev,
@@ -923,6 +942,7 @@ export default function AddOrderPage() {
                                                 ...orderItem,
                                                 variant: variantId,
                                                 unit_price: newUnitPrice,
+                                                buy_price: newBuyPrice,
                                                 total: orderItem.quantity * newUnitPrice,
                                                 variant_details: selectedVariant
                                                   ? `${selectedVariant.color} - ${selectedVariant.size}${
@@ -988,13 +1008,13 @@ export default function AddOrderPage() {
                           </div>
 
                           {/* Total Price & Actions */}
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-end gap-3">
                             <div className="font-semibold text-slate-100 text-sm">
                               {formatCurrency(item.total)}
                             </div>
                             <button
                               onClick={() => removeItem(item.id)}
-                              className="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/10 rounded transition-colors ml-2"
+                              className="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/10 rounded transition-colors"
                             >
                               <svg
                                 className="w-4 h-4"
@@ -1362,6 +1382,18 @@ export default function AddOrderPage() {
                           {orderForm.total > 0 && (
                             <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-3">
                               <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm text-slate-400">Total Buy Price:</span>
+                                <span className="text-sm text-red-400">{formatCurrency(orderForm.total_buy_price)}</span>
+                              </div>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm text-slate-400">Total Sell Price:</span>
+                                <span className="text-sm text-blue-400">{formatCurrency(orderForm.total_sell_price)}</span>
+                              </div>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm text-slate-400">Gross Profit:</span>
+                                <span className="text-sm text-green-400">{formatCurrency(orderForm.gross_profit)}</span>
+                              </div>
+                              <div className="flex justify-between items-center mb-2 pt-2 border-t border-slate-700/30">
                                 <span className="text-sm text-slate-400">Order Total:</span>
                                 <span className="text-sm text-slate-100">{formatCurrency(orderForm.total)}</span>
                               </div>
