@@ -678,8 +678,35 @@ export default function AddOrderPage() {
                             setIsCustomerDropdownOpen(true);
                           }}
                           onFocus={() => setIsCustomerDropdownOpen(true)}
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
                         />
+                        {/* Clear button */}
+                        {customerSearch && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomerSearch('');
+                              setSelectedCustomerId(null);
+                              setIsCustomerDropdownOpen(false);
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                customer: {
+                                  name: "",
+                                  email: "",
+                                  phone: "",
+                                  address: "",
+                                  company: "",
+                                },
+                                previous_due: 0,
+                                apply_previous_due_to_total: true,
+                              }));
+                            }}
+                            className="absolute right-12 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
+                            title="Clear search"
+                          >
+                            Clear
+                          </button>
+                        )}
                         <svg
                           className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
                           fill="none"
@@ -1294,8 +1321,23 @@ export default function AddOrderPage() {
                                   setIsEmployeeDropdownOpen(true);
                                 }}
                                 onFocus={() => setIsEmployeeDropdownOpen(true)}
-                                className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                                className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
                               />
+                              {/* Clear button */}
+                              {employeeSearch && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEmployeeSearch('');
+                                    setOrderForm((prev) => ({ ...prev, employee_id: undefined }));
+                                    setIsEmployeeDropdownOpen(false);
+                                  }}
+                                  className="absolute right-12 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
+                                  title="Clear search"
+                                >
+                                  Clear
+                                </button>
+                              )}
                               <svg
                                 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
                                 fill="none"
