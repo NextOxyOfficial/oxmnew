@@ -93,6 +93,17 @@ export default function EmployeeDetailsPage() {
     employee_id: '',
     status: 'active' as 'active' | 'suspended' | 'resigned' | 'corrupted'
   });
+  const [paymentForm, setPaymentForm] = useState({
+    bankName: '',
+    accountNumber: '',
+    bankBranch: '',
+    accountHolderName: '',
+    taxId: '',
+    taxWithholding: '',
+    paymentMethod: 'direct-deposit',
+    payFrequency: 'monthly',
+    paymentNotes: ''
+  });
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showIncentiveModal, setShowIncentiveModal] = useState(false);
@@ -226,6 +237,17 @@ export default function EmployeeDetailsPage() {
         employee_id: mockEmployee.employee_id,
         status: mockEmployee.status
       });
+      setPaymentForm({
+        bankName: 'Dutch-Bangla Bank Limited',
+        accountNumber: '1234567890123456',
+        bankBranch: 'Dhanmondi Branch',
+        accountHolderName: mockEmployee.name,
+        taxId: '123-45-6789',
+        taxWithholding: 'single',
+        paymentMethod: 'direct-deposit',
+        payFrequency: 'monthly',
+        paymentNotes: ''
+      });
       setIncentives(mockIncentives);
       setSalaryRecords(mockSalaryRecords);
       setTasks(mockTasks);
@@ -262,6 +284,23 @@ export default function EmployeeDetailsPage() {
       alert('Employee details updated successfully!');
     } catch (error) {
       alert('Failed to update employee details. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSavePaymentInfo = async () => {
+    setIsSaving(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // In a real application, you would save the payment information to the backend
+      console.log('Payment information saved:', paymentForm);
+      
+      alert('Payment information updated successfully!');
+    } catch (error) {
+      alert('Failed to update payment information. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -923,6 +962,8 @@ export default function EmployeeDetailsPage() {
                         </label>
                         <input
                           type="text"
+                          value={paymentForm.bankName}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, bankName: e.target.value })}
                           placeholder="Enter bank name"
                           className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                         />
@@ -934,6 +975,8 @@ export default function EmployeeDetailsPage() {
                         </label>
                         <input
                           type="text"
+                          value={paymentForm.accountNumber}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, accountNumber: e.target.value })}
                           placeholder="Enter account number"
                           className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                         />
@@ -941,11 +984,13 @@ export default function EmployeeDetailsPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Routing Number
+                          Bank Branch
                         </label>
                         <input
                           type="text"
-                          placeholder="Enter routing number"
+                          value={paymentForm.bankBranch}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, bankBranch: e.target.value })}
+                          placeholder="Enter bank branch"
                           className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                         />
                       </div>
@@ -956,6 +1001,8 @@ export default function EmployeeDetailsPage() {
                         </label>
                         <input
                           type="text"
+                          value={paymentForm.accountHolderName}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, accountHolderName: e.target.value })}
                           placeholder="Enter account holder name"
                           className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                         />
@@ -972,6 +1019,8 @@ export default function EmployeeDetailsPage() {
                         </label>
                         <input
                           type="text"
+                          value={paymentForm.taxId}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, taxId: e.target.value })}
                           placeholder="XXX-XX-XXXX"
                           className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                         />
@@ -981,7 +1030,11 @@ export default function EmployeeDetailsPage() {
                         <label className="block text-sm font-medium text-slate-300 mb-2">
                           Tax Withholding
                         </label>
-                        <select className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer">
+                        <select 
+                          value={paymentForm.taxWithholding}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, taxWithholding: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
+                        >
                           <option value="">Select tax withholding</option>
                           <option value="single">Single</option>
                           <option value="married">Married Filing Jointly</option>
@@ -994,7 +1047,11 @@ export default function EmployeeDetailsPage() {
                         <label className="block text-sm font-medium text-slate-300 mb-2">
                           Payment Method
                         </label>
-                        <select className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer">
+                        <select 
+                          value={paymentForm.paymentMethod}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
+                        >
                           <option value="direct-deposit">Bank Deposit</option>
                           <option value="check">Paper Check</option>
                           <option value="wire">Online Transfer</option>
@@ -1006,7 +1063,11 @@ export default function EmployeeDetailsPage() {
                         <label className="block text-sm font-medium text-slate-300 mb-2">
                           Pay Frequency
                         </label>
-                        <select className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer">
+                        <select 
+                          value={paymentForm.payFrequency}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, payFrequency: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
+                        >
                           <option value="monthly">Monthly</option>
                           <option value="bi-weekly">Bi-weekly</option>
                           <option value="weekly">Weekly</option>
@@ -1022,6 +1083,8 @@ export default function EmployeeDetailsPage() {
                     </label>
                     <textarea
                       rows={3}
+                      value={paymentForm.paymentNotes}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, paymentNotes: e.target.value })}
                       placeholder="Add any special payment instructions or notes..."
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
                     />
@@ -1029,8 +1092,12 @@ export default function EmployeeDetailsPage() {
 
                   {/* Save Payment Info Button */}
                   <div className="flex justify-end mt-6">
-                    <button className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg cursor-pointer">
-                      Save Payment Info
+                    <button 
+                      onClick={handleSavePaymentInfo}
+                      disabled={isSaving}
+                      className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                    >
+                      {isSaving ? 'Saving...' : 'Save Payment Info'}
                     </button>
                   </div>
                 </div>
