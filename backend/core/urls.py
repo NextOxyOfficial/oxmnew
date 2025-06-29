@@ -37,6 +37,15 @@ urlpatterns = [
     path('levels/<int:level_id>/', views.level_detail, name='level-detail'),
     path('levels/<int:level_id>/toggle/',
          views.toggle_level, name='toggle-level'),
+    path('brands/', views.brands, name='brands'),
+    path('brands/<int:brand_id>/', views.brand_detail, name='brand-detail'),
+    path('brands/<int:brand_id>/toggle/',
+         views.toggle_brand, name='toggle-brand'),
+    path('payment-methods/', views.payment_methods, name='payment-methods'),
+    path('payment-methods/<int:payment_method_id>/',
+         views.payment_method_detail, name='payment-method-detail'),
+    path('payment-methods/<int:payment_method_id>/toggle/',
+         views.toggle_payment_method, name='toggle-payment-method'),
 
     path('send-sms/', views.smsSend, name='sms-send'),
 ]

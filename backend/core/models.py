@@ -130,3 +130,33 @@ class Level(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.user.username}"
+
+class Brand(models.Model):
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='brands')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name_plural = "Brands"
+        ordering = ['name']
+        unique_together = ['name', 'user']  # Prevent duplicate brand names per user
+    
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"
+
+class PaymentMethod(models.Model):
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payment_methods')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name_plural = "Payment Methods"
+        ordering = ['name']
+        unique_together = ['name', 'user']  # Prevent duplicate payment method names per user
+    
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"

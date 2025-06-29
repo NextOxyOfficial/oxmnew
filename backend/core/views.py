@@ -10,7 +10,7 @@ from django.db import IntegrityError
 from django.core.mail import send_mail
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from .models import UserProfile, Category, UserSettings, Gift, Achievement, Level
+from .models import UserProfile, Category, UserSettings, Gift, Achievement, Level, Brand, PaymentMethod
 import json
 from django.conf import settings
 import requests
@@ -1371,3 +1371,341 @@ def smsSend(request):
     except requests.exceptions.RequestException as e:
         print(f"SMS API request failed: {str(e)}")
         return Response({'error': 'SMS service error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Brand Views
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def brands(request):
+    """
+    Get all brands or create a new brand
+    """
+    if request.method == 'GET':
+        try:
+            user_brands = Brand.objects.filter(user=request.user)
+            brands_data = []
+            for brand in user_brands:
+                brands_data.append({
+                    'id': brand.id,
+                    'name': brand.name,
+                    'is_active': brand.is_active,
+                    'created_at': brand.created_at,
+                    'updated_at': brand.updated_at,
+                })
+
+            return Response({
+                'brands': brands_data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    elif request.method == 'POST':
+        try:
+            name = request.data.get('name', '').strip()
+
+            if not name:
+                return Response({
+                    'error': 'Brand name is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if brand with same name already exists for this user
+            if Brand.objects.filter(user=request.user, name__iexact=name).exists():
+                return Response({
+                    'error': 'Brand with this name already exists'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create new brand
+            brand = Brand.objects.create(
+                name=name,
+                user=request.user,
+                is_active=request.data.get('is_active', True)
+            )
+
+            return Response({
+                'message': 'Brand created successfully',
+                'brand': {
+                    'id': brand.id,
+                    'name': brand.name,
+                    'is_active': brand.is_active,
+                    'created_at': brand.created_at,
+                    'updated_at': brand.updated_at,
+                }
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def brand_detail(request, brand_id):
+    """
+    Update or delete a specific brand
+    """
+    try:
+        brand = Brand.objects.get(id=brand_id, user=request.user)
+    except Brand.DoesNotExist:
+        return Response({
+            'error': 'Brand not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'PUT':
+        try:
+            # Update brand fields
+            if 'name' in request.data:
+                name = request.data['name'].strip()
+                if not name:
+                    return Response({
+                        'error': 'Brand name cannot be empty'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Check if another brand with same name exists for this user
+                if Brand.objects.filter(
+                    user=request.user,
+                    name__iexact=name
+                ).exclude(id=brand_id).exists():
+                    return Response({
+                        'error': 'Brand with this name already exists'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                brand.name = name
+
+            if 'is_active' in request.data:
+                brand.is_active = request.data['is_active']
+
+            brand.save()
+
+            return Response({
+                'message': 'Brand updated successfully',
+                'brand': {
+                    'id': brand.id,
+                    'name': brand.name,
+                    'is_active': brand.is_active,
+                    'created_at': brand.created_at,
+                    'updated_at': brand.updated_at,
+                }
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    elif request.method == 'DELETE':
+        try:
+            brand.delete()
+            return Response({
+                'message': 'Brand deleted successfully'
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def toggle_brand(request, brand_id):
+    """
+    Toggle brand active status
+    """
+    try:
+        brand = Brand.objects.get(id=brand_id, user=request.user)
+        brand.is_active = not brand.is_active
+        brand.save()
+
+        return Response({
+            'message': f'Brand {brand.name} {"activated" if brand.is_active else "deactivated"} successfully',
+            'brand': {
+                'id': brand.id,
+                'name': brand.name,
+                'is_active': brand.is_active,
+                'created_at': brand.created_at,
+                'updated_at': brand.updated_at,
+            }
+        }, status=status.HTTP_200_OK)
+
+    except Brand.DoesNotExist:
+        return Response({
+            'error': 'Brand not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Payment Method Views
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def payment_methods(request):
+    """
+    Get all payment methods or create a new payment method
+    """
+    if request.method == 'GET':
+        try:
+            user_payment_methods = PaymentMethod.objects.filter(user=request.user)
+            payment_methods_data = []
+            for payment_method in user_payment_methods:
+                payment_methods_data.append({
+                    'id': payment_method.id,
+                    'name': payment_method.name,
+                    'is_active': payment_method.is_active,
+                    'created_at': payment_method.created_at,
+                    'updated_at': payment_method.updated_at,
+                })
+
+            return Response({
+                'paymentMethods': payment_methods_data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    elif request.method == 'POST':
+        try:
+            name = request.data.get('name', '').strip()
+
+            if not name:
+                return Response({
+                    'error': 'Payment method name is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if payment method with same name already exists for this user
+            if PaymentMethod.objects.filter(user=request.user, name__iexact=name).exists():
+                return Response({
+                    'error': 'Payment method with this name already exists'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create new payment method
+            payment_method = PaymentMethod.objects.create(
+                name=name,
+                user=request.user,
+                is_active=request.data.get('is_active', True)
+            )
+
+            return Response({
+                'message': 'Payment method created successfully',
+                'paymentMethod': {
+                    'id': payment_method.id,
+                    'name': payment_method.name,
+                    'is_active': payment_method.is_active,
+                    'created_at': payment_method.created_at,
+                    'updated_at': payment_method.updated_at,
+                }
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def payment_method_detail(request, payment_method_id):
+    """
+    Update or delete a specific payment method
+    """
+    try:
+        payment_method = PaymentMethod.objects.get(id=payment_method_id, user=request.user)
+    except PaymentMethod.DoesNotExist:
+        return Response({
+            'error': 'Payment method not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'PUT':
+        try:
+            # Update payment method fields
+            if 'name' in request.data:
+                name = request.data['name'].strip()
+                if not name:
+                    return Response({
+                        'error': 'Payment method name cannot be empty'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Check if another payment method with same name exists for this user
+                if PaymentMethod.objects.filter(
+                    user=request.user,
+                    name__iexact=name
+                ).exclude(id=payment_method_id).exists():
+                    return Response({
+                        'error': 'Payment method with this name already exists'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                payment_method.name = name
+
+            if 'is_active' in request.data:
+                payment_method.is_active = request.data['is_active']
+
+            payment_method.save()
+
+            return Response({
+                'message': 'Payment method updated successfully',
+                'paymentMethod': {
+                    'id': payment_method.id,
+                    'name': payment_method.name,
+                    'is_active': payment_method.is_active,
+                    'created_at': payment_method.created_at,
+                    'updated_at': payment_method.updated_at,
+                }
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    elif request.method == 'DELETE':
+        try:
+            payment_method.delete()
+            return Response({
+                'message': 'Payment method deleted successfully'
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def toggle_payment_method(request, payment_method_id):
+    """
+    Toggle payment method active status
+    """
+    try:
+        payment_method = PaymentMethod.objects.get(id=payment_method_id, user=request.user)
+        payment_method.is_active = not payment_method.is_active
+        payment_method.save()
+
+        return Response({
+            'message': f'Payment method {payment_method.name} {"activated" if payment_method.is_active else "deactivated"} successfully',
+            'paymentMethod': {
+                'id': payment_method.id,
+                'name': payment_method.name,
+                'is_active': payment_method.is_active,
+                'created_at': payment_method.created_at,
+                'updated_at': payment_method.updated_at,
+            }
+        }, status=status.HTTP_200_OK)
+
+    except PaymentMethod.DoesNotExist:
+        return Response({
+            'error': 'Payment method not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
