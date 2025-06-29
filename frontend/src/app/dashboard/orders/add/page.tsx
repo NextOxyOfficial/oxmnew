@@ -516,6 +516,20 @@ export default function AddOrderPage() {
     }));
   };
 
+  // Update item unit price
+  const updateItemUnitPrice = (itemId: string, unitPrice: number) => {
+    if (unitPrice < 0) return;
+
+    setOrderForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item) =>
+        item.id === itemId
+          ? { ...item, unit_price: unitPrice, total: item.quantity * unitPrice }
+          : item
+      ),
+    }));
+  };
+
   // Handle form submission
   const handleSubmit = async (status: "draft" | "pending") => {
     if (orderForm.items.length === 0) {
@@ -1029,9 +1043,17 @@ export default function AddOrderPage() {
 
                           {/* Unit Price */}
                           <div className="text-center">
-                            <div className="text-sm text-slate-100">
-                              {formatCurrency(item.unit_price)}
-                            </div>
+                            <input
+                              type="number"
+                              value={item.unit_price}
+                              onChange={(e) => {
+                                const newPrice = parseFloat(e.target.value) || 0;
+                                updateItemUnitPrice(item.id, newPrice);
+                              }}
+                              className="w-20 bg-slate-800/50 border border-slate-700/50 text-white text-sm text-center rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              min="0"
+                              step="0.01"
+                            />
                           </div>
 
                           {/* Total Price & Actions */}
