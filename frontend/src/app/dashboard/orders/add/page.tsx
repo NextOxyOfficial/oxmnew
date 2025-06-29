@@ -1627,9 +1627,14 @@ export default function AddOrderPage() {
                                 <span className="text-sm text-orange-400">-{formatCurrency(orderForm.incentive_amount)}</span>
                               </div>
                               <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
-                                <span className="text-sm font-medium text-slate-300">Net Profit:</span>
-                                <span className="text-sm font-semibold text-green-400">
-                                  {formatCurrency(orderForm.net_profit)}
+                                <span className="text-sm font-medium text-slate-300">
+                                  {orderForm.net_profit < 0 ? "Net Loss:" : "Net Profit:"}
+                                </span>
+                                <span className={`text-sm font-semibold ${orderForm.net_profit < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                  {orderForm.net_profit < 0 
+                                    ? formatCurrency(Math.abs(orderForm.net_profit))
+                                    : formatCurrency(orderForm.net_profit)
+                                  }
                                 </span>
                               </div>
                             </div>
