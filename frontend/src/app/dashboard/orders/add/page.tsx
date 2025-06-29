@@ -752,7 +752,10 @@ export default function AddOrderPage() {
                             setIsCustomerDropdownOpen(true);
                           }}
                           onFocus={() => setIsCustomerDropdownOpen(true)}
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                          disabled={customerType === "guest"}
+                          className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                            customerType === "guest" ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
                         />
                         {/* Clear button */}
                         {customerSearch && (
@@ -843,6 +846,10 @@ export default function AddOrderPage() {
                           onChange={(e) => {
                             if (e.target.checked) {
                               handleGuestCustomer();
+                              // Clear customer search input when "New Customer" is checked
+                              setCustomerSearch('');
+                              setSelectedCustomerId(null);
+                              setIsCustomerDropdownOpen(false);
                             } else {
                               // If unchecked, switch to existing customer mode and clear form
                               setCustomerType("existing");
