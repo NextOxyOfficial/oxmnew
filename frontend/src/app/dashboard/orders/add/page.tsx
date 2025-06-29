@@ -55,6 +55,7 @@ interface OrderForm {
   due_amount: number;
   apply_due_to_total: boolean; // Whether to subtract due amount from total
   previous_due: number; // Customer's existing debt
+  apply_previous_due_to_total: boolean; // Whether to add previous due amount to total
   total: number;
   due_date: string;
   notes: string;
@@ -77,6 +78,12 @@ export default function AddOrderPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customerType, setCustomerType] = useState<"existing" | "guest">("existing");
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [isSalesIncentiveOpen, setIsSalesIncentiveOpen] = useState(false);
+  const [customerValidationError, setCustomerValidationError] = useState<string | null>(null);
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+  const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
 
   // Order form state
   const [orderForm, setOrderForm] = useState<OrderForm>({
@@ -96,6 +103,7 @@ export default function AddOrderPage() {
     due_amount: 0,
     apply_due_to_total: true, // Default to true - include due in total calculation
     previous_due: 0,
+    apply_previous_due_to_total: true, // Default to true - include previous due in total calculation
     total: 0,
     due_date: "",
     notes: "",
@@ -245,14 +253,15 @@ export default function AddOrderPage() {
     dueAmount: number,
     applyDueToTotal: boolean,
     previousDue: number,
+    applyPreviousDueToTotal: boolean,
     incentiveAmount: number
   ) => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const discountAmount = (subtotal * discountPercentage) / 100;
     const afterDiscount = subtotal - discountAmount;
     const vatAmount = (afterDiscount * vatPercentage) / 100;
-    // Only subtract due amount if checkbox is checked
-    const total = afterDiscount + vatAmount - (applyDueToTotal ? dueAmount : 0) + previousDue;
+    // Only subtract due amount if checkbox is checked, only add previous due if checkbox is checked
+    const total = afterDiscount + vatAmount - (applyDueToTotal ? dueAmount : 0) + (applyPreviousDueToTotal ? previousDue : 0);
     const netProfit = total - incentiveAmount;
 
     return {
@@ -264,7 +273,7 @@ export default function AddOrderPage() {
     };
   };
 
-  // Update totals when items, discount, VAT, due amount, apply_due_to_total, previous due, or incentive changes
+  // Update totals when items, discount, VAT, due amount, apply_due_to_total, previous due, apply_previous_due_to_total, or incentive changes
   useEffect(() => {
     const { subtotal, discountAmount, vatAmount, total, netProfit } = calculateTotals(
       orderForm.items,
@@ -273,6 +282,7 @@ export default function AddOrderPage() {
       orderForm.due_amount,
       orderForm.apply_due_to_total,
       orderForm.previous_due,
+      orderForm.apply_previous_due_to_total,
       orderForm.incentive_amount
     );
 
@@ -291,6 +301,7 @@ export default function AddOrderPage() {
     orderForm.due_amount,
     orderForm.apply_due_to_total,
     orderForm.previous_due,
+    orderForm.apply_previous_due_to_total,
     orderForm.incentive_amount,
   ]);
 
@@ -303,6 +314,23 @@ export default function AddOrderPage() {
         [field]: value,
       },
     }));
+
+    // Clear validation error when user starts typing
+    if (customerValidationError) {
+      setCustomerValidationError(null);
+    }
+
+    // Check for existing customer if email or phone is being changed
+    if ((field === 'email' || field === 'phone') && value.trim()) {
+      const existingCustomer = customers.find(c => 
+        (field === 'email' && c.email.toLowerCase() === value.toLowerCase()) ||
+        (field === 'phone' && c.phone === value)
+      );
+      
+      if (existingCustomer) {
+        setCustomerValidationError(`A customer with this ${field} already exists: ${existingCustomer.name}`);
+      }
+    }
   };
 
   // Handle customer selection
@@ -322,6 +350,7 @@ export default function AddOrderPage() {
             company: "",
           },
           previous_due: selectedCustomer.previous_due || 0,
+          apply_previous_due_to_total: true, // Default to true when selecting customer
         }));
       }
     } else {
@@ -338,6 +367,7 @@ export default function AddOrderPage() {
           company: "",
         },
         previous_due: 0,
+        apply_previous_due_to_total: true,
       }));
     }
   };
@@ -357,6 +387,7 @@ export default function AddOrderPage() {
           company: "",
         },
         previous_due: 0,
+        apply_previous_due_to_total: true,
       }));
     }
   };
@@ -375,6 +406,7 @@ export default function AddOrderPage() {
         company: "",
       },
       previous_due: 0,
+      apply_previous_due_to_total: true,
     }));
   };
 
@@ -478,6 +510,11 @@ export default function AddOrderPage() {
       return;
     }
 
+    if (customerValidationError) {
+      setError("Please fix the customer validation errors before submitting");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError(null);
@@ -532,8 +569,40 @@ export default function AddOrderPage() {
     ? selectedProduct.variants || []
     : [];
 
+  // Filter customers based on search
+  const filteredCustomers = customers.filter(customer => {
+    if (!customerSearch.trim()) return true;
+    const search = customerSearch.toLowerCase();
+    return (
+      customer.name.toLowerCase().includes(search) ||
+      customer.email.toLowerCase().includes(search) ||
+      customer.phone.includes(search)
+    );
+  });
+
+  // Filter employees based on search
+  const filteredEmployees = employees.filter(employee => {
+    if (!employeeSearch.trim()) return true;
+    const search = employeeSearch.toLowerCase();
+    return (
+      employee.name.toLowerCase().includes(search) ||
+      employee.email.toLowerCase().includes(search) ||
+      (employee.position && employee.position.toLowerCase().includes(search))
+    );
+  });
+
   return (
-    <div className="sm:p-6 p-1 space-y-6">
+    <>
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;  /* Internet Explorer 10+ */
+          scrollbar-width: none;  /* Firefox */
+        }
+        .scrollbar-hide::-webkit-scrollbar { 
+          display: none;  /* Safari and Chrome */
+        }
+      `}</style>
+      <div className="sm:p-6 p-1 space-y-6">
       <div className="max-w-7xl">
         {/* Page Header */}
         {/* Error Message */}
@@ -579,36 +648,71 @@ export default function AddOrderPage() {
                     Customer Selection
                   </label>
                   <div className="flex gap-4 items-center">
-                    {/* Customer Dropdown */}
-                    <div className="flex-1">
-                      <select
-                        value={selectedCustomerId || ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value) {
-                            handleCustomerSelection(parseInt(value));
-                          } else {
-                            handleCustomerSelection(0); // This will trigger guest mode
-                          }
-                        }}
-                        disabled={isLoadingCustomers}
-                        className={`w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                          isLoadingCustomers ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                      >
-                        <option value="" className="bg-slate-800">
-                          {isLoadingCustomers ? "Loading customers..." : "Select a customer"}
-                        </option>
-                        {customers.map((customer) => (
-                          <option
-                            key={customer.id}
-                            value={customer.id}
-                            className="bg-slate-800"
-                          >
-                            {customer.name} ({customer.email})
-                          </option>
-                        ))}
-                      </select>
+                    {/* Customer Dropdown with Integrated Search */}
+                    <div className="flex-1 relative">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search and select customer..."
+                          value={customerSearch}
+                          onChange={(e) => {
+                            setCustomerSearch(e.target.value);
+                            setIsCustomerDropdownOpen(true);
+                          }}
+                          onFocus={() => setIsCustomerDropdownOpen(true)}
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                        />
+                        <svg
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                      
+                      {/* Dropdown Options */}
+                      {isCustomerDropdownOpen && (
+                        <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto scrollbar-hide">
+                          {isLoadingCustomers ? (
+                            <div className="p-3 text-slate-400">Loading customers...</div>
+                          ) : filteredCustomers.length > 0 ? (
+                            filteredCustomers.map((customer) => (
+                              <div
+                                key={customer.id}
+                                onClick={() => {
+                                  handleCustomerSelection(customer.id);
+                                  setCustomerSearch(`${customer.name} (${customer.email}) - ${customer.phone}`);
+                                  setIsCustomerDropdownOpen(false);
+                                }}
+                                className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
+                              >
+                                <div className="text-white font-medium">{customer.name}</div>
+                                <div className="text-slate-400 text-sm">{customer.email} • {customer.phone}</div>
+                                {customer.previous_due && customer.previous_due > 0 && (
+                                  <div className="text-red-400 text-xs">Previous Due: {formatCurrency(customer.previous_due)}</div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-3 text-slate-400">No customers found</div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Click outside to close dropdown */}
+                      {isCustomerDropdownOpen && (
+                        <div
+                          className="fixed inset-0 z-5"
+                          onClick={() => setIsCustomerDropdownOpen(false)}
+                        />
+                      )}
                     </div>
 
                     {/* New Customer Checkbox */}
@@ -634,6 +738,7 @@ export default function AddOrderPage() {
                                   company: "",
                                 },
                                 previous_due: 0,
+                                apply_previous_due_to_total: true,
                               }));
                             }
                           }}
@@ -647,7 +752,15 @@ export default function AddOrderPage() {
 
                 {/* New Customer Form */}
                 {customerType === "guest" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    {/* Customer Validation Error */}
+                    {customerValidationError && (
+                      <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
+                        <p className="text-red-400 text-sm">{customerValidationError}</p>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-1.5">
                         Customer Name *
@@ -718,6 +831,7 @@ export default function AddOrderPage() {
                         placeholder="Customer address"
                       />
                     </div>
+                  </div>
                   </div>
                 )}
               </div>
@@ -1092,18 +1206,38 @@ export default function AddOrderPage() {
                           className="w-3 h-3 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-1 rounded"
                         />
                         <label htmlFor="apply-due-to-total" className="text-xs text-slate-400 cursor-pointer">
-                          {orderForm.apply_due_to_total ? "Due amount applied to total" : "Due amount shown only (not applied)"}
+                          Apply due amount to total
                         </label>
                       </div>
                     </div>
 
                     {/* Previous Due - Only show if customer has previous due */}
                     {orderForm.previous_due > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Previous Due:</span>
-                        <span className="text-red-400 font-medium">
-                          {formatCurrency(orderForm.previous_due)}
-                        </span>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Previous Due:</span>
+                          <span className="text-red-400 font-medium">
+                            {orderForm.apply_previous_due_to_total ? "+" : ""}{formatCurrency(orderForm.previous_due)}
+                          </span>
+                        </div>
+                        {/* Checkbox to include previous due in total */}
+                        <div className="flex items-center gap-2 ml-2">
+                          <input
+                            type="checkbox"
+                            id="apply-previous-due-to-total"
+                            checked={orderForm.apply_previous_due_to_total}
+                            onChange={(e) =>
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                apply_previous_due_to_total: e.target.checked,
+                              }))
+                            }
+                            className="w-3 h-3 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-1 rounded"
+                          />
+                          <label htmlFor="apply-previous-due-to-total" className="text-xs text-slate-400 cursor-pointer">
+                            Apply previous due to total
+                          </label>
+                        </div>
                       </div>
                     )}
 
@@ -1124,81 +1258,145 @@ export default function AddOrderPage() {
                   <div className="space-y-4">
                     {/* Incentive Section - Company Internal */}
                     <div>
-                      <h4 className="text-sm font-medium text-slate-300 mb-3 text-orange-400">
-                        Sales Incentive (Internal)
-                      </h4>
-                      
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                            Employee
-                          </label>
-                          <select
-                            value={orderForm.employee_id || ""}
-                            onChange={(e) =>
-                              setOrderForm((prev) => ({
-                                ...prev,
-                                employee_id: e.target.value ? parseInt(e.target.value) : undefined,
-                              }))
-                            }
-                            disabled={isLoadingEmployees}
-                            className={`w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                              isLoadingEmployees ? "opacity-50 cursor-not-allowed" : ""
-                            }`}
-                          >
-                            <option value="" className="bg-slate-800">
-                              {isLoadingEmployees ? "Loading employees..." : "Select employee (optional)"}
-                            </option>
-                            {employees.map((employee) => (
-                              <option
-                                key={employee.id}
-                                value={employee.id}
-                                className="bg-slate-800"
-                              >
-                                {employee.name} - {employee.position}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                            Incentive Amount
-                          </label>
-                          <input
-                            type="number"
-                            value={orderForm.incentive_amount === 0 ? "" : orderForm.incentive_amount}
-                            onChange={(e) =>
-                              setOrderForm((prev) => ({
-                                ...prev,
-                                incentive_amount: parseFloat(e.target.value) || 0,
-                              }))
-                            }
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
+                      <button
+                        onClick={() => setIsSalesIncentiveOpen(!isSalesIncentiveOpen)}
+                        className="w-full flex items-center justify-between text-sm font-medium text-orange-400 mb-3 p-2 rounded-lg hover:bg-slate-800/30 transition-colors"
+                      >
+                        <span>Sales Incentive (Internal)</span>
+                        <svg
+                          className={`w-4 h-4 transition-transform ${isSalesIncentiveOpen ? 'rotate-180' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
                           />
-                        </div>
-
-                        {/* Net Profit Display */}
-                        {orderForm.total > 0 && (
-                          <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-3">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm text-slate-400">Order Total:</span>
-                              <span className="text-sm text-slate-100">{formatCurrency(orderForm.total)}</span>
-                            </div>
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm text-slate-400">Incentive:</span>
-                              <span className="text-sm text-orange-400">-{formatCurrency(orderForm.incentive_amount)}</span>
-                            </div>
-                            <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
-                              <span className="text-sm font-medium text-slate-300">Net Profit:</span>
-                              <span className="text-sm font-semibold text-green-400">{formatCurrency(orderForm.net_profit)}</span>
+                        </svg>
+                      </button>
+                      
+                      {isSalesIncentiveOpen && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                              Employee
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                placeholder="Search and select employee..."
+                                value={employeeSearch}
+                                onChange={(e) => {
+                                  setEmployeeSearch(e.target.value);
+                                  setIsEmployeeDropdownOpen(true);
+                                }}
+                                onFocus={() => setIsEmployeeDropdownOpen(true)}
+                                className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                              />
+                              <svg
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                              
+                              {/* Dropdown Options */}
+                              {isEmployeeDropdownOpen && (
+                                <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto scrollbar-hide">
+                                  {isLoadingEmployees ? (
+                                    <div className="p-3 text-slate-400">Loading employees...</div>
+                                  ) : filteredEmployees.length > 0 ? (
+                                    <>
+                                      <div
+                                        onClick={() => {
+                                          setOrderForm((prev) => ({ ...prev, employee_id: undefined }));
+                                          setEmployeeSearch("");
+                                          setIsEmployeeDropdownOpen(false);
+                                        }}
+                                        className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 text-slate-400"
+                                      >
+                                        No employee selected
+                                      </div>
+                                      {filteredEmployees.map((employee) => (
+                                        <div
+                                          key={employee.id}
+                                          onClick={() => {
+                                            setOrderForm((prev) => ({ ...prev, employee_id: employee.id }));
+                                            setEmployeeSearch(`${employee.name} - ${employee.position}`);
+                                            setIsEmployeeDropdownOpen(false);
+                                          }}
+                                          className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
+                                        >
+                                          <div className="text-white font-medium">{employee.name}</div>
+                                          <div className="text-slate-400 text-sm">{employee.position} • {employee.email}</div>
+                                        </div>
+                                      ))}
+                                    </>
+                                  ) : (
+                                    <div className="p-3 text-slate-400">No employees found</div>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {/* Click outside to close dropdown */}
+                              {isEmployeeDropdownOpen && (
+                                <div
+                                  className="fixed inset-0 z-5"
+                                  onClick={() => setIsEmployeeDropdownOpen(false)}
+                                />
+                              )}
                             </div>
                           </div>
-                        )}
-                      </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                              Incentive Amount
+                            </label>
+                            <input
+                              type="number"
+                              value={orderForm.incentive_amount === 0 ? "" : orderForm.incentive_amount}
+                              onChange={(e) =>
+                                setOrderForm((prev) => ({
+                                  ...prev,
+                                  incentive_amount: parseFloat(e.target.value) || 0,
+                                }))
+                              }
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              placeholder="0.00"
+                              min="0"
+                              step="0.01"
+                            />
+                          </div>
+
+                          {/* Net Profit Display */}
+                          {orderForm.total > 0 && (
+                            <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-3">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm text-slate-400">Order Total:</span>
+                                <span className="text-sm text-slate-100">{formatCurrency(orderForm.total)}</span>
+                              </div>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm text-slate-400">Incentive:</span>
+                                <span className="text-sm text-orange-400">-{formatCurrency(orderForm.incentive_amount)}</span>
+                              </div>
+                              <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
+                                <span className="text-sm font-medium text-slate-300">Net Profit:</span>
+                                <span className="text-sm font-semibold text-green-400">{formatCurrency(orderForm.net_profit)}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1226,5 +1424,6 @@ export default function AddOrderPage() {
           </div>
         </div>
       </div>
+    </>
   );
 }
