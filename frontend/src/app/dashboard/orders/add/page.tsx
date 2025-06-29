@@ -287,7 +287,7 @@ export default function AddOrderPage() {
     // Only subtract due amount if checkbox is checked, only add previous due if checkbox is checked
     const total = afterDiscount + vatAmount - (applyDueToTotal ? dueAmount : 0) + (applyPreviousDueToTotal ? previousDue : 0);
     const grossProfit = totalSellPrice - totalBuyPrice;
-    const netProfit = total - incentiveAmount;
+    const netProfit = grossProfit - incentiveAmount; // Net Profit = Gross Profit - Incentive
     const totalPaymentReceived = payments.reduce((sum, payment) => sum + payment.amount, 0);
     const remainingBalance = total - totalPaymentReceived;
 
@@ -1618,13 +1618,9 @@ export default function AddOrderPage() {
                                 <span className="text-sm text-slate-400">Total Sell Price:</span>
                                 <span className="text-sm text-blue-400">{formatCurrency(orderForm.total_sell_price)}</span>
                               </div>
-                              <div className="flex justify-between items-center mb-2">
+                              <div className="flex justify-between items-center mb-2 pt-2 border-t border-slate-700/30">
                                 <span className="text-sm text-slate-400">Gross Profit:</span>
                                 <span className="text-sm text-green-400">{formatCurrency(orderForm.gross_profit)}</span>
-                              </div>
-                              <div className="flex justify-between items-center mb-2 pt-2 border-t border-slate-700/30">
-                                <span className="text-sm text-slate-400">Order Total:</span>
-                                <span className="text-sm text-slate-100">{formatCurrency(orderForm.total)}</span>
                               </div>
                               <div className="flex justify-between items-center mb-2">
                                 <span className="text-sm text-slate-400">Incentive:</span>
