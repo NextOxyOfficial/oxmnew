@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, Search, Filter, ArrowUpDown } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { customersAPI, type Customer } from "@/lib/api/customers";
 
 // Import dev auth helper in development
@@ -123,7 +123,7 @@ export default function CustomersPage() {
   const totalCustomers = customers.length;
   const activeCustomers = customers.filter((c) => c.status === "active").length;
   const totalRevenue = customers.reduce(
-    (sum, customer) => sum + customer.total_spent,
+    (sum, customer) => sum + (customer.total_spent || 0),
     0
   );
 
@@ -229,13 +229,13 @@ export default function CustomersPage() {
         case "name":
           return a.name.localeCompare(b.name);
         case "orders-high":
-          return b.total_orders - a.total_orders;
+          return (b.total_orders || 0) - (a.total_orders || 0);
         case "orders-low":
-          return a.total_orders - b.total_orders;
+          return (a.total_orders || 0) - (b.total_orders || 0);
         case "spent-high":
-          return b.total_spent - a.total_spent;
+          return (b.total_spent || 0) - (a.total_spent || 0);
         case "spent-low":
-          return a.total_spent - b.total_spent;
+          return (a.total_spent || 0) - (b.total_spent || 0);
         case "recent":
           return (
             new Date(b.last_order_date || 0).getTime() -
@@ -533,13 +533,13 @@ export default function CustomersPage() {
                     <div>
                       <p className="text-xs text-slate-400">Orders</p>
                       <p className="text-sm font-medium text-slate-100">
-                        {customer.total_orders}
+                        {customer.total_orders || 0}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-400">Total Spent</p>
                       <p className="text-sm font-medium text-green-400">
-                        ${customer.total_spent.toFixed(2)}
+                        ${(customer.total_spent || 0).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -558,6 +558,7 @@ export default function CustomersPage() {
                   {/* Action Buttons */}
                   <div className="mt-3 pt-3 border-t border-slate-700/50 flex space-x-2">
                     <button
+                      key={`view-${customer.id}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleViewCustomer(customer);
@@ -587,6 +588,7 @@ export default function CustomersPage() {
                       <span>View</span>
                     </button>
                     <button
+                      key={`edit-${customer.id}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEditCustomer(customer);
@@ -610,6 +612,7 @@ export default function CustomersPage() {
                       <span>Edit</span>
                     </button>
                     <button
+                      key={`delete-${customer.id}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         showDeleteConfirmation(customer);
@@ -699,10 +702,10 @@ export default function CustomersPage() {
                       <td className="py-3 px-4">
                         <div className="space-y-1">
                           <div className="text-sm font-medium text-slate-100">
-                            {customer.total_orders} orders
+                            {customer.total_orders || 0} orders
                           </div>
                           <div className="text-sm font-bold text-green-400">
-                            ${customer.total_spent.toFixed(2)}
+                            ${(customer.total_spent || 0).toFixed(2)}
                           </div>
                         </div>
                       </td>
