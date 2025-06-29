@@ -16,6 +16,7 @@ import {
   Printer,
   StickyNote,
   MessageSquare,
+  Star, // Add Star icon for levels
 } from "lucide-react";
 
 interface Customer {
@@ -79,6 +80,21 @@ interface TransactionForm {
   notifyCustomer: boolean;
 }
 
+interface Level {
+  id: number;
+  name: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface CustomerLevel {
+  id: number;
+  level: Level;
+  assigned_date: string;
+  notes?: string;
+}
+
 export default function CustomerDetailsPage() {
   const router = useRouter();
   const params = useParams();
@@ -118,6 +134,13 @@ export default function CustomerDetailsPage() {
   const [isSendingSMS, setIsSendingSMS] = useState(false);
   const [redeemAmount, setRedeemAmount] = useState("");
   const [isRedeeming, setIsRedeeming] = useState(false);
+  
+  // Level-related state
+  const [availableLevels, setAvailableLevels] = useState<Level[]>([]);
+  const [customerLevel, setCustomerLevel] = useState<CustomerLevel | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState("");
+  const [isAssigningLevel, setIsAssigningLevel] = useState(false);
+  const [levelNotes, setLevelNotes] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -237,6 +260,20 @@ export default function CustomerDetailsPage() {
         { id: 3, name: "Bonus Points", value: 20 },
       ];
 
+      const mockAvailableLevels: Level[] = [
+        { id: 1, name: "Bronze", is_active: true, created_at: "2024-01-01" },
+        { id: 2, name: "Silver", is_active: true, created_at: "2024-01-01" },
+        { id: 3, name: "Gold", is_active: true, created_at: "2024-01-01" },
+        { id: 4, name: "Platinum", is_active: true, created_at: "2024-01-01" },
+      ];
+
+      const mockCustomerLevel: CustomerLevel = {
+        id: 1,
+        level: { id: 2, name: "Silver", is_active: true, created_at: "2024-01-01" },
+        assigned_date: "2024-03-15",
+        notes: "Upgraded to Silver level due to consistent purchases and loyalty",
+      };
+
       setCustomer(mockCustomer);
       setCustomerForm({
         name: mockCustomer.name,
@@ -249,6 +286,8 @@ export default function CustomerDetailsPage() {
       setGifts(mockGifts);
       setAchievements(mockAchievements);
       setAvailableGifts(mockAvailableGifts);
+      setAvailableLevels(mockAvailableLevels);
+      setCustomerLevel(mockCustomerLevel);
       setIsLoading(false);
     };
 
@@ -305,8 +344,8 @@ export default function CustomerDetailsPage() {
       alert(
         `SMS sent successfully to ${customer?.phone}!\nMessage: "${message}"`
       );
-    } catch (error) {
-      console.error("Failed to send SMS:", error);
+    } catch {
+      console.error("Failed to send SMS");
       alert("Failed to send SMS. Please try again.");
     } finally {
       setIsSendingSMS(false);
@@ -353,7 +392,7 @@ export default function CustomerDetailsPage() {
 
       // Close modal and reset form
       handleCloseTransactionModal();
-    } catch (error) {
+    } catch {
       alert("Failed to add transaction. Please try again.");
     }
   };
@@ -376,7 +415,7 @@ export default function CustomerDetailsPage() {
       }
 
       alert("Profile updated successfully!");
-    } catch (error) {
+    } catch {
       alert("Failed to update profile. Please try again.");
     } finally {
       setIsSaving(false);
@@ -405,7 +444,7 @@ export default function CustomerDetailsPage() {
         setSelectedGift("");
         alert("Gift added successfully!");
       }
-    } catch (error) {
+    } catch {
       alert("Failed to add gift. Please try again.");
     } finally {
       setIsAddingGift(false);
@@ -426,7 +465,7 @@ export default function CustomerDetailsPage() {
       );
 
       alert("Gift redeemed successfully!");
-    } catch (error) {
+    } catch {
       alert("Failed to redeem gift. Please try again.");
     } finally {
       setRedeemingGiftIds((prev) => {
@@ -465,10 +504,51 @@ export default function CustomerDetailsPage() {
       // For now, we'll just show a success message
       alert(`Successfully redeemed ${amount} points!`);
       setRedeemAmount("");
-    } catch (error) {
+    } catch {
       alert("Failed to redeem points. Please try again.");
     } finally {
       setIsRedeeming(false);
+    }
+  };
+
+  // Level assignment handlers
+  const handleAssignLevel = async () => {
+    if (!selectedLevel) return;
+
+    setIsAssigningLevel(true);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const level = availableLevels.find((l) => l.id.toString() === selectedLevel);
+      if (level) {
+        const newCustomerLevel: CustomerLevel = {
+          id: Date.now(),
+          level: level,
+          assigned_date: new Date().toISOString(),
+          notes: levelNotes || `Assigned ${level.name} level`,
+        };
+        setCustomerLevel(newCustomerLevel);
+        setSelectedLevel("");
+        setLevelNotes("");
+        alert("Level assigned successfully!");
+      }
+    } catch {
+      alert("Failed to assign level. Please try again.");
+    } finally {
+      setIsAssigningLevel(false);
+    }
+  };
+
+  const handleRemoveLevel = async () => {
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      setCustomerLevel(null);
+      alert("Level removed successfully!");
+    } catch {
+      alert("Failed to remove level. Please try again.");
     }
   };
 
@@ -672,6 +752,11 @@ export default function CustomerDetailsPage() {
                 key: "achievements",
                 label: "Achievements",
                 icon: <Trophy className="w-4 h-4" />,
+              },
+              {
+                key: "level",
+                label: "Level",
+                icon: <Star className="w-4 h-4" />,
               },
             ].map((tab) => (
               <button
@@ -1239,6 +1324,164 @@ export default function CustomerDetailsPage() {
                               </div>
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Level Tab */}
+            {activeTab === "level" && (
+              <div className="space-y-6">
+                <div>
+                  {/* Current Level Section */}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Current Level
+                    </h4>
+                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+                      {customerLevel ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+                              <Star className="w-8 h-8 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-bold text-white mb-1">
+                                {customerLevel.level.name} Level
+                              </h3>
+                              <p className="text-slate-300 text-sm mb-2">
+                                Assigned on {formatDate(customerLevel.assigned_date)}
+                              </p>
+                              {customerLevel.notes && (
+                                <p className="text-slate-400 text-sm italic">
+                                  &ldquo;{customerLevel.notes}&rdquo;
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleRemoveLevel}
+                            className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm"
+                          >
+                            Remove Level
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <Star className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-slate-400 mb-2">
+                            No Level Assigned
+                          </h3>
+                          <p className="text-slate-500">
+                            This customer doesn&apos;t have a level assigned yet.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Assign Level Section */}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Assign New Level
+                    </h4>
+                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                              Select Level
+                            </label>
+                            <select
+                              value={selectedLevel}
+                              onChange={(e) => setSelectedLevel(e.target.value)}
+                              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm cursor-pointer"
+                            >
+                              <option value="" className="bg-slate-800">
+                                Select a level...
+                              </option>
+                              {availableLevels
+                                .filter((level) => level.is_active)
+                                .map((level) => (
+                                  <option
+                                    key={level.id}
+                                    value={level.id.toString()}
+                                    className="bg-slate-800"
+                                  >
+                                    {level.name}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                              Notes (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              value={levelNotes}
+                              onChange={(e) => setLevelNotes(e.target.value)}
+                              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                              placeholder="Reason for level assignment..."
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <button
+                            onClick={handleAssignLevel}
+                            disabled={!selectedLevel || isAssigningLevel}
+                            className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                          >
+                            {isAssigningLevel ? "Assigning..." : "Assign Level"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Available Levels Section */}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Available Levels
+                    </h4>
+                    <div className="max-w-4xl">
+                      {availableLevels.filter((level) => level.is_active).length === 0 ? (
+                        <div className="text-center py-8 text-slate-400">
+                          <p>No active levels found. Levels can be managed in Settings.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {availableLevels
+                            .filter((level) => level.is_active)
+                            .map((level) => (
+                              <div
+                                key={level.id}
+                                className={`p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200 ${
+                                  customerLevel?.level.id === level.id
+                                    ? "ring-2 ring-cyan-400 border-cyan-400/50"
+                                    : ""
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+                                    <Star className="w-5 h-5 text-white" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <h5 className="font-medium text-white text-sm leading-tight">
+                                      {level.name}
+                                    </h5>
+                                    {customerLevel?.level.id === level.id && (
+                                      <span className="inline-flex items-center px-2 py-0.5 bg-cyan-500/20 text-cyan-300 rounded-full text-xs font-medium mt-1">
+                                        Current Level
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                         </div>
                       )}
                     </div>
