@@ -120,6 +120,7 @@ export default function EmployeeDetailsPage() {
     deductions: ''
   });
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
+  const [markingTaskDone, setMarkingTaskDone] = useState<number | null>(null);
   const [newDocument, setNewDocument] = useState({
     name: '',
     category: 'other' as Document['category'],
@@ -380,8 +381,17 @@ export default function EmployeeDetailsPage() {
   };
 
   const handleAddTransaction = async () => {
-    if (!newTransaction.month || !newTransaction.base_salary) {
-      alert('Please fill in all required fields.');
+    // Check if at least one meaningful field has a value
+    const hasBaseSalary = newTransaction.base_salary && parseFloat(newTransaction.base_salary) > 0;
+    const hasOvertime = newTransaction.overtime_hours && newTransaction.overtime_rate && 
+                       parseFloat(newTransaction.overtime_hours) > 0 && parseFloat(newTransaction.overtime_rate) > 0;
+    const hasBonuses = newTransaction.bonuses && parseFloat(newTransaction.bonuses) > 0;
+    const hasDeductions = newTransaction.deductions && parseFloat(newTransaction.deductions) > 0;
+    
+    const hasValues = hasBaseSalary || hasOvertime || hasBonuses || hasDeductions;
+    
+    if (!newTransaction.month || !hasValues) {
+      alert('Please select a month and add at least one complete transaction value.');
       return;
     }
 
@@ -390,7 +400,7 @@ export default function EmployeeDetailsPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const baseSalary = parseFloat(newTransaction.base_salary);
+      const baseSalary = parseFloat(newTransaction.base_salary) || 0;
       const overtimeHours = parseFloat(newTransaction.overtime_hours) || 0;
       const overtimeRate = parseFloat(newTransaction.overtime_rate) || 0;
       const bonuses = parseFloat(newTransaction.bonuses) || 0;
@@ -428,6 +438,38 @@ export default function EmployeeDetailsPage() {
       alert('Failed to add transaction. Please try again.');
     } finally {
       setIsAddingTransaction(false);
+    }
+  };
+
+  const handleMarkTaskDone = async (taskId: number) => {
+    setMarkingTaskDone(taskId);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setTasks(prev => prev.map(task => 
+        task.id === taskId 
+          ? { 
+              ...task, 
+              status: 'completed' as const,
+              completed_date: new Date().toISOString()
+            }
+          : task
+      ));
+
+      // Update employee's task completion count
+      if (employee) {
+        setEmployee(prev => prev ? {
+          ...prev,
+          tasks_completed: prev.tasks_completed + 1
+        } : null);
+      }
+
+      alert('Task marked as completed!');
+    } catch (error) {
+      alert('Failed to mark task as completed. Please try again.');
+    } finally {
+      setMarkingTaskDone(null);
     }
   };
 
@@ -498,6 +540,7 @@ export default function EmployeeDetailsPage() {
 
   const totalIncentives = incentives.reduce((sum, incentive) => sum + incentive.amount, 0);
   const completionRate = employee.tasks_assigned > 0 ? (employee.tasks_completed / employee.tasks_assigned) * 100 : 0;
+  const pendingTasks = tasks.filter(task => task.status !== 'completed' && task.status !== 'cancelled').length;
 
   return (
     <div className="sm:p-6 p-1 space-y-6">
@@ -563,6 +606,9 @@ export default function EmployeeDetailsPage() {
                 <p className="text-purple-300/80 text-sm">Task Completion</p>
                 <p className="text-xl font-bold text-purple-400 mt-1">
                   {completionRate.toFixed(0)}%
+                </p>
+                <p className="text-xs text-purple-300/60 mt-1">
+                  {pendingTasks} pending tasks
                 </p>
               </div>
               <CheckCircle2 className="h-7 w-7 text-purple-400" />
@@ -994,7 +1040,7 @@ export default function EmployeeDetailsPage() {
 
                         <p className="text-slate-300 text-sm mb-4 line-clamp-3">{task.description}</p>
 
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-2 text-sm mb-4">
                           {task.project && (
                             <div className="flex items-center text-slate-400">
                               <ClipboardList className="w-4 h-4 mr-2" />
@@ -1016,6 +1062,29 @@ export default function EmployeeDetailsPage() {
                             </div>
                           )}
                         </div>
+
+                        {/* Mark as Done Button */}
+                        {task.status !== 'completed' && task.status !== 'cancelled' && (
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => handleMarkTaskDone(task.id)}
+                              disabled={markingTaskDone === task.id}
+                              className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer flex items-center gap-1.5"
+                            >
+                              {markingTaskDone === task.id ? (
+                                <>
+                                  <Clock className="w-3 h-3 animate-spin" />
+                                  <span>Marking...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Mark as Done</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1375,6 +1444,13 @@ export default function EmployeeDetailsPage() {
 
                 {/* Modal Body */}
                 <div className="p-6 space-y-4">
+                  {/* Info Note */}
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                    <p className="text-blue-300 text-sm">
+                      💡 You can add individual transaction components (e.g., just overtime, bonuses, or deductions) by filling only the relevant fields.
+                    </p>
+                  </div>
+
                   {/* Month and Year */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -1418,7 +1494,7 @@ export default function EmployeeDetailsPage() {
                   {/* Base Salary */}
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Base Salary *
+                      Base Salary
                     </label>
                     <input
                       type="number"
@@ -1426,7 +1502,7 @@ export default function EmployeeDetailsPage() {
                       value={newTransaction.base_salary}
                       onChange={(e) => setNewTransaction({ ...newTransaction, base_salary: e.target.value })}
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                      placeholder="Enter base salary"
+                      placeholder="Enter base salary (optional)"
                     />
                   </div>
 
@@ -1501,7 +1577,12 @@ export default function EmployeeDetailsPage() {
                   </button>
                   <button
                     onClick={handleAddTransaction}
-                    disabled={isAddingTransaction || !newTransaction.month || !newTransaction.base_salary}
+                    disabled={isAddingTransaction || !newTransaction.month || !(
+                      (newTransaction.base_salary && parseFloat(newTransaction.base_salary) > 0) ||
+                      (newTransaction.overtime_hours && newTransaction.overtime_rate && parseFloat(newTransaction.overtime_hours) > 0 && parseFloat(newTransaction.overtime_rate) > 0) ||
+                      (newTransaction.bonuses && parseFloat(newTransaction.bonuses) > 0) ||
+                      (newTransaction.deductions && parseFloat(newTransaction.deductions) > 0)
+                    )}
                     className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                   >
                     {isAddingTransaction ? 'Adding...' : 'Add Transaction'}
