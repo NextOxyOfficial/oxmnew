@@ -392,6 +392,60 @@ export class ApiService {
     return this.put(`/levels/${levelId}/toggle/`, {});
   }
 
+  // Brand methods
+  static async getBrands() {
+    return this.get("/brands/");
+  }
+
+  static async createBrand(brandData: { name: string; is_active?: boolean }) {
+    return this.post("/brands/", brandData);
+  }
+
+  static async updateBrand(
+    brandId: number,
+    brandData: {
+      name?: string;
+      is_active?: boolean;
+    }
+  ) {
+    return this.put(`/brands/${brandId}/`, brandData);
+  }
+
+  static async deleteBrand(brandId: number) {
+    return this.delete(`/brands/${brandId}/`);
+  }
+
+  static async toggleBrand(brandId: number) {
+    return this.put(`/brands/${brandId}/toggle/`, {});
+  }
+
+  // Payment Method methods
+  static async getPaymentMethods() {
+    return this.get("/payment-methods/");
+  }
+
+  static async createPaymentMethod(paymentMethodData: { name: string; is_active?: boolean }) {
+    return this.post("/payment-methods/", paymentMethodData);
+  }
+
+  static async updatePaymentMethod(
+    paymentMethodId: number,
+    paymentMethodData: {
+      name?: string;
+      is_active?: boolean;
+    }
+  ) {
+    return this.put(`/payment-methods/${paymentMethodId}/`, paymentMethodData);
+  }
+
+  static async deletePaymentMethod(paymentMethodId: number) {
+    return this.delete(`/payment-methods/${paymentMethodId}/`);
+  }
+
+  static async togglePaymentMethod(paymentMethodId: number) {
+    return this.put(`/payment-methods/${paymentMethodId}/toggle/`, {});
+  }
+
   // Suppliers methods
   static async getSuppliers() {
     return this.get("/suppliers/");
