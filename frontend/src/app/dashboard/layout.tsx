@@ -12,7 +12,6 @@ import {
   Package,
   ShoppingCart,
   Settings,
-  TrendingUp,
   Users,
   Building2,
   Briefcase,
@@ -21,7 +20,6 @@ import {
   BookOpen,
   Clock,
   Smartphone,
-  Mail,
   Diamond,
   Truck,
 } from "lucide-react";
@@ -66,12 +64,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/dashboard/settings",
       icon: Settings,
       current: pathname === "/dashboard/settings",
-    },
-    {
-      name: "Reports",
-      href: "/dashboard/reports",
-      icon: TrendingUp,
-      current: pathname === "/dashboard/reports",
     },
     {
       name: "Customers",
@@ -122,12 +114,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       current: pathname === "/dashboard/sms",
     },
     {
-      name: "Email",
-      href: "/dashboard/email",
-      icon: Mail,
-      current: pathname === "/dashboard/email",
-    },
-    {
       name: "Subscriptions",
       href: "/dashboard/subscriptions",
       icon: Diamond,
@@ -150,14 +136,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "Settings";
       case "/dashboard/subscriptions":
         return "Subscriptions";
-      case "/reports":
-        return "Reports";
       case "/dashboard/customers":
         return "Customers";
       case "/dashboard/banking":
         return "Banking";
-      case "/dashboard/reports":
-        return "Reports";
       case "/dashboard/employees":
         return "Employees";
       case "/dashboard/duebook":
@@ -170,8 +152,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "Reminder";
       case "/dashboard/sms":
         return "SMS";
-      case "/dashboard/email":
-        return "Email";
       default:
         return "Dashboard";
     }
