@@ -661,10 +661,12 @@ export default function EmployeeDetailsPage() {
                         <>
                           {/* Table Header */}
                           <div className="px-6 py-3 bg-white/5 border-b border-white/10">
-                            <div className="grid grid-cols-10 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                            <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
                               <div className="col-span-2">Date</div>
+                              <div className="col-span-2">Type</div>
+                              <div className="col-span-2">Status</div>
                               <div className="col-span-2">Amount</div>
-                              <div className="col-span-4">Note</div>
+                              <div className="col-span-2">Note</div>
                               <div className="col-span-2">Actions</div>
                             </div>
                           </div>
@@ -673,16 +675,12 @@ export default function EmployeeDetailsPage() {
                           <div className="divide-y divide-white/5">
                             {incentives.map((incentive) => (
                               <div key={incentive.id} className="px-6 py-4 hover:bg-white/5 transition-colors">
-                                <div className="grid grid-cols-10 gap-4 items-center">
+                                <div className="grid grid-cols-12 gap-4 items-center">
                                   <div className="col-span-2">
                                     <p className="text-sm font-medium text-slate-100">{formatDate(incentive.date_awarded)}</p>
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getStatusColor(incentive.status)}`}>
-                                      {incentive.status}
-                                    </span>
                                   </div>
                                   <div className="col-span-2">
-                                    <p className="text-sm font-bold text-green-400">{formatCurrency(incentive.amount)}</p>
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                       incentive.type === 'bonus' ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30' :
                                       incentive.type === 'commission' ? 'bg-purple-500/20 text-purple-300 border border-purple-400/30' :
                                       incentive.type === 'achievement' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30' :
@@ -691,27 +689,32 @@ export default function EmployeeDetailsPage() {
                                       {incentive.type}
                                     </span>
                                   </div>
-                                  <div className="col-span-4">
-                                    <p className="text-sm font-medium text-slate-300">{incentive.title}</p>
-                                    <p className="text-xs text-slate-400 mt-1">{incentive.description}</p>
+                                  <div className="col-span-2">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(incentive.status)}`}>
+                                      {incentive.status}
+                                    </span>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <p className="text-sm font-semibold text-green-300">{formatCurrency(incentive.amount)}</p>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <p className="text-sm text-slate-300 truncate" title={`${incentive.title}: ${incentive.description}`}>
+                                      {incentive.title}
+                                    </p>
                                   </div>
                                   <div className="col-span-2">
                                     <div className="flex items-center space-x-2">
-                                      <button className="px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-500/30 transition-colors cursor-pointer flex items-center space-x-1">
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <button className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.014 8.014 0 01-4.24-1.2L3 21l2.2-5.76A8.014 8.014 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
                                         </svg>
                                         <span>SMS</span>
                                       </button>
-                                      <button className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer" title="Edit">
+                                      <button className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer">
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
-                                      </button>
-                                      <button className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer" title="Delete">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
+                                        <span>Edit</span>
                                       </button>
                                     </div>
                                   </div>
