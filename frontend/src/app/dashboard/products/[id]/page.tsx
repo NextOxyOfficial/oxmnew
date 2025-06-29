@@ -366,12 +366,6 @@ export default function ProductDetailsPage() {
                     <p className="text-white font-medium">{product.category_name || product.category || "N/A"}</p>
                   </div>
                   <div>
-                    <p className="text-slate-400 mb-1">Total Stock</p>
-                    <p className="text-cyan-400 font-bold">
-                      {getTotalStock()} units
-                    </p>
-                  </div>
-                  <div>
                     <p className="text-slate-400 mb-1">Supplier</p>
                     <p className="text-white font-medium">
                       {product.supplier_name || product.supplier || "N/A"}
@@ -633,6 +627,33 @@ export default function ProductDetailsPage() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                    
+                    {/* Total Stock - moved here from basic info */}
+                    <div className="mt-4 pt-3 border-t border-slate-700/50">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 text-sm">Total Stock</span>
+                        <span className="text-cyan-400 font-bold text-lg">
+                          {getTotalStock()} units
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Show Total Stock for products without variants */}
+                {(!product.variants || product.variants.length === 0) && (
+                  <div>
+                    <h4 className="font-semibold text-white mb-2 text-sm">
+                      Stock Information
+                    </h4>
+                    <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 text-sm">Total Stock</span>
+                        <span className="text-cyan-400 font-bold text-lg">
+                          {getTotalStock()} units
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
