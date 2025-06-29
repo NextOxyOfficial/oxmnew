@@ -106,6 +106,20 @@ export default function EmployeeDetailsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [incentiveToDelete, setIncentiveToDelete] = useState<number | null>(null);
   const [isDeletingIncentive, setIsDeletingIncentive] = useState(false);
+  const [showSalaryDeleteModal, setShowSalaryDeleteModal] = useState(false);
+  const [salaryToDelete, setSalaryToDelete] = useState<number | null>(null);
+  const [isDeletingSalary, setIsDeletingSalary] = useState(false);
+  const [showAddTransactionModal, setShowAddTransactionModal] = useState(false);
+  const [newTransaction, setNewTransaction] = useState({
+    month: '',
+    year: new Date().getFullYear().toString(),
+    base_salary: '',
+    overtime_hours: '',
+    overtime_rate: '',
+    bonuses: '',
+    deductions: ''
+  });
+  const [isAddingTransaction, setIsAddingTransaction] = useState(false);
   const [newDocument, setNewDocument] = useState({
     name: '',
     category: 'other' as Document['category'],
@@ -339,6 +353,82 @@ export default function EmployeeDetailsPage() {
   const openDeleteModal = (incentiveId: number) => {
     setIncentiveToDelete(incentiveId);
     setShowDeleteModal(true);
+  };
+
+  const handleDeleteSalary = async () => {
+    if (!salaryToDelete) return;
+
+    setIsDeletingSalary(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setSalaryRecords(prev => prev.filter(record => record.id !== salaryToDelete));
+      setShowSalaryDeleteModal(false);
+      setSalaryToDelete(null);
+      alert('Salary record deleted successfully!');
+    } catch (error) {
+      alert('Failed to delete salary record. Please try again.');
+    } finally {
+      setIsDeletingSalary(false);
+    }
+  };
+
+  const openSalaryDeleteModal = (salaryId: number) => {
+    setSalaryToDelete(salaryId);
+    setShowSalaryDeleteModal(true);
+  };
+
+  const handleAddTransaction = async () => {
+    if (!newTransaction.month || !newTransaction.base_salary) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    setIsAddingTransaction(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const baseSalary = parseFloat(newTransaction.base_salary);
+      const overtimeHours = parseFloat(newTransaction.overtime_hours) || 0;
+      const overtimeRate = parseFloat(newTransaction.overtime_rate) || 0;
+      const bonuses = parseFloat(newTransaction.bonuses) || 0;
+      const deductions = parseFloat(newTransaction.deductions) || 0;
+      const overtimePay = overtimeHours * overtimeRate;
+      const netSalary = baseSalary + overtimePay + bonuses - deductions;
+
+      const transaction: SalaryRecord = {
+        id: Date.now(),
+        month: newTransaction.month,
+        year: parseInt(newTransaction.year),
+        base_salary: baseSalary,
+        overtime_hours: overtimeHours,
+        overtime_rate: overtimeRate,
+        bonuses: bonuses,
+        deductions: deductions,
+        net_salary: netSalary,
+        payment_date: new Date().toISOString(),
+        status: 'pending'
+      };
+
+      setSalaryRecords(prev => [transaction, ...prev]);
+      setNewTransaction({
+        month: '',
+        year: new Date().getFullYear().toString(),
+        base_salary: '',
+        overtime_hours: '',
+        overtime_rate: '',
+        bonuses: '',
+        deductions: ''
+      });
+      setShowAddTransactionModal(false);
+      alert('Transaction added successfully!');
+    } catch (error) {
+      alert('Failed to add transaction. Please try again.');
+    } finally {
+      setIsAddingTransaction(false);
+    }
   };
 
   const getPriorityColor = (priority: Task['priority']) => {
@@ -801,8 +891,11 @@ export default function EmployeeDetailsPage() {
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <h4 className="text-lg font-medium text-slate-100">Salary Records</h4>
-                    <button className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer">
-                      Add Record
+                    <button 
+                      onClick={() => setShowAddTransactionModal(true)}
+                      className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
+                    >
+                      Add Transaction
                     </button>
                   </div>
                   
@@ -810,9 +903,10 @@ export default function EmployeeDetailsPage() {
                     <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
                       {/* Table Header */}
                       <div className="px-6 py-3 bg-white/5 border-b border-white/10">
-                        <div className="grid grid-cols-10 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                        <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
                           <div className="col-span-2">Period</div>
                           <div className="col-span-2">Base Salary</div>
+                          <div className="col-span-2">Overtime</div>
                           <div className="col-span-2">Bonuses</div>
                           <div className="col-span-2">Net Payment</div>
                           <div className="col-span-2">Actions</div>
@@ -823,13 +917,17 @@ export default function EmployeeDetailsPage() {
                       <div className="divide-y divide-white/5">
                         {salaryRecords.map((record) => (
                           <div key={record.id} className="px-6 py-4 hover:bg-white/5 transition-colors">
-                            <div className="grid grid-cols-10 gap-4 items-center">
+                            <div className="grid grid-cols-12 gap-4 items-center">
                               <div className="col-span-2">
                                 <p className="text-sm font-medium text-slate-100">{record.month} {record.year}</p>
                                 <p className="text-xs text-slate-400">{formatDate(record.payment_date)}</p>
                               </div>
                               <div className="col-span-2">
                                 <p className="text-sm text-slate-300">{formatCurrency(record.base_salary)}</p>
+                              </div>
+                              <div className="col-span-2">
+                                <p className="text-sm text-slate-300">{record.overtime_hours}h × {formatCurrency(record.overtime_rate)}</p>
+                                <p className="text-xs text-slate-400">{formatCurrency(record.overtime_hours * record.overtime_rate)}</p>
                               </div>
                               <div className="col-span-2">
                                 <p className="text-sm font-semibold text-green-300">{formatCurrency(record.bonuses)}</p>
@@ -847,7 +945,11 @@ export default function EmployeeDetailsPage() {
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
                                   </button>
-                                  <button className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer" title="Delete">
+                                  <button 
+                                    onClick={() => openSalaryDeleteModal(record.id)}
+                                    className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer" 
+                                    title="Delete"
+                                  >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
@@ -1248,6 +1350,219 @@ export default function EmployeeDetailsPage() {
                     className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                   >
                     {isDeletingIncentive ? 'Deleting...' : 'Delete Incentive'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Transaction Modal */}
+        {showAddTransactionModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                  <h2 className="text-xl font-semibold text-slate-100">Add Transaction</h2>
+                  <button 
+                    onClick={() => setShowAddTransactionModal(false)}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-4">
+                  {/* Month and Year */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Month *
+                      </label>
+                      <select
+                        value={newTransaction.month}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, month: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
+                      >
+                        <option value="">Select Month</option>
+                        <option value="January">January</option>
+                        <option value="February">February</option>
+                        <option value="March">March</option>
+                        <option value="April">April</option>
+                        <option value="May">May</option>
+                        <option value="June">June</option>
+                        <option value="July">July</option>
+                        <option value="August">August</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                        <option value="November">November</option>
+                        <option value="December">December</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Year *
+                      </label>
+                      <input
+                        type="number"
+                        value={newTransaction.year}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, year: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                        placeholder="2025"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Base Salary */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Base Salary *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newTransaction.base_salary}
+                      onChange={(e) => setNewTransaction({ ...newTransaction, base_salary: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter base salary"
+                    />
+                  </div>
+
+                  {/* Overtime */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Overtime Hours
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={newTransaction.overtime_hours}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, overtime_hours: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                        placeholder="Hours"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Overtime Rate
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={newTransaction.overtime_rate}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, overtime_rate: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                        placeholder="Rate/hr"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bonuses and Deductions */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Bonuses
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={newTransaction.bonuses}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, bonuses: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                        placeholder="Bonus amount"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Deductions
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={newTransaction.deductions}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, deductions: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                        placeholder="Deduction amount"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={() => setShowAddTransactionModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddTransaction}
+                    disabled={isAddingTransaction || !newTransaction.month || !newTransaction.base_salary}
+                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                  >
+                    {isAddingTransaction ? 'Adding...' : 'Add Transaction'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Salary Confirmation Modal */}
+        {showSalaryDeleteModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                  <h2 className="text-xl font-semibold text-slate-100">Delete Salary Record</h2>
+                  <button 
+                    onClick={() => {
+                      setShowSalaryDeleteModal(false);
+                      setSalaryToDelete(null);
+                    }}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="p-3 bg-red-500/20 rounded-full">
+                      <Trash2 className="w-6 h-6 text-red-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-slate-100">Are you sure?</h3>
+                      <p className="text-sm text-slate-400 mt-1">
+                        This action cannot be undone. This will permanently delete the salary record from the employee's financial history.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={() => {
+                      setShowSalaryDeleteModal(false);
+                      setSalaryToDelete(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteSalary}
+                    disabled={isDeletingSalary}
+                    className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                  >
+                    {isDeletingSalary ? 'Deleting...' : 'Delete Record'}
                   </button>
                 </div>
               </div>
