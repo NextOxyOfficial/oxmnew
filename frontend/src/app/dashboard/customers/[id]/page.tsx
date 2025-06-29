@@ -2,7 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, DollarSign, ShoppingBag, Star, Gift, Trophy, AlertTriangle, FileText, Receipt, X, Printer, StickyNote, MessageSquare, Coins } from "lucide-react";
+import {
+  ArrowLeft,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  DollarSign,
+  ShoppingBag,
+  Star,
+  Gift,
+  Trophy,
+  FileText,
+  X,
+  Printer,
+  StickyNote,
+  MessageSquare,
+} from "lucide-react";
 
 interface Customer {
   id: number;
@@ -13,7 +29,7 @@ interface Customer {
   total_orders: number;
   total_spent: number;
   last_order_date?: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   created_at: string;
 }
 
@@ -21,7 +37,7 @@ interface Order {
   id: number;
   date: string;
   total: number;
-  status: 'completed' | 'pending' | 'cancelled';
+  status: "completed" | "pending" | "cancelled";
   items: number;
 }
 
@@ -31,7 +47,7 @@ interface Gift {
   description: string;
   date_given: string;
   value: number;
-  status: 'active' | 'used' | 'expired';
+  status: "active" | "used" | "expired";
 }
 
 interface Achievement {
@@ -48,7 +64,7 @@ interface DuePayment {
   order_id: number;
   amount: number;
   due_date: string;
-  type: 'due' | 'advance';
+  type: "due" | "advance";
   notes?: string;
 }
 
@@ -59,7 +75,7 @@ interface AvailableGift {
 }
 
 interface TransactionForm {
-  type: 'due' | 'advance';
+  type: "due" | "advance";
   amount: string;
   note: string;
   notifyCustomer: boolean;
@@ -70,7 +86,7 @@ export default function CustomerDetailsPage() {
   const params = useParams();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState("profile");
   const [orders, setOrders] = useState<Order[]>([]);
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -79,30 +95,30 @@ export default function CustomerDetailsPage() {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
-  const [selectedDuePayment, setSelectedDuePayment] = useState<DuePayment | null>(null);
+  const [selectedDuePayment, setSelectedDuePayment] =
+    useState<DuePayment | null>(null);
   const [availableGifts, setAvailableGifts] = useState<AvailableGift[]>([]);
-  const [selectedGift, setSelectedGift] = useState('');
+  const [selectedGift, setSelectedGift] = useState("");
   const [isAddingGift, setIsAddingGift] = useState(false);
   const [transactionForm, setTransactionForm] = useState<TransactionForm>({
-    type: 'due',
-    amount: '',
-    note: '',
-    notifyCustomer: false
+    type: "due",
+    amount: "",
+    note: "",
+    notifyCustomer: false,
   });
   const [mounted, setMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [customerForm, setCustomerForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: ''
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
   });
-  const [showNotifyModal, setShowNotifyModal] = useState(false);
-  const [redeemingGiftIds, setRedeemingGiftIds] = useState<Set<number>>(new Set());
-  const [notifyOrderId, setNotifyOrderId] = useState<number | null>(null);
-  const [isNotifying, setIsNotifying] = useState(false);
+  const [redeemingGiftIds, setRedeemingGiftIds] = useState<Set<number>>(
+    new Set()
+  );
   const [isSendingSMS, setIsSendingSMS] = useState(false);
-  const [redeemAmount, setRedeemAmount] = useState('');
+  const [redeemAmount, setRedeemAmount] = useState("");
   const [isRedeeming, setIsRedeeming] = useState(false);
 
   useEffect(() => {
@@ -114,47 +130,107 @@ export default function CustomerDetailsPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const getCustomerId = () => {
-    return Array.isArray(params.id) ? params.id[0] : params.id;
-  };
-
   useEffect(() => {
+    const getCustomerId = () => {
+      return Array.isArray(params.id) ? params.id[0] : params.id;
+    };
+
     const fetchCustomerData = async () => {
       const customerId = getCustomerId();
-      
+
       // Mock data
       const mockCustomer: Customer = {
-        id: parseInt(customerId || '1'),
+        id: parseInt(customerId || "1"),
         name: "John Doe",
-        email: "john.doe@email.com", 
+        email: "john.doe@email.com",
         phone: "+1 (555) 123-4567",
         address: "123 Main St, City, State 12345",
         total_orders: 12,
         total_spent: 1250.75,
         last_order_date: "2025-06-25",
         status: "active",
-        created_at: "2024-01-15"
+        created_at: "2024-01-15",
       };
 
       const mockOrders: Order[] = [
-        { id: 1001, date: "2025-06-25", total: 89.99, status: "completed", items: 3 },
-        { id: 1002, date: "2025-06-20", total: 156.50, status: "completed", items: 5 },
-        { id: 1003, date: "2025-06-15", total: 45.25, status: "pending", items: 2 },
+        {
+          id: 1001,
+          date: "2025-06-25",
+          total: 89.99,
+          status: "completed",
+          items: 3,
+        },
+        {
+          id: 1002,
+          date: "2025-06-20",
+          total: 156.5,
+          status: "completed",
+          items: 5,
+        },
+        {
+          id: 1003,
+          date: "2025-06-15",
+          total: 45.25,
+          status: "pending",
+          items: 2,
+        },
       ];
 
       const mockDuePayments: DuePayment[] = [
-        { id: 1, order_id: 1003, amount: 45.25, due_date: "2025-07-01", type: 'due', notes: 'Pending payment for order #1003' },
-        { id: 2, order_id: 1004, amount: -25.00, due_date: "2025-06-30", type: 'advance', notes: 'Advance payment for future order' },
+        {
+          id: 1,
+          order_id: 1003,
+          amount: 45.25,
+          due_date: "2025-07-01",
+          type: "due",
+          notes: "Pending payment for order #1003",
+        },
+        {
+          id: 2,
+          order_id: 1004,
+          amount: -25.0,
+          due_date: "2025-06-30",
+          type: "advance",
+          notes: "Advance payment for future order",
+        },
       ];
 
       const mockGifts: Gift[] = [
-        { id: 1, name: "Welcome Bonus", description: "New customer welcome gift", date_given: "2024-01-15", value: 10, status: "used" },
-        { id: 2, name: "Loyalty Reward", description: "10 orders milestone reward", date_given: "2025-06-01", value: 25, status: "active" },
+        {
+          id: 1,
+          name: "Welcome Bonus",
+          description: "New customer welcome gift",
+          date_given: "2024-01-15",
+          value: 10,
+          status: "used",
+        },
+        {
+          id: 2,
+          name: "Loyalty Reward",
+          description: "10 orders milestone reward",
+          date_given: "2025-06-01",
+          value: 25,
+          status: "active",
+        },
       ];
 
       const mockAchievements: Achievement[] = [
-        { id: 1, title: "First Purchase", description: "Made your first purchase", icon: "🎉", date_earned: "2024-01-15", points: 100 },
-        { id: 2, title: "Loyal Customer", description: "10+ orders completed", icon: "🏆", date_earned: "2025-06-01", points: 500 },
+        {
+          id: 1,
+          title: "First Purchase",
+          description: "Made your first purchase",
+          icon: "🎉",
+          date_earned: "2024-01-15",
+          points: 100,
+        },
+        {
+          id: 2,
+          title: "Loyal Customer",
+          description: "10+ orders completed",
+          icon: "🏆",
+          date_earned: "2025-06-01",
+          points: 500,
+        },
       ];
 
       const mockAvailableGifts: AvailableGift[] = [
@@ -168,7 +244,7 @@ export default function CustomerDetailsPage() {
         name: mockCustomer.name,
         email: mockCustomer.email,
         phone: mockCustomer.phone,
-        address: mockCustomer.address || ''
+        address: mockCustomer.address || "",
       });
       setOrders(mockOrders);
       setDuePayments(mockDuePayments);
@@ -179,7 +255,7 @@ export default function CustomerDetailsPage() {
     };
 
     fetchCustomerData();
-  }, []);
+  }, [params.id]);
 
   const handleShowInvoice = (order: Order) => {
     setSelectedOrder(order);
@@ -194,20 +270,20 @@ export default function CustomerDetailsPage() {
   const handleShowTransaction = () => {
     setShowTransactionModal(true);
     setTransactionForm({
-      type: 'due',
-      amount: '',
-      note: '',
-      notifyCustomer: false
+      type: "due",
+      amount: "",
+      note: "",
+      notifyCustomer: false,
     });
   };
 
   const handleCloseTransactionModal = () => {
     setShowTransactionModal(false);
     setTransactionForm({
-      type: 'due',
-      amount: '',
-      note: '',
-      notifyCustomer: false
+      type: "due",
+      amount: "",
+      note: "",
+      notifyCustomer: false,
     });
   };
 
@@ -225,66 +301,62 @@ export default function CustomerDetailsPage() {
     setIsSendingSMS(true);
     try {
       // Simulate SMS sending API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       // Show success message
-      alert(`SMS sent successfully to ${customer?.phone}!\nMessage: "${message}"`);
+      alert(
+        `SMS sent successfully to ${customer?.phone}!\nMessage: "${message}"`
+      );
     } catch (error) {
-      alert('Failed to send SMS. Please try again.');
+      console.error("Failed to send SMS:", error);
+      alert("Failed to send SMS. Please try again.");
     } finally {
       setIsSendingSMS(false);
     }
   };
 
   const handleSendNotification = async (payment: DuePayment) => {
-    const message = `Hello ${customer?.name}, this is a reminder about your ${payment.type === 'due' ? 'due payment' : 'advance payment'} of $${Math.abs(payment.amount).toFixed(2)} for order #${payment.order_id}. Due date: ${formatDate(payment.due_date)}.`;
+    const message = `Hello ${customer?.name}, this is a reminder about your ${
+      payment.type === "due" ? "due payment" : "advance payment"
+    } of $${Math.abs(payment.amount).toFixed(2)} for order #${
+      payment.order_id
+    }. Due date: ${formatDate(payment.due_date)}.`;
     await handleSendSMS(message);
   };
 
   const handleSendOrderNotification = async (order: Order) => {
-    const statusMessage = order.status === 'completed' ? 'completed' : order.status === 'pending' ? 'is pending' : 'was cancelled';
-    const message = `Hello ${customer?.name}, your order #${order.id} ${statusMessage}. Order total: $${order.total.toFixed(2)}. Order date: ${formatDate(order.date)}. Thank you for your business!`;
+    const statusMessage =
+      order.status === "completed"
+        ? "completed"
+        : order.status === "pending"
+        ? "is pending"
+        : "was cancelled";
+    const message = `Hello ${customer?.name}, your order #${
+      order.id
+    } ${statusMessage}. Order total: $${order.total.toFixed(
+      2
+    )}. Order date: ${formatDate(order.date)}. Thank you for your business!`;
     await handleSendSMS(message);
-  };
-
-  const handleRedeemAchievement = async (achievement: Achievement) => {
-    try {
-      // Show confirmation
-      const confirmed = window.confirm(
-        `Are you sure you want to redeem ${achievement.points} points for "${achievement.title}"?`
-      );
-      
-      if (!confirmed) return;
-
-      // Here you would typically make an API call to redeem the achievement
-      // For now, we'll simulate the redemption by removing the achievement from the list
-      // and showing a success message
-      
-      setAchievements(prev => prev.filter(a => a.id !== achievement.id));
-      
-      // You could also add the points to a customer's account balance or gift credits
-      // For example: updateCustomerCredits(customer.id, achievement.points);
-      
-      alert(`Successfully redeemed ${achievement.points} points for "${achievement.title}"!`);
-      
-    } catch (error) {
-      console.error('Error redeeming achievement:', error);
-      alert('Failed to redeem achievement. Please try again.');
-    }
   };
 
   const handleSubmitTransaction = async () => {
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Show success message
-      alert(`Transaction added successfully! ${transactionForm.notifyCustomer ? 'Customer will be notified via SMS.' : ''}`);
-      
+      alert(
+        `Transaction added successfully! ${
+          transactionForm.notifyCustomer
+            ? "Customer will be notified via SMS."
+            : ""
+        }`
+      );
+
       // Close modal and reset form
       handleCloseTransactionModal();
     } catch (error) {
-      alert('Failed to add transaction. Please try again.');
+      alert("Failed to add transaction. Please try again.");
     }
   };
 
@@ -292,8 +364,8 @@ export default function CustomerDetailsPage() {
     setIsSaving(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Update customer data
       if (customer) {
         setCustomer({
@@ -301,13 +373,13 @@ export default function CustomerDetailsPage() {
           name: customerForm.name,
           email: customerForm.email,
           phone: customerForm.phone,
-          address: customerForm.address
+          address: customerForm.address,
         });
       }
-      
-      alert('Profile updated successfully!');
+
+      alert("Profile updated successfully!");
     } catch (error) {
-      alert('Failed to update profile. Please try again.');
+      alert("Failed to update profile. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -315,13 +387,13 @@ export default function CustomerDetailsPage() {
 
   const handleAddGift = async () => {
     if (!selectedGift) return;
-    
+
     setIsAddingGift(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const gift = availableGifts.find(g => g.id.toString() === selectedGift);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const gift = availableGifts.find((g) => g.id.toString() === selectedGift);
       if (gift) {
         const newGift: Gift = {
           id: Date.now(),
@@ -329,37 +401,37 @@ export default function CustomerDetailsPage() {
           description: `Manually added gift: ${gift.name}`,
           date_given: new Date().toISOString(),
           value: gift.value,
-          status: 'active'
+          status: "active",
         };
-        setGifts(prev => [newGift, ...prev]);
-        setSelectedGift('');
-        alert('Gift added successfully!');
+        setGifts((prev) => [newGift, ...prev]);
+        setSelectedGift("");
+        alert("Gift added successfully!");
       }
     } catch (error) {
-      alert('Failed to add gift. Please try again.');
+      alert("Failed to add gift. Please try again.");
     } finally {
       setIsAddingGift(false);
     }
   };
 
   const handleRedeemGift = async (giftId: number) => {
-    setRedeemingGiftIds(prev => new Set(prev).add(giftId));
-    
+    setRedeemingGiftIds((prev) => new Set(prev).add(giftId));
+
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setGifts(prev => prev.map(gift => 
-        gift.id === giftId 
-          ? { ...gift, status: 'used' as const }
-          : gift
-      ));
-      
-      alert('Gift redeemed successfully!');
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      setGifts((prev) =>
+        prev.map((gift) =>
+          gift.id === giftId ? { ...gift, status: "used" as const } : gift
+        )
+      );
+
+      alert("Gift redeemed successfully!");
     } catch (error) {
-      alert('Failed to redeem gift. Please try again.');
+      alert("Failed to redeem gift. Please try again.");
     } finally {
-      setRedeemingGiftIds(prev => {
+      setRedeemingGiftIds((prev) => {
         const newSet = new Set(prev);
         newSet.delete(giftId);
         return newSet;
@@ -369,29 +441,34 @@ export default function CustomerDetailsPage() {
 
   const handleRedeemPoints = async () => {
     const amount = parseFloat(redeemAmount);
-    const totalPoints = achievements.reduce((total, achievement) => total + achievement.points, 0);
-    
+    const totalPoints = achievements.reduce(
+      (total, achievement) => total + achievement.points,
+      0
+    );
+
     if (!amount || amount <= 0) {
-      alert('Please enter a valid amount to redeem.');
+      alert("Please enter a valid amount to redeem.");
       return;
     }
-    
+
     if (amount > totalPoints) {
-      alert('Insufficient points. You cannot redeem more than your total points.');
+      alert(
+        "Insufficient points. You cannot redeem more than your total points."
+      );
       return;
     }
-    
+
     setIsRedeeming(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       // Here you would typically call an API to process the redemption
       // For now, we'll just show a success message
       alert(`Successfully redeemed ${amount} points!`);
-      setRedeemAmount('');
+      setRedeemAmount("");
     } catch (error) {
-      alert('Failed to redeem points. Please try again.');
+      alert("Failed to redeem points. Please try again.");
     } finally {
       setIsRedeeming(false);
     }
@@ -423,9 +500,12 @@ export default function CustomerDetailsPage() {
       <div className="sm:p-6 p-1 space-y-6">
         <div className="max-w-7xl">
           <div className="text-center py-12">
-            <h3 className="text-lg font-medium text-slate-100 mb-2">Customer Not Found</h3>
+            <h3 className="text-lg font-medium text-slate-100 mb-2">
+              Customer Not Found
+            </h3>
             <p className="text-slate-400 mb-4">
-              The customer you're looking for doesn't exist or has been removed.
+              The customer you&apos;re looking for doesn&apos;t exist or has
+              been removed.
             </p>
             <button
               onClick={() => router.back()}
@@ -440,11 +520,11 @@ export default function CustomerDetailsPage() {
   }
 
   const totalDue = duePayments
-    .filter(payment => payment.type === 'due')
+    .filter((payment) => payment.type === "due")
     .reduce((sum, payment) => sum + payment.amount, 0);
 
   const totalAdvance = duePayments
-    .filter(payment => payment.type === 'advance')
+    .filter((payment) => payment.type === "advance")
     .reduce((sum, payment) => sum + Math.abs(payment.amount), 0);
 
   const netAmount = totalDue - totalAdvance;
@@ -472,7 +552,9 @@ export default function CustomerDetailsPage() {
               </span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-100">{customer.name}</h1>
+              <h1 className="text-2xl font-bold text-slate-100">
+                {customer.name}
+              </h1>
               <div className="flex items-center gap-4 mt-2">
                 <div className="flex items-center gap-1 text-slate-300">
                   <Mail className="w-4 h-4" />
@@ -499,7 +581,9 @@ export default function CustomerDetailsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-cyan-300/80 text-sm">Total Orders</p>
-                <p className="text-xl font-bold text-white mt-1">{customer.total_orders}</p>
+                <p className="text-xl font-bold text-white mt-1">
+                  {customer.total_orders}
+                </p>
               </div>
               <ShoppingBag className="h-7 w-7 text-cyan-400" />
             </div>
@@ -517,17 +601,35 @@ export default function CustomerDetailsPage() {
             </div>
           </div>
 
-          <div className={`bg-gradient-to-br ${netAmount >= 0 ? 'from-red-500/10 to-pink-600/10 border-red-500/30' : 'from-green-500/10 to-emerald-600/10 border-green-500/30'} border rounded-lg p-3`}>
+          <div
+            className={`bg-gradient-to-br ${
+              netAmount >= 0
+                ? "from-red-500/10 to-pink-600/10 border-red-500/30"
+                : "from-green-500/10 to-emerald-600/10 border-green-500/30"
+            } border rounded-lg p-3`}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className={`${netAmount >= 0 ? 'text-red-300/80' : 'text-green-300/80'} text-sm`}>
-                  {netAmount >= 0 ? 'Due Amount' : 'Advance Amount'}
+                <p
+                  className={`${
+                    netAmount >= 0 ? "text-red-300/80" : "text-green-300/80"
+                  } text-sm`}
+                >
+                  {netAmount >= 0 ? "Due Amount" : "Advance Amount"}
                 </p>
-                <p className={`text-xl font-bold ${netAmount >= 0 ? 'text-red-400' : 'text-green-400'} mt-1`}>
+                <p
+                  className={`text-xl font-bold ${
+                    netAmount >= 0 ? "text-red-400" : "text-green-400"
+                  } mt-1`}
+                >
                   ${Math.abs(netAmount).toFixed(2)}
                 </p>
               </div>
-              <DollarSign className={`h-7 w-7 ${netAmount >= 0 ? 'text-red-400' : 'text-green-400'}`} />
+              <DollarSign
+                className={`h-7 w-7 ${
+                  netAmount >= 0 ? "text-red-400" : "text-green-400"
+                }`}
+              />
             </div>
           </div>
 
@@ -536,7 +638,7 @@ export default function CustomerDetailsPage() {
               <div>
                 <p className="text-purple-300/80 text-sm">Active Gifts</p>
                 <p className="text-xl font-bold text-purple-400 mt-1">
-                  {gifts.filter(gift => gift.status === 'active').length}
+                  {gifts.filter((gift) => gift.status === "active").length}
                 </p>
               </div>
               <Gift className="h-7 w-7 text-purple-400" />
@@ -548,19 +650,39 @@ export default function CustomerDetailsPage() {
         <div className="max-w-4xl">
           <div className="flex border-b border-slate-700/50 mb-6">
             {[
-              { key: 'profile', label: 'Profile', icon: <Mail className="w-4 h-4" /> },
-              { key: 'orders', label: 'Purchase History', icon: <ShoppingBag className="w-4 h-4" /> },
-              { key: 'due-payments', label: 'Due/Payments', icon: <DollarSign className="w-4 h-4" /> },
-              { key: 'gifts', label: 'Gifts & Rewards', icon: <Gift className="w-4 h-4" /> },
-              { key: 'achievements', label: 'Achievements', icon: <Trophy className="w-4 h-4" /> },
+              {
+                key: "profile",
+                label: "Profile",
+                icon: <Mail className="w-4 h-4" />,
+              },
+              {
+                key: "orders",
+                label: "Purchase History",
+                icon: <ShoppingBag className="w-4 h-4" />,
+              },
+              {
+                key: "due-payments",
+                label: "Due/Payments",
+                icon: <DollarSign className="w-4 h-4" />,
+              },
+              {
+                key: "gifts",
+                label: "Gifts & Rewards",
+                icon: <Gift className="w-4 h-4" />,
+              },
+              {
+                key: "achievements",
+                label: "Achievements",
+                icon: <Trophy className="w-4 h-4" />,
+              },
             ].map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 flex items-center gap-2 cursor-pointer ${
                   activeTab === tab.key
-                    ? 'border-cyan-400 text-cyan-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600'
+                    ? "border-cyan-400 text-cyan-400"
+                    : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600"
                 }`}
               >
                 {tab.icon}
@@ -572,11 +694,13 @@ export default function CustomerDetailsPage() {
           {/* Tab Content */}
           <div className="max-w-4xl">
             {/* Profile Tab */}
-            {activeTab === 'profile' && (
+            {activeTab === "profile" && (
               <div className="space-y-6">
                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
-                  <h4 className="text-lg font-medium text-slate-100 mb-4">Customer Information</h4>
-                  
+                  <h4 className="text-lg font-medium text-slate-100 mb-4">
+                    Customer Information
+                  </h4>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Customer Name */}
                     <div>
@@ -586,7 +710,12 @@ export default function CustomerDetailsPage() {
                       <input
                         type="text"
                         value={customerForm.name}
-                        onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
+                        onChange={(e) =>
+                          setCustomerForm({
+                            ...customerForm,
+                            name: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                         placeholder="Enter customer name"
                       />
@@ -600,7 +729,12 @@ export default function CustomerDetailsPage() {
                       <input
                         type="email"
                         value={customerForm.email}
-                        onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
+                        onChange={(e) =>
+                          setCustomerForm({
+                            ...customerForm,
+                            email: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                         placeholder="Enter email address"
                       />
@@ -614,7 +748,12 @@ export default function CustomerDetailsPage() {
                       <input
                         type="tel"
                         value={customerForm.phone}
-                        onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
+                        onChange={(e) =>
+                          setCustomerForm({
+                            ...customerForm,
+                            phone: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                         placeholder="Enter phone number"
                       />
@@ -626,11 +765,14 @@ export default function CustomerDetailsPage() {
                         Member Since
                       </label>
                       <div className="w-full px-3 py-2 bg-slate-800/30 border border-slate-700/50 rounded-lg text-slate-400 text-sm">
-                        {new Date(customer.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
+                        {new Date(customer.created_at).toLocaleDateString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )}
                       </div>
                     </div>
 
@@ -642,7 +784,12 @@ export default function CustomerDetailsPage() {
                       <textarea
                         rows={3}
                         value={customerForm.address}
-                        onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })}
+                        onChange={(e) =>
+                          setCustomerForm({
+                            ...customerForm,
+                            address: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
                         placeholder="Enter customer address"
                       />
@@ -656,7 +803,7 @@ export default function CustomerDetailsPage() {
                       disabled={isSaving}
                       className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                     >
-                      {isSaving ? 'Saving...' : 'Save Changes'}
+                      {isSaving ? "Saving..." : "Save Changes"}
                     </button>
                   </div>
                 </div>
@@ -664,10 +811,12 @@ export default function CustomerDetailsPage() {
             )}
 
             {/* Purchase History Tab */}
-            {activeTab === 'orders' && (
+            {activeTab === "orders" && (
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-lg font-medium text-slate-100 mb-4">Purchase History</h4>
+                  <h4 className="text-lg font-medium text-slate-100 mb-4">
+                    Purchase History
+                  </h4>
                   <div className="max-w-4xl">
                     <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
                       {/* Table Header */}
@@ -681,36 +830,51 @@ export default function CustomerDetailsPage() {
                           <div className="col-span-2">Actions</div>
                         </div>
                       </div>
-                      
+
                       {/* Table Body */}
                       <div className="divide-y divide-white/5">
                         {orders.map((order) => (
-                          <div key={order.id} className="px-6 py-4 hover:bg-white/5 transition-colors">
+                          <div
+                            key={order.id}
+                            className="px-6 py-4 hover:bg-white/5 transition-colors"
+                          >
                             <div className="grid grid-cols-12 gap-4 items-center">
                               <div className="col-span-2">
-                                <p className="text-sm font-medium text-slate-100">#{order.id}</p>
+                                <p className="text-sm font-medium text-slate-100">
+                                  #{order.id}
+                                </p>
                               </div>
                               <div className="col-span-2">
-                                <p className="text-sm text-slate-300">{formatDate(order.date)}</p>
+                                <p className="text-sm text-slate-300">
+                                  {formatDate(order.date)}
+                                </p>
                               </div>
                               <div className="col-span-2">
-                                <p className="text-sm text-slate-300">{order.items} items</p>
+                                <p className="text-sm text-slate-300">
+                                  {order.items} items
+                                </p>
                               </div>
                               <div className="col-span-2">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  order.status === 'completed' ? 'bg-green-500/20 text-green-300 border border-green-400/30' :
-                                  order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30' : 
-                                  'bg-red-500/20 text-red-300 border border-red-400/30'
-                                }`}>
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    order.status === "completed"
+                                      ? "bg-green-500/20 text-green-300 border border-green-400/30"
+                                      : order.status === "pending"
+                                      ? "bg-yellow-500/20 text-yellow-300 border border-yellow-400/30"
+                                      : "bg-red-500/20 text-red-300 border border-red-400/30"
+                                  }`}
+                                >
                                   {order.status}
                                 </span>
                               </div>
                               <div className="col-span-2">
-                                <p className="text-sm font-semibold text-green-300">${order.total.toFixed(2)}</p>
+                                <p className="text-sm font-semibold text-green-300">
+                                  ${order.total.toFixed(2)}
+                                </p>
                               </div>
                               <div className="col-span-2">
                                 <div className="flex items-center space-x-2">
-                                  <button 
+                                  <button
                                     onClick={() => handleShowInvoice(order)}
                                     className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
                                   >
@@ -718,13 +882,17 @@ export default function CustomerDetailsPage() {
                                     <span>Invoice</span>
                                   </button>
                                   <button
-                                    onClick={() => handleSendOrderNotification(order)}
+                                    onClick={() =>
+                                      handleSendOrderNotification(order)
+                                    }
                                     disabled={isSendingSMS}
                                     className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
                                     title="Send SMS notification"
                                   >
                                     <MessageSquare className="w-4 h-4" />
-                                    <span>{isSendingSMS ? 'Sending...' : 'SMS'}</span>
+                                    <span>
+                                      {isSendingSMS ? "Sending..." : "SMS"}
+                                    </span>
                                   </button>
                                 </div>
                               </div>
@@ -739,11 +907,13 @@ export default function CustomerDetailsPage() {
             )}
 
             {/* Due Payments Tab */}
-            {activeTab === 'due-payments' && (
+            {activeTab === "due-payments" && (
               <div className="space-y-6">
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-medium text-slate-100">Due Payments</h4>
+                    <h4 className="text-lg font-medium text-slate-100">
+                      Due Payments
+                    </h4>
                     <button
                       onClick={handleShowTransaction}
                       className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
@@ -751,7 +921,7 @@ export default function CustomerDetailsPage() {
                       Add Transaction
                     </button>
                   </div>
-                  
+
                   <div className="max-w-4xl">
                     <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
                       {/* Table Header */}
@@ -764,28 +934,44 @@ export default function CustomerDetailsPage() {
                           <div className="col-span-3">Notes & Actions</div>
                         </div>
                       </div>
-                      
+
                       {/* Table Body */}
                       <div className="divide-y divide-white/5">
                         {duePayments.map((payment) => (
-                          <div key={payment.id} className="px-6 py-4 hover:bg-white/5 transition-colors">
+                          <div
+                            key={payment.id}
+                            className="px-6 py-4 hover:bg-white/5 transition-colors"
+                          >
                             <div className="grid grid-cols-12 gap-4 items-center">
                               <div className="col-span-2">
-                                <p className="text-sm font-medium text-slate-100">#{payment.order_id}</p>
+                                <p className="text-sm font-medium text-slate-100">
+                                  #{payment.order_id}
+                                </p>
                               </div>
                               <div className="col-span-3">
-                                <p className="text-sm text-slate-300">{formatDate(payment.due_date)}</p>
+                                <p className="text-sm text-slate-300">
+                                  {formatDate(payment.due_date)}
+                                </p>
                               </div>
                               <div className="col-span-2">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  payment.type === 'due' ? 'bg-red-500/20 text-red-300 border border-red-400/30' : 
-                                  'bg-green-500/20 text-green-300 border border-green-400/30'
-                                }`}>
-                                  {payment.type === 'due' ? 'Due' : 'Advance'}
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    payment.type === "due"
+                                      ? "bg-red-500/20 text-red-300 border border-red-400/30"
+                                      : "bg-green-500/20 text-green-300 border border-green-400/30"
+                                  }`}
+                                >
+                                  {payment.type === "due" ? "Due" : "Advance"}
                                 </span>
                               </div>
                               <div className="col-span-2">
-                                <p className={`text-sm font-semibold ${payment.type === 'due' ? 'text-red-300' : 'text-green-300'}`}>
+                                <p
+                                  className={`text-sm font-semibold ${
+                                    payment.type === "due"
+                                      ? "text-red-300"
+                                      : "text-green-300"
+                                  }`}
+                                >
                                   ${Math.abs(payment.amount).toFixed(2)}
                                 </p>
                               </div>
@@ -793,7 +979,7 @@ export default function CustomerDetailsPage() {
                                 <div className="flex items-center space-x-2">
                                   {payment.notes ? (
                                     <>
-                                      <button 
+                                      <button
                                         onClick={() => handleShowNotes(payment)}
                                         className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
                                       >
@@ -801,17 +987,23 @@ export default function CustomerDetailsPage() {
                                         <span>Notes</span>
                                       </button>
                                       <button
-                                        onClick={() => handleSendNotification(payment)}
+                                        onClick={() =>
+                                          handleSendNotification(payment)
+                                        }
                                         disabled={isSendingSMS}
                                         className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
                                         title="Send SMS notification"
                                       >
                                         <MessageSquare className="w-4 h-4" />
-                                        <span>{isSendingSMS ? 'Sending...' : 'SMS'}</span>
+                                        <span>
+                                          {isSendingSMS ? "Sending..." : "SMS"}
+                                        </span>
                                       </button>
                                     </>
                                   ) : (
-                                    <span className="text-slate-500 text-sm">No notes</span>
+                                    <span className="text-slate-500 text-sm">
+                                      No notes
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -826,20 +1018,29 @@ export default function CustomerDetailsPage() {
             )}
 
             {/* Gifts Tab */}
-            {activeTab === 'gifts' && (
+            {activeTab === "gifts" && (
               <div className="space-y-6">
                 <div>
-                  <div className="flex justify-between items-center mb-6">
-                    <h4 className="text-lg font-medium text-slate-100">Gifts & Rewards</h4>
-                    <div className="flex items-center space-x-3">
+                  {/* Add Gift Section */}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Add New Gift
+                    </h4>
+                    <div className="flex gap-3 max-w-md">
                       <select
                         value={selectedGift}
                         onChange={(e) => setSelectedGift(e.target.value)}
-                        className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm min-w-[200px] cursor-pointer"
+                        className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm cursor-pointer"
                       >
-                        <option value="" className="bg-slate-800">Select a gift...</option>
+                        <option value="" className="bg-slate-800">
+                          Select a gift...
+                        </option>
                         {availableGifts.map((gift) => (
-                          <option key={gift.id} value={gift.id.toString()} className="bg-slate-800">
+                          <option
+                            key={gift.id}
+                            value={gift.id.toString()}
+                            className="bg-slate-800"
+                          >
                             {gift.name} (${gift.value})
                           </option>
                         ))}
@@ -849,96 +1050,109 @@ export default function CustomerDetailsPage() {
                         disabled={!selectedGift || isAddingGift}
                         className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                       >
-                        {isAddingGift ? 'Adding...' : 'Add Gift'}
+                        {isAddingGift ? "Adding..." : "Add Gift"}
                       </button>
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {gifts.map((gift) => (
-                      <div key={gift.id} className="bg-gradient-to-br from-purple-500/10 to-violet-600/10 border border-purple-500/30 rounded-lg p-5 relative overflow-hidden">
-                        {/* Gift Card Header */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-purple-500/20 rounded-lg">
-                              <Gift className="h-6 w-6 text-purple-400" />
-                            </div>
-                            <div>
-                              <h5 className="text-lg font-semibold text-white">{gift.name}</h5>
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                gift.status === 'active' ? 'bg-green-500/20 text-green-300 border border-green-400/30' :
-                                gift.status === 'used' ? 'bg-gray-500/20 text-gray-300 border border-gray-400/30' :
-                                'bg-red-500/20 text-red-300 border border-red-400/30'
-                              }`}>
-                                {gift.status}
+
+                  {/* Gifts List */}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Customer Gifts
+                    </h4>
+                    <div className="max-w-4xl">
+                      {gifts.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400">
+                          <p>
+                            No gifts found. Add a gift above to get started.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-3">
+                          {gifts.map((gift) => (
+                            <div
+                              key={gift.id}
+                              className="flex items-center gap-3 p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200 min-w-[280px]"
+                            >
+                              {/* Status Badge */}
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                                  gift.status === "active"
+                                    ? "bg-green-500/20 text-green-300 border border-green-400/30"
+                                    : gift.status === "used"
+                                    ? "bg-gray-500/20 text-gray-300 border border-gray-400/30"
+                                    : "bg-red-500/20 text-red-300 border border-red-400/30"
+                                }`}
+                              >
+                                {gift.status === "active"
+                                  ? "Active"
+                                  : gift.status === "used"
+                                  ? "Used"
+                                  : "Expired"}
                               </span>
+
+                              {/* Gift Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-sm font-medium text-white whitespace-nowrap">
+                                    {gift.name}
+                                  </span>
+                                  <span className="text-green-400 font-semibold text-sm">
+                                    ${gift.value}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                  Given: {formatDate(gift.date_given)}
+                                </div>
+                              </div>
+
+                              {/* Action Button */}
+                              {gift.status === "active" ? (
+                                <button
+                                  onClick={() => handleRedeemGift(gift.id)}
+                                  disabled={redeemingGiftIds.has(gift.id)}
+                                  className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-medium rounded-md hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 cursor-pointer"
+                                >
+                                  {redeemingGiftIds.has(gift.id)
+                                    ? "Redeeming..."
+                                    : "Redeem"}
+                                </button>
+                              ) : (
+                                <span className="px-3 py-1.5 bg-gray-500/20 text-gray-400 text-xs font-medium rounded-md border border-gray-500/30">
+                                  {gift.status === "used"
+                                    ? "Redeemed"
+                                    : "Expired"}
+                                </span>
+                              )}
                             </div>
-                          </div>
+                          ))}
                         </div>
-
-                        {/* Gift Details */}
-                        <div className="space-y-3 mb-4">
-                          <p className="text-slate-300 text-sm">{gift.description}</p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <DollarSign className="h-4 w-4 text-green-400" />
-                              <span className="text-green-400 font-semibold text-lg">${gift.value}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Calendar className="h-4 w-4 text-slate-400" />
-                              <span className="text-slate-400 text-sm">{formatDate(gift.date_given)}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Redeem Button */}
-                        {gift.status === 'active' ? (
-                          <button
-                            onClick={() => handleRedeemGift(gift.id)}
-                            disabled={redeemingGiftIds.has(gift.id)}
-                            className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {redeemingGiftIds.has(gift.id) ? 'Redeeming...' : 'Redeem Gift'}
-                          </button>
-                        ) : (
-                          <button
-                            disabled
-                            className="w-full px-4 py-2 bg-gray-500/20 text-gray-400 text-sm font-medium rounded-lg border border-gray-500/30 cursor-not-allowed"
-                          >
-                            {gift.status === 'used' ? 'Redeemed' : 'Expired'}
-                          </button>
-                        )}
-
-                        {/* Decorative elements */}
-                        <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-400/20 to-transparent rounded-full -translate-y-10 translate-x-10"></div>
-                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-purple-400/10 to-transparent rounded-full translate-y-8 -translate-x-8"></div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {gifts.length === 0 && (
-                    <div className="text-center py-12">
-                      <Gift className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-slate-400 mb-2">No Gifts Available</h3>
-                      <p className="text-slate-500">Add a gift to get started.</p>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Achievements Tab */}
-            {activeTab === 'achievements' && (
+            {activeTab === "achievements" && (
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center justify-between mb-6">
-                    <h4 className="text-lg font-medium text-slate-100">Achievements</h4>
+                    <h4 className="text-lg font-medium text-slate-100">
+                      Achievements
+                    </h4>
                     <div className="flex items-center space-x-3">
                       <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-lg px-3 py-2">
                         <div className="flex items-center space-x-2">
                           <Trophy className="h-4 w-4 text-amber-400" />
                           <span className="text-amber-300 font-semibold text-sm">
-                            {achievements.reduce((total, achievement) => total + achievement.points, 0)} Total Points
+                            {achievements.reduce(
+                              (total, achievement) =>
+                                total + achievement.points,
+                              0
+                            )}{" "}
+                            Total Points
                           </span>
                         </div>
                       </div>
@@ -949,15 +1163,22 @@ export default function CustomerDetailsPage() {
                           onChange={(e) => setRedeemAmount(e.target.value)}
                           placeholder="Amount to redeem"
                           min="1"
-                          max={achievements.reduce((total, achievement) => total + achievement.points, 0)}
+                          max={achievements.reduce(
+                            (total, achievement) => total + achievement.points,
+                            0
+                          )}
                           className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm w-32"
                         />
                         <button
                           onClick={handleRedeemPoints}
-                          disabled={!redeemAmount || isRedeeming || parseFloat(redeemAmount) <= 0}
+                          disabled={
+                            !redeemAmount ||
+                            isRedeeming ||
+                            parseFloat(redeemAmount) <= 0
+                          }
                           className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                         >
-                          {isRedeeming ? 'Redeeming...' : 'Redeem'}
+                          {isRedeeming ? "Redeeming..." : "Redeem"}
                         </button>
                       </div>
                       <div className="text-sm text-slate-400">
@@ -967,18 +1188,27 @@ export default function CustomerDetailsPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {achievements.map((achievement) => (
-                      <div key={achievement.id} className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 border border-amber-500/30 rounded-lg p-5 relative overflow-hidden">
+                      <div
+                        key={achievement.id}
+                        className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 border border-amber-500/30 rounded-lg p-5 relative overflow-hidden"
+                      >
                         {/* Achievement Card Header */}
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center space-x-3">
                             <div className="p-2 bg-amber-500/20 rounded-lg">
-                              <span className="text-2xl">{achievement.icon}</span>
+                              <span className="text-2xl">
+                                {achievement.icon}
+                              </span>
                             </div>
                             <div>
-                              <h5 className="text-lg font-semibold text-white">{achievement.title}</h5>
+                              <h5 className="text-lg font-semibold text-white">
+                                {achievement.title}
+                              </h5>
                               <div className="flex items-center space-x-2 mt-1">
                                 <Trophy className="h-4 w-4 text-amber-400" />
-                                <span className="text-amber-400 font-medium text-sm">{achievement.points} points</span>
+                                <span className="text-amber-400 font-medium text-sm">
+                                  {achievement.points} points
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -986,10 +1216,14 @@ export default function CustomerDetailsPage() {
 
                         {/* Achievement Details */}
                         <div className="space-y-3 mb-4">
-                          <p className="text-slate-300 text-sm">{achievement.description}</p>
+                          <p className="text-slate-300 text-sm">
+                            {achievement.description}
+                          </p>
                           <div className="flex items-center space-x-2">
                             <Calendar className="h-4 w-4 text-slate-400" />
-                            <span className="text-slate-400 text-sm">Earned on {formatDate(achievement.date_earned)}</span>
+                            <span className="text-slate-400 text-sm">
+                              Earned on {formatDate(achievement.date_earned)}
+                            </span>
                           </div>
                         </div>
 
@@ -997,7 +1231,9 @@ export default function CustomerDetailsPage() {
                         <div className="space-y-3">
                           <div className="flex items-center justify-center p-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg border border-amber-500/30">
                             <Star className="h-5 w-5 text-amber-400 mr-2" />
-                            <span className="text-amber-300 font-medium text-sm">Achievement Unlocked</span>
+                            <span className="text-amber-300 font-medium text-sm">
+                              Achievement Unlocked
+                            </span>
                           </div>
                         </div>
 
@@ -1011,8 +1247,12 @@ export default function CustomerDetailsPage() {
                   {achievements.length === 0 && (
                     <div className="text-center py-12">
                       <Trophy className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-slate-400 mb-2">No Achievements Yet</h3>
-                      <p className="text-slate-500">Complete actions to earn achievements and points.</p>
+                      <h3 className="text-lg font-medium text-slate-400 mb-2">
+                        No Achievements Yet
+                      </h3>
+                      <p className="text-slate-500">
+                        Complete actions to earn achievements and points.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1028,16 +1268,18 @@ export default function CustomerDetailsPage() {
               <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full my-8">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900">Invoice #{selectedOrder.id}</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Invoice #{selectedOrder.id}
+                  </h2>
                   <div className="flex items-center space-x-2">
-                    <button 
+                    <button
                       onClick={() => window.print()}
                       className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
                       title="Print Invoice"
                     >
                       <Printer className="w-5 h-5 text-gray-600" />
                     </button>
-                    <button 
+                    <button
                       onClick={handleCloseInvoice}
                       className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
                     >
@@ -1051,30 +1293,52 @@ export default function CustomerDetailsPage() {
                   <div className="mb-6">
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <h3 className="text-sm font-medium text-gray-600 mb-2">Order Details</h3>
-                        <p className="text-sm text-gray-900">Order ID: #{selectedOrder.id}</p>
-                        <p className="text-sm text-gray-900">Date: {formatDate(selectedOrder.date)}</p>
-                        <p className="text-sm text-gray-900">Status: {selectedOrder.status}</p>
+                        <h3 className="text-sm font-medium text-gray-600 mb-2">
+                          Order Details
+                        </h3>
+                        <p className="text-sm text-gray-900">
+                          Order ID: #{selectedOrder.id}
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          Date: {formatDate(selectedOrder.date)}
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          Status: {selectedOrder.status}
+                        </p>
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-600 mb-2">Customer</h3>
+                        <h3 className="text-sm font-medium text-gray-600 mb-2">
+                          Customer
+                        </h3>
                         <p className="text-sm text-gray-900">{customer.name}</p>
-                        <p className="text-sm text-gray-900">{customer.email}</p>
-                        <p className="text-sm text-gray-900">{customer.phone}</p>
+                        <p className="text-sm text-gray-900">
+                          {customer.email}
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {customer.phone}
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="border-t border-gray-200 pt-6">
-                    <h3 className="text-sm font-medium text-gray-600 mb-4">Order Summary</h3>
+                    <h3 className="text-sm font-medium text-gray-600 mb-4">
+                      Order Summary
+                    </h3>
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-900">Items ({selectedOrder.items})</span>
-                        <span className="text-sm text-gray-900">${selectedOrder.total.toFixed(2)}</span>
+                        <span className="text-sm text-gray-900">
+                          Items ({selectedOrder.items})
+                        </span>
+                        <span className="text-sm text-gray-900">
+                          ${selectedOrder.total.toFixed(2)}
+                        </span>
                       </div>
                       <div className="flex justify-between font-medium border-t border-gray-200 pt-2">
                         <span className="text-gray-900">Total</span>
-                        <span className="text-gray-900">${selectedOrder.total.toFixed(2)}</span>
+                        <span className="text-gray-900">
+                          ${selectedOrder.total.toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1091,8 +1355,10 @@ export default function CustomerDetailsPage() {
               <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                  <h2 className="text-xl font-semibold text-slate-100">Add Transaction</h2>
-                  <button 
+                  <h2 className="text-xl font-semibold text-slate-100">
+                    Add Transaction
+                  </h2>
+                  <button
                     onClick={handleCloseTransactionModal}
                     className="p-2 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                   >
@@ -1109,7 +1375,12 @@ export default function CustomerDetailsPage() {
                     </label>
                     <select
                       value={transactionForm.type}
-                      onChange={(e) => setTransactionForm({ ...transactionForm, type: e.target.value as 'due' | 'advance' })}
+                      onChange={(e) =>
+                        setTransactionForm({
+                          ...transactionForm,
+                          type: e.target.value as "due" | "advance",
+                        })
+                      }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
                     >
                       <option value="due">Due</option>
@@ -1126,7 +1397,12 @@ export default function CustomerDetailsPage() {
                       type="number"
                       step="0.01"
                       value={transactionForm.amount}
-                      onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })}
+                      onChange={(e) =>
+                        setTransactionForm({
+                          ...transactionForm,
+                          amount: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                       placeholder="Enter amount"
                     />
@@ -1140,7 +1416,12 @@ export default function CustomerDetailsPage() {
                     <textarea
                       rows={3}
                       value={transactionForm.note}
-                      onChange={(e) => setTransactionForm({ ...transactionForm, note: e.target.value })}
+                      onChange={(e) =>
+                        setTransactionForm({
+                          ...transactionForm,
+                          note: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
                       placeholder="Add a note for this transaction"
                     />
@@ -1152,10 +1433,18 @@ export default function CustomerDetailsPage() {
                       type="checkbox"
                       id="notify-customer"
                       checked={transactionForm.notifyCustomer}
-                      onChange={(e) => setTransactionForm({ ...transactionForm, notifyCustomer: e.target.checked })}
+                      onChange={(e) =>
+                        setTransactionForm({
+                          ...transactionForm,
+                          notifyCustomer: e.target.checked,
+                        })
+                      }
                       className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-slate-600 rounded bg-slate-800 cursor-pointer"
                     />
-                    <label htmlFor="notify-customer" className="ml-2 text-sm text-slate-300 cursor-pointer">
+                    <label
+                      htmlFor="notify-customer"
+                      className="ml-2 text-sm text-slate-300 cursor-pointer"
+                    >
                       Notify customer via SMS
                     </label>
                   </div>
@@ -1188,8 +1477,10 @@ export default function CustomerDetailsPage() {
               <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                  <h2 className="text-xl font-semibold text-slate-100">Transaction Notes</h2>
-                  <button 
+                  <h2 className="text-xl font-semibold text-slate-100">
+                    Transaction Notes
+                  </h2>
+                  <button
                     onClick={handleCloseNotes}
                     className="p-2 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                   >
@@ -1200,15 +1491,21 @@ export default function CustomerDetailsPage() {
                 {/* Modal Body */}
                 <div className="p-6">
                   <div className="mb-4">
-                    <h3 className="text-sm font-medium text-slate-300 mb-2">Order #{selectedDuePayment.order_id}</h3>
+                    <h3 className="text-sm font-medium text-slate-300 mb-2">
+                      Order #{selectedDuePayment.order_id}
+                    </h3>
                     <p className="text-sm text-slate-400">
-                      {selectedDuePayment.type === 'due' ? 'Due Payment' : 'Advance Payment'} - ${Math.abs(selectedDuePayment.amount).toFixed(2)}
+                      {selectedDuePayment.type === "due"
+                        ? "Due Payment"
+                        : "Advance Payment"}{" "}
+                      - ${Math.abs(selectedDuePayment.amount).toFixed(2)}
                     </p>
                   </div>
-                  
+
                   <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 mb-4">
                     <p className="text-slate-100 text-sm leading-relaxed">
-                      {selectedDuePayment.notes || 'No notes available for this transaction.'}
+                      {selectedDuePayment.notes ||
+                        "No notes available for this transaction."}
                     </p>
                   </div>
 
@@ -1220,7 +1517,9 @@ export default function CustomerDetailsPage() {
                       className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <MessageSquare className="w-4 h-4" />
-                      <span>{isSendingSMS ? 'Sending SMS...' : 'Send SMS Reminder'}</span>
+                      <span>
+                        {isSendingSMS ? "Sending SMS..." : "Send SMS Reminder"}
+                      </span>
                     </button>
                   </div>
                 </div>
