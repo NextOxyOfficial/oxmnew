@@ -39,8 +39,10 @@ interface ProductFormData {
   name: string;
   buyPrice: number;
   sellPrice: number;
+  stock: number;
   category: number | "";
   supplier: number | "";
+  productCode: string;
   location: string;
   details: string;
   photos: File[];
@@ -56,8 +58,10 @@ export default function AddProductPage() {
     name: "",
     buyPrice: 0,
     sellPrice: 0,
+    stock: 0,
     category: "",
     supplier: "",
+    productCode: "",
     location: "",
     details: "",
     photos: [],
@@ -176,7 +180,7 @@ export default function AddProductPage() {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
 
-    if (name === "buyPrice" || name === "sellPrice") {
+    if (name === "buyPrice" || name === "sellPrice" || name === "stock") {
       setFormData((prev) => ({
         ...prev,
         [name]: parseFloat(value) || 0,
@@ -481,6 +485,10 @@ export default function AddProductPage() {
       if (formData.sellPrice < formData.buyPrice) {
         newErrors.sellPrice = "Sell price should be higher than buy price";
       }
+
+      if (formData.stock < 0) {
+        newErrors.stock = "Stock quantity cannot be negative";
+      }
     } else {
       if (formData.colorSizeVariants.length === 0) {
         newErrors.variants = "Please add at least one color/size variant";
@@ -527,11 +535,13 @@ export default function AddProductPage() {
           typeof formData.category === "number" ? formData.category : undefined,
         supplier:
           typeof formData.supplier === "number" ? formData.supplier : undefined,
+        productCode: formData.productCode || undefined,
         location: formData.location,
         details: formData.details,
         hasVariants: formData.hasVariants,
         buyPrice: formData.hasVariants ? undefined : formData.buyPrice,
         sellPrice: formData.hasVariants ? undefined : formData.sellPrice,
+        stock: formData.hasVariants ? undefined : formData.stock,
         colorSizeVariants: formData.hasVariants
           ? formData.colorSizeVariants
           : undefined,
@@ -663,44 +673,71 @@ export default function AddProductPage() {
                 )}
               </div>
 
-              {/* Supplier */}
-              <div>
-                <label
-                  htmlFor="supplier"
-                  className="block text-sm font-medium text-slate-300 mb-1.5"
-                >
-                  Supplier *
-                </label>
-                <select
-                  id="supplier"
-                  name="supplier"
-                  value={formData.supplier}
-                  onChange={handleInputChange}
-                  disabled={isLoadingData}
-                  className={`w-full bg-slate-800/50 border ${
-                    errors.supplier ? "border-red-500" : "border-slate-700/50"
-                  } text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                    isLoadingData ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                >
-                  <option value="" className="bg-slate-800">
-                    {isLoadingData
-                      ? "Loading suppliers..."
-                      : "Select a supplier"}
-                  </option>
-                  {suppliers.map((supplier) => (
-                    <option
-                      key={supplier.id}
-                      value={supplier.id}
-                      className="bg-slate-800"
-                    >
-                      {supplier.name}
+              {/* Supplier and Product Code Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Supplier */}
+                <div>
+                  <label
+                    htmlFor="supplier"
+                    className="block text-sm font-medium text-slate-300 mb-1.5"
+                  >
+                    Supplier *
+                  </label>
+                  <select
+                    id="supplier"
+                    name="supplier"
+                    value={formData.supplier}
+                    onChange={handleInputChange}
+                    disabled={isLoadingData}
+                    className={`w-full bg-slate-800/50 border ${
+                      errors.supplier ? "border-red-500" : "border-slate-700/50"
+                    } text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                      isLoadingData ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    <option value="" className="bg-slate-800">
+                      {isLoadingData
+                        ? "Loading suppliers..."
+                        : "Select a supplier"}
                     </option>
-                  ))}
-                </select>
-                {errors.supplier && (
-                  <p className="text-red-400 text-sm mt-1">{errors.supplier}</p>
-                )}
+                    {suppliers.map((supplier) => (
+                      <option
+                        key={supplier.id}
+                        value={supplier.id}
+                        className="bg-slate-800"
+                      >
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.supplier && (
+                    <p className="text-red-400 text-sm mt-1">{errors.supplier}</p>
+                  )}
+                </div>
+
+                {/* Product/Parts Code */}
+                <div>
+                  <label
+                    htmlFor="productCode"
+                    className="block text-sm font-medium text-slate-300 mb-1.5"
+                  >
+                    Product/Parts Code
+                  </label>
+                  <input
+                    type="text"
+                    id="productCode"
+                    name="productCode"
+                    value={formData.productCode}
+                    onChange={handleInputChange}
+                    className={`w-full bg-slate-800/50 border ${
+                      errors.productCode ? "border-red-500" : "border-slate-700/50"
+                    } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                    placeholder="Enter product or parts code (e.g., SKU, part number)"
+                  />
+                  {errors.productCode && (
+                    <p className="text-red-400 text-sm mt-1">{errors.productCode}</p>
+                  )}
+                </div>
               </div>
 
               {/* Photo Upload */}
@@ -959,7 +996,7 @@ export default function AddProductPage() {
                 {!formData.hasVariants ? (
                   /* Single Pricing */
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                       {/* Buy Price */}
                       <div>
                         <label
@@ -1026,6 +1063,36 @@ export default function AddProductPage() {
                         {errors.sellPrice && (
                           <p className="text-red-400 text-sm mt-1">
                             {errors.sellPrice}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Stock */}
+                      <div>
+                        <label
+                          htmlFor="stock"
+                          className="block text-sm font-medium text-slate-300 mb-1.5"
+                        >
+                          Stock Quantity *
+                        </label>
+                        <input
+                          type="number"
+                          id="stock"
+                          name="stock"
+                          value={formData.stock || ""}
+                          onChange={handleInputChange}
+                          min="0"
+                          step="1"
+                          className={`w-full bg-slate-800/50 border ${
+                            errors.stock
+                              ? "border-red-500"
+                              : "border-slate-700/50"
+                          } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                          placeholder="0"
+                        />
+                        {errors.stock && (
+                          <p className="text-red-400 text-sm mt-1">
+                            {errors.stock}
                           </p>
                         )}
                       </div>

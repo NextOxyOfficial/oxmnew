@@ -363,39 +363,7 @@ export default function ProductDetailsPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-slate-400 mb-1">Category</p>
-                    <p className="text-white font-medium">{product.category}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 mb-1">Status</p>
-                    <span
-                      className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        product.status
-                      )}`}
-                    >
-                      {product.status
-                        ? product.status.replace("_", " ").toUpperCase()
-                        : "UNKNOWN"}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 mb-1">Price</p>
-                    <p className="text-white font-bold">
-                      $
-                      {(() => {
-                        const price = Number(product.price) || 0;
-                        return price > 0 ? price.toFixed(2) : "N/A";
-                      })()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 mb-1">Cost</p>
-                    <p className="text-white font-bold">
-                      $
-                      {(() => {
-                        const cost = Number(product.cost) || 0;
-                        return cost > 0 ? cost.toFixed(2) : "N/A";
-                      })()}
-                    </p>
+                    <p className="text-white font-medium">{product.category_name || product.category || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-slate-400 mb-1">Total Stock</p>
@@ -406,7 +374,7 @@ export default function ProductDetailsPage() {
                   <div>
                     <p className="text-slate-400 mb-1">Supplier</p>
                     <p className="text-white font-medium">
-                      {product.supplier || "N/A"}
+                      {product.supplier_name || product.supplier || "N/A"}
                     </p>
                   </div>
                   <div>
