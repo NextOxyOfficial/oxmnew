@@ -12,6 +12,7 @@ interface Customer {
   email: string;
   phone: string;
   address?: string;
+  previous_due?: number; // Customer's existing debt
 }
 
 // Employee interface
@@ -52,6 +53,8 @@ interface OrderForm {
   vat_percentage: number;
   vat_amount: number;
   due_amount: number;
+  apply_due_to_total: boolean; // Whether to subtract due amount from total
+  previous_due: number; // Customer's existing debt
   total: number;
   due_date: string;
   notes: string;
@@ -91,6 +94,8 @@ export default function AddOrderPage() {
     vat_percentage: 0,
     vat_amount: 0,
     due_amount: 0,
+    apply_due_to_total: true, // Default to true - include due in total calculation
+    previous_due: 0,
     total: 0,
     due_date: "",
     notes: "",
@@ -145,28 +150,32 @@ export default function AddOrderPage() {
           name: "John Doe",
           email: "john@example.com",
           phone: "+1 (555) 123-4567",
-          address: "123 Main St, New York, NY 10001"
+          address: "123 Main St, New York, NY 10001",
+          previous_due: 150.75 // Has existing debt
         },
         {
           id: 2,
           name: "Jane Smith",
           email: "jane@example.com",
           phone: "+1 (555) 234-5678",
-          address: "456 Oak Ave, Los Angeles, CA 90210"
+          address: "456 Oak Ave, Los Angeles, CA 90210",
+          previous_due: 0 // No existing debt
         },
         {
           id: 3,
           name: "Bob Wilson",
           email: "bob@example.com",
           phone: "+1 (555) 345-6789",
-          address: "789 Pine St, Chicago, IL 60601"
+          address: "789 Pine St, Chicago, IL 60601",
+          previous_due: 89.50 // Has existing debt
         },
         {
           id: 4,
           name: "Alice Johnson",
           email: "alice@example.com",
           phone: "+1 (555) 456-7890",
-          address: "321 Elm Dr, Miami, FL 33101"
+          address: "321 Elm Dr, Miami, FL 33101",
+          previous_due: 0 // No existing debt
         }
       ];
       setCustomers(mockCustomers);
@@ -234,13 +243,16 @@ export default function AddOrderPage() {
     discountPercentage: number,
     vatPercentage: number,
     dueAmount: number,
+    applyDueToTotal: boolean,
+    previousDue: number,
     incentiveAmount: number
   ) => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const discountAmount = (subtotal * discountPercentage) / 100;
     const afterDiscount = subtotal - discountAmount;
     const vatAmount = (afterDiscount * vatPercentage) / 100;
-    const total = afterDiscount + vatAmount - dueAmount;
+    // Only subtract due amount if checkbox is checked
+    const total = afterDiscount + vatAmount - (applyDueToTotal ? dueAmount : 0) + previousDue;
     const netProfit = total - incentiveAmount;
 
     return {
@@ -252,13 +264,15 @@ export default function AddOrderPage() {
     };
   };
 
-  // Update totals when items, discount, VAT, due amount, or incentive changes
+  // Update totals when items, discount, VAT, due amount, apply_due_to_total, previous due, or incentive changes
   useEffect(() => {
     const { subtotal, discountAmount, vatAmount, total, netProfit } = calculateTotals(
       orderForm.items,
       orderForm.discount_percentage,
       orderForm.vat_percentage,
       orderForm.due_amount,
+      orderForm.apply_due_to_total,
+      orderForm.previous_due,
       orderForm.incentive_amount
     );
 
@@ -275,6 +289,8 @@ export default function AddOrderPage() {
     orderForm.discount_percentage,
     orderForm.vat_percentage,
     orderForm.due_amount,
+    orderForm.apply_due_to_total,
+    orderForm.previous_due,
     orderForm.incentive_amount,
   ]);
 
@@ -305,6 +321,7 @@ export default function AddOrderPage() {
             address: selectedCustomer.address || "",
             company: "",
           },
+          previous_due: selectedCustomer.previous_due || 0,
         }));
       }
     } else {
@@ -320,6 +337,7 @@ export default function AddOrderPage() {
           address: "",
           company: "",
         },
+        previous_due: 0,
       }));
     }
   };
@@ -338,6 +356,7 @@ export default function AddOrderPage() {
           address: "",
           company: "",
         },
+        previous_due: 0,
       }));
     }
   };
@@ -355,6 +374,7 @@ export default function AddOrderPage() {
         address: "",
         company: "",
       },
+      previous_due: 0,
     }));
   };
 
@@ -613,6 +633,7 @@ export default function AddOrderPage() {
                                   address: "",
                                   company: "",
                                 },
+                                previous_due: 0,
                               }));
                             }
                           }}
@@ -1032,29 +1053,59 @@ export default function AddOrderPage() {
                     </div>
 
                     {/* Due */}
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Due:</span>
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Due:</span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={orderForm.due_amount === 0 ? "" : orderForm.due_amount}
+                            onChange={(e) =>
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                due_amount: parseFloat(e.target.value) || 0,
+                              }))
+                            }
+                            className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            placeholder="0"
+                            min="0"
+                            step="0.01"
+                          />
+                          <span className="text-slate-400 text-sm">$</span>
+                          <span className="text-slate-100">
+                            {orderForm.apply_due_to_total ? "-" : ""}{formatCurrency(orderForm.due_amount)}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Checkbox to include due in total */}
+                      <div className="flex items-center gap-2 ml-2">
                         <input
-                          type="number"
-                          value={orderForm.due_amount === 0 ? "" : orderForm.due_amount}
+                          type="checkbox"
+                          id="apply-due-to-total"
+                          checked={orderForm.apply_due_to_total}
                           onChange={(e) =>
                             setOrderForm((prev) => ({
                               ...prev,
-                              due_amount: parseFloat(e.target.value) || 0,
+                              apply_due_to_total: e.target.checked,
                             }))
                           }
-                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          placeholder="0"
-                          min="0"
-                          step="0.01"
+                          className="w-3 h-3 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-1 rounded"
                         />
-                        <span className="text-slate-400 text-sm">$</span>
-                        <span className="text-slate-100">
-                          -{formatCurrency(orderForm.due_amount)}
-                        </span>
+                        <label htmlFor="apply-due-to-total" className="text-xs text-slate-400 cursor-pointer">
+                          {orderForm.apply_due_to_total ? "Due amount applied to total" : "Due amount shown only (not applied)"}
+                        </label>
                       </div>
                     </div>
+
+                    {/* Previous Due - Only show if customer has previous due */}
+                    {orderForm.previous_due > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Previous Due:</span>
+                        <span className="text-red-400 font-medium">
+                          {formatCurrency(orderForm.previous_due)}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Total */}
                     <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
