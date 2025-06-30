@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import api_views
 
 urlpatterns = [
     path('', views.api_root, name='api-root'),
@@ -48,4 +49,8 @@ urlpatterns = [
          views.toggle_payment_method, name='toggle-payment-method'),
 
     path('send-sms/', views.smsSend, name='sms-send'),
+
+    # Dashboard API endpoints
+    path('dashboard/stats/', api_views.dashboard_stats, name='dashboard-stats'),
+    path('search/', api_views.search_global, name='search-global'),
 ]

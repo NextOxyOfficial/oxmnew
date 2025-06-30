@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { searchData, getRecentSearches, getPopularSearches, type SearchResult } from '@/lib/searchData';
+import { searchData, getRecentSearches, addToRecentSearches, type SearchResult } from '@/lib/searchData';
 
 interface User {
   id: number;
@@ -79,26 +79,41 @@ export default function Header({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const unreadNotifications = notifications.filter(n => !n.read).length;
 
-  // Handle search
+  // Handle search with debouncing
   useEffect(() => {
-    if (searchQuery.trim().length >= 2) {
-      const results = searchData(searchQuery);
-      setSearchResults(results);
-      setShowSearchResults(true);
-    } else {
-      setSearchResults([]);
-      setShowSearchResults(false);
-    }
+    const performSearch = async () => {
+      if (searchQuery.trim().length >= 2) {
+        setIsSearching(true);
+        try {
+          const results = await searchData(searchQuery);
+          setSearchResults(results);
+          setShowSearchResults(true);
+        } catch (error) {
+          console.error('Search failed:', error);
+          setSearchResults([]);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+        setIsSearching(false);
+      }
+    };
+
+    const timeoutId = setTimeout(performSearch, 300); // Debounce by 300ms
+    return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
   // Handle search input focus
   const handleSearchFocus = () => {
     setIsSearchFocused(true);
     if (searchQuery.trim().length === 0) {
-      // Show recent or popular searches when focused with no query
+      // Show recent searches when focused with no query
       const recentSearches = getRecentSearches();
       setSearchResults(recentSearches);
       setShowSearchResults(true);
@@ -112,6 +127,13 @@ export default function Header({
       setIsSearchFocused(false);
       setShowSearchResults(false);
     }, 200);
+  };
+
+  // Handle search result selection
+  const handleSearchResultSelect = (result: SearchResult) => {
+    addToRecentSearches(result);
+    setShowSearchResults(false);
+    setSearchQuery('');
   };
   
   // Add click outside handlers for dropdowns
@@ -218,7 +240,10 @@ export default function Header({
           <div className="hidden md:flex flex-1 justify-center max-w-lg mx-8">
             <div className="relative w-full">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className={`h-4 w-4 transition-colors ${isSearchFocused ? 'text-cyan-400' : 'text-slate-500'}`} />
+                <Search className={`h-4 w-4 transition-colors ${
+                  isSearching ? 'text-cyan-400 animate-pulse' : 
+                  isSearchFocused ? 'text-cyan-400' : 'text-slate-500'
+                }`} />
               </div>
               <input
                 type="text"
@@ -233,16 +258,33 @@ export default function Header({
               {/* Search Results Dropdown */}
               {showSearchResults && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl max-h-80 overflow-hidden z-50">
-                  {searchQuery.trim().length === 0 ? (
+                  {isSearching ? (
+                    // Loading state
+                    <div className="px-4 py-6 text-center text-slate-500 text-sm">
+                      <Search className="h-8 w-8 mx-auto mb-2 text-slate-600 animate-pulse" />
+                      <p>Searching...</p>
+                    </div>
+                  ) : searchQuery.trim().length === 0 ? (
                     // Show recent searches when no query
                     <div>
                       <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-700/50 bg-slate-900/50">
                         Recent Searches
                       </div>
                       <div className="max-h-64 overflow-y-auto">
-                        {getRecentSearches().map((item) => (
-                          <SearchResultItem key={item.id} item={item} onSelect={() => setShowSearchResults(false)} />
-                        ))}
+                        {searchResults.length > 0 ? (
+                          searchResults.map((item) => (
+                            <SearchResultItem 
+                              key={`${item.type}-${item.id}`} 
+                              item={item} 
+                              onSelect={() => handleSearchResultSelect(item)} 
+                            />
+                          ))
+                        ) : (
+                          <div className="px-4 py-4 text-center text-slate-500 text-sm">
+                            <p>No recent searches</p>
+                            <p className="text-xs mt-1">Start typing to search for products, customers, or suppliers</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : searchResults.length > 0 ? (
@@ -253,7 +295,11 @@ export default function Header({
                       </div>
                       <div className="max-h-64 overflow-y-auto">
                         {searchResults.map((item) => (
-                          <SearchResultItem key={item.id} item={item} onSelect={() => setShowSearchResults(false)} />
+                          <SearchResultItem 
+                            key={`${item.type}-${item.id}`} 
+                            item={item} 
+                            onSelect={() => handleSearchResultSelect(item)} 
+                          />
                         ))}
                       </div>
                     </div>
@@ -262,7 +308,7 @@ export default function Header({
                     <div className="px-4 py-6 text-center text-slate-500 text-sm">
                       <Search className="h-8 w-8 mx-auto mb-2 text-slate-600" />
                       <p>No results found for "{searchQuery}"</p>
-                      <p className="text-xs mt-1">Try searching for products, customers, or orders</p>
+                      <p className="text-xs mt-1">Try searching for products, customers, or suppliers</p>
                     </div>
                   )}
                 </div>
@@ -475,15 +521,31 @@ export default function Header({
           {/* Mobile Search Results */}
           {showSearchResults && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl max-h-64 overflow-hidden z-50">
-              {searchQuery.trim().length === 0 ? (
+              {isSearching ? (
+                // Loading state
+                <div className="px-4 py-4 text-center text-slate-500 text-sm">
+                  <Search className="h-6 w-6 mx-auto mb-2 text-slate-600 animate-pulse" />
+                  <p>Searching...</p>
+                </div>
+              ) : searchQuery.trim().length === 0 ? (
                 <div>
                   <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-700/50 bg-slate-900/50">
                     Recent Searches
                   </div>
                   <div className="max-h-48 overflow-y-auto">
-                    {getRecentSearches().map((item) => (
-                      <SearchResultItem key={item.id} item={item} onSelect={() => setShowSearchResults(false)} />
-                    ))}
+                    {searchResults.length > 0 ? (
+                      searchResults.map((item) => (
+                        <SearchResultItem 
+                          key={`mobile-${item.type}-${item.id}`} 
+                          item={item} 
+                          onSelect={() => handleSearchResultSelect(item)} 
+                        />
+                      ))
+                    ) : (
+                      <div className="px-4 py-4 text-center text-slate-500 text-sm">
+                        <p>No recent searches</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : searchResults.length > 0 ? (
@@ -493,7 +555,11 @@ export default function Header({
                   </div>
                   <div className="max-h-48 overflow-y-auto">
                     {searchResults.map((item) => (
-                      <SearchResultItem key={item.id} item={item} onSelect={() => setShowSearchResults(false)} />
+                      <SearchResultItem 
+                        key={`mobile-${item.type}-${item.id}`} 
+                        item={item} 
+                        onSelect={() => handleSearchResultSelect(item)} 
+                      />
                     ))}
                   </div>
                 </div>
@@ -556,6 +622,8 @@ function SearchResultItem({
       case 'MEDIUM_STOCK':
         return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
       case 'LOW_STOCK':
+        return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
+      case 'OUT_OF_STOCK':
         return 'bg-red-500/20 text-red-300 border-red-500/30';
       case 'COMPLETED':
         return 'bg-green-500/20 text-green-300 border-green-500/30';
@@ -593,7 +661,7 @@ function SearchResultItem({
           <h4 className="text-sm font-medium text-slate-200 truncate">{item.title}</h4>
           {item.badge && (
             <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getBadgeColor(item.badge)}`}>
-              {item.badge.replace('_', ' ')}
+              {item.badge.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
             </span>
           )}
         </div>

@@ -434,6 +434,80 @@ class ProductViewSet(viewsets.ModelViewSet):
             }
         )
 
+    @action(detail=False, methods=["get"])
+    def stats(self, request):
+        """Get product statistics"""
+        queryset = self.get_queryset()
+
+        total_products = queryset.count()
+        active_products = queryset.filter(is_active=True).count()
+        low_stock_products = queryset.filter(stock__lte=10).count()
+        out_of_stock_products = queryset.filter(stock=0).count()
+
+        # Calculate total inventory value
+        total_buy_value = sum(product.total_buy_price for product in queryset)
+        total_sell_value = sum(product.total_sell_price for product in queryset)
+
+        # Get top categories
+        category_stats = (
+            queryset.values("category__name")
+            .annotate(count=Count("id"))
+            .order_by("-count")[:5]
+        )
+
+        return Response(
+            {
+                "total_products": total_products,
+                "active_products": active_products,
+                "low_stock_products": low_stock_products,
+                "out_of_stock_products": out_of_stock_products,
+                "total_buy_value": float(total_buy_value),
+                "total_sell_value": float(total_sell_value),
+                "top_categories": list(category_stats),
+            }
+        )
+
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        """Advanced search endpoint for products"""
+        query = request.query_params.get('q', '').strip()
+        
+        if not query or len(query) < 2:
+            return Response({'results': [], 'total': 0})
+        
+        queryset = self.get_queryset()
+        
+        # Search in multiple fields
+        search_results = queryset.filter(
+            Q(name__icontains=query) |
+            Q(details__icontains=query) |
+            Q(location__icontains=query) |
+            Q(category__name__icontains=query) |
+            Q(supplier__name__icontains=query)
+        ).distinct()
+        
+        # Format results for frontend
+        results = []
+        for product in search_results[:10]:  # Limit to 10 results
+            stock_level = 'HIGH_STOCK' if product.stock > 20 else 'MEDIUM_STOCK' if product.stock > 10 else 'LOW_STOCK'
+            
+            results.append({
+                'id': str(product.id),
+                'type': 'product',
+                'title': product.name,
+                'subtitle': f"{product.category.name if product.category else 'Uncategorized'} • ${product.sell_price} • {product.stock} in stock",
+                'href': f"/dashboard/products/{product.id}",
+                'badge': stock_level
+            })
+        
+        return Response({
+            'results': results,
+            'total': search_results.count(),
+            'query': query
+        })
+
+    # ...existing code...
+
 
 class ProductSaleViewSet(viewsets.ModelViewSet):
     """ViewSet for managing product sales"""
