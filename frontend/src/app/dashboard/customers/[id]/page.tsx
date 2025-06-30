@@ -338,7 +338,7 @@ export default function CustomerDetailsPage() {
   const handleSendNotification = async (payment: DuePayment) => {
     const message = `Hello ${customer?.name}, this is a reminder about your ${
       payment.type === "due" ? "due payment" : "advance payment"
-    } of $${Math.abs(payment.amount).toFixed(2)} for order #${
+    } of ${formatCurrency(Math.abs(Number(payment.amount) || 0))} for order #${
       payment.order_id
     }. Due date: ${formatDate(payment.due_date)}.`;
     await handleSendSMS(message);
@@ -353,8 +353,8 @@ export default function CustomerDetailsPage() {
         : "was cancelled";
     const message = `Hello ${customer?.name}, your order #${
       order.id
-    } ${statusMessage}. Order total: $${order.total.toFixed(
-      2
+    } ${statusMessage}. Order total: ${formatCurrency(
+      order.total
     )}. Order date: ${formatDate(order.date)}. Thank you for your business!`;
     await handleSendSMS(message);
   };
@@ -401,7 +401,7 @@ export default function CustomerDetailsPage() {
           customer.name
         }, this is a reminder about your ${
           transactionForm.type === "due" ? "due payment" : "advance payment"
-        } of $${amount.toFixed(2)}. Due date: ${formatDate(
+        } of ${formatCurrency(amount)}. Due date: ${formatDate(
           transactionForm.due_date
         )}.`;
         await handleSendSMS(message);
@@ -650,11 +650,17 @@ export default function CustomerDetailsPage() {
 
   const totalDue = duePayments
     .filter((payment) => payment.type === "due")
-    .reduce((sum, payment) => sum + payment.amount, 0);
+    .reduce((sum, payment) => {
+      const amount = Number(payment.amount);
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
 
   const totalAdvance = duePayments
     .filter((payment) => payment.type === "advance")
-    .reduce((sum, payment) => sum + Math.abs(payment.amount), 0);
+    .reduce((sum, payment) => {
+      const amount = Number(payment.amount);
+      return sum + (isNaN(amount) ? 0 : Math.abs(amount));
+    }, 0);
 
   const netAmount = totalDue - totalAdvance;
 
@@ -751,7 +757,7 @@ export default function CustomerDetailsPage() {
                     netAmount >= 0 ? "text-red-400" : "text-green-400"
                   } mt-1`}
                 >
-                  {formatCurrency(Math.abs(netAmount))}
+                  {formatCurrency(isNaN(netAmount) ? 0 : Math.abs(netAmount))}
                 </p>
               </div>
               <DollarSign
@@ -1106,7 +1112,9 @@ export default function CustomerDetailsPage() {
                                       : "text-green-300"
                                   }`}
                                 >
-                                  {formatCurrency(Math.abs(payment.amount))}
+                                  {formatCurrency(
+                                    Math.abs(Number(payment.amount) || 0)
+                                  )}
                                 </p>
                               </div>
                               <div className="col-span-3">
@@ -1241,7 +1249,7 @@ export default function CustomerDetailsPage() {
                                     {gift.name}
                                   </span>
                                   <span className="text-green-400 font-semibold text-sm">
-                                    ${gift.value}
+                                    {formatCurrency(gift.value)}
                                   </span>
                                 </div>
                                 <div className="text-xs text-slate-400">
@@ -1770,7 +1778,10 @@ export default function CustomerDetailsPage() {
                       {selectedDuePayment.type === "due"
                         ? "Due Payment"
                         : "Advance Payment"}{" "}
-                      - ${Math.abs(selectedDuePayment.amount).toFixed(2)}
+                      -{" "}
+                      {formatCurrency(
+                        Math.abs(Number(selectedDuePayment.amount) || 0)
+                      )}
                     </p>
                   </div>
 
