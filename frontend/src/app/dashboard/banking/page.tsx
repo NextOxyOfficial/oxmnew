@@ -400,7 +400,7 @@ export default function BankingPage() {
                   <td>${t.purpose}</td>
                   <td>${getEmployeeName(t.verified_by)}</td>
                   <td>${t.status}</td>
-                  <td style="color: ${t.runningBalance >= 0 ? 'green' : 'red'}">$${Math.abs(t.runningBalance).toFixed(2)}${t.runningBalance < 0 ? ' (Overdraft)' : ''}</td>
+                  <td style="color: ${t.runningBalance >= 0 ? 'green' : 'red'}">${t.runningBalance >= 0 ? '+' : ''}$${t.runningBalance.toFixed(2)}${t.runningBalance < 0 ? ' (Overdraft)' : ''}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -818,7 +818,8 @@ export default function BankingPage() {
                                   <span className={`font-semibold text-sm ${
                                     transaction.runningBalance >= 0 ? "text-green-400" : "text-red-400"
                                   }`}>
-                                    {formatCurrency(Math.abs(transaction.runningBalance))}
+                                    {transaction.runningBalance >= 0 ? "+" : ""}
+                                    {formatCurrency(transaction.runningBalance)}
                                   </span>
                                   {transaction.runningBalance < 0 && (
                                     <span className="text-xs text-red-400 font-medium">(Overdraft)</span>
