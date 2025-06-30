@@ -699,10 +699,14 @@ export default function EmployeeDetailsPage() {
     );
   }
 
-  const totalIncentives = incentives.reduce(
-    (sum, incentive) => sum + incentive.amount,
-    0
-  );
+  const totalIncentives =
+    incentives && incentives.length > 0
+      ? incentives.reduce(
+          (sum, incentive) =>
+            sum + (parseFloat(incentive.amount.toString()) || 0),
+          0
+        )
+      : 0;
   const completionRate =
     employee.tasks_assigned > 0
       ? (employee.tasks_completed / employee.tasks_assigned) * 100
