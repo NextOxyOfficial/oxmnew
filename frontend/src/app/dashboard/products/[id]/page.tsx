@@ -86,6 +86,11 @@ export default function ProductDetailsPage() {
 		"addStock"
 	);
 	const [isSubmittingStock, setIsSubmittingStock] = useState(false);
+	const [notification, setNotification] = useState<{
+		isVisible: boolean;
+		type: "success" | "error";
+		message: string;
+	}>({ isVisible: false, type: "success", message: "" });
 	const [stockForm, setStockForm] = useState({
 		quantity: "",
 		buy_price: "",
@@ -94,6 +99,13 @@ export default function ProductDetailsPage() {
 		notes: "",
 		variant_id: "",
 	});
+
+	const showNotification = (type: "success" | "error", message: string) => {
+		setNotification({ isVisible: true, type, message });
+		setTimeout(() => {
+			setNotification({ isVisible: false, type: "success", message: "" });
+		}, 5000);
+	};
 
 	// Fetch product details on component mount
 	useEffect(() => {
@@ -239,22 +251,24 @@ export default function ProductDetailsPage() {
 		setIsSubmittingStock(true);
 
 		try {
-			// TODO: Implement actual API call for adding stock
-			console.log("Add stock:", {
-				productId: product.id,
+			const stockData = {
 				quantity: parseInt(stockForm.quantity),
-				buy_price: parseFloat(stockForm.buy_price),
-				sell_price: parseFloat(stockForm.sell_price),
 				reason: stockForm.reason,
 				notes: stockForm.notes || undefined,
 				variant_id: stockForm.variant_id
 					? parseInt(stockForm.variant_id)
 					: undefined,
+			};
+
+			console.log("Adding stock:", {
+				productId: product.id,
+				...stockData,
 			});
 
-			// Simulate API call
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			// Call the actual API to adjust stock
+			await ApiService.adjustProductStock(product.id, stockData);
 
+			// Reset form
 			setStockForm({
 				quantity: "",
 				buy_price: "",
@@ -263,11 +277,20 @@ export default function ProductDetailsPage() {
 				notes: "",
 				variant_id: "",
 			});
-			setActiveTab("addStock");
 
-			// TODO: Refresh product data after successful stock addition
+			// Refresh product data to show updated stock
+			console.log("Fetching updated product details...");
+			const updatedProduct = await ApiService.getProduct(product.id);
+			setProduct(updatedProduct);
+
+			// Show success message
+			showNotification("success", `Successfully added ${stockData.quantity} units to stock!`);
+
 		} catch (error) {
 			console.error("Error adding stock:", error);
+			// Show error message
+			const errorMessage = error instanceof Error ? error.message : "Failed to add stock";
+			showNotification("error", errorMessage);
 		} finally {
 			setIsSubmittingStock(false);
 		}
@@ -295,6 +318,54 @@ export default function ProductDetailsPage() {
 					<ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
 					Back to Products
 				</button>
+
+				{/* Notification */}
+				{notification.isVisible && (
+					<div
+						className={`p-4 rounded-lg border mb-6 ${
+							notification.type === "success"
+								? "bg-green-500/10 border-green-400/30 text-green-300"
+								: "bg-red-500/10 border-red-400/30 text-red-300"
+						}`}
+					>
+						<div className="flex items-center">
+							<div className="flex-shrink-0">
+								{notification.type === "success" ? (
+									<svg
+										className="h-5 w-5"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 13l4 4L19 7"
+										/>
+									</svg>
+								) : (
+									<svg
+										className="h-5 w-5"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								)}
+							</div>
+							<div className="ml-3">
+								<p className="text-sm font-medium">{notification.message}</p>
+							</div>
+						</div>
+					</div>
+				)}
 
 				<div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl">
 					{/* Header */}
