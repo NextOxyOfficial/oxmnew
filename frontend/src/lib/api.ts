@@ -511,6 +511,7 @@ export class ApiService {
 		hasVariants: boolean;
 		buyPrice?: number;
 		sellPrice?: number;
+		stock?: number;
 		colorSizeVariants?: Array<{
 			id?: string;
 			color: string;
@@ -549,6 +550,9 @@ export class ApiService {
 			}
 			if (productData.sellPrice) {
 				formData.append("sellPrice", productData.sellPrice.toString());
+			}
+			if (productData.stock !== undefined && productData.stock !== null) {
+				formData.append("stock", productData.stock.toString());
 			}
 		}
 
