@@ -98,23 +98,15 @@ export interface CustomerLevel {
   assigned_date: string;
   is_current: boolean;
   notes?: string;
-  assigned_by: number;
-  assigned_by_name: string;
 }
 
 export interface DuePayment {
   id: number;
-  customer: number;
-  customer_name: string;
-  order?: number;
-  order_number?: string;
+  order_id?: number;
   amount: number;
-  payment_type: "due" | "advance";
   due_date: string;
-  status: "pending" | "paid" | "partially_paid" | "overdue";
   notes?: string;
-  created_at: string;
-  updated_at: string;
+  payment_type: "due" | "advance";
 }
 
 export interface Transaction {
@@ -164,6 +156,16 @@ export interface CustomerStats {
   total_revenue: number;
   average_order_value: number;
   top_customers: Customer[];
+}
+
+export interface DueCustomer {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  total_due: number;
+  due_payments: DuePayment[];
 }
 
 // API functions
@@ -543,6 +545,39 @@ export const customersAPI = {
 
     if (!response.ok) {
       throw new Error("Failed to fetch customer statistics");
+    }
+
+    return response.json();
+  },
+
+  // Duebook
+  getDuebookCustomers: async (params?: {
+    search?: string;
+    date_filter_type?: "all" | "due_today" | "due_this_week" | "custom";
+    custom_date?: string;
+  }): Promise<{
+    customers: DueCustomer[];
+    summary: {
+      total_customers: number;
+      total_due_amount: number;
+    };
+  }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.date_filter_type)
+      searchParams.append("date_filter_type", params.date_filter_type);
+    if (params?.custom_date)
+      searchParams.append("custom_date", params.custom_date);
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/duebook/customers/?${searchParams.toString()}`,
+      {
+        headers: customersAPI.getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch duebook customers");
     }
 
     return response.json();

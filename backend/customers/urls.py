@@ -61,4 +61,7 @@ urlpatterns = [
          views.redeem_points, name='redeem-points'),
     path('customers/<int:customer_id>/send-sms/',
          views.send_sms, name='send-sms'),
+
+    # Duebook
+    path('duebook/customers/', views.duebook_customers, name='duebook-customers'),
 ]
