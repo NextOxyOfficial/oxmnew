@@ -151,10 +151,11 @@ export default function BankingPage() {
   }, [loadFilteredTransactions]);
 
   const formatCurrency = (amount: number) => {
+    const safeAmount = Number(amount) || 0;
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-    }).format(amount);
+    }).format(safeAmount);
   };
 
   const handleCreateAccount = async (e: React.FormEvent) => {
@@ -272,44 +273,43 @@ export default function BankingPage() {
     const filteredTransactions = getFilteredTransactions();
     if (!selectedAccount || filteredTransactions.length === 0) return [];
 
-    // Sort transactions by date and time (oldest first) to calculate running balance chronologically
+    // Sort transactions by date and time (newest first for display order)
     const sortedTransactions = [...filteredTransactions].sort((a, b) => {
       const dateA = new Date(a.date);
       const dateB = new Date(b.date);
       
-      // If dates are the same, sort by updated_at (creation time)
+      // If dates are the same, sort by updated_at (creation time) - newest first
       if (dateA.getTime() === dateB.getTime()) {
-        return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       }
       
-      return dateA.getTime() - dateB.getTime();
+      return dateB.getTime() - dateA.getTime(); // newest first
     });
 
     // Get the current account balance - ensure it's a number
     const currentBalance = Number(selectedAccount.balance) || 0;
     
-    // Calculate the net effect of all filtered transactions
-    const netTransactionEffect = sortedTransactions.reduce((total, transaction) => {
-      const amount = Number(transaction.amount) || 0;
-      if (transaction.type === 'credit') {
-        return total + amount;
-      } else {
-        return total - amount;
+    // Start with current balance and work backwards for each transaction
+    // This approach shows what the balance was after each transaction
+    let runningBalance = currentBalance;
+    
+    const transactionsWithBalance: TransactionWithBalance[] = sortedTransactions.map((transaction, index) => {
+      // For the first transaction (most recent), the running balance is the current balance
+      if (index === 0) {
+        return {
+          ...transaction,
+          runningBalance: currentBalance
+        };
       }
-    }, 0);
-    
-    // The starting balance (before any of these transactions) would be:
-    // current balance - net effect of all these transactions
-    let runningBalance = currentBalance - netTransactionEffect;
-    
-    // Now calculate running balance after each transaction chronologically
-    const transactionsWithBalance: TransactionWithBalance[] = sortedTransactions.map(transaction => {
-      // Apply this transaction to the running balance - ensure amount is a number
-      const amount = Number(transaction.amount) || 0;
-      if (transaction.type === 'credit') {
-        runningBalance += amount;
+      
+      // For subsequent transactions, calculate what the balance was before the previous transaction
+      const previousTransaction = sortedTransactions[index - 1];
+      const previousAmount = Number(previousTransaction.amount) || 0;
+      
+      if (previousTransaction.type === 'credit') {
+        runningBalance -= previousAmount; // Remove the credit to go back in time
       } else {
-        runningBalance -= amount;
+        runningBalance += previousAmount; // Remove the debit to go back in time
       }
       
       return {
@@ -318,8 +318,7 @@ export default function BankingPage() {
       };
     });
 
-    // Return in reverse chronological order (newest first) for display
-    return transactionsWithBalance.reverse();
+    return transactionsWithBalance;
   };
 
   // Download functions
@@ -375,9 +374,9 @@ export default function BankingPage() {
           <p>Generated on: ${new Date().toLocaleDateString()}</p>
           <div class="summary">
             <h3>Summary</h3>
-            <p>Total Credits: +$${getAccountSummary(true).totalCredit.toFixed(2)}</p>
-            <p>Total Debits: -$${getAccountSummary(true).totalDebit.toFixed(2)}</p>
-            <p>Net Amount: $${(getAccountSummary(true).totalCredit - getAccountSummary(true).totalDebit).toFixed(2)}</p>
+            <p>Total Credits: +${(getAccountSummary(true).totalCredit || 0).toFixed(2)}</p>
+            <p>Total Debits: -${(getAccountSummary(true).totalDebit || 0).toFixed(2)}</p>
+            <p>Net Amount: ${((getAccountSummary(true).totalCredit || 0) - (getAccountSummary(true).totalDebit || 0)).toFixed(2)}</p>
           </div>
           <table>
             <thead>
@@ -424,12 +423,21 @@ export default function BankingPage() {
     const transactionsToUse = useFiltered ? getTransactionsWithRunningBalance() : transactions;
     const totalCredit = transactionsToUse
       .filter((t: Transaction | TransactionWithBalance) => t.type === "credit")
-      .reduce((sum: number, t: Transaction | TransactionWithBalance) => sum + t.amount, 0);
+      .reduce((sum: number, t: Transaction | TransactionWithBalance) => {
+        const amount = Number(t.amount) || 0;
+        return sum + amount;
+      }, 0);
     const totalDebit = transactionsToUse
       .filter((t: Transaction | TransactionWithBalance) => t.type === "debit")
-      .reduce((sum: number, t: Transaction | TransactionWithBalance) => sum + t.amount, 0);
+      .reduce((sum: number, t: Transaction | TransactionWithBalance) => {
+        const amount = Number(t.amount) || 0;
+        return sum + amount;
+      }, 0);
     
-    return { totalCredit, totalDebit };
+    return { 
+      totalCredit: Number(totalCredit) || 0, 
+      totalDebit: Number(totalDebit) || 0 
+    };
   };
 
   return (
@@ -816,12 +824,12 @@ export default function BankingPage() {
                               <td className="py-3 px-4">
                                 <div className="flex items-center space-x-1.5">
                                   <span className={`font-semibold text-sm ${
-                                    transaction.runningBalance >= 0 ? "text-green-400" : "text-red-400"
+                                    (transaction.runningBalance || 0) >= 0 ? "text-green-400" : "text-red-400"
                                   }`}>
-                                    {transaction.runningBalance >= 0 ? "+" : ""}
-                                    {formatCurrency(transaction.runningBalance)}
+                                    {(transaction.runningBalance || 0) >= 0 ? "+" : ""}
+                                    {formatCurrency(transaction.runningBalance || 0)}
                                   </span>
-                                  {transaction.runningBalance < 0 && (
+                                  {(transaction.runningBalance || 0) < 0 && (
                                     <span className="text-xs text-red-400 font-medium">(Overdraft)</span>
                                   )}
                                 </div>
@@ -843,13 +851,13 @@ export default function BankingPage() {
                           {getTransactionsWithRunningBalance().length > 0 && (
                             <div className="flex items-center space-x-3">
                               <span className="text-green-400 text-xs">
-                                +{formatCurrency(getAccountSummary(true).totalCredit)}
+                                +{formatCurrency((getAccountSummary(true).totalCredit || 0))}
                               </span>
                               <span className="text-red-400 text-xs">
-                                -{formatCurrency(getAccountSummary(true).totalDebit)}
+                                -{formatCurrency((getAccountSummary(true).totalDebit || 0))}
                               </span>
                               <span className="text-cyan-400 font-medium text-xs">
-                                Net: {formatCurrency(getAccountSummary(true).totalCredit - getAccountSummary(true).totalDebit)}
+                                Net: {formatCurrency(((getAccountSummary(true).totalCredit || 0) - (getAccountSummary(true).totalDebit || 0)))}
                               </span>
                               
                               {/* Export Options */}
