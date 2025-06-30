@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import SmsHistory from "./SmsHistory";
+import { ApiService } from "../../../lib/api";
 
 // Mock data for customers, employees, and suppliers
 const mockCustomers = [
@@ -55,6 +56,7 @@ export default function SmsPage() {
 	const [status, setStatus] = useState<string | null>(null);
 	const [contactsText, setContactsText] = useState("");
 	const [contacts, setContacts] = useState<{ number: string; name: string }[]>([]);
+	const [isSending, setIsSending] = useState(false);
 
 	// Populate contactsText based on tab
 	useEffect(() => {
@@ -79,9 +81,13 @@ export default function SmsPage() {
 				.split("\n")
 				.map((line) => {
 					const [number, ...nameParts] = line.split(",");
-					return number && nameParts.length
-						? { number: number.trim(), name: nameParts.join(",").trim() }
-						: null;
+					if (number && number.trim()) {
+						return {
+							number: number.trim(),
+							name: nameParts.length ? nameParts.join(",").trim() : ""
+						};
+					}
+					return null;
 				})
 				.filter(Boolean) as { number: string; name: string }[]
 		);
@@ -92,9 +98,32 @@ export default function SmsPage() {
 		setContactsText(newContacts.map((c) => `${c.number}, ${c.name}`).join("\n"));
 	};
 
-	const handleSend = () => {
-		setStatus("Sending...");
-		setTimeout(() => setStatus("SMS sent!"), 1200);
+	const handleSend = async () => {
+		if (!message.trim() || contacts.length === 0) {
+			setStatus("Please enter a message and at least one contact.");
+			return;
+		}
+		setIsSending(true);
+		setStatus(null);
+		let successCount = 0;
+		let failCount = 0;
+		for (const contact of contacts) {
+			const name = contact.name && contact.name.trim() ? contact.name : contact.number;
+			const personalizedMsg = message.replace(/\{name\}/gi, name);
+			try {
+				await ApiService.sendSmsNotification(contact.number, personalizedMsg);
+				successCount++;
+			} catch (e) {
+				failCount++;
+			}
+		}
+		if (successCount > 0) {
+			setStatus(`${successCount} SMS sent successfully to ${successCount} user${successCount > 1 ? 's' : ''}.`);
+			setTimeout(() => setStatus(null), 5000);
+		} else {
+			setStatus("Failed to send SMS.");
+		}
+		setIsSending(false);
 	};
 
 	return (
@@ -111,7 +140,7 @@ export default function SmsPage() {
 			{/* Tabs */}
 			<div className="flex justify-center gap-2 mb-6">
 				<button
-					className={`px-4 py-2 rounded-lg font-medium transition-all ${
+					className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${
 						tab === "custom"
 							? "bg-cyan-600 text-white"
 							: "bg-slate-800 text-slate-300"
@@ -121,7 +150,7 @@ export default function SmsPage() {
 					Custom
 				</button>
 				<button
-					className={`px-4 py-2 rounded-lg font-medium transition-all ${
+					className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${
 						tab === "customers"
 							? "bg-cyan-600 text-white"
 							: "bg-slate-800 text-slate-300"
@@ -131,7 +160,7 @@ export default function SmsPage() {
 					All Customers
 				</button>
 				<button
-					className={`px-4 py-2 rounded-lg font-medium transition-all ${
+					className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${
 						tab === "employees"
 							? "bg-cyan-600 text-white"
 							: "bg-slate-800 text-slate-300"
@@ -141,7 +170,7 @@ export default function SmsPage() {
 					All Employees
 				</button>
 				<button
-					className={`px-4 py-2 rounded-lg font-medium transition-all ${
+					className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${
 						tab === "suppliers"
 							? "bg-cyan-600 text-white"
 							: "bg-slate-800 text-slate-300"
@@ -151,7 +180,7 @@ export default function SmsPage() {
 					All Suppliers
 				</button>
 				<button
-					className={`px-4 py-2 rounded-lg font-medium transition-all ${
+					className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${
 						tab === "history"
 							? "bg-cyan-600 text-white"
 							: "bg-slate-800 text-slate-300"
@@ -184,6 +213,13 @@ export default function SmsPage() {
 						<label className="block text-slate-300 mb-2 font-medium">
 							Message
 						</label>
+						<p className="text-xs text-slate-400 mb-2">
+							You can use{" "}
+							<span className="font-mono bg-slate-800 px-1 rounded">
+								{name}
+							</span>{" "}
+							in your message. It will be replaced with each contact's name.
+						</p>
 						<div className="relative mb-4">
 							<textarea
 								className="w-full p-3 rounded bg-slate-800 text-slate-200 border border-slate-700 pr-32"
@@ -197,17 +233,27 @@ export default function SmsPage() {
 								{Math.max(1, Math.ceil(message.length / 160))} SMS
 							</span>
 						</div>
+						{status && (
+							<div className="w-full flex justify-end mb-2">
+								<span className="bg-green-500/90 text-white text-xs font-semibold rounded-lg px-4 py-2 shadow animate-fade-in-out">
+									{status}
+								</span>
+							</div>
+						)}
 						<button
-							className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg font-medium hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 text-sm mt-2 self-end"
+							className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg font-medium hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 text-sm mt-2 self-end flex items-center justify-center gap-2 cursor-pointer"
 							onClick={handleSend}
-							disabled={contacts.length === 0}
+							disabled={contacts.length === 0 || isSending}
 							style={{ minWidth: 120 }}
 						>
-							Send SMS
+							{isSending && (
+								<svg className="animate-spin h-4 w-4 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+									<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+									<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+								</svg>
+							)}
+							{isSending ? "Sending..." : "Send SMS"}
 						</button>
-						{status && (
-							<div className="text-center text-green-400 mt-2">{status}</div>
-						)}
 					</>
 				)}
 			</div>
