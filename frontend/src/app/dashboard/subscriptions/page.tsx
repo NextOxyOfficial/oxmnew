@@ -63,7 +63,7 @@ export default function SubscriptionsPage() {
 	};
 
 	return (
-		<div className="sm:p-6 p-1 space-y-10 max-w-7xl mx-auto">
+		<div className="w-full max-w-6xl mx-auto sm:p-6 p-1 space-y-10">
 			<div className="text-center mb-8">
 				<h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
 					Subscriptions
@@ -82,7 +82,7 @@ export default function SubscriptionsPage() {
 							plan.popular
 								? "border-cyan-500 ring-2 ring-cyan-500"
 								: "border-slate-700/50"
-						} ${currentPlan === plan.id ? "ring-2 ring-green-500" : ""}`}
+						} ${plan.id === "free" ? "ring-2 ring-green-500" : currentPlan === plan.id ? "ring-2 ring-green-500" : ""}`}
 					>
 						{plan.popular && (
 							<span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-4 py-1 rounded-full text-xs font-semibold shadow">
@@ -129,16 +129,20 @@ export default function SubscriptionsPage() {
 						</ul>
 						<button
 							className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 mt-auto ${
-								currentPlan === plan.id || isProcessing
-									? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
-									: plan.popular
-									? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-									: "bg-slate-700 text-white hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500"
+							plan.id === "free"
+								? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
+								: currentPlan === plan.id || isProcessing
+								? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
+								: plan.popular
+								? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+								: "bg-slate-700 text-white hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500"
 							}`}
-							disabled={currentPlan === plan.id || isProcessing}
+							disabled={plan.id === "free" || currentPlan === plan.id || isProcessing}
 							onClick={() => handlePlanSelect(plan.id)}
 						>
-							{currentPlan === plan.id
+							{plan.id === "free"
+								? "Current Plan"
+								: currentPlan === plan.id
 								? "Current Plan"
 								: isProcessing
 								? "Processing..."
