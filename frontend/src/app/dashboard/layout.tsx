@@ -18,7 +18,6 @@ import {
   CreditCard,
   Store,
   BookOpen,
-  Clock,
   Smartphone,
   Diamond,
   Truck,
@@ -102,12 +101,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       current: pathname === "/dashboard/notebook",
     },
     {
-      name: "Reminder",
-      href: "/dashboard/scheduler",
-      icon: Clock,
-      current: pathname === "/dashboard/scheduler",
-    },
-    {
       name: "SMS",
       href: "/dashboard/sms",
       icon: Smartphone,
@@ -148,8 +141,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "Online Store";
       case "/dashboard/notebook":
         return "Notebook";
-      case "/dashboard/scheduler":
-        return "Reminder";
       case "/dashboard/sms":
         return "SMS";
       default:
