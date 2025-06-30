@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrencyFormatter } from '@/contexts/CurrencyContext';
 import { ApiService } from '@/lib/api';
 import { SuppliersTab, PurchaseHistoryTab, PaymentsTab, ProductsTab, CreatePurchaseModal, CreatePaymentModal } from '@/components/suppliers';
 import { ClientOnly } from '@/components';
@@ -59,6 +60,7 @@ interface Supplier {
 
 export default function SuppliersPage() {
   const { user } = useAuth();
+  const formatCurrency = useCurrencyFormatter();
   const [activeTab, setActiveTab] = useState('suppliers');
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -153,7 +155,7 @@ export default function SuppliersPage() {
           console.log('Suppliers fetched successfully:', suppliersResponse);
           
           // Ensure all suppliers have default values for orders and amount
-          const suppliersWithDefaults = suppliersResponse.map((supplier: any) => ({
+          const suppliersWithDefaults = suppliersResponse.map((supplier: Supplier) => ({
             ...supplier,
             total_orders: supplier.total_orders ?? 0,
             total_amount: supplier.total_amount ?? 0
@@ -457,14 +459,6 @@ export default function SuppliersPage() {
   };
 
   // Utility functions
-  const formatCurrency = (amount: number | null | undefined) => {
-    const validAmount = amount ?? 0;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(validAmount);
-  };
-
   const formatDate = (dateString: string) => {
     // Use a consistent date format to avoid hydration mismatches
     try {
@@ -475,7 +469,8 @@ export default function SuppliersPage() {
         day: 'numeric',
         timeZone: 'UTC' // Use UTC to ensure consistency between server and client
       });
-    } catch (error) {
+    } catch (err) {
+      console.error('Error formatting date:', err);
       return dateString; // Fallback to original string if parsing fails
     }
   };
