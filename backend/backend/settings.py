@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'products',
     'customers',
     'employees',
+    'banking',
 ]
 
 CORS_ALLOWED_ORIGINS = [
