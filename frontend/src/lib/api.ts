@@ -996,4 +996,17 @@ export class ApiService {
 		const queryParams = accountId ? `?account_id=${accountId}` : '';
 		return this.get(`/banking/transactions/dashboard_stats/${queryParams}`);
 	}
+
+	// Fix: add type for suppliers
+	static async getSuppliers(): Promise<{ id: number; name: string; phone: string }[]> {
+		const list = await ApiService.get("/suppliers/");
+		if (!Array.isArray(list)) return [];
+		return list.map((s: any) => ({ id: s.id, name: s.name, phone: s.phone }));
+	}
+
+	// Add a stub for getSmsHistory (returns empty for now, or implement if endpoint exists)
+	static async getSmsHistory(): Promise<any[]> {
+		// TODO: Replace with real endpoint if available
+		return [];
+	};
 }

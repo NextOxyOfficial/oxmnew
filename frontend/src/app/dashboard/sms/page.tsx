@@ -3,52 +3,8 @@
 import { useState, useEffect } from "react";
 import SmsHistory from "./SmsHistory";
 import { ApiService } from "../../../lib/api";
-
-// Mock data for customers, employees, and suppliers
-const mockCustomers = [
-	{ id: 1, name: "Alice Customer", phone: "+8801000000001" },
-	{ id: 2, name: "Bob Customer", phone: "+8801000000002" },
-];
-const mockEmployees = [
-	{ id: 1, name: "Eve Employee", phone: "+8801000001001" },
-	{ id: 2, name: "John Employee", phone: "+8801000001002" },
-];
-const mockSuppliers = [
-	{ id: 1, name: "Sam Supplier", phone: "+8801000002001" },
-	{ id: 2, name: "Jane Supplier", phone: "+8801000002002" },
-];
-
-// Example mock data for sent SMS history
-const mockHistory = [
-	{
-		id: 1,
-		time: "2025-07-01 14:32",
-		contacts: [
-			{ number: "+8801000000001", name: "Alice Customer" },
-			{ number: "+8801000000002", name: "Bob Customer" },
-		],
-		smsCount: 2,
-		text: "Promo: 10% off for all!",
-	},
-	{
-		id: 2,
-		time: "2025-07-01 13:10",
-		contacts: [{ number: "+8801000001001", name: "Eve Employee" }],
-		smsCount: 1,
-		text: "Hello John, your order is ready.",
-	},
-	{
-		id: 3,
-		time: "2025-06-30 18:45",
-		contacts: [
-			{ number: "+8801000001002", name: "John Employee" },
-			{ number: "+8801000002001", name: "Sam Supplier" },
-			{ number: "+8801000002002", name: "Jane Supplier" },
-		],
-		smsCount: 3,
-		text: "Monthly update sent to all employees.",
-	},
-];
+import { customersAPI } from "../../../lib/api/customers";
+import employeeAPI from "../../../lib/employeeAPI";
 
 export default function SmsPage() {
 	const [tab, setTab] = useState("custom");
@@ -57,22 +13,50 @@ export default function SmsPage() {
 	const [contactsText, setContactsText] = useState("");
 	const [contacts, setContacts] = useState<{ number: string; name: string }[]>([]);
 	const [isSending, setIsSending] = useState(false);
+	const [customers, setCustomers] = useState<{ id: number; name: string; phone: string }[]>([]);
+	const [employees, setEmployees] = useState<{ id: number; name: string; phone: string }[]>([]);
+	const [suppliers, setSuppliers] = useState<{ id: number; name: string; phone: string }[]>([]);
+	const [history, setHistory] = useState<any[]>([]);
+
+	// Fetch real data for customers, employees, suppliers, and SMS history
+	useEffect(() => {
+		async function fetchData() {
+			try {
+				const [cust, emp, supp] = await Promise.all([
+					customersAPI.getCustomers().then(list => list.map(c => ({ id: c.id, name: c.name, phone: c.phone }))) ,
+					employeeAPI.getEmployees().then(list => list.map(e => ({ id: e.id, name: e.name, phone: e.phone }))) ,
+					ApiService.getSuppliers().then(list => list.map(s => ({ id: s.id, name: s.name, phone: s.phone }))) ,
+				]);
+				setCustomers(cust || []);
+				setEmployees(emp || []);
+				setSuppliers(supp || []);
+				// Fetch SMS history if available
+				if (ApiService.getSmsHistory) {
+					const hist = await ApiService.getSmsHistory();
+					setHistory(hist || []);
+				}
+			} catch (e) {
+				// fallback to empty
+			}
+		}
+		fetchData();
+	}, []);
 
 	// Populate contactsText based on tab
 	useEffect(() => {
 		let lines: string[] = [];
 		if (tab === "custom") {
-			// keep as is
 			lines = contactsText.split("\n").filter(Boolean);
 		} else if (tab === "customers") {
-			lines = mockCustomers.map((c) => `${c.phone}, ${c.name}`);
+			lines = customers.map((c) => `${c.phone}, ${c.name}`);
 		} else if (tab === "employees") {
-			lines = mockEmployees.map((e) => `${e.phone}, ${e.name}`);
+			lines = employees.map((e) => `${e.phone}, ${e.name}`);
 		} else if (tab === "suppliers") {
-			lines = mockSuppliers.map((s) => `${s.phone}, ${s.name}`);
+			lines = suppliers.map((s) => `${s.phone}, ${s.name}`);
 		}
 		setContactsText(lines.join("\n"));
-	}, [tab]);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [tab, customers, employees, suppliers]);
 
 	// Parse contactsText into contacts array
 	useEffect(() => {
@@ -207,7 +191,7 @@ export default function SmsPage() {
 						/>
 					</>
 				)}
-				{tab === "history" && <SmsHistory history={mockHistory} />}
+				{tab === "history" && <SmsHistory history={history} />}
 				{tab !== "history" && (
 					<>
 						<label className="block text-slate-300 mb-2 font-medium">
@@ -216,7 +200,6 @@ export default function SmsPage() {
 						<p className="text-xs text-slate-400 mb-2">
 							You can use{" "}
 							<span className="font-mono bg-slate-800 px-1 rounded">
-								{name}
 							</span>{" "}
 							in your message. It will be replaced with each contact's name.
 						</p>
