@@ -20,7 +20,7 @@ const SmsHistory: React.FC<SmsHistoryProps> = ({ history }) => (
         <tr className="border-b border-slate-700 text-slate-400">
           <th className="py-2 px-2">Time</th>
           <th className="py-2 px-2">Contact Count</th>
-          <th className="py-2 px-2">SMS Count</th>
+          <th className="py-2 px-2">SMS Count (chars/messages)</th>
           <th className="py-2 px-2">Text</th>
         </tr>
       </thead>
@@ -29,7 +29,7 @@ const SmsHistory: React.FC<SmsHistoryProps> = ({ history }) => (
           <tr key={h.id} className="border-b border-slate-800 hover:bg-slate-800/40">
             <td className="py-2 px-2 whitespace-nowrap">{h.time}</td>
             <td className="py-2 px-2">{h.contacts}</td>
-            <td className="py-2 px-2">{h.smsCount}</td>
+            <td className="py-2 px-2">{h.text.length} / {Math.max(1, Math.ceil(h.text.length / 160))}</td>
             <td className="py-2 px-2 break-all max-w-xs">{h.text}</td>
           </tr>
         ))}

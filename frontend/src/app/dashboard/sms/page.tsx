@@ -141,17 +141,25 @@ export default function SmsPage() {
 						<label className="block text-slate-300 mb-2 font-medium">
 							Message
 						</label>
-						<textarea
-							className="w-full p-3 rounded bg-slate-800 text-slate-200 border border-slate-700 mb-4"
-							rows={4}
-							placeholder="Type your SMS message here..."
-							value={message}
-							onChange={(e) => setMessage(e.target.value)}
-						/>
+						<div className="relative mb-4">
+							<textarea
+								className="w-full p-3 rounded bg-slate-800 text-slate-200 border border-slate-700 pr-32"
+								rows={4}
+								placeholder="Type your SMS message here..."
+								value={message}
+								onChange={(e) => setMessage(e.target.value)}
+							/>
+							<span className="absolute bottom-2 right-4 text-xs text-slate-400 select-none">
+								{message.length} chars /{" "}
+								{Math.max(1, Math.ceil(message.length / 160))} SMS
+							</span>
+						</div>
 						<button
 							className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-3 px-6 rounded-lg font-medium hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
 							onClick={handleSend}
-							disabled={tab === "custom" ? !bulkContacts.trim() : false}
+							disabled={
+								tab === "custom" ? !bulkContacts.trim() : false
+							}
 						>
 							{tab === "custom" ? "Send SMS to All" : "Send SMS"}
 						</button>
