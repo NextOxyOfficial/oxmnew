@@ -28,9 +28,14 @@ export const useBanking = () => {
       const accountsData = await ApiService.getBankAccounts();
       setAccounts(accountsData);
       
-      // Auto-select first account if none selected
+      // Auto-select Primary account first, then any account if none selected
       if (accountsData.length > 0 && !selectedAccountId) {
-        setSelectedAccountId(accountsData[0].id);
+        const primaryAccount = accountsData.find((acc: BankAccount) => acc.name === "Primary");
+        if (primaryAccount) {
+          setSelectedAccountId(primaryAccount.id);
+        } else {
+          setSelectedAccountId(accountsData[0].id);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load accounts");
@@ -82,8 +87,8 @@ export const useBanking = () => {
       const newAccount = await ApiService.createBankAccount(data);
       setAccounts(prev => [...prev, newAccount]);
       
-      // Auto-select the new account if it's the first one
-      if (accounts.length === 0) {
+      // Auto-select the new account if it's the Primary account or if no account is currently selected
+      if (newAccount.name === "Primary" || !selectedAccountId) {
         setSelectedAccountId(newAccount.id);
       }
       
@@ -95,7 +100,7 @@ export const useBanking = () => {
     } finally {
       setLoading(false);
     }
-  }, [accounts.length]);
+  }, [selectedAccountId]);
 
   // Update account
   const updateAccount = useCallback(async (accountId: string, data: UpdateAccountData) => {

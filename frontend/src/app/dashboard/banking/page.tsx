@@ -21,9 +21,12 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useBanking } from "@/hooks/useBanking";
+import { useAuth } from "@/contexts/AuthContext";
 import type { BankAccount, Transaction, Employee, TransactionFilters } from "@/types/banking";
 
 export default function BankingPage() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  
   const {
     accounts,
     transactions,
@@ -39,6 +42,31 @@ export default function BankingPage() {
     createTransaction,
     loadTransactions,
   } = useBanking();
+
+  // Show loading while auth is being checked
+  if (authLoading) {
+    return (
+      <div className="sm:p-6 p-1 space-y-6">
+        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-8 text-center">
+          <Loader2 className="h-8 w-8 text-cyan-400 mx-auto mb-3 animate-spin" />
+          <p className="text-slate-400">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="sm:p-6 p-1 space-y-6">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-8 text-center">
+          <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-3" />
+          <p className="text-red-400 font-medium mb-2">Authentication Required</p>
+          <p className="text-red-300 text-sm">Please log in to access the banking features.</p>
+        </div>
+      </div>
+    );
+  }
 
   const [showCreateAccountModal, setShowCreateAccountModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -406,7 +434,15 @@ export default function BankingPage() {
             {/* Account Tabs */}
             <div className="border-b border-slate-700/50">
               <div className="flex flex-wrap">
-                {accounts.map((account, index) => {
+                {[...accounts]
+                  .sort((a, b) => {
+                    // Always put Primary account first
+                    if (a.name === "Primary") return -1;
+                    if (b.name === "Primary") return 1;
+                    // Then sort by creation date (newest first)
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                  })
+                  .map((account, index) => {
                   const colorSchemes = [
                     { 
                       bg: selectedAccountId === account.id ? "bg-gradient-to-r from-blue-500/20 to-blue-600/10" : "hover:bg-blue-500/10",
@@ -433,7 +469,9 @@ export default function BankingPage() {
                       border: "border-b-2 border-orange-500"
                     }
                   ];
-                  const scheme = colorSchemes[index % 4];
+                  
+                  // Use different color scheme for Primary account (always blue)
+                  const scheme = account.name === "Primary" ? colorSchemes[0] : colorSchemes[index % 4];
                   
                   return (
                     <button
@@ -443,7 +481,14 @@ export default function BankingPage() {
                     >
                       <CreditCard className="h-4 w-4" />
                       <div className="text-left">
-                        <div className="font-semibold text-sm">{account.name}</div>
+                        <div className="font-semibold text-sm flex items-center gap-1.5">
+                          {account.name}
+                          {account.name === "Primary" && (
+                            <span className="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30">
+                              Main
+                            </span>
+                          )}
+                        </div>
                         <div className={`text-xs ${selectedAccountId === account.id ? scheme.accent : 'text-slate-500'}`}>
                           {formatCurrency(account.balance)}
                         </div>
