@@ -1,7 +1,9 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { ApiService } from "@/lib/api";
 import {
   Activity,
   Command,
@@ -50,8 +52,27 @@ export default function Sidebar({
   systemStatus = 85, 
   securityLevel = 92, 
   networkStatus = 78,
-  smsCredits = 1250
+  smsCredits: initialSmsCredits = 1250
 }: SidebarProps) {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const [smsCredits, setSmsCredits] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setSmsCredits(null);
+      return;
+    }
+    async function fetchSmsCredits() {
+      try {
+        const data = await ApiService.get("/my-sms-credits/");
+        setSmsCredits(typeof data.credits === "number" ? data.credits : 0);
+      } catch {
+        setSmsCredits(0);
+      }
+    }
+    fetchSmsCredits();
+  }, [isAuthenticated]);
+
   return (
     <Fragment>
       {/* Mobile sidebar */}
@@ -96,7 +117,7 @@ export default function Sidebar({
                     <div>
                       <div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
                       <div className="flex items-center gap-2">
-                        <div className="text-xs text-emerald-400/70">{smsCredits.toLocaleString()} available</div>
+                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
                         <Link href="/dashboard/subscriptions">
                           <ShoppingCart className="h-4 w-4 text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors" />
                         </Link>
@@ -139,7 +160,7 @@ export default function Sidebar({
                     <div>
                       <div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
                       <div className="flex items-center gap-2">
-                        <div className="text-xs text-emerald-400/70">{smsCredits.toLocaleString()} available</div>
+                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
                         <Link href="/dashboard/subscriptions">
                           <ShoppingCart className="h-4 w-4 text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors" />
                         </Link>
