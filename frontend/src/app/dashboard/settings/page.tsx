@@ -1,14 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import CustomDomainSettings from '@/components/CustomDomainSettings';
-import GiftsTab from '@/components/settings/GiftsTab';
-import AchievementsTab from '@/components/settings/AchievementsTab';
-import LevelTab from '@/components/settings/LevelTab';
-import BrandTab from '@/components/settings/BrandTab';
-import PaymentMethodsTab from '@/components/settings/PaymentMethodsTab';
-import { ApiService } from '@/lib/api';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import CustomDomainSettings from "@/components/CustomDomainSettings";
+import GiftsTab from "@/components/settings/GiftsTab";
+import AchievementsTab from "@/components/settings/AchievementsTab";
+import LevelTab from "@/components/settings/LevelTab";
+import BrandTab from "@/components/settings/BrandTab";
+import PaymentMethodsTab from "@/components/settings/PaymentMethodsTab";
+import { ApiService } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -22,7 +23,7 @@ interface Category {
 interface Achievement {
   id: number;
   name: string;
-  type: 'orders' | 'amount';
+  type: "orders" | "amount";
   value: number;
   points: number;
   is_active: boolean;
@@ -54,36 +55,39 @@ interface SecuritySettings {
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('profile');
+  const { refreshCurrency } = useCurrency();
+  const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{
     isVisible: boolean;
-    type: 'success' | 'error';
+    type: "success" | "error";
     message: string;
-  }>({ isVisible: false, type: 'success', message: '' });
-  
+  }>({ isVisible: false, type: "success", message: "" });
+
   // Profile state
   const [profile, setProfile] = useState<UserProfile>({
-    email: user?.email || '',
-    first_name: '',
-    last_name: '',
-    company: '',
-    company_address: '',
-    phone: '',
-    store_logo: '',
-    banner_image: ''
+    email: user?.email || "",
+    first_name: "",
+    last_name: "",
+    company: "",
+    company_address: "",
+    phone: "",
+    store_logo: "",
+    banner_image: "",
   });
 
   // Categories state
   const [categories, setCategories] = useState<Category[]>([]);
-  const [newCategory, setNewCategory] = useState('');
+  const [newCategory, setNewCategory] = useState("");
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     category: Category | null;
   }>({ isOpen: false, category: null });
 
   // Gift state (managed by component)
-  const [gifts, setGifts] = useState<{ id: number; name: string; is_active: boolean }[]>([]);
+  const [gifts, setGifts] = useState<
+    { id: number; name: string; is_active: boolean }[]
+  >([]);
   const [giftDeleteModal, setGiftDeleteModal] = useState<{
     isOpen: boolean;
     gift: { id: number; name: string; is_active: boolean } | null;
@@ -93,41 +97,45 @@ export default function SettingsPage() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
 
   // Level state (managed by component)
-  const [levels, setLevels] = useState<{ id: number; name: string; is_active: boolean }[]>([]);
+  const [levels, setLevels] = useState<
+    { id: number; name: string; is_active: boolean }[]
+  >([]);
   const [levelDeleteModal, setLevelDeleteModal] = useState<{
     isOpen: boolean;
     level: { id: number; name: string; is_active: boolean } | null;
   }>({ isOpen: false, level: null });
 
   // Brand state (managed by component)
-  const [brands, setBrands] = useState<{ id: number; name: string; is_active: boolean }[]>([]);
+  const [brands, setBrands] = useState<
+    { id: number; name: string; is_active: boolean }[]
+  >([]);
   const [brandDeleteModal, setBrandDeleteModal] = useState<{
     isOpen: boolean;
     brand: { id: number; name: string; is_active: boolean } | null;
   }>({ isOpen: false, brand: null });
 
   // Payment Methods state (managed by component)
-  const [paymentMethods, setPaymentMethods] = useState<{ id: number; name: string; is_active: boolean }[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<
+    { id: number; name: string; is_active: boolean }[]
+  >([]);
   const [paymentMethodDeleteModal, setPaymentMethodDeleteModal] = useState<{
     isOpen: boolean;
     paymentMethod: { id: number; name: string; is_active: boolean } | null;
   }>({ isOpen: false, paymentMethod: null });
 
-
-
   // General settings state
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
-    language: 'en',
-    currency: 'USD',
+    language: "en",
+    currency: "USD",
     email_notifications: true,
-    marketing_notifications: false
+    marketing_notifications: false,
   });
 
   // Security settings state
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   useEffect(() => {
@@ -143,17 +151,17 @@ export default function SettingsPage() {
 
   // Fetch achievements when the achievements tab becomes active
   useEffect(() => {
-    if (activeTab === 'achievements') {
+    if (activeTab === "achievements") {
       fetchAchievements();
-    } else if (activeTab === 'levels') {
+    } else if (activeTab === "levels") {
       fetchLevels();
     }
   }, [activeTab]);
 
-  const showNotification = (type: 'success' | 'error', message: string) => {
+  const showNotification = (type: "success" | "error", message: string) => {
     setNotification({ isVisible: true, type, message });
     setTimeout(() => {
-      setNotification({ isVisible: false, type: 'success', message: '' });
+      setNotification({ isVisible: false, type: "success", message: "" });
     }, 5000);
   };
 
@@ -162,18 +170,22 @@ export default function SettingsPage() {
       const response = await ApiService.getProfile();
       if (response.user && response.profile) {
         setProfile({
-          email: response.user.email || '',
-          first_name: response.user.first_name || '',
-          last_name: response.user.last_name || '',
-          company: response.profile.company || '',
-          company_address: response.profile.company_address || '',
-          phone: response.profile.phone || '',
-          store_logo: response.profile.store_logo ? ApiService.getImageUrl(response.profile.store_logo) : '',
-          banner_image: response.profile.banner_image ? ApiService.getImageUrl(response.profile.banner_image) : ''
+          email: response.user.email || "",
+          first_name: response.user.first_name || "",
+          last_name: response.user.last_name || "",
+          company: response.profile.company || "",
+          company_address: response.profile.company_address || "",
+          phone: response.profile.phone || "",
+          store_logo: response.profile.store_logo
+            ? ApiService.getImageUrl(response.profile.store_logo)
+            : "",
+          banner_image: response.profile.banner_image
+            ? ApiService.getImageUrl(response.profile.banner_image)
+            : "",
         });
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error("Error fetching profile:", error);
     }
   };
 
@@ -184,7 +196,7 @@ export default function SettingsPage() {
         setCategories(response.categories);
       }
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error("Error fetching categories:", error);
     }
   };
 
@@ -193,14 +205,20 @@ export default function SettingsPage() {
       const response = await ApiService.getSettings();
       if (response.settings) {
         setGeneralSettings({
-          language: response.settings.language || 'en',
-          currency: response.settings.currency || 'USD',
-          email_notifications: response.settings.email_notifications !== undefined ? response.settings.email_notifications : true,
-          marketing_notifications: response.settings.marketing_notifications !== undefined ? response.settings.marketing_notifications : false
+          language: response.settings.language || "en",
+          currency: response.settings.currency || "USD",
+          email_notifications:
+            response.settings.email_notifications !== undefined
+              ? response.settings.email_notifications
+              : true,
+          marketing_notifications:
+            response.settings.marketing_notifications !== undefined
+              ? response.settings.marketing_notifications
+              : false,
         });
       }
     } catch (error) {
-      console.error('Error fetching settings:', error);
+      console.error("Error fetching settings:", error);
     }
   };
 
@@ -211,14 +229,14 @@ export default function SettingsPage() {
         setGifts(response.gifts);
       }
     } catch (error) {
-      console.error('Error fetching gifts:', error);
+      console.error("Error fetching gifts:", error);
     }
   };
 
   const fetchAchievements = async () => {
     try {
       const response = await ApiService.getAchievements();
-      console.log('Achievements response:', response); // Debug log
+      console.log("Achievements response:", response); // Debug log
       if (response.achievements) {
         setAchievements(response.achievements);
       } else {
@@ -226,17 +244,17 @@ export default function SettingsPage() {
         setAchievements([]);
       }
     } catch (error) {
-      console.error('Error fetching achievements:', error);
+      console.error("Error fetching achievements:", error);
       // Set empty array on error to show "no achievements" state
       setAchievements([]);
-      showNotification('error', 'Failed to load achievements');
+      showNotification("error", "Failed to load achievements");
     }
   };
 
   const fetchLevels = async () => {
     try {
       const response = await ApiService.getLevels();
-      console.log('Levels response:', response); // Debug log
+      console.log("Levels response:", response); // Debug log
       if (response.levels) {
         setLevels(response.levels);
       } else {
@@ -244,17 +262,17 @@ export default function SettingsPage() {
         setLevels([]);
       }
     } catch (error) {
-      console.error('Error fetching levels:', error);
+      console.error("Error fetching levels:", error);
       // Set empty array on error to show "no levels" state
       setLevels([]);
-      showNotification('error', 'Failed to load levels');
+      showNotification("error", "Failed to load levels");
     }
   };
 
   const fetchBrands = async () => {
     try {
       const response = await ApiService.getBrands();
-      console.log('Brands response:', response); // Debug log
+      console.log("Brands response:", response); // Debug log
       if (response.brands) {
         setBrands(response.brands);
       } else {
@@ -262,17 +280,17 @@ export default function SettingsPage() {
         setBrands([]);
       }
     } catch (error) {
-      console.error('Error fetching brands:', error);
+      console.error("Error fetching brands:", error);
       // Set empty array on error to show "no brands" state
       setBrands([]);
-      showNotification('error', 'Failed to load brands');
+      showNotification("error", "Failed to load brands");
     }
   };
 
   const fetchPaymentMethods = async () => {
     try {
       const response = await ApiService.getPaymentMethods();
-      console.log('Payment methods response:', response); // Debug log
+      console.log("Payment methods response:", response); // Debug log
       if (response.paymentMethods) {
         setPaymentMethods(response.paymentMethods);
       } else {
@@ -280,10 +298,10 @@ export default function SettingsPage() {
         setPaymentMethods([]);
       }
     } catch (error) {
-      console.error('Error fetching payment methods:', error);
+      console.error("Error fetching payment methods:", error);
       // Set empty array on error to show "no payment methods" state
       setPaymentMethods([]);
-      showNotification('error', 'Failed to load payment methods');
+      showNotification("error", "Failed to load payment methods");
     }
   };
 
@@ -296,69 +314,79 @@ export default function SettingsPage() {
         email: profile.email,
         company: profile.company,
         company_address: profile.company_address,
-        phone: profile.phone
+        phone: profile.phone,
       });
-      
-      console.log('Profile saved:', response);
-      showNotification('success', 'Profile updated successfully!');
+
+      console.log("Profile saved:", response);
+      showNotification("success", "Profile updated successfully!");
     } catch (error) {
-      console.error('Error saving profile:', error);
-      showNotification('error', 'Error saving profile. Please try again.');
+      console.error("Error saving profile:", error);
+      showNotification("error", "Error saving profile. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImageUpload = async (file: File, type: 'logo' | 'banner') => {
+  const handleImageUpload = async (file: File, type: "logo" | "banner") => {
     if (file) {
       setLoading(true);
       try {
         let response: any;
-        if (type === 'logo') {
+        if (type === "logo") {
           response = await ApiService.uploadStoreLogo(file);
-          setProfile(prevProfile => ({
+          setProfile((prevProfile) => ({
             ...prevProfile,
-            store_logo: ApiService.getImageUrl(response.store_logo_url)
+            store_logo: ApiService.getImageUrl(response.store_logo_url),
           }));
         } else {
           response = await ApiService.uploadBannerImage(file);
-          setProfile(prevProfile => ({
+          setProfile((prevProfile) => ({
             ...prevProfile,
-            banner_image: ApiService.getImageUrl(response.banner_image_url)
+            banner_image: ApiService.getImageUrl(response.banner_image_url),
           }));
         }
-        console.log('Image uploaded:', response);
-        showNotification('success', `${type === 'logo' ? 'Store logo' : 'Banner image'} uploaded successfully!`);
+        console.log("Image uploaded:", response);
+        showNotification(
+          "success",
+          `${
+            type === "logo" ? "Store logo" : "Banner image"
+          } uploaded successfully!`
+        );
       } catch (error) {
-        console.error('Error uploading image:', error);
-        showNotification('error', 'Error uploading image. Please try again.');
+        console.error("Error uploading image:", error);
+        showNotification("error", "Error uploading image. Please try again.");
       } finally {
         setLoading(false);
       }
     }
   };
 
-  const removeImage = async (type: 'logo' | 'banner') => {
+  const removeImage = async (type: "logo" | "banner") => {
     setLoading(true);
     try {
-      if (type === 'logo') {
+      if (type === "logo") {
         await ApiService.removeStoreLogo();
-        setProfile(prevProfile => ({
+        setProfile((prevProfile) => ({
           ...prevProfile,
-          store_logo: ''
+          store_logo: "",
         }));
       } else {
         await ApiService.removeBannerImage();
-        setProfile(prevProfile => ({
+        setProfile((prevProfile) => ({
           ...prevProfile,
-          banner_image: ''
+          banner_image: "",
         }));
       }
       console.log(`${type} removed successfully`);
-      showNotification('success', `${type === 'logo' ? 'Store logo' : 'Banner image'} removed successfully!`);
+      showNotification(
+        "success",
+        `${
+          type === "logo" ? "Store logo" : "Banner image"
+        } removed successfully!`
+      );
     } catch (error) {
       console.error(`Error removing ${type}:`, error);
-      showNotification('error', `Error removing ${type}. Please try again.`);
+      showNotification("error", `Error removing ${type}. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -366,19 +394,21 @@ export default function SettingsPage() {
 
   const handleAddCategory = async () => {
     if (!newCategory.trim()) return;
-    
+
     setLoading(true);
     try {
-      const response = await ApiService.createCategory({ name: newCategory.trim() });
+      const response = await ApiService.createCategory({
+        name: newCategory.trim(),
+      });
       if (response.category) {
         setCategories([...categories, response.category]);
-        setNewCategory('');
-        console.log('Category added successfully');
-        showNotification('success', 'Category added successfully!');
+        setNewCategory("");
+        console.log("Category added successfully");
+        showNotification("success", "Category added successfully!");
       }
     } catch (error) {
-      console.error('Error adding category:', error);
-      showNotification('error', 'Error adding category. Please try again.');
+      console.error("Error adding category:", error);
+      showNotification("error", "Error adding category. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -389,15 +419,24 @@ export default function SettingsPage() {
     try {
       const response = await ApiService.toggleCategory(id);
       if (response.category) {
-        setCategories(categories.map(cat => 
-          cat.id === id ? { ...cat, is_active: response.category.is_active } : cat
-        ));
-        console.log('Category toggled successfully');
-        showNotification('success', `Category ${response.category.is_active ? 'activated' : 'deactivated'} successfully!`);
+        setCategories(
+          categories.map((cat) =>
+            cat.id === id
+              ? { ...cat, is_active: response.category.is_active }
+              : cat
+          )
+        );
+        console.log("Category toggled successfully");
+        showNotification(
+          "success",
+          `Category ${
+            response.category.is_active ? "activated" : "deactivated"
+          } successfully!`
+        );
       }
     } catch (error) {
-      console.error('Error toggling category:', error);
-      showNotification('error', 'Error updating category. Please try again.');
+      console.error("Error toggling category:", error);
+      showNotification("error", "Error updating category. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -407,13 +446,13 @@ export default function SettingsPage() {
     setLoading(true);
     try {
       await ApiService.deleteCategory(id);
-      setCategories(categories.filter(cat => cat.id !== id));
-      console.log('Category deleted successfully');
+      setCategories(categories.filter((cat) => cat.id !== id));
+      console.log("Category deleted successfully");
       setDeleteModal({ isOpen: false, category: null });
-      showNotification('success', 'Category deleted successfully!');
+      showNotification("success", "Category deleted successfully!");
     } catch (error) {
-      console.error('Error deleting category:', error);
-      showNotification('error', 'Error deleting category. Please try again.');
+      console.error("Error deleting category:", error);
+      showNotification("error", "Error deleting category. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -434,7 +473,11 @@ export default function SettingsPage() {
   };
 
   // Gift delete handlers
-  const handleGiftDeleteClick = (gift: { id: number; name: string; is_active: boolean }) => {
+  const handleGiftDeleteClick = (gift: {
+    id: number;
+    name: string;
+    is_active: boolean;
+  }) => {
     setGiftDeleteModal({ isOpen: true, gift });
   };
 
@@ -442,12 +485,17 @@ export default function SettingsPage() {
     if (giftDeleteModal.gift) {
       try {
         await ApiService.deleteGift(giftDeleteModal.gift.id);
-        setGifts(gifts.filter(gift => gift.id !== giftDeleteModal.gift!.id));
+        setGifts(gifts.filter((gift) => gift.id !== giftDeleteModal.gift!.id));
         setGiftDeleteModal({ isOpen: false, gift: null });
-        showNotification('success', 'Gift deleted successfully!');
+        showNotification("success", "Gift deleted successfully!");
       } catch (error) {
-        console.error('Error deleting gift:', error);
-        showNotification('error', error instanceof Error ? error.message : 'Error deleting gift. Please try again.');
+        console.error("Error deleting gift:", error);
+        showNotification(
+          "error",
+          error instanceof Error
+            ? error.message
+            : "Error deleting gift. Please try again."
+        );
       }
     }
   };
@@ -457,7 +505,11 @@ export default function SettingsPage() {
   };
 
   // Level delete handlers
-  const handleLevelDeleteClick = (level: { id: number; name: string; is_active: boolean }) => {
+  const handleLevelDeleteClick = (level: {
+    id: number;
+    name: string;
+    is_active: boolean;
+  }) => {
     setLevelDeleteModal({ isOpen: true, level });
   };
 
@@ -465,12 +517,19 @@ export default function SettingsPage() {
     if (levelDeleteModal.level) {
       try {
         await ApiService.deleteLevel(levelDeleteModal.level.id);
-        setLevels(levels.filter(level => level.id !== levelDeleteModal.level!.id));
+        setLevels(
+          levels.filter((level) => level.id !== levelDeleteModal.level!.id)
+        );
         setLevelDeleteModal({ isOpen: false, level: null });
-        showNotification('success', 'Level deleted successfully!');
+        showNotification("success", "Level deleted successfully!");
       } catch (error) {
-        console.error('Error deleting level:', error);
-        showNotification('error', error instanceof Error ? error.message : 'Error deleting level. Please try again.');
+        console.error("Error deleting level:", error);
+        showNotification(
+          "error",
+          error instanceof Error
+            ? error.message
+            : "Error deleting level. Please try again."
+        );
       }
     }
   };
@@ -480,7 +539,11 @@ export default function SettingsPage() {
   };
 
   // Brand delete handlers
-  const handleBrandDeleteClick = (brand: { id: number; name: string; is_active: boolean }) => {
+  const handleBrandDeleteClick = (brand: {
+    id: number;
+    name: string;
+    is_active: boolean;
+  }) => {
     setBrandDeleteModal({ isOpen: true, brand });
   };
 
@@ -488,12 +551,19 @@ export default function SettingsPage() {
     if (brandDeleteModal.brand) {
       try {
         await ApiService.deleteBrand(brandDeleteModal.brand.id);
-        setBrands(brands.filter(brand => brand.id !== brandDeleteModal.brand!.id));
+        setBrands(
+          brands.filter((brand) => brand.id !== brandDeleteModal.brand!.id)
+        );
         setBrandDeleteModal({ isOpen: false, brand: null });
-        showNotification('success', 'Brand deleted successfully!');
+        showNotification("success", "Brand deleted successfully!");
       } catch (error) {
-        console.error('Error deleting brand:', error);
-        showNotification('error', error instanceof Error ? error.message : 'Error deleting brand. Please try again.');
+        console.error("Error deleting brand:", error);
+        showNotification(
+          "error",
+          error instanceof Error
+            ? error.message
+            : "Error deleting brand. Please try again."
+        );
       }
     }
   };
@@ -503,20 +573,35 @@ export default function SettingsPage() {
   };
 
   // Payment Method delete handlers
-  const handlePaymentMethodDeleteClick = (paymentMethod: { id: number; name: string; is_active: boolean }) => {
+  const handlePaymentMethodDeleteClick = (paymentMethod: {
+    id: number;
+    name: string;
+    is_active: boolean;
+  }) => {
     setPaymentMethodDeleteModal({ isOpen: true, paymentMethod });
   };
 
   const handlePaymentMethodDeleteConfirm = async () => {
     if (paymentMethodDeleteModal.paymentMethod) {
       try {
-        await ApiService.deletePaymentMethod(paymentMethodDeleteModal.paymentMethod.id);
-        setPaymentMethods(paymentMethods.filter(pm => pm.id !== paymentMethodDeleteModal.paymentMethod!.id));
+        await ApiService.deletePaymentMethod(
+          paymentMethodDeleteModal.paymentMethod.id
+        );
+        setPaymentMethods(
+          paymentMethods.filter(
+            (pm) => pm.id !== paymentMethodDeleteModal.paymentMethod!.id
+          )
+        );
         setPaymentMethodDeleteModal({ isOpen: false, paymentMethod: null });
-        showNotification('success', 'Payment method deleted successfully!');
+        showNotification("success", "Payment method deleted successfully!");
       } catch (error) {
-        console.error('Error deleting payment method:', error);
-        showNotification('error', error instanceof Error ? error.message : 'Error deleting payment method. Please try again.');
+        console.error("Error deleting payment method:", error);
+        showNotification(
+          "error",
+          error instanceof Error
+            ? error.message
+            : "Error deleting payment method. Please try again."
+        );
       }
     }
   };
@@ -532,14 +617,18 @@ export default function SettingsPage() {
         language: generalSettings.language,
         currency: generalSettings.currency,
         email_notifications: generalSettings.email_notifications,
-        marketing_notifications: generalSettings.marketing_notifications
+        marketing_notifications: generalSettings.marketing_notifications,
       });
-      
-      console.log('General settings saved:', response);
-      showNotification('success', 'Settings updated successfully!');
+
+      console.log("General settings saved:", response);
+
+      // Refresh currency context to update symbol across the app
+      await refreshCurrency();
+
+      showNotification("success", "Settings updated successfully!");
     } catch (error) {
-      console.error('Error saving general settings:', error);
-      showNotification('error', 'Error saving settings. Please try again.');
+      console.error("Error saving general settings:", error);
+      showNotification("error", "Error saving settings. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -547,12 +636,12 @@ export default function SettingsPage() {
 
   const handlePasswordChange = async () => {
     if (securitySettings.newPassword !== securitySettings.confirmPassword) {
-      showNotification('error', 'New passwords do not match');
+      showNotification("error", "New passwords do not match");
       return;
     }
-    
+
     if (securitySettings.newPassword.length < 8) {
-      showNotification('error', 'Password must be at least 8 characters long');
+      showNotification("error", "Password must be at least 8 characters long");
       return;
     }
 
@@ -561,35 +650,38 @@ export default function SettingsPage() {
       const response = await ApiService.changePassword({
         current_password: securitySettings.currentPassword,
         new_password: securitySettings.newPassword,
-        confirm_password: securitySettings.confirmPassword
+        confirm_password: securitySettings.confirmPassword,
       });
-      
-      console.log('Password changed successfully:', response);
+
+      console.log("Password changed successfully:", response);
       setSecuritySettings({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       });
-      showNotification('success', 'Password changed successfully!');
+      showNotification("success", "Password changed successfully!");
     } catch (error) {
-      console.error('Error changing password:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Error changing password. Please try again.');
+      console.error("Error changing password:", error);
+      showNotification(
+        "error",
+        error instanceof Error
+          ? error.message
+          : "Error changing password. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-
-
   const handleCustomDomainSave = async (settings: any) => {
     setLoading(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Custom domain settings saved:', settings);
-      showNotification('success', 'Custom domain settings saved successfully!');
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log("Custom domain settings saved:", settings);
+      showNotification("success", "Custom domain settings saved successfully!");
     } catch (error) {
-      console.error('Error saving custom domain settings:', error);
+      console.error("Error saving custom domain settings:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -598,47 +690,67 @@ export default function SettingsPage() {
 
   // Gift functions
   const tabs = [
-    { id: 'profile', label: 'Profile' },
-    { id: 'categories', label: 'Categories' },
-    { id: 'general', label: 'General' },
-    { id: 'gift', label: 'Gift' },
-    { id: 'achievements', label: 'Achievements' },
-    { id: 'levels', label: 'Level' },
-    { id: 'brand', label: 'Brand' },
-    { id: 'payment-methods', label: 'Payment Methods' }
+    { id: "profile", label: "Profile" },
+    { id: "categories", label: "Categories" },
+    { id: "general", label: "General" },
+    { id: "gift", label: "Gift" },
+    { id: "achievements", label: "Achievements" },
+    { id: "levels", label: "Level" },
+    { id: "brand", label: "Brand" },
+    { id: "payment-methods", label: "Payment Methods" },
   ];
 
   return (
     <div className="p-6 space-y-6">
       <div className="max-w-4xl">
-        {/* Header - removed since breadcrumb is now in the main header */}      {/* Notification */}
-      {notification.isVisible && (
-        <div className={`p-4 rounded-lg border ${
-          notification.type === 'success' 
-            ? 'bg-green-500/10 border-green-400/30 text-green-300' 
-            : 'bg-red-500/10 border-red-400/30 text-red-300'
-        }`}>
+        {/* Header - removed since breadcrumb is now in the main header */}{" "}
+        {/* Notification */}
+        {notification.isVisible && (
+          <div
+            className={`p-4 rounded-lg border ${
+              notification.type === "success"
+                ? "bg-green-500/10 border-green-400/30 text-green-300"
+                : "bg-red-500/10 border-red-400/30 text-red-300"
+            }`}
+          >
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                {notification.type === 'success' ? (
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                {notification.type === "success" ? (
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 ) : (
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 )}
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">
-                  {notification.message}
-                </p>
+                <p className="text-sm font-medium">{notification.message}</p>
               </div>
             </div>
           </div>
         )}
-
         {/* Tabs */}
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
           <div className="border-b border-slate-700/50">
@@ -649,8 +761,8 @@ export default function SettingsPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`py-2 px-1 border-b-2 font-medium text-sm transition-all duration-200 cursor-pointer ${
                     activeTab === tab.id
-                      ? 'border-cyan-400 text-cyan-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300'
+                      ? "border-cyan-400 text-cyan-400"
+                      : "border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300"
                   }`}
                 >
                   {tab.label}
@@ -661,61 +773,91 @@ export default function SettingsPage() {
 
           <div className="p-6">
             {/* Profile Tab */}
-            {activeTab === 'profile' && (
+            {activeTab === "profile" && (
               <div className="space-y-6">
                 <div>
                   {/* Company Images */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">Company Images</h4>
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Company Images
+                    </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Store Logo */}
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">
                           Store Logo
                         </label>
-                        <div className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group"
-                             onClick={() => {
-                               const input = document.createElement('input');
-                               input.type = 'file';
-                               input.accept = 'image/*';
-                               input.onchange = (e: any) => {
-                                 const file = e.target.files[0];
-                                 if (file) handleImageUpload(file, 'logo');
-                               };
-                               input.click();
-                             }}>
+                        <div
+                          className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group"
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/*";
+                            input.onchange = (e: any) => {
+                              const file = e.target.files[0];
+                              if (file) handleImageUpload(file, "logo");
+                            };
+                            input.click();
+                          }}
+                        >
                           {profile.store_logo ? (
                             <>
-                              <img src={profile.store_logo} alt="Store Logo" className="w-full h-full object-contain rounded-lg" />
+                              <img
+                                src={profile.store_logo}
+                                alt="Store Logo"
+                                className="w-full h-full object-contain rounded-lg"
+                              />
                               <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg">
                                 <div className="flex space-x-2">
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      const input = document.createElement('input');
-                                      input.type = 'file';
-                                      input.accept = 'image/*';
+                                      const input =
+                                        document.createElement("input");
+                                      input.type = "file";
+                                      input.accept = "image/*";
                                       input.onchange = (event: any) => {
                                         const file = event.target.files[0];
-                                        if (file) handleImageUpload(file, 'logo');
+                                        if (file)
+                                          handleImageUpload(file, "logo");
                                       };
                                       input.click();
                                     }}
                                     className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                                   >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                      />
                                     </svg>
                                   </button>
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      removeImage('logo');
+                                      removeImage("logo");
                                     }}
                                     className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
                                   >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                      />
                                     </svg>
                                   </button>
                                 </div>
@@ -723,8 +865,18 @@ export default function SettingsPage() {
                             </>
                           ) : (
                             <div className="text-center">
-                              <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              <svg
+                                className="mx-auto h-12 w-12 text-slate-400"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={1}
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
                               </svg>
                               <div className="mt-2 text-xs text-slate-400">
                                 Click to upload logo
@@ -739,49 +891,77 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-slate-300 mb-2">
                           Banner Image
                         </label>
-                        <div className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group"
-                             onClick={() => {
-                               const input = document.createElement('input');
-                               input.type = 'file';
-                               input.accept = 'image/*';
-                               input.onchange = (e: any) => {
-                                 const file = e.target.files[0];
-                                 if (file) handleImageUpload(file, 'banner');
-                               };
-                               input.click();
-                             }}>
+                        <div
+                          className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group"
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/*";
+                            input.onchange = (e: any) => {
+                              const file = e.target.files[0];
+                              if (file) handleImageUpload(file, "banner");
+                            };
+                            input.click();
+                          }}
+                        >
                           {profile.banner_image ? (
                             <>
-                              <img src={profile.banner_image} alt="Banner" className="w-full h-full object-cover rounded-lg" />
+                              <img
+                                src={profile.banner_image}
+                                alt="Banner"
+                                className="w-full h-full object-cover rounded-lg"
+                              />
                               <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg">
                                 <div className="flex space-x-2">
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      const input = document.createElement('input');
-                                      input.type = 'file';
-                                      input.accept = 'image/*';
+                                      const input =
+                                        document.createElement("input");
+                                      input.type = "file";
+                                      input.accept = "image/*";
                                       input.onchange = (event: any) => {
                                         const file = event.target.files[0];
-                                        if (file) handleImageUpload(file, 'banner');
+                                        if (file)
+                                          handleImageUpload(file, "banner");
                                       };
                                       input.click();
                                     }}
                                     className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                                   >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                      />
                                     </svg>
                                   </button>
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      removeImage('banner');
+                                      removeImage("banner");
                                     }}
                                     className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
                                   >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                      />
                                     </svg>
                                   </button>
                                 </div>
@@ -789,8 +969,18 @@ export default function SettingsPage() {
                             </>
                           ) : (
                             <div className="text-center">
-                              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              <svg
+                                className="mx-auto h-12 w-12 text-gray-400"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={1}
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
                               </svg>
                               <div className="mt-2 text-xs text-gray-400">
                                 Click to upload banner
@@ -804,7 +994,9 @@ export default function SettingsPage() {
 
                   {/* Company Address */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">Company Address</h4>
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Company Address
+                    </h4>
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-2">
                         Address
@@ -812,7 +1004,12 @@ export default function SettingsPage() {
                       <textarea
                         rows={3}
                         value={profile.company_address}
-                        onChange={(e) => setProfile({ ...profile, company_address: e.target.value })}
+                        onChange={(e) =>
+                          setProfile({
+                            ...profile,
+                            company_address: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
                         placeholder="Enter your company address"
                       />
@@ -821,7 +1018,9 @@ export default function SettingsPage() {
 
                   {/* Personal Information */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">Personal Information</h4>
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Personal Information
+                    </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -830,7 +1029,12 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           value={profile.first_name}
-                          onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
+                          onChange={(e) =>
+                            setProfile({
+                              ...profile,
+                              first_name: e.target.value,
+                            })
+                          }
                           className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                           placeholder="Enter your first name"
                         />
@@ -842,7 +1046,12 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           value={profile.last_name}
-                          onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
+                          onChange={(e) =>
+                            setProfile({
+                              ...profile,
+                              last_name: e.target.value,
+                            })
+                          }
                           className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                           placeholder="Enter your last name"
                         />
@@ -854,7 +1063,9 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           value={profile.company}
-                          onChange={(e) => setProfile({ ...profile, company: e.target.value })}
+                          onChange={(e) =>
+                            setProfile({ ...profile, company: e.target.value })
+                          }
                           className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                           placeholder="Enter your company name"
                         />
@@ -866,7 +1077,9 @@ export default function SettingsPage() {
                         <input
                           type="email"
                           value={profile.email}
-                          onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                          onChange={(e) =>
+                            setProfile({ ...profile, email: e.target.value })
+                          }
                           className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                           placeholder="Enter your email"
                         />
@@ -878,7 +1091,9 @@ export default function SettingsPage() {
                         <input
                           type="tel"
                           value={profile.phone}
-                          onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                          onChange={(e) =>
+                            setProfile({ ...profile, phone: e.target.value })
+                          }
                           className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                           placeholder="Enter your phone number"
                         />
@@ -892,7 +1107,7 @@ export default function SettingsPage() {
                       disabled={loading}
                       className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                     >
-                      {loading ? 'Saving...' : 'Save Changes'}
+                      {loading ? "Saving..." : "Save Changes"}
                     </button>
                   </div>
                 </div>
@@ -900,12 +1115,14 @@ export default function SettingsPage() {
             )}
 
             {/* Categories Tab */}
-            {activeTab === 'categories' && (
+            {activeTab === "categories" && (
               <div className="space-y-6">
                 <div>
                   {/* Add Category */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">Add New Category</h4>
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Add New Category
+                    </h4>
                     <div className="flex gap-3 max-w-md">
                       <input
                         type="text"
@@ -926,11 +1143,15 @@ export default function SettingsPage() {
 
                   {/* Categories List */}
                   <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">Categories</h4>
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Categories
+                    </h4>
                     <div className="max-w-2xl">
                       {categories.length === 0 ? (
                         <div className="text-center py-8 text-slate-400">
-                          <p>No categories found. Add your first category above.</p>
+                          <p>
+                            No categories found. Add your first category above.
+                          </p>
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-3">
@@ -939,25 +1160,37 @@ export default function SettingsPage() {
                               key={category.id}
                               className="flex items-center gap-2 p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200"
                             >
-                              <span 
+                              <span
                                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 ${
                                   category.is_active
-                                    ? 'bg-green-500/20 text-green-300 border border-green-400/30 hover:bg-green-500/30'
-                                    : 'bg-gray-500/20 text-gray-300 border border-gray-400/30 hover:bg-gray-500/30'
+                                    ? "bg-green-500/20 text-green-300 border border-green-400/30 hover:bg-green-500/30"
+                                    : "bg-gray-500/20 text-gray-300 border border-gray-400/30 hover:bg-gray-500/30"
                                 }`}
                                 onClick={() => toggleCategory(category.id)}
                                 title="Click to toggle active/inactive status"
                               >
-                                {category.is_active ? 'Active' : 'Inactive'}
+                                {category.is_active ? "Active" : "Inactive"}
                               </span>
-                              <span className="text-sm font-medium text-white whitespace-nowrap">{category.name}</span>
+                              <span className="text-sm font-medium text-white whitespace-nowrap">
+                                {category.name}
+                              </span>
                               <button
                                 onClick={() => handleDeleteClick(category)}
                                 className="p-1.5 bg-red-500/20 text-red-300 rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200 cursor-pointer"
                                 title="Delete category"
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
                                 </svg>
                               </button>
                             </div>
@@ -971,11 +1204,13 @@ export default function SettingsPage() {
             )}
 
             {/* General Tab */}
-            {activeTab === 'general' && (
+            {activeTab === "general" && (
               <div className="space-y-6">
                 {/* Preferences */}
                 <div className="mb-8">
-                  <h4 className="text-lg font-medium text-slate-100 mb-4">Preferences</h4>
+                  <h4 className="text-lg font-medium text-slate-100 mb-4">
+                    Preferences
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -983,11 +1218,26 @@ export default function SettingsPage() {
                       </label>
                       <select
                         value={generalSettings.language}
-                        onChange={(e) => setGeneralSettings({ ...generalSettings, language: e.target.value })}
+                        onChange={(e) =>
+                          setGeneralSettings({
+                            ...generalSettings,
+                            language: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
                       >
-                        <option value="en" className="bg-slate-800 text-slate-100">English</option>
-                        <option value="bn" className="bg-slate-800 text-slate-100">Bangla</option>
+                        <option
+                          value="en"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          English
+                        </option>
+                        <option
+                          value="bn"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          Bangla
+                        </option>
                       </select>
                     </div>
                     <div>
@@ -996,22 +1246,72 @@ export default function SettingsPage() {
                       </label>
                       <select
                         value={generalSettings.currency}
-                        onChange={(e) => setGeneralSettings({ ...generalSettings, currency: e.target.value })}
+                        onChange={(e) =>
+                          setGeneralSettings({
+                            ...generalSettings,
+                            currency: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
                       >
-                        <option value="USD" className="bg-slate-800 text-slate-100">USD - US Dollar</option>
-                        <option value="EUR" className="bg-slate-800 text-slate-100">EUR - Euro</option>
-                        <option value="GBP" className="bg-slate-800 text-slate-100">GBP - British Pound</option>
-                        <option value="JPY" className="bg-slate-800 text-slate-100">JPY - Japanese Yen</option>
-                        <option value="CAD" className="bg-slate-800 text-slate-100">CAD - Canadian Dollar</option>
-                        <option value="AUD" className="bg-slate-800 text-slate-100">AUD - Australian Dollar</option>
-                        <option value="CHF" className="bg-slate-800 text-slate-100">CHF - Swiss Franc</option>
-                        <option value="CNY" className="bg-slate-800 text-slate-100">CNY - Chinese Yuan</option>
-                        <option value="BDT" className="bg-slate-800 text-slate-100">BDT - Bangladeshi Taka</option>
+                        <option
+                          value="USD"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          USD - US Dollar
+                        </option>
+                        <option
+                          value="EUR"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          EUR - Euro
+                        </option>
+                        <option
+                          value="GBP"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          GBP - British Pound
+                        </option>
+                        <option
+                          value="JPY"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          JPY - Japanese Yen
+                        </option>
+                        <option
+                          value="CAD"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          CAD - Canadian Dollar
+                        </option>
+                        <option
+                          value="AUD"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          AUD - Australian Dollar
+                        </option>
+                        <option
+                          value="CHF"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          CHF - Swiss Franc
+                        </option>
+                        <option
+                          value="CNY"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          CNY - Chinese Yuan
+                        </option>
+                        <option
+                          value="BDT"
+                          className="bg-slate-800 text-slate-100"
+                        >
+                          BDT - Bangladeshi Taka
+                        </option>
                       </select>
                     </div>
                   </div>
-                  
+
                   {/* Save Button */}
                   <div className="mt-6 flex justify-end">
                     <button
@@ -1019,7 +1319,7 @@ export default function SettingsPage() {
                       disabled={loading}
                       className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                     >
-                      {loading ? 'Saving...' : 'Save Changes'}
+                      {loading ? "Saving..." : "Save Changes"}
                     </button>
                   </div>
                 </div>
@@ -1028,7 +1328,9 @@ export default function SettingsPage() {
                 <div className="mb-8">
                   {/* Change Password */}
                   <div className="mb-6">
-                    <h4 className="text-lg font-medium text-white mb-4">Change Password</h4>
+                    <h4 className="text-lg font-medium text-white mb-4">
+                      Change Password
+                    </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -1037,7 +1339,12 @@ export default function SettingsPage() {
                         <input
                           type="password"
                           value={securitySettings.currentPassword}
-                          onChange={(e) => setSecuritySettings({ ...securitySettings, currentPassword: e.target.value })}
+                          onChange={(e) =>
+                            setSecuritySettings({
+                              ...securitySettings,
+                              currentPassword: e.target.value,
+                            })
+                          }
                           className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
                           placeholder="Enter current password"
                         />
@@ -1049,7 +1356,12 @@ export default function SettingsPage() {
                         <input
                           type="password"
                           value={securitySettings.newPassword}
-                          onChange={(e) => setSecuritySettings({ ...securitySettings, newPassword: e.target.value })}
+                          onChange={(e) =>
+                            setSecuritySettings({
+                              ...securitySettings,
+                              newPassword: e.target.value,
+                            })
+                          }
                           className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
                           placeholder="Enter new password"
                         />
@@ -1061,7 +1373,12 @@ export default function SettingsPage() {
                         <input
                           type="password"
                           value={securitySettings.confirmPassword}
-                          onChange={(e) => setSecuritySettings({ ...securitySettings, confirmPassword: e.target.value })}
+                          onChange={(e) =>
+                            setSecuritySettings({
+                              ...securitySettings,
+                              confirmPassword: e.target.value,
+                            })
+                          }
                           className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
                           placeholder="Confirm new password"
                         />
@@ -1073,15 +1390,18 @@ export default function SettingsPage() {
                       </div>
                       <button
                         onClick={handlePasswordChange}
-                        disabled={loading || !securitySettings.currentPassword || !securitySettings.newPassword || !securitySettings.confirmPassword}
+                        disabled={
+                          loading ||
+                          !securitySettings.currentPassword ||
+                          !securitySettings.newPassword ||
+                          !securitySettings.confirmPassword
+                        }
                         className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                       >
-                        {loading ? 'Changing...' : 'Change Password'}
+                        {loading ? "Changing..." : "Change Password"}
                       </button>
                     </div>
                   </div>
-
-
                 </div>
 
                 {/* Custom Domain & DNS */}
@@ -1095,7 +1415,7 @@ export default function SettingsPage() {
             )}
 
             {/* Gift Tab */}
-            {activeTab === 'gift' && (
+            {activeTab === "gift" && (
               <GiftsTab
                 gifts={gifts}
                 setGifts={setGifts}
@@ -1106,7 +1426,7 @@ export default function SettingsPage() {
             )}
 
             {/* Achievements Tab */}
-            {activeTab === 'achievements' && (
+            {activeTab === "achievements" && (
               <AchievementsTab
                 achievements={achievements}
                 setAchievements={setAchievements}
@@ -1117,7 +1437,7 @@ export default function SettingsPage() {
             )}
 
             {/* Levels Tab */}
-            {activeTab === 'levels' && (
+            {activeTab === "levels" && (
               <LevelTab
                 levels={levels}
                 setLevels={setLevels}
@@ -1128,7 +1448,7 @@ export default function SettingsPage() {
             )}
 
             {/* Brand Tab */}
-            {activeTab === 'brand' && (
+            {activeTab === "brand" && (
               <BrandTab
                 brands={brands}
                 setBrands={setBrands}
@@ -1139,7 +1459,7 @@ export default function SettingsPage() {
             )}
 
             {/* Payment Methods Tab */}
-            {activeTab === 'payment-methods' && (
+            {activeTab === "payment-methods" && (
               <PaymentMethodsTab
                 paymentMethods={paymentMethods}
                 setPaymentMethods={setPaymentMethods}
@@ -1150,271 +1470,386 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
+        {/* Delete Confirmation Modal */}
+        {deleteModal.isOpen && (
+          <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div
+                className="fixed inset-0 transition-opacity"
+                aria-hidden="true"
+              >
+                <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+              </div>
 
-      {/* Delete Confirmation Modal */}
-      {deleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
-            </div>
+              <span
+                className="hidden sm:inline-block sm:align-middle sm:h-screen"
+                aria-hidden="true"
+              >
+                &#8203;
+              </span>
 
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
-              <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
-                    <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-white" id="modal-title">
-                      Delete Category
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-300">
-                        Are you sure you want to delete the category{' '}
-                        <span className="font-semibold text-white">"{deleteModal.category?.name}"</span>? 
-                        This action cannot be undone and will permanently remove this category from your system.
-                      </p>
+              <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
+                <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
+                      <svg
+                        className="h-6 w-6 text-red-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                      <h3
+                        className="text-lg leading-6 font-medium text-white"
+                        id="modal-title"
+                      >
+                        Delete Category
+                      </h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-300">
+                          Are you sure you want to delete the category{" "}
+                          <span className="font-semibold text-white">
+                            "{deleteModal.category?.name}"
+                          </span>
+                          ? This action cannot be undone and will permanently
+                          remove this category from your system.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
-                <button
-                  onClick={handleDeleteConfirm}
-                  disabled={loading}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  {loading ? 'Deleting...' : 'Delete'}
-                </button>
-                <button
-                  onClick={handleDeleteCancel}
-                  disabled={loading}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  Cancel
-                </button>
+                <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
+                  <button
+                    onClick={handleDeleteConfirm}
+                    disabled={loading}
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {loading ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    onClick={handleDeleteCancel}
+                    disabled={loading}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+        {/* Gift Delete Confirmation Modal */}
+        {giftDeleteModal.isOpen && (
+          <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div
+                className="fixed inset-0 transition-opacity"
+                aria-hidden="true"
+              >
+                <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+              </div>
 
-      {/* Gift Delete Confirmation Modal */}
-      {giftDeleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
-            </div>
+              <span
+                className="hidden sm:inline-block sm:align-middle sm:h-screen"
+                aria-hidden="true"
+              >
+                &#8203;
+              </span>
 
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
-              <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
-                    <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-white" id="modal-title">
-                      Delete Gift
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-300">
-                        Are you sure you want to delete the gift{' '}
-                        <span className="font-semibold text-white">"{giftDeleteModal.gift?.name}"</span>? 
-                        This action cannot be undone and will permanently remove this gift from your system.
-                      </p>
+              <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
+                <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
+                      <svg
+                        className="h-6 w-6 text-red-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                      <h3
+                        className="text-lg leading-6 font-medium text-white"
+                        id="modal-title"
+                      >
+                        Delete Gift
+                      </h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-300">
+                          Are you sure you want to delete the gift{" "}
+                          <span className="font-semibold text-white">
+                            "{giftDeleteModal.gift?.name}"
+                          </span>
+                          ? This action cannot be undone and will permanently
+                          remove this gift from your system.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
-                <button
-                  onClick={handleGiftDeleteConfirm}
-                  disabled={loading}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  {loading ? 'Deleting...' : 'Delete'}
-                </button>
-                <button
-                  onClick={handleGiftDeleteCancel}
-                  disabled={loading}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  Cancel
-                </button>
+                <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
+                  <button
+                    onClick={handleGiftDeleteConfirm}
+                    disabled={loading}
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {loading ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    onClick={handleGiftDeleteCancel}
+                    disabled={loading}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+        {/* Level Delete Confirmation Modal */}
+        {levelDeleteModal.isOpen && (
+          <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div
+                className="fixed inset-0 transition-opacity"
+                aria-hidden="true"
+              >
+                <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+              </div>
 
-      {/* Level Delete Confirmation Modal */}
-      {levelDeleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
-            </div>
+              <span
+                className="hidden sm:inline-block sm:align-middle sm:h-screen"
+                aria-hidden="true"
+              >
+                &#8203;
+              </span>
 
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
-              <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
-                    <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-white" id="modal-title">
-                      Delete Level
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-300">
-                        Are you sure you want to delete the level{' '}
-                        <span className="font-semibold text-white">"{levelDeleteModal.level?.name}"</span>? 
-                        This action cannot be undone and will permanently remove this level from your system.
-                      </p>
+              <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
+                <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
+                      <svg
+                        className="h-6 w-6 text-red-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                      <h3
+                        className="text-lg leading-6 font-medium text-white"
+                        id="modal-title"
+                      >
+                        Delete Level
+                      </h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-300">
+                          Are you sure you want to delete the level{" "}
+                          <span className="font-semibold text-white">
+                            "{levelDeleteModal.level?.name}"
+                          </span>
+                          ? This action cannot be undone and will permanently
+                          remove this level from your system.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
-                <button
-                  onClick={handleLevelDeleteConfirm}
-                  disabled={loading}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  {loading ? 'Deleting...' : 'Delete'}
-                </button>
-                <button
-                  onClick={handleLevelDeleteCancel}
-                  disabled={loading}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-slate-600 shadow-sm px-4 py-2 bg-slate-800 text-base font-medium text-slate-100 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  Cancel
-                </button>
+                <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
+                  <button
+                    onClick={handleLevelDeleteConfirm}
+                    disabled={loading}
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {loading ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    onClick={handleLevelDeleteCancel}
+                    disabled={loading}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-slate-600 shadow-sm px-4 py-2 bg-slate-800 text-base font-medium text-slate-100 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+        {/* Brand Delete Confirmation Modal */}
+        {brandDeleteModal.isOpen && (
+          <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div
+                className="fixed inset-0 transition-opacity"
+                aria-hidden="true"
+              >
+                <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+              </div>
 
-      {/* Brand Delete Confirmation Modal */}
-      {brandDeleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
-            </div>
+              <span
+                className="hidden sm:inline-block sm:align-middle sm:h-screen"
+                aria-hidden="true"
+              >
+                &#8203;
+              </span>
 
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
-              <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
-                    <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-white" id="modal-title">
-                      Delete Brand
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-300">
-                        Are you sure you want to delete the brand{' '}
-                        <span className="font-semibold text-white">"{brandDeleteModal.brand?.name}"</span>? 
-                        This action cannot be undone and will permanently remove this brand from your system.
-                      </p>
+              <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
+                <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
+                      <svg
+                        className="h-6 w-6 text-red-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                      <h3
+                        className="text-lg leading-6 font-medium text-white"
+                        id="modal-title"
+                      >
+                        Delete Brand
+                      </h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-300">
+                          Are you sure you want to delete the brand{" "}
+                          <span className="font-semibold text-white">
+                            "{brandDeleteModal.brand?.name}"
+                          </span>
+                          ? This action cannot be undone and will permanently
+                          remove this brand from your system.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
-                <button
-                  onClick={handleBrandDeleteConfirm}
-                  disabled={loading}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  {loading ? 'Deleting...' : 'Delete'}
-                </button>
-                <button
-                  onClick={handleBrandDeleteCancel}
-                  disabled={loading}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  Cancel
-                </button>
+                <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
+                  <button
+                    onClick={handleBrandDeleteConfirm}
+                    disabled={loading}
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {loading ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    onClick={handleBrandDeleteCancel}
+                    disabled={loading}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+        {/* Payment Method Delete Confirmation Modal */}
+        {paymentMethodDeleteModal.isOpen && (
+          <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div
+                className="fixed inset-0 transition-opacity"
+                aria-hidden="true"
+              >
+                <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+              </div>
 
-      {/* Payment Method Delete Confirmation Modal */}
-      {paymentMethodDeleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
-            </div>
+              <span
+                className="hidden sm:inline-block sm:align-middle sm:h-screen"
+                aria-hidden="true"
+              >
+                &#8203;
+              </span>
 
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
-              <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
-                    <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-white" id="modal-title">
-                      Delete Payment Method
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-300">
-                        Are you sure you want to delete the payment method{' '}
-                        <span className="font-semibold text-white">"{paymentMethodDeleteModal.paymentMethod?.name}"</span>? 
-                        This action cannot be undone and will permanently remove this payment method from your system.
-                      </p>
+              <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
+                <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
+                      <svg
+                        className="h-6 w-6 text-red-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                      <h3
+                        className="text-lg leading-6 font-medium text-white"
+                        id="modal-title"
+                      >
+                        Delete Payment Method
+                      </h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-300">
+                          Are you sure you want to delete the payment method{" "}
+                          <span className="font-semibold text-white">
+                            "{paymentMethodDeleteModal.paymentMethod?.name}"
+                          </span>
+                          ? This action cannot be undone and will permanently
+                          remove this payment method from your system.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
-                <button
-                  onClick={handlePaymentMethodDeleteConfirm}
-                  disabled={loading}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  {loading ? 'Deleting...' : 'Delete'}
-                </button>
-                <button
-                  onClick={handlePaymentMethodDeleteCancel}
-                  disabled={loading}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  Cancel
-                </button>
+                <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
+                  <button
+                    onClick={handlePaymentMethodDeleteConfirm}
+                    disabled={loading}
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {loading ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    onClick={handlePaymentMethodDeleteCancel}
+                    disabled={loading}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );

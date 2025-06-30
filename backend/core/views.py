@@ -551,6 +551,7 @@ def user_settings(request):
                 'settings': {
                     'language': settings.language,
                     'currency': settings.currency,
+                    'currency_symbol': settings.currency_symbol,
                     'email_notifications': settings.email_notifications,
                     'marketing_notifications': settings.marketing_notifications,
                 }
@@ -600,6 +601,7 @@ def user_settings(request):
                 'settings': {
                     'language': settings.language,
                     'currency': settings.currency,
+                    'currency_symbol': settings.currency_symbol,
                     'email_notifications': settings.email_notifications,
                     'marketing_notifications': settings.marketing_notifications,
                 }
@@ -1552,7 +1554,8 @@ def payment_methods(request):
     """
     if request.method == 'GET':
         try:
-            user_payment_methods = PaymentMethod.objects.filter(user=request.user)
+            user_payment_methods = PaymentMethod.objects.filter(
+                user=request.user)
             payment_methods_data = []
             for payment_method in user_payment_methods:
                 payment_methods_data.append({
@@ -1618,7 +1621,8 @@ def payment_method_detail(request, payment_method_id):
     Update or delete a specific payment method
     """
     try:
-        payment_method = PaymentMethod.objects.get(id=payment_method_id, user=request.user)
+        payment_method = PaymentMethod.objects.get(
+            id=payment_method_id, user=request.user)
     except PaymentMethod.DoesNotExist:
         return Response({
             'error': 'Payment method not found'
@@ -1686,7 +1690,8 @@ def toggle_payment_method(request, payment_method_id):
     Toggle payment method active status
     """
     try:
-        payment_method = PaymentMethod.objects.get(id=payment_method_id, user=request.user)
+        payment_method = PaymentMethod.objects.get(
+            id=payment_method_id, user=request.user)
         payment_method.is_active = not payment_method.is_active
         payment_method.save()
 

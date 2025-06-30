@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useCurrency, formatCurrency } from "@/contexts/CurrencyContext";
 import {
   ArrowLeft,
   Mail,

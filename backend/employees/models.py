@@ -128,7 +128,7 @@ class Incentive(models.Model):
         ordering = ['-date_awarded']
 
     def __str__(self):
-        return f"{self.title} - ${self.amount}"
+        return f"{self.title} - {self.amount}"
 
 
 class SalaryRecord(models.Model):

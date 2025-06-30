@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { Plus, X, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useCurrency, formatCurrency } from "@/contexts/CurrencyContext";
 import { Employee, CreateEmployeeData } from "@/types/employee";
 import employeeAPI from "@/lib/employeeAPI";
 
 export default function EmployeesPage() {
   const router = useRouter();
+  const { currencySymbol } = useCurrency();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -274,7 +276,7 @@ export default function EmployeesPage() {
       `${emp.bank_name || "N/A"} - ${emp.bank_branch || "N/A"}\n${
         emp.account_number || "N/A"
       }`,
-      `$${emp.salary}`,
+      `${currencySymbol}${emp.salary}`,
     ]);
 
     // Add table
@@ -542,7 +544,7 @@ export default function EmployeesPage() {
                   Avg Salary
                 </p>
                 <p className="text-base font-bold text-yellow-400">
-                  ${averageSalary.toFixed(0)}
+                  {formatCurrency(averageSalary)}
                 </p>
                 <p className="text-xs text-yellow-500 opacity-80">
                   Per employee
@@ -706,7 +708,7 @@ export default function EmployeesPage() {
                     <div>
                       <p className="text-xs text-slate-400">Salary</p>
                       <p className="text-sm font-medium text-green-400">
-                        ${employee.salary.toLocaleString()}
+                        {formatCurrency(employee.salary)}
                       </p>
                     </div>
                   </div>
@@ -855,7 +857,7 @@ export default function EmployeesPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-sm font-medium text-green-400">
-                          ${employee.salary.toLocaleString()}
+                          {formatCurrency(employee.salary)}
                         </div>
                       </td>
                       <td className="py-3 px-4">
