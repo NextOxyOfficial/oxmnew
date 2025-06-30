@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   CreditCard,
   Plus,
@@ -18,83 +18,55 @@ import {
   FileSpreadsheet,
   Loader2,
   Settings,
+  AlertCircle,
 } from "lucide-react";
-
-interface Account {
-  id: string;
-  name: string;
-  balance: number;
-  createdAt: string;
-}
-
-interface Transaction {
-  id: string;
-  accountId: string;
-  type: "debit" | "credit";
-  amount: number;
-  purpose: string;
-  verifiedBy: string;
-  date: string;
-  status: "pending" | "verified";
-}
-
-interface Employee {
-  id: string;
-  name: string;
-  role: string;
-}
+import { useBanking } from "@/hooks/useBanking";
+import type { BankAccount, Transaction, Employee, TransactionFilters } from "@/types/banking";
 
 export default function BankingPage() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const {
+    accounts,
+    transactions,
+    employees,
+    selectedAccountId,
+    selectedAccount,
+    loading,
+    error,
+    setSelectedAccountId,
+    setError,
+    createAccount,
+    updateAccount,
+    createTransaction,
+    loadTransactions,
+  } = useBanking();
+
   const [showCreateAccountModal, setShowCreateAccountModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"accounts" | "transactions">("accounts");
-
-  // Initialize with default Primary account
-  useEffect(() => {
-    if (accounts.length === 0) {
-      const primaryAccount: Account = {
-        id: "primary-001",
-        name: "Primary",
-        balance: 0.00,
-        createdAt: new Date().toISOString(),
-      };
-      setAccounts([primaryAccount]);
-      setSelectedAccountId(primaryAccount.id);
-    }
-  }, [accounts.length]);
+  const [isAddingTransaction, setIsAddingTransaction] = useState(false);
+  const [isSavingAccountNames, setIsSavingAccountNames] = useState(false);
 
   // Filter and search states
-  const [dateRange, setDateRange] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [filters, setFilters] = useState<TransactionFilters>({
+    type: "all",
+    status: "all",
+    verified_by: "all",
+  });
   const [searchTerm, setSearchTerm] = useState("");
-  const [employeeFilter, setEmployeeFilter] = useState("all");
+  const [dateRange, setDateRange] = useState("all");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const [tempStartDate, setTempStartDate] = useState("");
   const [tempEndDate, setTempEndDate] = useState("");
-  const [isAddingTransaction, setIsAddingTransaction] = useState(false);
 
   // Settings modal states
-  const [editableAccounts, setEditableAccounts] = useState<Account[]>([]);
-  const [isSavingAccountNames, setIsSavingAccountNames] = useState(false);
-
-  // Mock employee data
-  const employees: Employee[] = [
-    { id: "1", name: "John Smith", role: "Manager" },
-    { id: "2", name: "Sarah Johnson", role: "Accountant" },
-    { id: "3", name: "Mike Wilson", role: "Supervisor" },
-    { id: "4", name: "Emily Davis", role: "Financial Analyst" },
-  ];
+  const [editableAccounts, setEditableAccounts] = useState<BankAccount[]>([]);
 
   // Create Account Form State
   const [newAccount, setNewAccount] = useState({
     name: "",
-    initialBalance: "",
+    balance: 0,
   });
 
   // Transaction Form State
@@ -102,8 +74,53 @@ export default function BankingPage() {
     type: "debit" as "debit" | "credit",
     amount: "",
     purpose: "",
-    verifiedBy: "",
+    verified_by: "",
   });
+
+  // Load transactions with current filters
+  const loadFilteredTransactions = useCallback(() => {
+    if (!selectedAccountId) return;
+
+    const currentFilters: TransactionFilters = {
+      ...filters,
+      search: searchTerm,
+    };
+
+    // Handle date range
+    if (dateRange === "custom" && customStartDate && customEndDate) {
+      currentFilters.date_from = customStartDate;
+      currentFilters.date_to = customEndDate;
+    } else if (dateRange !== "all") {
+      const now = new Date();
+      const filterDate = new Date();
+      
+      switch (dateRange) {
+        case "today":
+          filterDate.setHours(0, 0, 0, 0);
+          currentFilters.date_from = filterDate.toISOString().split('T')[0];
+          break;
+        case "week":
+          filterDate.setDate(now.getDate() - 7);
+          currentFilters.date_from = filterDate.toISOString().split('T')[0];
+          break;
+        case "month":
+          filterDate.setMonth(now.getMonth() - 1);
+          currentFilters.date_from = filterDate.toISOString().split('T')[0];
+          break;
+        case "3months":
+          filterDate.setMonth(now.getMonth() - 3);
+          currentFilters.date_from = filterDate.toISOString().split('T')[0];
+          break;
+      }
+    }
+
+    loadTransactions(selectedAccountId, currentFilters);
+  }, [selectedAccountId, filters, searchTerm, dateRange, customStartDate, customEndDate, loadTransactions]);
+
+  // Update transactions when filters change
+  useEffect(() => {
+    loadFilteredTransactions();
+  }, [loadFilteredTransactions]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -112,59 +129,44 @@ export default function BankingPage() {
     }).format(amount);
   };
 
-  const handleCreateAccount = (e: React.FormEvent) => {
+  const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newAccount.name && newAccount.initialBalance) {
-      const account: Account = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: newAccount.name,
-        balance: parseFloat(newAccount.initialBalance),
-        createdAt: new Date().toISOString(),
-      };
-      setAccounts([...accounts, account]);
-      // Auto-select the first account if none is selected
-      if (!selectedAccountId) {
-        setSelectedAccountId(account.id);
+    if (newAccount.name) {
+      try {
+        await createAccount({
+          name: newAccount.name,
+          balance: newAccount.balance,
+        });
+        setNewAccount({ name: "", balance: 0 });
+        setShowCreateAccountModal(false);
+      } catch (err) {
+        // Error is handled by the hook
       }
-      setNewAccount({ name: "", initialBalance: "" });
-      setShowCreateAccountModal(false);
     }
   };
 
-  const handleAddTransaction = (e: React.FormEvent) => {
+  const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedAccountId && newTransaction.amount && newTransaction.purpose && newTransaction.verifiedBy) {
-      setIsAddingTransaction(true);
-      
-      // Simulate async operation
-      setTimeout(() => {
-        const transaction: Transaction = {
-          id: Math.random().toString(36).substr(2, 9),
-          accountId: selectedAccountId,
+    if (selectedAccountId && newTransaction.amount && newTransaction.purpose && newTransaction.verified_by) {
+      try {
+        setIsAddingTransaction(true);
+        
+        await createTransaction({
+          account: selectedAccountId,
           type: newTransaction.type,
           amount: parseFloat(newTransaction.amount),
           purpose: newTransaction.purpose,
-          verifiedBy: newTransaction.verifiedBy,
-          date: new Date().toISOString(),
+          verified_by: newTransaction.verified_by,
           status: "verified",
-        };
+        });
 
-        // Update account balance
-        setAccounts(accounts.map(account => {
-          if (account.id === selectedAccountId) {
-            const newBalance = newTransaction.type === "credit" 
-              ? account.balance + parseFloat(newTransaction.amount)
-              : account.balance - parseFloat(newTransaction.amount);
-            return { ...account, balance: newBalance };
-          }
-          return account;
-        }));
-
-        setTransactions([transaction, ...transactions]);
-        setNewTransaction({ type: "debit", amount: "", purpose: "", verifiedBy: "" });
-        setIsAddingTransaction(false);
+        setNewTransaction({ type: "debit", amount: "", purpose: "", verified_by: "" });
         setShowTransactionModal(false);
-      }, 800);
+      } catch (err) {
+        // Error is handled by the hook
+      } finally {
+        setIsAddingTransaction(false);
+      }
     }
   };
 
@@ -201,15 +203,23 @@ export default function BankingPage() {
     setShowSettingsModal(true);
   };
 
-  const handleSaveAccountNames = () => {
+  const handleSaveAccountNames = async () => {
     setIsSavingAccountNames(true);
     
-    // Simulate async operation
-    setTimeout(() => {
-      setAccounts(editableAccounts);
-      setIsSavingAccountNames(false);
+    try {
+      // Update each account that has changed
+      for (const editedAccount of editableAccounts) {
+        const originalAccount = accounts.find(acc => acc.id === editedAccount.id);
+        if (originalAccount && originalAccount.name !== editedAccount.name) {
+          await updateAccount(editedAccount.id, { name: editedAccount.name });
+        }
+      }
       setShowSettingsModal(false);
-    }, 500);
+    } catch (err) {
+      // Error handled by hook
+    } finally {
+      setIsSavingAccountNames(false);
+    }
   };
 
   const handleAccountNameChange = (accountId: string, newName: string) => {
@@ -218,74 +228,15 @@ export default function BankingPage() {
     ));
   };
 
-  const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
-  const accountTransactions = transactions.filter(t => t.accountId === selectedAccountId);
-
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? employee.name : "Unknown";
+    return employee ? employee.full_name || `${employee.first_name} ${employee.last_name}`.trim() || employee.username : "Unknown";
   };
 
-  // Filter transactions based on search and filters
+  // Filter transactions (now using local state since transactions are already filtered by backend)
   const getFilteredTransactions = () => {
-    let filtered = accountTransactions;
-
-    // Date range filter
-    if (dateRange !== "all") {
-      const now = new Date();
-      const filterDate = new Date();
-      
-      if (dateRange === "custom") {
-        // Custom date range
-        if (customStartDate && customEndDate) {
-          const startDate = new Date(customStartDate);
-          const endDate = new Date(customEndDate);
-          endDate.setHours(23, 59, 59, 999); // Include the entire end date
-          filtered = filtered.filter(t => {
-            const transactionDate = new Date(t.date);
-            return transactionDate >= startDate && transactionDate <= endDate;
-          });
-        }
-      } else {
-        switch (dateRange) {
-          case "today":
-            filterDate.setHours(0, 0, 0, 0);
-            break;
-          case "week":
-            filterDate.setDate(now.getDate() - 7);
-            break;
-          case "month":
-            filterDate.setMonth(now.getMonth() - 1);
-            break;
-          case "3months":
-            filterDate.setMonth(now.getMonth() - 3);
-            break;
-        }
-        
-        filtered = filtered.filter(t => new Date(t.date) >= filterDate);
-      }
-    }
-
-    // Type filter
-    if (typeFilter !== "all") {
-      filtered = filtered.filter(t => t.type === typeFilter);
-    }
-
-    // Employee filter
-    if (employeeFilter !== "all") {
-      filtered = filtered.filter(t => t.verifiedBy === employeeFilter);
-    }
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(t => 
-        t.purpose.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getEmployeeName(t.verifiedBy).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.amount.toString().includes(searchTerm)
-      );
-    }
-
-    return filtered;
+    // Transactions are already filtered by the backend API call
+    return transactions;
   };
 
   // Download functions
@@ -301,7 +252,7 @@ export default function BankingPage() {
         t.type,
         t.amount,
         `"${t.purpose}"`,
-        `"${getEmployeeName(t.verifiedBy)}"`,
+        `"${getEmployeeName(t.verified_by)}"`,
         t.status
       ].join(','))
     ].join('\n');
@@ -362,7 +313,7 @@ export default function BankingPage() {
                   <td style="color: ${t.type === 'credit' ? 'green' : 'red'}">${t.type.toUpperCase()}</td>
                   <td style="color: ${t.type === 'credit' ? 'green' : 'red'}">${t.type === 'credit' ? '+' : '-'}$${t.amount.toFixed(2)}</td>
                   <td>${t.purpose}</td>
-                  <td>${getEmployeeName(t.verifiedBy)}</td>
+                  <td>${getEmployeeName(t.verified_by)}</td>
                   <td>${t.status}</td>
                 </tr>
               `).join('')}
@@ -384,13 +335,13 @@ export default function BankingPage() {
   const getAccountSummary = (useFiltered = false) => {
     if (!selectedAccountId) return { totalCredit: 0, totalDebit: 0 };
     
-    const transactionsToUse = useFiltered ? getFilteredTransactions() : accountTransactions;
+    const transactionsToUse = useFiltered ? getFilteredTransactions() : transactions;
     const totalCredit = transactionsToUse
-      .filter(t => t.type === "credit")
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter((t: Transaction) => t.type === "credit")
+      .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
     const totalDebit = transactionsToUse
-      .filter(t => t.type === "debit")
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter((t: Transaction) => t.type === "debit")
+      .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
     
     return { totalCredit, totalDebit };
   };
@@ -407,6 +358,31 @@ export default function BankingPage() {
             Manage your accounts and track financial transactions
           </p>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6 flex items-center space-x-3">
+            <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
+            <div>
+              <p className="text-red-400 text-sm font-medium">Error</p>
+              <p className="text-red-300 text-sm">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-400 hover:text-red-300 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Loading Indicator */}
+        {loading && (
+          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-8 text-center mb-6">
+            <Loader2 className="h-8 w-8 text-cyan-400 mx-auto mb-3 animate-spin" />
+            <p className="text-slate-400">Loading banking data...</p>
+          </div>
+        )}
 
 
 
@@ -584,8 +560,8 @@ export default function BankingPage() {
 
                       {/* Type Filter */}
                       <select
-                        value={typeFilter}
-                        onChange={(e) => setTypeFilter(e.target.value)}
+                        value={filters.type || "all"}
+                        onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as any }))}
                         className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[120px] cursor-pointer"
                       >
                         <option value="all" className="bg-slate-800">All Types</option>
@@ -595,14 +571,14 @@ export default function BankingPage() {
 
                       {/* Employee Filter */}
                       <select
-                        value={employeeFilter}
-                        onChange={(e) => setEmployeeFilter(e.target.value)}
+                        value={filters.verified_by || "all"}
+                        onChange={(e) => setFilters(prev => ({ ...prev, verified_by: e.target.value }))}
                         className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[140px] cursor-pointer"
                       >
                         <option value="all" className="bg-slate-800">All Employees</option>
                         {employees.map((employee) => (
                           <option key={employee.id} value={employee.id} className="bg-slate-800">
-                            {employee.name}
+                            {employee.full_name || `${employee.first_name} ${employee.last_name}`.trim() || employee.username}
                           </option>
                         ))}
                       </select>
@@ -638,12 +614,11 @@ export default function BankingPage() {
 
                     <div className="flex items-center space-x-3">
                       {/* Clear Filters */}
-                      {(searchTerm || typeFilter !== "all" || employeeFilter !== "all" || dateRange !== "all" || customStartDate || customEndDate) && (
+                      {(searchTerm || filters.type !== "all" || filters.verified_by !== "all" || dateRange !== "all" || customStartDate || customEndDate) && (
                         <button
                           onClick={() => {
                             setSearchTerm("");
-                            setTypeFilter("all");
-                            setEmployeeFilter("all");
+                            setFilters({ type: "all", status: "all", verified_by: "all" });
                             setDateRange("all");
                             setCustomStartDate("");
                             setCustomEndDate("");
@@ -665,15 +640,15 @@ export default function BankingPage() {
                     <div className="p-8 text-center">
                       <DollarSign className="h-10 w-10 text-slate-500 mx-auto mb-3" />
                       <h4 className="text-base font-medium text-slate-300 mb-2">
-                        {accountTransactions.length === 0 ? "No transactions yet" : "No transactions match your filters"}
+                        {transactions.length === 0 ? "No transactions yet" : "No transactions match your filters"}
                       </h4>
                       <p className="text-slate-500 mb-3 text-sm">
-                        {accountTransactions.length === 0 
+                        {transactions.length === 0 
                           ? "Add your first transaction to get started" 
                           : "Try adjusting your search or filter criteria"
                         }
                       </p>
-                      {accountTransactions.length === 0 && (
+                      {transactions.length === 0 && (
                         <button
                           onClick={() => setShowTransactionModal(true)}
                           className="px-3 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
@@ -722,7 +697,7 @@ export default function BankingPage() {
                               <td className="py-3 px-4 text-slate-400 text-sm">
                                 <div className="flex items-center space-x-1.5">
                                   <User className="h-3.5 w-3.5" />
-                                  <span>{getEmployeeName(transaction.verifiedBy)}</span>
+                                  <span>{getEmployeeName(transaction.verified_by)}</span>
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-slate-400 text-sm">
@@ -743,8 +718,8 @@ export default function BankingPage() {
                       <div className="p-3 border-t border-slate-700/50 bg-gradient-to-r from-slate-800/20 to-slate-700/20">
                         <div className="flex items-center justify-between text-xs text-slate-400">
                           <span>
-                            Showing {getFilteredTransactions().length} of {accountTransactions.length} transactions
-                            {(searchTerm || typeFilter !== "all" || employeeFilter !== "all" || dateRange !== "all" || customStartDate || customEndDate) && 
+                            Showing {getFilteredTransactions().length} of {transactions.length} transactions
+                            {(searchTerm || filters.type !== "all" || filters.verified_by !== "all" || dateRange !== "all" || customStartDate || customEndDate) && 
                               " (filtered)"
                             }
                           </span>
@@ -826,11 +801,10 @@ export default function BankingPage() {
                   <input
                     type="number"
                     step="0.01"
-                    value={newAccount.initialBalance}
-                    onChange={(e) => setNewAccount({...newAccount, initialBalance: e.target.value})}
+                    value={newAccount.balance}
+                    onChange={(e) => setNewAccount({...newAccount, balance: parseFloat(e.target.value) || 0})}
                     className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
                     placeholder="0.00"
-                    required
                   />
                 </div>
 
@@ -935,15 +909,15 @@ export default function BankingPage() {
                     Verified By (Employee)
                   </label>
                   <select
-                    value={newTransaction.verifiedBy}
-                    onChange={(e) => setNewTransaction({...newTransaction, verifiedBy: e.target.value})}
+                    value={newTransaction.verified_by}
+                    onChange={(e) => setNewTransaction({...newTransaction, verified_by: e.target.value})}
                     className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm cursor-pointer"
                     required
                   >
                     <option value="" className="bg-slate-800">Select employee...</option>
                     {employees.map((employee) => (
                       <option key={employee.id} value={employee.id} className="bg-slate-800">
-                        {employee.name} - {employee.role}
+                        {employee.full_name || `${employee.first_name} ${employee.last_name}`.trim() || employee.username}
                       </option>
                     ))}
                   </select>
@@ -1094,7 +1068,7 @@ export default function BankingPage() {
                           </div>
                         </div>
                         <div className="mt-2 text-xs text-slate-500">
-                          Created: {new Date(account.createdAt).toLocaleDateString()}
+                          Created: {new Date(account.created_at).toLocaleDateString()}
                         </div>
                       </div>
                     ))}
