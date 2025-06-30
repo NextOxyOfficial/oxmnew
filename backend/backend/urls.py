@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/', include('customers.urls')),
     path('api/', include('employees.urls')),
     path('api/', include('banking.urls')),
+    path('api/', include('subscription.urls')),  # Added subscription app endpoints
 ]
 
 # Serve media files during development
