@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useCurrency, formatCurrency } from "@/contexts/CurrencyContext";
+import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import {
   ArrowLeft,
   Mail,
@@ -38,6 +38,7 @@ import employeeAPI from "@/lib/employeeAPI";
 export default function EmployeeDetailsPage() {
   const router = useRouter();
   const params = useParams();
+  const formatCurrencyWithSymbol = useCurrencyFormatter();
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
@@ -129,13 +130,6 @@ export default function EmployeeDetailsPage() {
   const formatDate = (dateString: string) => {
     if (!mounted) return dateString;
     return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -775,7 +769,7 @@ export default function EmployeeDetailsPage() {
               <div>
                 <p className="text-cyan-300/80 text-sm">Monthly Salary</p>
                 <p className="text-xl font-bold text-white mt-1">
-                  {formatCurrency(employee.salary)}
+                  {formatCurrencyWithSymbol(employee.salary)}
                 </p>
               </div>
               <DollarSign className="h-7 w-7 text-cyan-400" />
@@ -802,7 +796,7 @@ export default function EmployeeDetailsPage() {
               <div>
                 <p className="text-yellow-300/80 text-sm">Total Incentives</p>
                 <p className="text-xl font-bold text-yellow-400 mt-1">
-                  {formatCurrency(totalIncentives)}
+                  {formatCurrencyWithSymbol(totalIncentives)}
                 </p>
               </div>
               <TrendingUp className="h-7 w-7 text-yellow-400" />
@@ -1396,7 +1390,9 @@ export default function EmployeeDetailsPage() {
                                   </div>
                                   <div className="col-span-3">
                                     <p className="text-sm font-semibold text-green-300">
-                                      {formatCurrency(incentive.amount)}
+                                      {formatCurrencyWithSymbol(
+                                        incentive.amount
+                                      )}
                                     </p>
                                   </div>
                                   <div className="col-span-3">
@@ -1503,28 +1499,30 @@ export default function EmployeeDetailsPage() {
                               </div>
                               <div className="col-span-2">
                                 <p className="text-sm text-slate-300">
-                                  {formatCurrency(record.base_salary)}
+                                  {formatCurrencyWithSymbol(record.base_salary)}
                                 </p>
                               </div>
                               <div className="col-span-2">
                                 <p className="text-sm text-slate-300">
                                   {record.overtime_hours}h ×{" "}
-                                  {formatCurrency(record.overtime_rate)}
+                                  {formatCurrencyWithSymbol(
+                                    record.overtime_rate
+                                  )}
                                 </p>
                                 <p className="text-xs text-slate-400">
-                                  {formatCurrency(
+                                  {formatCurrencyWithSymbol(
                                     record.overtime_hours * record.overtime_rate
                                   )}
                                 </p>
                               </div>
                               <div className="col-span-2">
                                 <p className="text-sm font-semibold text-green-300">
-                                  {formatCurrency(record.bonuses)}
+                                  {formatCurrencyWithSymbol(record.bonuses)}
                                 </p>
                               </div>
                               <div className="col-span-2">
                                 <p className="text-sm font-bold text-green-400">
-                                  {formatCurrency(record.net_salary)}
+                                  {formatCurrencyWithSymbol(record.net_salary)}
                                 </p>
                               </div>
                               <div className="col-span-2">

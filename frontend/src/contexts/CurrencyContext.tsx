@@ -101,6 +101,21 @@ export function useCurrency() {
   return context;
 }
 
+// Hook to get a currency formatter with the current symbol
+export function useCurrencyFormatter() {
+  const { currencySymbol } = useCurrency();
+
+  return (amount: number | string): string => {
+    const numAmount =
+      typeof amount === "string" ? parseFloat(amount) || 0 : amount;
+
+    // Format number with 2 decimal places
+    const formattedAmount = numAmount.toFixed(2);
+
+    return `${currencySymbol}${formattedAmount}`;
+  };
+}
+
 // Utility function to format currency with the current symbol
 export function formatCurrency(
   amount: number | string,
@@ -108,10 +123,9 @@ export function formatCurrency(
 ): string {
   const numAmount =
     typeof amount === "string" ? parseFloat(amount) || 0 : amount;
-  const currentSymbol = symbol || "$"; // fallback to USD symbol
 
   // Format number with 2 decimal places
   const formattedAmount = numAmount.toFixed(2);
 
-  return `${currentSymbol}${formattedAmount}`;
+  return `${symbol || "$"}${formattedAmount}`;
 }

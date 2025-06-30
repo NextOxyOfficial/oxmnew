@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { Plus, X, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { useCurrency, formatCurrency } from "@/contexts/CurrencyContext";
+import { useCurrency, useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { Employee, CreateEmployeeData } from "@/types/employee";
 import employeeAPI from "@/lib/employeeAPI";
 
 export default function EmployeesPage() {
   const router = useRouter();
   const { currencySymbol } = useCurrency();
+  const formatCurrency = useCurrencyFormatter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
