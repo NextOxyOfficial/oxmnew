@@ -1,25 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, User, DollarSign, Eye, MessageSquare, Phone, Mail, Download, FileText, Calendar } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Search,
+  User,
+  DollarSign,
+  Eye,
+  MessageSquare,
+  Phone,
+  Mail,
+  Download,
+  FileText,
+  Calendar,
+} from "lucide-react";
 import Link from "next/link";
+import { customersAPI, DueCustomer } from "@/lib/api/customers";
 
-interface DueCustomer {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  total_due: number;
-  due_payments: DuePayment[];
-}
-
-interface DuePayment {
-  id: number;
-  order_id: number;
-  amount: number;
-  due_date: string;
-  notes?: string;
+// Import dev auth helper in development
+if (process.env.NODE_ENV === "development") {
+  import("@/lib/dev-auth");
 }
 
 export default function DueBookPage() {
@@ -28,141 +27,82 @@ export default function DueBookPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState("");
-  const [dateFilterType, setDateFilterType] = useState<"all" | "due_today" | "due_this_week" | "custom">("all");
+  const [dateFilterType, setDateFilterType] = useState<
+    "all" | "due_today" | "due_this_week" | "custom"
+  >("all");
   const [isMounted, setIsMounted] = useState(false);
+  const [totalDueAmount, setTotalDueAmount] = useState(0);
 
-  // Mock data for demonstration
+  // Component mount check
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    const mockData: DueCustomer[] = [
-      {
-        id: 1,
-        name: "John Doe",
-        email: "john@example.com",
-        phone: "+1 (555) 123-4567",
-        address: "123 Main St, New York, NY 10001",
-        total_due: 450.00,
-        due_payments: [
-          { id: 1, order_id: 1001, amount: 250.00, due_date: "2025-01-15", notes: "First installment" },
-          { id: 2, order_id: 1002, amount: 200.00, due_date: "2025-02-01", notes: "Second installment" }
-        ]
-      },
-      {
-        id: 2,
-        name: "Jane Smith",
-        email: "jane@example.com",
-        phone: "+1 (555) 234-5678",
-        address: "456 Oak Ave, Los Angeles, CA 90210",
-        total_due: 180.00,
-        due_payments: [
-          { id: 3, order_id: 1003, amount: 180.00, due_date: "2025-02-01", notes: "Monthly payment plan" }
-        ]
-      },
-      {
-        id: 3,
-        name: "Bob Wilson",
-        email: "bob@example.com",
-        phone: "+1 (555) 345-6789",
-        address: "789 Pine St, Chicago, IL 60601",
-        total_due: 320.00,
-        due_payments: [
-          { id: 4, order_id: 1004, amount: 320.00, due_date: "2025-01-30" }
-        ]
-      },
-      {
-        id: 4,
-        name: "Alice Johnson",
-        email: "alice@example.com",
-        phone: "+1 (555) 456-7890",
-        address: "321 Elm Dr, Miami, FL 33101",
-        total_due: 150.00,
-        due_payments: [
-          { id: 5, order_id: 1005, amount: 150.00, due_date: "2024-12-30", notes: "Overdue payment" }
-        ]
-      },
-      {
-        id: 5,
-        name: "Charlie Brown",
-        email: "charlie@example.com",
-        phone: "+1 (555) 567-8901",
-        address: "654 Maple Ln, Seattle, WA 98101",
-        total_due: 275.00,
-        due_payments: [
-          { id: 6, order_id: 1006, amount: 125.00, due_date: "2025-01-25" },
-          { id: 7, order_id: 1007, amount: 150.00, due_date: "2025-02-15" }
-        ]
-      }
-    ];
+  // Fetch due customers from API
+  const fetchDueCustomers = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const params: {
+        search?: string;
+        date_filter_type?: "all" | "due_today" | "due_this_week" | "custom";
+        custom_date?: string;
+      } = {};
 
-    setDueCustomers(mockData);
-    setFilteredCustomers(mockData);
-    setIsLoading(false);
-  }, []);
+      if (searchTerm) params.search = searchTerm;
+      if (dateFilterType !== "all") params.date_filter_type = dateFilterType;
+      if (dateFilterType === "custom" && dateFilter)
+        params.custom_date = dateFilter;
 
-  // Filter customers based on search and date
-  useEffect(() => {
-    if (!isMounted) return;
-    
-    let filtered = dueCustomers;
-
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(customer =>
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone.includes(searchTerm)
-      );
+      const response = await customersAPI.getDuebookCustomers(params);
+      setDueCustomers(response.customers);
+      setFilteredCustomers(response.customers);
+      setTotalDueAmount(response.summary.total_due_amount);
+    } catch (error) {
+      console.error("Failed to fetch due customers:", error);
+      // Fallback to empty state
+      setDueCustomers([]);
+      setFilteredCustomers([]);
+      setTotalDueAmount(0);
+    } finally {
+      setIsLoading(false);
     }
+  }, [searchTerm, dateFilterType, dateFilter]);
 
-    // Apply date filter
-    if (dateFilterType !== "all") {
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
-      const oneWeekFromNow = new Date(today);
-      oneWeekFromNow.setDate(today.getDate() + 7);
-      const oneWeekStr = oneWeekFromNow.toISOString().split('T')[0];
-
-      filtered = filtered.filter(customer => {
-        return customer.due_payments.some(payment => {
-          const paymentDate = payment.due_date;
-          
-          switch (dateFilterType) {
-            case "due_today":
-              return paymentDate === todayStr;
-            case "due_this_week":
-              return paymentDate >= todayStr && paymentDate <= oneWeekStr;
-            case "custom":
-              return dateFilter ? paymentDate === dateFilter : true;
-            default:
-              return true;
-          }
-        });
-      });
+  // Initial load
+  useEffect(() => {
+    if (isMounted) {
+      fetchDueCustomers();
     }
+  }, [isMounted, fetchDueCustomers]);
 
-    setFilteredCustomers(filtered);
-  }, [dueCustomers, searchTerm, dateFilterType, dateFilter, isMounted]);
+  // Refetch when filters change
+  useEffect(() => {
+    if (isMounted) {
+      const debounceTimer = setTimeout(() => {
+        fetchDueCustomers();
+      }, 300); // Debounce search
+
+      return () => clearTimeout(debounceTimer);
+    }
+  }, [searchTerm, dateFilterType, dateFilter, isMounted, fetchDueCustomers]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const getTotalDue = () => {
-    return dueCustomers.reduce((sum, customer) => sum + customer.total_due, 0);
+    return totalDueAmount;
   };
 
   const handleSendSMS = (customer: DueCustomer) => {
@@ -171,27 +111,44 @@ export default function DueBookPage() {
 
   const exportToCSV = () => {
     if (!isMounted) return;
-    
-    const headers = ['Customer Name', 'Email', 'Phone', 'Due Amount', 'Number of Payments', 'Payment Details'];
-    const csvData = filteredCustomers.map(customer => [
+
+    const headers = [
+      "Customer Name",
+      "Email",
+      "Phone",
+      "Due Amount",
+      "Number of Payments",
+      "Payment Details",
+    ];
+    const csvData = filteredCustomers.map((customer) => [
       customer.name,
       customer.email,
       customer.phone,
       customer.total_due.toFixed(2),
       customer.due_payments.length,
-      customer.due_payments.map(p => `Order #${p.order_id}: $${p.amount} (Due: ${formatDate(p.due_date)})`).join('; ')
+      customer.due_payments
+        .map(
+          (p) =>
+            `Order #${p.order_id}: $${p.amount} (Due: ${formatDate(
+              p.due_date
+            )})`
+        )
+        .join("; "),
     ]);
 
     const csvContent = [headers, ...csvData]
-      .map(row => row.map(field => `"${field}"`).join(','))
-      .join('\n');
+      .map((row) => row.map((field) => `"${field}"`).join(","))
+      .join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `due-book-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `due-book-${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -199,7 +156,7 @@ export default function DueBookPage() {
 
   const exportToPDF = () => {
     if (!isMounted) return;
-    
+
     // Create a simple HTML structure for PDF
     const htmlContent = `
       <!DOCTYPE html>
@@ -225,8 +182,12 @@ export default function DueBookPage() {
         
         <div class="summary">
           <h3>Summary</h3>
-          <p><strong>Total Customers with Due:</strong> ${filteredCustomers.length}</p>
-          <p><strong>Total Due Amount:</strong> ${formatCurrency(getTotalDue())}</p>
+          <p><strong>Total Customers with Due:</strong> ${
+            filteredCustomers.length
+          }</p>
+          <p><strong>Total Due Amount:</strong> ${formatCurrency(
+            getTotalDue()
+          )}</p>
         </div>
 
         <table>
@@ -240,26 +201,34 @@ export default function DueBookPage() {
             </tr>
           </thead>
           <tbody>
-            ${filteredCustomers.map(customer => `
+            ${filteredCustomers
+              .map(
+                (customer) => `
               <tr>
                 <td>${customer.name}</td>
                 <td>${customer.email}</td>
                 <td>${customer.phone}</td>
                 <td class="amount">${formatCurrency(customer.total_due)}</td>
-                <td>${customer.due_payments.length} payment${customer.due_payments.length !== 1 ? 's' : ''}</td>
+                <td>${customer.due_payments.length} payment${
+                  customer.due_payments.length !== 1 ? "s" : ""
+                }</td>
               </tr>
-            `).join('')}
+            `
+              )
+              .join("")}
           </tbody>
         </table>
 
         <div class="footer">
-          <p>This report contains ${filteredCustomers.length} customers with outstanding due payments.</p>
+          <p>This report contains ${
+            filteredCustomers.length
+          } customers with outstanding due payments.</p>
         </div>
       </body>
       </html>
     `;
 
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(htmlContent);
       printWindow.document.close();
@@ -301,7 +270,9 @@ export default function DueBookPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-300/80 text-sm">Customers with Due</p>
-              <p className="text-xl font-bold text-white mt-1">{dueCustomers.length}</p>
+              <p className="text-xl font-bold text-white mt-1">
+                {dueCustomers.length}
+              </p>
             </div>
             <User className="h-7 w-7 text-blue-400" />
           </div>
@@ -312,7 +283,9 @@ export default function DueBookPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-red-300/80 text-sm">Total Due Amount</p>
-              <p className="text-xl font-bold text-red-400 mt-1">{formatCurrency(getTotalDue())}</p>
+              <p className="text-xl font-bold text-red-400 mt-1">
+                {formatCurrency(getTotalDue())}
+              </p>
             </div>
             <DollarSign className="h-7 w-7 text-red-400" />
           </div>
@@ -324,9 +297,11 @@ export default function DueBookPage() {
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
           <div className="p-4 border-b border-slate-700/50">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-slate-100">Due Customers List</h3>
+              <h3 className="text-lg font-medium text-slate-100">
+                Due Customers List
+              </h3>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 {/* Search Input */}
@@ -340,11 +315,19 @@ export default function DueBookPage() {
                     className="w-60 pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
-                
+
                 {/* Date Filter Dropdown */}
                 <select
                   value={dateFilterType}
-                  onChange={(e) => setDateFilterType(e.target.value as any)}
+                  onChange={(e) =>
+                    setDateFilterType(
+                      e.target.value as
+                        | "all"
+                        | "due_today"
+                        | "due_this_week"
+                        | "custom"
+                    )
+                  }
                   className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All Dates</option>
@@ -352,7 +335,7 @@ export default function DueBookPage() {
                   <option value="due_this_week">Due This Week</option>
                   <option value="custom">Custom Date</option>
                 </select>
-                
+
                 {/* Custom Date Input */}
                 {dateFilterType === "custom" && (
                   <div className="relative">
@@ -366,7 +349,7 @@ export default function DueBookPage() {
                   </div>
                 )}
               </div>
-              
+
               <div className="flex items-center space-x-3">
                 {/* Export Buttons */}
                 <button
@@ -394,11 +377,13 @@ export default function DueBookPage() {
               {/* Results Counter */}
               <div className="px-6 py-2 bg-slate-700/30 border-b border-white/5">
                 <p className="text-xs text-slate-400">
-                  Showing {filteredCustomers.length} of {dueCustomers.length} customers
-                  {dateFilterType !== "all" && ` • Filtered by: ${dateFilterType.replace('_', ' ')}`}
+                  Showing {filteredCustomers.length} of {dueCustomers.length}{" "}
+                  customers
+                  {dateFilterType !== "all" &&
+                    ` • Filtered by: ${dateFilterType.replace("_", " ")}`}
                 </p>
               </div>
-              
+
               {/* Table Header */}
               <div className="px-6 py-3 bg-white/5 border-b border-white/10">
                 <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
@@ -409,14 +394,17 @@ export default function DueBookPage() {
                   <div className="col-span-2">Actions</div>
                 </div>
               </div>
-              
+
               {/* Table Body */}
               <div className="divide-y divide-white/5">
                 {filteredCustomers.map((customer) => (
-                  <div key={customer.id} className="px-6 py-4 hover:bg-white/5 transition-colors">
+                  <div
+                    key={customer.id}
+                    className="px-6 py-4 hover:bg-white/5 transition-colors"
+                  >
                     <div className="grid grid-cols-12 gap-4 items-center">
                       <div className="col-span-3">
-                        <Link 
+                        <Link
                           href={`/dashboard/customers/${customer.id}`}
                           className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
                         >
@@ -442,7 +430,8 @@ export default function DueBookPage() {
                       </div>
                       <div className="col-span-2">
                         <p className="text-xs text-slate-400">
-                          {customer.due_payments.length} payment{customer.due_payments.length !== 1 ? 's' : ''}
+                          {customer.due_payments.length} payment
+                          {customer.due_payments.length !== 1 ? "s" : ""}
                         </p>
                       </div>
                       <div className="col-span-2">
@@ -472,8 +461,12 @@ export default function DueBookPage() {
           ) : (
             <div className="text-center py-8">
               <DollarSign className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-              <h3 className="text-base font-medium text-slate-400 mb-2">No Due Customers Found</h3>
-              <p className="text-sm text-slate-500">Try adjusting your search terms.</p>
+              <h3 className="text-base font-medium text-slate-400 mb-2">
+                No Due Customers Found
+              </h3>
+              <p className="text-sm text-slate-500">
+                Try adjusting your search terms.
+              </p>
             </div>
           )}
         </div>

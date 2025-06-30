@@ -438,3 +438,123 @@ def customer_summary(request, customer_id):
         return Response({
             'error': 'Customer not found'
         }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def duebook_customers(request):
+    """Get customers with due payments for the duebook page"""
+    try:
+        # Get search and filter parameters
+        search = request.GET.get('search', '')
+        date_filter_type = request.GET.get('date_filter_type', 'all')
+        custom_date = request.GET.get('custom_date', '')
+
+        # Base queryset - customers with due payments
+        customers_with_due = Customer.objects.filter(
+            user=request.user,
+            due_payments__status='pending'
+        ).distinct()
+
+        # Apply search filter
+        if search:
+            customers_with_due = customers_with_due.filter(
+                Q(name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(phone__icontains=search)
+            )
+
+        # Apply date filter
+        today = timezone.now().date()
+        if date_filter_type == 'due_today':
+            customers_with_due = customers_with_due.filter(
+                due_payments__due_date=today,
+                due_payments__status='pending'
+            ).distinct()
+        elif date_filter_type == 'due_this_week':
+            week_end = today + timedelta(days=7)
+            customers_with_due = customers_with_due.filter(
+                due_payments__due_date__range=[today, week_end],
+                due_payments__status='pending'
+            ).distinct()
+        elif date_filter_type == 'custom' and custom_date:
+            try:
+                custom_date_obj = datetime.strptime(
+                    custom_date, '%Y-%m-%d').date()
+                customers_with_due = customers_with_due.filter(
+                    due_payments__due_date=custom_date_obj,
+                    due_payments__status='pending'
+                ).distinct()
+            except ValueError:
+                pass
+
+        # Serialize customers with their due payments
+        due_customers = []
+        for customer in customers_with_due:
+            # Get pending due payments for this customer
+            pending_due_payments = customer.due_payments.filter(
+                status='pending')
+
+            # Apply date filter to payments if needed
+            if date_filter_type == 'due_today':
+                pending_due_payments = pending_due_payments.filter(
+                    due_date=today)
+            elif date_filter_type == 'due_this_week':
+                week_end = today + timedelta(days=7)
+                pending_due_payments = pending_due_payments.filter(
+                    due_date__range=[today, week_end])
+            elif date_filter_type == 'custom' and custom_date:
+                try:
+                    custom_date_obj = datetime.strptime(
+                        custom_date, '%Y-%m-%d').date()
+                    pending_due_payments = pending_due_payments.filter(
+                        due_date=custom_date_obj)
+                except ValueError:
+                    pass
+
+            if pending_due_payments.exists():
+                # Calculate total due amount (positive for due, negative for advance)
+                total_due = pending_due_payments.aggregate(
+                    total=Sum('amount'))['total'] or 0
+
+                customer_data = {
+                    'id': customer.id,
+                    'name': customer.name,
+                    'email': customer.email,
+                    'phone': customer.phone,
+                    'address': customer.address or '',
+                    'total_due': float(total_due),
+                    'due_payments': []
+                }
+
+                # Add due payment details
+                for payment in pending_due_payments:
+                    payment_data = {
+                        'id': payment.id,
+                        'order_id': payment.order.id if payment.order else None,
+                        'amount': float(payment.amount),
+                        'due_date': payment.due_date.isoformat(),
+                        'notes': payment.notes,
+                        'payment_type': payment.payment_type
+                    }
+                    customer_data['due_payments'].append(payment_data)
+
+                due_customers.append(customer_data)
+
+        # Calculate summary statistics
+        total_customers = len(due_customers)
+        total_due_amount = sum(customer['total_due']
+                               for customer in due_customers)
+
+        return Response({
+            'customers': due_customers,
+            'summary': {
+                'total_customers': total_customers,
+                'total_due_amount': total_due_amount
+            }
+        })
+
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

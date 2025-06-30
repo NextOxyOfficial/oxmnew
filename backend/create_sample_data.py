@@ -1,7 +1,7 @@
-from django.contrib.auth.models import User
-from customers.models import Customer, Order, OrderItem, CustomerGift, CustomerAchievement, CustomerLevel, DuePayment, Transaction
-from core.models import Gift, Achievement, Level
 from products.models import Product, ProductVariant
+from core.models import Gift, Achievement, Level
+from customers.models import Customer, Order, OrderItem, CustomerGift, CustomerAchievement, CustomerLevel, DuePayment, Transaction
+from django.contrib.auth.models import User
 import random
 import django
 import sys
@@ -14,7 +14,6 @@ sys.path.insert(0, '.')
 
 # Set up Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
-
 django.setup()
 
 # Now import Django models after setup
@@ -180,6 +179,58 @@ def create_sample_data():
                     assigned_by=user
                 )
                 print(f"Assigned level {level.name} to {customer.name}")
+
+            # Create due payments for customers
+            customer_orders = customer.orders.all()
+            if customer_orders:
+                # Create some due payments based on orders
+                due_payment_count = random.randint(1, 3)
+                for _ in range(due_payment_count):
+                    order = random.choice(customer_orders)
+                    payment_type = random.choice(['due', 'advance'])
+
+                    # Generate amount
+                    if payment_type == 'due':
+                        amount = Decimal(str(random.uniform(50, 500)))
+                    else:  # advance
+                        amount = Decimal(str(random.uniform(20, 200)))
+
+                    # Generate due date (some overdue, some future)
+                    days_offset = random.randint(-30, 60)  # -30 to +60 days
+                    due_date = date.today() + timedelta(days=days_offset)
+
+                    DuePayment.objects.create(
+                        customer=customer,
+                        order=order,
+                        amount=amount,
+                        payment_type=payment_type,
+                        due_date=due_date,
+                        status='pending',
+                        notes=f"Sample {payment_type} payment for order #{order.order_number}",
+                        user=user
+                    )
+                    print(
+                        f"Created {payment_type} payment of ${amount} for {customer.name}")
+
+            # Also create some due payments without orders (manual entries)
+            standalone_payments = random.randint(0, 2)
+            for _ in range(standalone_payments):
+                payment_type = random.choice(['due', 'advance'])
+                amount = Decimal(str(random.uniform(25, 300)))
+                days_offset = random.randint(-15, 45)
+                due_date = date.today() + timedelta(days=days_offset)
+
+                DuePayment.objects.create(
+                    customer=customer,
+                    amount=amount,
+                    payment_type=payment_type,
+                    due_date=due_date,
+                    status='pending',
+                    notes=f"Manual {payment_type} payment entry",
+                    user=user
+                )
+                print(
+                    f"Created standalone {payment_type} payment of ${amount} for {customer.name}")
 
 
 if __name__ == '__main__':

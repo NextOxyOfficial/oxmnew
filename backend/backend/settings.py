@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'suppliers',
     'products',
     'customers',
+    'employees',
 ]
 
 CORS_ALLOWED_ORIGINS = [
