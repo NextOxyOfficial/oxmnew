@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useBanking } from "@/hooks/useBanking";
 import { useAuth } from "@/contexts/AuthContext";
-import type { BankAccount, Transaction, Employee, TransactionFilters } from "@/types/banking";
+import type { BankAccount, Transaction, TransactionWithBalance, Employee, TransactionFilters, CreateTransactionData, CreateAccountData } from "@/types/banking";
 
 export default function BankingPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -267,21 +267,77 @@ export default function BankingPage() {
     return transactions;
   };
 
+  // Calculate running balance for transactions
+  const getTransactionsWithRunningBalance = (): TransactionWithBalance[] => {
+    const filteredTransactions = getFilteredTransactions();
+    if (!selectedAccount || filteredTransactions.length === 0) return [];
+
+    // Sort transactions by date and time (oldest first) to calculate running balance chronologically
+    const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      
+      // If dates are the same, sort by updated_at (creation time)
+      if (dateA.getTime() === dateB.getTime()) {
+        return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+      }
+      
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    // Get the current account balance - ensure it's a number
+    const currentBalance = Number(selectedAccount.balance) || 0;
+    
+    // Calculate the net effect of all filtered transactions
+    const netTransactionEffect = sortedTransactions.reduce((total, transaction) => {
+      const amount = Number(transaction.amount) || 0;
+      if (transaction.type === 'credit') {
+        return total + amount;
+      } else {
+        return total - amount;
+      }
+    }, 0);
+    
+    // The starting balance (before any of these transactions) would be:
+    // current balance - net effect of all these transactions
+    let runningBalance = currentBalance - netTransactionEffect;
+    
+    // Now calculate running balance after each transaction chronologically
+    const transactionsWithBalance: TransactionWithBalance[] = sortedTransactions.map(transaction => {
+      // Apply this transaction to the running balance - ensure amount is a number
+      const amount = Number(transaction.amount) || 0;
+      if (transaction.type === 'credit') {
+        runningBalance += amount;
+      } else {
+        runningBalance -= amount;
+      }
+      
+      return {
+        ...transaction,
+        runningBalance: runningBalance
+      };
+    });
+
+    // Return in reverse chronological order (newest first) for display
+    return transactionsWithBalance.reverse();
+  };
+
   // Download functions
   const downloadCSV = () => {
-    const filteredTransactions = getFilteredTransactions();
-    if (filteredTransactions.length === 0) return;
+    const transactionsWithBalance = getTransactionsWithRunningBalance();
+    if (transactionsWithBalance.length === 0) return;
 
-    const headers = ['Date', 'Type', 'Amount', 'Purpose', 'Verified By', 'Status'];
+    const headers = ['Date', 'Type', 'Amount', 'Purpose', 'Verified By', 'Status', 'Running Balance'];
     const csvContent = [
       headers.join(','),
-      ...filteredTransactions.map(t => [
+      ...transactionsWithBalance.map(t => [
         new Date(t.date).toLocaleDateString(),
         t.type,
         t.amount,
         `"${t.purpose}"`,
         `"${getEmployeeName(t.verified_by)}"`,
-        t.status
+        t.status,
+        t.runningBalance
       ].join(','))
     ].join('\n');
 
@@ -297,8 +353,8 @@ export default function BankingPage() {
   };
 
   const downloadPDF = () => {
-    const filteredTransactions = getFilteredTransactions();
-    if (filteredTransactions.length === 0) return;
+    const transactionsWithBalance = getTransactionsWithRunningBalance();
+    if (transactionsWithBalance.length === 0) return;
 
     // Create a simple HTML structure for PDF generation
     const htmlContent = `
@@ -332,10 +388,11 @@ export default function BankingPage() {
                 <th>Purpose</th>
                 <th>Verified By</th>
                 <th>Status</th>
+                <th>Running Balance</th>
               </tr>
             </thead>
             <tbody>
-              ${filteredTransactions.map(t => `
+              ${transactionsWithBalance.map(t => `
                 <tr>
                   <td>${new Date(t.date).toLocaleDateString()}</td>
                   <td style="color: ${t.type === 'credit' ? 'green' : 'red'}">${t.type.toUpperCase()}</td>
@@ -343,6 +400,7 @@ export default function BankingPage() {
                   <td>${t.purpose}</td>
                   <td>${getEmployeeName(t.verified_by)}</td>
                   <td>${t.status}</td>
+                  <td style="color: ${t.runningBalance >= 0 ? 'green' : 'red'}">$${Math.abs(t.runningBalance).toFixed(2)}${t.runningBalance < 0 ? ' (Overdraft)' : ''}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -363,13 +421,13 @@ export default function BankingPage() {
   const getAccountSummary = (useFiltered = false) => {
     if (!selectedAccountId) return { totalCredit: 0, totalDebit: 0 };
     
-    const transactionsToUse = useFiltered ? getFilteredTransactions() : transactions;
+    const transactionsToUse = useFiltered ? getTransactionsWithRunningBalance() : transactions;
     const totalCredit = transactionsToUse
-      .filter((t: Transaction) => t.type === "credit")
-      .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
+      .filter((t: Transaction | TransactionWithBalance) => t.type === "credit")
+      .reduce((sum: number, t: Transaction | TransactionWithBalance) => sum + t.amount, 0);
     const totalDebit = transactionsToUse
-      .filter((t: Transaction) => t.type === "debit")
-      .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
+      .filter((t: Transaction | TransactionWithBalance) => t.type === "debit")
+      .reduce((sum: number, t: Transaction | TransactionWithBalance) => sum + t.amount, 0);
     
     return { totalCredit, totalDebit };
   };
@@ -681,7 +739,7 @@ export default function BankingPage() {
 
                 {/* Transaction History */}
                 <div>
-                  {getFilteredTransactions().length === 0 ? (
+                  {getTransactionsWithRunningBalance().length === 0 ? (
                     <div className="p-8 text-center">
                       <DollarSign className="h-10 w-10 text-slate-500 mx-auto mb-3" />
                       <h4 className="text-base font-medium text-slate-300 mb-2">
@@ -713,10 +771,11 @@ export default function BankingPage() {
                             <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Verified By</th>
                             <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Date</th>
                             <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Status</th>
+                            <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Running Balance</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {getFilteredTransactions().map((transaction) => (
+                          {getTransactionsWithRunningBalance().map((transaction) => (
                             <tr key={transaction.id} className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors">
                               <td className="py-3 px-4">
                                 <div className="flex items-center space-x-2">
@@ -754,6 +813,18 @@ export default function BankingPage() {
                                   <span>Verified</span>
                                 </span>
                               </td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center space-x-1.5">
+                                  <span className={`font-semibold text-sm ${
+                                    transaction.runningBalance >= 0 ? "text-green-400" : "text-red-400"
+                                  }`}>
+                                    {formatCurrency(Math.abs(transaction.runningBalance))}
+                                  </span>
+                                  {transaction.runningBalance < 0 && (
+                                    <span className="text-xs text-red-400 font-medium">(Overdraft)</span>
+                                  )}
+                                </div>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -763,12 +834,12 @@ export default function BankingPage() {
                       <div className="p-3 border-t border-slate-700/50 bg-gradient-to-r from-slate-800/20 to-slate-700/20">
                         <div className="flex items-center justify-between text-xs text-slate-400">
                           <span>
-                            Showing {getFilteredTransactions().length} of {transactions.length} transactions
+                            Showing {getTransactionsWithRunningBalance().length} of {transactions.length} transactions
                             {(searchTerm || filters.type !== "all" || filters.verified_by !== "all" || dateRange !== "all" || customStartDate || customEndDate) && 
                               " (filtered)"
                             }
                           </span>
-                          {getFilteredTransactions().length > 0 && (
+                          {getTransactionsWithRunningBalance().length > 0 && (
                             <div className="flex items-center space-x-3">
                               <span className="text-green-400 text-xs">
                                 +{formatCurrency(getAccountSummary(true).totalCredit)}

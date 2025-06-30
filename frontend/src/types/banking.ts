@@ -35,6 +35,10 @@ export interface Transaction {
   account_name: string;
 }
 
+export interface TransactionWithBalance extends Transaction {
+  runningBalance: number;
+}
+
 export interface Employee {
   id: string;
   username: string;
