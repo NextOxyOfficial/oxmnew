@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { customersAPI, type Customer } from "@/lib/api/customers";
+import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 
 // Import dev auth helper in development
 if (process.env.NODE_ENV === "development") {
@@ -12,6 +13,7 @@ if (process.env.NODE_ENV === "development") {
 
 export default function CustomersPage() {
   const router = useRouter();
+  const formatCurrency = useCurrencyFormatter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -387,7 +389,7 @@ export default function CustomersPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
                   />
                 </svg>
               </div>
@@ -396,7 +398,7 @@ export default function CustomersPage() {
                   Total Revenue
                 </p>
                 <p className="text-base font-bold text-yellow-400">
-                  ${totalRevenue.toFixed(2)}
+                  {formatCurrency(totalRevenue)}
                 </p>
                 <p className="text-xs text-yellow-500 opacity-80">
                   From all customers
@@ -539,7 +541,7 @@ export default function CustomersPage() {
                     <div>
                       <p className="text-xs text-slate-400">Total Spent</p>
                       <p className="text-sm font-medium text-green-400">
-                        ${(customer.total_spent || 0).toFixed(2)}
+                        {formatCurrency(customer.total_spent || 0)}
                       </p>
                     </div>
                   </div>
@@ -705,7 +707,7 @@ export default function CustomersPage() {
                             {customer.total_orders || 0} orders
                           </div>
                           <div className="text-sm font-bold text-green-400">
-                            ${(customer.total_spent || 0).toFixed(2)}
+                            {formatCurrency(customer.total_spent || 0)}
                           </div>
                         </div>
                       </td>
