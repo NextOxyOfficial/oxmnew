@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SmsHistory from "./SmsHistory";
 
 // Mock data for customers, employees, and suppliers
@@ -22,22 +22,29 @@ const mockHistory = [
 	{
 		id: 1,
 		time: "2025-07-01 14:32",
-		contacts: 2,
+		contacts: [
+			{ number: "+8801000000001", name: "Alice Customer" },
+			{ number: "+8801000000002", name: "Bob Customer" },
+		],
 		smsCount: 2,
 		text: "Promo: 10% off for all!",
 	},
 	{
 		id: 2,
 		time: "2025-07-01 13:10",
-		contacts: 1,
+		contacts: [{ number: "+8801000001001", name: "Eve Employee" }],
 		smsCount: 1,
 		text: "Hello John, your order is ready.",
 	},
 	{
 		id: 3,
 		time: "2025-06-30 18:45",
-		contacts: 5,
-		smsCount: 5,
+		contacts: [
+			{ number: "+8801000001002", name: "John Employee" },
+			{ number: "+8801000002001", name: "Sam Supplier" },
+			{ number: "+8801000002002", name: "Jane Supplier" },
+		],
+		smsCount: 3,
 		text: "Monthly update sent to all employees.",
 	},
 ];
@@ -46,7 +53,44 @@ export default function SmsPage() {
 	const [tab, setTab] = useState("custom");
 	const [message, setMessage] = useState("");
 	const [status, setStatus] = useState<string | null>(null);
-	const [bulkContacts, setBulkContacts] = useState("");
+	const [contactsText, setContactsText] = useState("");
+	const [contacts, setContacts] = useState<{ number: string; name: string }[]>([]);
+
+	// Populate contactsText based on tab
+	useEffect(() => {
+		let lines: string[] = [];
+		if (tab === "custom") {
+			// keep as is
+			lines = contactsText.split("\n").filter(Boolean);
+		} else if (tab === "customers") {
+			lines = mockCustomers.map((c) => `${c.phone}, ${c.name}`);
+		} else if (tab === "employees") {
+			lines = mockEmployees.map((e) => `${e.phone}, ${e.name}`);
+		} else if (tab === "suppliers") {
+			lines = mockSuppliers.map((s) => `${s.phone}, ${s.name}`);
+		}
+		setContactsText(lines.join("\n"));
+	}, [tab]);
+
+	// Parse contactsText into contacts array
+	useEffect(() => {
+		setContacts(
+			contactsText
+				.split("\n")
+				.map((line) => {
+					const [number, ...nameParts] = line.split(",");
+					return number && nameParts.length
+						? { number: number.trim(), name: nameParts.join(",").trim() }
+						: null;
+				})
+				.filter(Boolean) as { number: string; name: string }[]
+		);
+	}, [contactsText]);
+
+	const handleRemoveContact = (idx: number) => {
+		const newContacts = contacts.filter((_, i) => i !== idx);
+		setContactsText(newContacts.map((c) => `${c.number}, ${c.name}`).join("\n"));
+	};
 
 	const handleSend = () => {
 		setStatus("Sending...");
@@ -119,22 +163,21 @@ export default function SmsPage() {
 			</div>
 
 			{/* Main Form */}
-			<div className="bg-slate-900/70 border border-slate-700/50 rounded-xl p-6 space-y-6">
-				{tab === "custom" && (
-					<div>
+			<div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4 space-y-6">
+				{tab !== "history" && (
+					<>
 						<label className="block text-slate-300 mb-2 font-medium">
-							Bulk Contacts (Number, Name per line)
+							Contacts (Number, Name per line)
 						</label>
 						<textarea
 							className="w-full p-2 rounded bg-slate-800 text-slate-200 border border-slate-700 mb-4"
 							rows={4}
 							placeholder="017xxxxxxxx, John\n018xxxxxxxx, Jane"
-							value={bulkContacts}
-							onChange={(e) => setBulkContacts(e.target.value)}
+							value={contactsText}
+							onChange={(e) => setContactsText(e.target.value)}
 						/>
-					</div>
+					</>
 				)}
-				{tab === "suppliers" && <></>}
 				{tab === "history" && <SmsHistory history={mockHistory} />}
 				{tab !== "history" && (
 					<>
@@ -155,13 +198,12 @@ export default function SmsPage() {
 							</span>
 						</div>
 						<button
-							className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-3 px-6 rounded-lg font-medium hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
+							className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg font-medium hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 text-sm mt-2 self-end"
 							onClick={handleSend}
-							disabled={
-								tab === "custom" ? !bulkContacts.trim() : false
-							}
+							disabled={contacts.length === 0}
+							style={{ minWidth: 120 }}
 						>
-							{tab === "custom" ? "Send SMS to All" : "Send SMS"}
+							Send SMS
 						</button>
 						{status && (
 							<div className="text-center text-green-400 mt-2">{status}</div>
