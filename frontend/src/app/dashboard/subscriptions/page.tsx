@@ -63,9 +63,9 @@ export default function SubscriptionsPage() {
 	};
 
 	return (
-		<div className="w-full max-w-6xl mx-auto sm:p-6 p-1 space-y-10">
+		<div className="w-full max-w-6xl mx-auto sm:p-6 p-2 space-y-10">
 			<div className="text-center mb-8">
-				<h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+				<h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
 					Subscriptions
 				</h1>
 				<p className="text-gray-400 text-base mt-2">
@@ -78,7 +78,7 @@ export default function SubscriptionsPage() {
 				{plans.map((plan) => (
 					<div
 						key={plan.id}
-						className={`relative bg-slate-900/60 border rounded-xl p-8 flex flex-col items-center shadow-lg transition-all duration-200 ${
+						className={`relative bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-6 flex flex-col items-center transition-all duration-200 ${
 							plan.popular
 								? "border-cyan-500 ring-2 ring-cyan-500"
 								: "border-slate-700/50"
@@ -89,27 +89,27 @@ export default function SubscriptionsPage() {
 								Most Popular
 							</span>
 						)}
-						<h2 className="text-2xl font-bold text-white mb-2">
+						<h2 className="text-xl font-bold text-white mb-2">
 							{plan.name}
 						</h2>
-						<p className="text-slate-400 mb-4 text-center">
+						<p className="text-gray-300 mb-4 text-center text-sm">
 							{plan.description}
 						</p>
 						<div className="mb-6">
-							<span className="text-4xl font-bold text-white">
+							<span className="text-3xl font-bold text-white">
 								{plan.price === 0
 									? "Free"
 									: `৳${plan.price}`}
 							</span>
 							{plan.price !== 0 && (
-								<span className="text-slate-400 ml-1">
+								<span className="text-slate-400 ml-1 text-base">
 									/ {plan.period}
 								</span>
 							)}
 						</div>
 						<ul className="mb-6 space-y-2 w-full">
 							{plan.features.map((feature, idx) => (
-								<li key={idx} className="flex items-center text-slate-300">
+								<li key={idx} className="flex items-center text-slate-300 text-sm">
 									<svg
 										className="w-4 h-4 text-cyan-400 mr-2"
 										fill="none"
@@ -128,7 +128,7 @@ export default function SubscriptionsPage() {
 							))}
 						</ul>
 						<button
-							className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 mt-auto ${
+							className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-200 mt-auto text-sm ${
 							plan.id === "free"
 								? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
 								: currentPlan === plan.id || isProcessing
@@ -154,17 +154,17 @@ export default function SubscriptionsPage() {
 
 			{/* SMS Packages */}
 			<div className="mt-12">
-				<h3 className="text-xl font-bold text-slate-200 mb-2 text-center">
+				<h3 className="text-lg font-bold text-white mb-2 text-center">
 					SMS Packages
 				</h3>
-				<p className="text-slate-400 text-sm text-center mb-8">
+				<p className="text-gray-400 text-sm text-center mb-8">
 					Buy SMS credits for your marketing campaigns. Credits never expire.
 				</p>
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
 					{smsPackages.map((pkg, idx) => (
 						<div
 							key={idx}
-							className={`relative bg-slate-900/60 border rounded-xl p-6 flex flex-col items-center shadow transition-all duration-200 ${
+							className={`relative bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-6 flex flex-col items-center transition-all duration-200 ${
 								pkg.popular
 									? "border-orange-500 ring-2 ring-orange-500"
 									: "border-slate-700/50"
@@ -175,7 +175,7 @@ export default function SubscriptionsPage() {
 									Popular
 								</span>
 							)}
-							<div className="text-2xl font-bold text-white mb-2">
+							<div className="text-xl font-bold text-white mb-2">
 								{pkg.sms.toLocaleString()} SMS
 							</div>
 							<div className="text-lg text-cyan-400 font-semibold mb-4">
