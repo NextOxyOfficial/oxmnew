@@ -856,9 +856,6 @@ export default function BankingPage() {
                               <span className="text-red-400 text-xs">
                                 -{formatCurrency((getAccountSummary(true).totalDebit || 0))}
                               </span>
-                              <span className="text-cyan-400 font-medium text-xs">
-                                Net: {formatCurrency(((getAccountSummary(true).totalCredit || 0) - (getAccountSummary(true).totalDebit || 0)))}
-                              </span>
                               
                               {/* Export Options */}
                               <div className="flex items-center space-x-1.5 ml-3 pl-3 border-l border-slate-600/50">
