@@ -176,7 +176,14 @@ export default function EmployeesPage() {
       });
       setShowCreateModal(false);
 
-      alert("Employee created successfully!");
+      // Show success message with option to view details
+      const viewDetails = window.confirm(
+        `Employee "${createdEmployee.name}" created successfully!\n\nWould you like to view their details now?`
+      );
+
+      if (viewDetails) {
+        router.push(`/dashboard/employees/${createdEmployee.id}`);
+      }
     } catch (error) {
       console.error("Error creating employee:", error);
       alert("Failed to create employee. Please try again.");

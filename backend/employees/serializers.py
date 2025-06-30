@@ -123,10 +123,13 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = [
-            'employee_id', 'name', 'email', 'phone', 'address',
+            'id', 'employee_id', 'name', 'email', 'phone', 'address',
             'role', 'department', 'manager', 'salary', 'hiring_date',
             'photo', 'status'
         ]
+        extra_kwargs = {
+            'id': {'read_only': True}
+        }
 
     def validate_employee_id(self, value):
         """Ensure employee_id is unique"""
