@@ -450,10 +450,6 @@ export class ApiService {
 	}
 
 	// Suppliers methods
-	static async getSuppliers() {
-		return this.get("/suppliers/");
-	}
-
 	static async createSupplier(supplierData: {
 		name: string;
 		address?: string;
@@ -997,11 +993,15 @@ export class ApiService {
 		return this.get(`/banking/transactions/dashboard_stats/${queryParams}`);
 	}
 
-	// Fix: add type for suppliers
+	// Fix: avoid static reference to class inside itself
 	static async getSuppliers(): Promise<{ id: number; name: string; phone: string }[]> {
-		const list = await ApiService.get("/suppliers/");
-		if (!Array.isArray(list)) return [];
-		return list.map((s: any) => ({ id: s.id, name: s.name, phone: s.phone }));
+		const list = await this.get("/suppliers/");
+		if (Array.isArray(list)) {
+			return list.map((s: any) => ({ id: s.id, name: s.name, phone: s.phone }));
+		} else if (list && Array.isArray(list.results)) {
+			return list.results.map((s: any) => ({ id: s.id, name: s.name, phone: s.phone }));
+		}
+		return [];
 	}
 
 	// Add a stub for getSmsHistory (returns empty for now, or implement if endpoint exists)
