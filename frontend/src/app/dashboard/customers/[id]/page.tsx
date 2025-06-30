@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import {
   ArrowLeft,
   Mail,
@@ -105,6 +106,7 @@ interface CustomerLevel {
 export default function CustomerDetailsPage() {
   const router = useRouter();
   const params = useParams();
+  const formatCurrency = useCurrencyFormatter();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("profile");
@@ -721,7 +723,7 @@ export default function CustomerDetailsPage() {
               <div>
                 <p className="text-green-300/80 text-sm">Total Spent</p>
                 <p className="text-xl font-bold text-green-400 mt-1">
-                  ${customer.total_spent.toFixed(2)}
+                  {formatCurrency(customer.total_spent)}
                 </p>
               </div>
               <DollarSign className="h-7 w-7 text-green-400" />
@@ -749,7 +751,7 @@ export default function CustomerDetailsPage() {
                     netAmount >= 0 ? "text-red-400" : "text-green-400"
                   } mt-1`}
                 >
-                  ${Math.abs(netAmount).toFixed(2)}
+                  {formatCurrency(Math.abs(netAmount))}
                 </p>
               </div>
               <DollarSign
@@ -1001,7 +1003,7 @@ export default function CustomerDetailsPage() {
                               </div>
                               <div className="col-span-2">
                                 <p className="text-sm font-semibold text-green-300">
-                                  ${order.total.toFixed(2)}
+                                  {formatCurrency(order.total)}
                                 </p>
                               </div>
                               <div className="col-span-2">
@@ -1104,7 +1106,7 @@ export default function CustomerDetailsPage() {
                                       : "text-green-300"
                                   }`}
                                 >
-                                  ${Math.abs(payment.amount).toFixed(2)}
+                                  {formatCurrency(Math.abs(payment.amount))}
                                 </p>
                               </div>
                               <div className="col-span-3">
@@ -1577,13 +1579,13 @@ export default function CustomerDetailsPage() {
                           Items ({selectedOrder.items})
                         </span>
                         <span className="text-sm text-gray-900">
-                          ${selectedOrder.total.toFixed(2)}
+                          {formatCurrency(selectedOrder.total)}
                         </span>
                       </div>
                       <div className="flex justify-between font-medium border-t border-gray-200 pt-2">
                         <span className="text-gray-900">Total</span>
                         <span className="text-gray-900">
-                          ${selectedOrder.total.toFixed(2)}
+                          {formatCurrency(selectedOrder.total)}
                         </span>
                       </div>
                     </div>
