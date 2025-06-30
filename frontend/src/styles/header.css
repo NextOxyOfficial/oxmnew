@@ -1,0 +1,152 @@
+/* Header Enhancement Styles */
+
+/* Smooth scroll behavior for mobile */
+@media (max-width: 768px) {
+  .header-mobile-search {
+    transition: max-height 0.3s ease-in-out;
+    overflow: hidden;
+  }
+  
+  .header-mobile-search.collapsed {
+    max-height: 0;
+  }
+  
+  .header-mobile-search.expanded {
+    max-height: 80px;
+  }
+}
+
+/* Notification badge animation */
+.notification-badge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Dropdown animations */
+.dropdown-enter {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.dropdown-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms ease-in-out, transform 200ms ease-in-out;
+}
+
+.dropdown-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dropdown-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 150ms ease-in-out, transform 150ms ease-in-out;
+}
+
+/* Mobile-first responsive design improvements */
+@media (max-width: 640px) {
+  .header-logo-text {
+    display: none;
+  }
+  
+  .header-breadcrumbs {
+    display: none;
+  }
+  
+  .header-stats {
+    display: none;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1024px) {
+  .header-time-date {
+    display: none;
+  }
+  
+  .header-quick-stats {
+    gap: 0.25rem;
+  }
+  
+  .header-quick-stats > div {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.625rem;
+  }
+}
+
+/* Focus states for accessibility */
+.header-button:focus-visible {
+  outline: 2px solid #06b6d4;
+  outline-offset: 2px;
+}
+
+/* Hover states */
+.header-button:hover {
+  transform: translateY(-1px);
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Loading states */
+.header-loading-skeleton {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Dark mode improvements */
+.dark .header-glass {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .header-border {
+    border-color: #ffffff;
+  }
+  
+  .header-text {
+    color: #ffffff;
+  }
+  
+  .header-secondary-text {
+    color: #e5e7eb;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .notification-badge {
+    animation: none;
+  }
+  
+  .dropdown-enter-active,
+  .dropdown-exit-active {
+    transition: none;
+  }
+  
+  .header-button:hover {
+    transform: none;
+  }
+}

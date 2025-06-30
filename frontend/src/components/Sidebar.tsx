@@ -16,6 +16,9 @@ import {
   Crown,
   MessageCircle,
   ShoppingCart,
+  Package,
+  TrendingUp,
+  BarChart3,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -23,6 +26,8 @@ interface NavigationItem {
   href: string;
   icon: LucideIcon;
   current: boolean;
+  category: string;
+  badge?: string;
 }
 
 interface SidebarProps {
@@ -33,6 +38,9 @@ interface SidebarProps {
   securityLevel?: number;
   networkStatus?: number;
   smsCredits?: number;
+  productCount?: number;
+  totalRevenue?: number;
+  ordersCount?: number;
 }
 
 export default function Sidebar({ 
@@ -100,16 +108,7 @@ export default function Sidebar({
               </div>
               
               <nav className="space-y-1 mb-8 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {navigation.map((item) => (
-                  <NavItem
-                    key={item.name}
-                    icon={item.icon}
-                    label={item.name}
-                    href={item.href}
-                    active={item.current}
-                    onClick={onClose}
-                  />
-                ))}
+                <CategorizedNavigation navigation={navigation} onItemClick={onClose} />
               </nav>
             </div>
           </div>
@@ -152,15 +151,7 @@ export default function Sidebar({
             </div>
 
             <nav className="space-y-1 mb-8 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {navigation.map((item) => (
-                <NavItem
-                  key={item.name}
-                  icon={item.icon}
-                  label={item.name}
-                  href={item.href}
-                  active={item.current}
-                />
-              ))}
+              <CategorizedNavigation navigation={navigation} onItemClick={onClose} />
             </nav>
           </div>
         </div>
@@ -169,32 +160,126 @@ export default function Sidebar({
   );
 }
 
+// Component for categorized navigation
+function CategorizedNavigation({ 
+  navigation, 
+  onItemClick 
+}: { 
+  navigation: NavigationItem[]; 
+  onItemClick?: () => void;
+}) {
+  const categories = {
+    main: { label: "Overview", items: [] as NavigationItem[] },
+    business: { label: "Business Operations", items: [] as NavigationItem[] },
+    finance: { label: "Financial Management", items: [] as NavigationItem[] },
+    hr: { label: "Human Resources", items: [] as NavigationItem[] },
+    communication: { label: "Communication & Sales", items: [] as NavigationItem[] },
+    tools: { label: "Tools & Utilities", items: [] as NavigationItem[] },
+    settings: { label: "Settings", items: [] as NavigationItem[] },
+  };
+
+  // Group navigation items by category
+  navigation.forEach(item => {
+    if (categories[item.category as keyof typeof categories]) {
+      categories[item.category as keyof typeof categories].items.push(item);
+    }
+  });
+
+  return (
+    <div className="space-y-6">
+      {Object.entries(categories).map(([key, category]) => {
+        if (category.items.length === 0) return null;
+        
+        return (
+          <div key={key}>
+            {key !== 'main' && (
+              <div className="px-3 mb-2">
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  {category.label}
+                </h3>
+              </div>
+            )}
+            <div className="space-y-1">
+              {category.items.map((item) => (
+                <NavItem
+                  key={item.name}
+                  icon={item.icon}
+                  label={item.name}
+                  href={item.href}
+                  active={item.current}
+                  badge={item.badge}
+                  onClick={onItemClick}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Component for nav items
 function NavItem({ 
   icon: Icon, 
   label, 
   href, 
-  active, 
+  active,
+  badge,
   onClick 
 }: { 
   icon: LucideIcon; 
   label: string; 
   href: string;
   active?: boolean;
+  badge?: string;
   onClick?: () => void;
 }) {
+  const getBadgeColors = (badgeType?: string) => {
+    switch (badgeType) {
+      case 'inventory':
+        return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
+      case 'sales':
+        return 'bg-green-500/20 text-green-300 border-green-500/30';
+      case 'payments':
+        return 'bg-red-500/20 text-red-300 border-red-500/30';
+      case 'e-commerce':
+        return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+      case 'pro':
+        return 'bg-gradient-to-r from-amber-400 to-orange-500 text-black border-0';
+      default:
+        return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+    }
+  };
+
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={`w-full flex items-center justify-start px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200 group ${
+      className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200 group ${
         active 
           ? "bg-slate-800/70 text-cyan-400 shadow-sm" 
           : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/30"
       }`}
     >
-      <Icon className="mr-3 h-4 w-4 flex-shrink-0" />
-      <span className="truncate">{label}</span>
+      <div className="flex items-center">
+        <Icon className="mr-3 h-4 w-4 flex-shrink-0" />
+        <span className="truncate">{label}</span>
+      </div>
+      
+      {badge && (
+        <span className={`
+          px-2 py-0.5 text-xs font-medium rounded-full border
+          ${getBadgeColors(badge)}
+          ${badge === 'pro' ? 'font-bold' : ''}
+        `}>
+          {badge === 'inventory' && 'INV'}
+          {badge === 'sales' && 'SALE'}
+          {badge === 'payments' && 'PAY'}
+          {badge === 'e-commerce' && 'WEB'}
+          {badge === 'pro' && 'PRO'}
+        </span>
+      )}
     </Link>
   );
 }

@@ -39,110 +39,138 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/dashboard",
       icon: BarChart3,
       current: pathname === "/dashboard",
+      category: "main"
     },
+    
+    // Business Operations
     {
       name: "Products",
       href: "/dashboard/products",
       icon: Package,
-      current: pathname === "/dashboard/products",
+      current: pathname.startsWith("/dashboard/products"),
+      category: "business",
+      badge: "inventory"
     },
     {
       name: "Orders",
       href: "/dashboard/orders",
       icon: ShoppingCart,
-      current: pathname === "/dashboard/orders",
-    },
-    {
-      name: "Suppliers",
-      href: "/dashboard/suppliers",
-      icon: Truck,
-      current: pathname === "/dashboard/suppliers",
-    },
-    {
-      name: "Settings",
-      href: "/dashboard/settings",
-      icon: Settings,
-      current: pathname === "/dashboard/settings",
+      current: pathname.startsWith("/dashboard/orders"),
+      category: "business",
+      badge: "sales"
     },
     {
       name: "Customers",
       href: "/dashboard/customers",
       icon: Users,
-      current: pathname === "/dashboard/customers",
+      current: pathname.startsWith("/dashboard/customers"),
+      category: "business"
     },
+    {
+      name: "Suppliers",
+      href: "/dashboard/suppliers",
+      icon: Truck,
+      current: pathname.startsWith("/dashboard/suppliers"),
+      category: "business"
+    },
+    
+    // Financial Management
     {
       name: "Banking",
       href: "/dashboard/banking",
       icon: Building2,
-      current: pathname === "/dashboard/banking",
-    },
-    {
-      name: "Employees",
-      href: "/dashboard/employees",
-      icon: Briefcase,
-      current: pathname === "/dashboard/employees",
+      current: pathname.startsWith("/dashboard/banking"),
+      category: "finance"
     },
     {
       name: "Due Book",
       href: "/dashboard/duebook",
       icon: CreditCard,
-      current: pathname === "/dashboard/duebook",
+      current: pathname.startsWith("/dashboard/duebook"),
+      category: "finance",
+      badge: "payments"
+    },
+    
+    // Human Resources
+    {
+      name: "Employees",
+      href: "/dashboard/employees",
+      icon: Briefcase,
+      current: pathname.startsWith("/dashboard/employees"),
+      category: "hr"
+    },
+    
+    // Communication & Marketing
+    {
+      name: "SMS Center",
+      href: "/dashboard/sms",
+      icon: Smartphone,
+      current: pathname.startsWith("/dashboard/sms"),
+      category: "communication"
     },
     {
       name: "Online Store",
       href: "/dashboard/online-store",
       icon: Store,
-      current: pathname === "/dashboard/online-store",
+      current: pathname.startsWith("/dashboard/online-store"),
+      category: "communication",
+      badge: "e-commerce"
     },
+    
+    // Tools & Utilities
     {
       name: "Notebook",
       href: "/dashboard/notebook",
       icon: BookOpen,
-      current: pathname === "/dashboard/notebook",
-    },
-    {
-      name: "SMS",
-      href: "/dashboard/sms",
-      icon: Smartphone,
-      current: pathname === "/dashboard/sms",
+      current: pathname.startsWith("/dashboard/notebook"),
+      category: "tools"
     },
     {
       name: "Subscriptions",
       href: "/dashboard/subscriptions",
       icon: Diamond,
-      current: pathname === "/dashboard/subscriptions",
+      current: pathname.startsWith("/dashboard/subscriptions"),
+      category: "tools",
+      badge: "pro"
+    },
+    {
+      name: "Settings",
+      href: "/dashboard/settings",
+      icon: Settings,
+      current: pathname.startsWith("/dashboard/settings"),
+      category: "settings"
     },
   ];
 
   // Get page title based on current path
   const getPageTitle = () => {
-    switch (pathname) {
-      case "/dashboard":
-        return "Dashboard";
-      case "/dashboard/products":
-        return "Products";
-      case "/dashboard/orders":
-        return "Orders";
-      case "/dashboard/suppliers":
-        return "Suppliers";
-      case "/dashboard/settings":
-        return "Settings";
-      case "/dashboard/subscriptions":
-        return "Subscriptions";
-      case "/dashboard/customers":
-        return "Customers";
-      case "/dashboard/banking":
-        return "Banking";
-      case "/dashboard/employees":
-        return "Employees";
-      case "/dashboard/duebook":
-        return "Due Book";
-      case "/dashboard/online-store":
+    switch (true) {
+      case pathname === "/dashboard":
+        return "Dashboard Overview";
+      case pathname.startsWith("/dashboard/products"):
+        return "Product Management";
+      case pathname.startsWith("/dashboard/orders"):
+        return "Order Management";
+      case pathname.startsWith("/dashboard/suppliers"):
+        return "Supplier Management";
+      case pathname.startsWith("/dashboard/customers"):
+        return "Customer Management";
+      case pathname.startsWith("/dashboard/banking"):
+        return "Banking & Finance";
+      case pathname.startsWith("/dashboard/employees"):
+        return "Human Resources";
+      case pathname.startsWith("/dashboard/duebook"):
+        return "Due Book & Payments";
+      case pathname.startsWith("/dashboard/online-store"):
         return "Online Store";
-      case "/dashboard/notebook":
-        return "Notebook";
-      case "/dashboard/sms":
-        return "SMS";
+      case pathname.startsWith("/dashboard/notebook"):
+        return "Business Notebook";
+      case pathname.startsWith("/dashboard/sms"):
+        return "SMS Communication";
+      case pathname.startsWith("/dashboard/subscriptions"):
+        return "Subscriptions & Plans";
+      case pathname.startsWith("/dashboard/settings"):
+        return "System Settings";
       default:
         return "Dashboard";
     }
@@ -199,6 +227,34 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return null;
   }
 
+  // Sample notifications for demo
+  const sampleNotifications = [
+    {
+      id: 1,
+      title: "Low Stock Alert",
+      message: "Product ABC123 is running low in inventory",
+      type: "warning" as const,
+      timestamp: "2 minutes ago",
+      read: false
+    },
+    {
+      id: 2,
+      title: "New Order Received",
+      message: "Order #12345 received from John Doe",
+      type: "success" as const,
+      timestamp: "5 minutes ago",
+      read: false
+    },
+    {
+      id: 3,
+      title: "Payment Processed",
+      message: "Payment of $1,250.00 has been processed",
+      type: "success" as const,
+      timestamp: "1 hour ago",
+      read: true
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
       {/* Sticky full width header */}
@@ -209,6 +265,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           onMenuClick={() => setSidebarOpen(true)}
           title={getPageTitle()}
           breadcrumbs={getBreadcrumbs()}
+          notifications={sampleNotifications}
+          smsCredits={1250}
+          darkMode={true}
         />
       </div>
 
@@ -219,6 +278,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           onClose={() => setSidebarOpen(false)}
           navigation={navigation}
           smsCredits={1250}
+          productCount={1250}
+          totalRevenue={125000}
+          ordersCount={342}
         />
 
         {/* Main content */}
