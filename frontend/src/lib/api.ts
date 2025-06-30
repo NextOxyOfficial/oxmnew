@@ -405,7 +405,7 @@ export class ApiService {
 		brandId: number,
 		brandData: {
 			name?: string;
-			is_active?: boolean;
+		 is_active?: boolean;
 		}
 	) {
 		return this.put(`/brands/${brandId}/`, brandData);
@@ -934,5 +934,66 @@ export class ApiService {
 	static async sendSmsNotification(phone: string, message: string) {
 		const data = { phone, message };
 		return this.post("/send-sms/", data);
+	}
+
+	// Banking API methods
+	static async getBankAccounts() {
+		return this.get("/banking/accounts/my_accounts/");
+	}
+
+	static async createBankAccount(data: { name: string; balance?: number }) {
+		return this.post("/banking/accounts/", data);
+	}
+
+	static async updateBankAccount(id: string, data: { name: string }) {
+		return this.patch(`/banking/accounts/${id}/`, data);
+	}
+
+	static async getAccountTransactions(accountId: string, filters?: {
+		type?: string;
+		status?: string;
+		date_from?: string;
+		date_to?: string;
+		search?: string;
+	}) {
+		const queryParams = new URLSearchParams();
+		
+		if (filters) {
+			Object.entries(filters).forEach(([key, value]) => {
+				if (value) queryParams.append(key, value);
+			});
+		}
+
+		const queryString = queryParams.toString();
+		const endpoint = `/banking/accounts/${accountId}/transactions/${queryString ? `?${queryString}` : ''}`;
+		
+		return this.get(endpoint);
+	}
+
+	static async createTransaction(data: {
+		account: string;
+		type: 'credit' | 'debit';
+		amount: number;
+		purpose: string;
+		verified_by: string;
+		status?: string;
+	}) {
+		return this.post("/banking/transactions/", {
+			...data,
+			status: data.status || 'verified',
+		});
+	}
+
+	static async getEmployees() {
+		return this.get("/banking/transactions/employees/");
+	}
+
+	static async getAccountSummary(accountId: string) {
+		return this.get(`/banking/accounts/${accountId}/summary/`);
+	}
+
+	static async getDashboardStats(accountId?: string) {
+		const queryParams = accountId ? `?account_id=${accountId}` : '';
+		return this.get(`/banking/transactions/dashboard_stats/${queryParams}`);
 	}
 }
