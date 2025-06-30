@@ -27,8 +27,8 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         """Return accounts based on user permissions"""
         user = self.request.user
         
-        # Ensure user has a Primary account
-        self.ensure_primary_account(user)
+        # Ensure user has a Main account
+        self.ensure_main_account(user)
         
         # If user is staff/admin, they can see all accounts
         if user.is_staff or user.is_superuser:
@@ -37,11 +37,11 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         # Regular users can only see their own accounts
         return BankAccount.objects.filter(owner=user, is_active=True)
 
-    def ensure_primary_account(self, user):
-        """Ensure user has a Primary account"""
-        if not BankAccount.objects.filter(owner=user, name="Primary").exists():
+    def ensure_main_account(self, user):
+        """Ensure user has a Main account"""
+        if not BankAccount.objects.filter(owner=user, name="Main").exists():
             BankAccount.objects.create(
-                name="Primary",
+                name="Main",
                 owner=user,
                 balance=0.00,
                 is_active=True
