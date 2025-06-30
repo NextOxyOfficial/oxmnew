@@ -147,9 +147,9 @@ class EmployeeAPI {
     employeeId: number,
     data: CreateIncentiveData
   ): Promise<Incentive> {
-    return this.fetchAPI("/incentives/", {
+    return this.fetchAPI(`/employees/${employeeId}/incentives/`, {
       method: "POST",
-      body: JSON.stringify({ ...data, employee: employeeId }),
+      body: JSON.stringify(data),
     });
   }
 
@@ -175,9 +175,9 @@ class EmployeeAPI {
   }
 
   async createTask(employeeId: number, data: CreateTaskData): Promise<Task> {
-    return this.fetchAPI("/tasks/", {
+    return this.fetchAPI(`/employees/${employeeId}/tasks/`, {
       method: "POST",
-      body: JSON.stringify({ ...data, employee: employeeId }),
+      body: JSON.stringify(data),
     });
   }
 
@@ -215,9 +215,9 @@ class EmployeeAPI {
     employeeId: number,
     data: CreateSalaryRecordData
   ): Promise<SalaryRecord> {
-    return this.fetchAPI("/salary-records/", {
+    return this.fetchAPI(`/employees/${employeeId}/salary_records/`, {
       method: "POST",
-      body: JSON.stringify({ ...data, employee: employeeId }),
+      body: JSON.stringify(data),
     });
   }
 

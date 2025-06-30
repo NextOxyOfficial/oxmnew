@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Mail,
   Phone,
-  MapPin,
   Calendar,
   DollarSign,
   User,
@@ -17,17 +16,13 @@ import {
   Upload,
   Download,
   Trash2,
-  Star,
   Gift,
   TrendingUp,
   Clock,
   CheckCircle2,
-  StickyNote,
-  MessageSquare,
 } from "lucide-react";
 import {
   Employee,
-  PaymentInformation,
   Incentive,
   SalaryRecord,
   Task,
@@ -35,6 +30,7 @@ import {
   CreateIncentiveData,
   CreateTaskData,
   CreateSalaryRecordData,
+  UpdatePaymentInformationData,
 } from "@/types/employee";
 import employeeAPI from "@/lib/employeeAPI";
 
@@ -258,17 +254,30 @@ export default function EmployeeDetailsPage() {
 
     setIsSaving(true);
     try {
-      await employeeAPI.updatePaymentInformation(employee.id, {
+      const paymentData: UpdatePaymentInformationData = {
         bank_name: paymentForm.bankName,
         account_number: paymentForm.accountNumber,
         bank_branch: paymentForm.bankBranch,
         account_holder_name: paymentForm.accountHolderName,
         tax_id: paymentForm.taxId,
-        tax_withholding: paymentForm.taxWithholding as any,
-        payment_method: paymentForm.paymentMethod as any,
-        pay_frequency: paymentForm.payFrequency as any,
+        tax_withholding: paymentForm.taxWithholding as
+          | "single"
+          | "married"
+          | "married-separate"
+          | "head",
+        payment_method: paymentForm.paymentMethod as
+          | "direct-deposit"
+          | "check"
+          | "wire"
+          | "cash",
+        pay_frequency: paymentForm.payFrequency as
+          | "weekly"
+          | "bi-weekly"
+          | "monthly",
         payment_notes: paymentForm.paymentNotes,
-      });
+      };
+
+      await employeeAPI.updatePaymentInformation(employee.id, paymentData);
 
       alert("Payment information updated successfully!");
     } catch (error) {
@@ -1732,7 +1741,7 @@ export default function EmployeeDetailsPage() {
 
                         <div className="flex space-x-2">
                           <button
-                            onClick={() => window.open(document.url, "_blank")}
+                            onClick={() => window.open(document.file, "_blank")}
                             className="flex-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 p-2 rounded-lg transition-colors cursor-pointer text-xs font-medium flex items-center justify-center space-x-1"
                           >
                             <Download className="w-4 h-4" />
