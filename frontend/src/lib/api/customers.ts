@@ -109,6 +109,20 @@ export interface DuePayment {
   payment_type: "due" | "advance";
 }
 
+export interface DuePayment {
+  id: number;
+  customer: number;
+  customer_name: string;
+  order?: number;
+  amount: number;
+  payment_type: "due" | "advance";
+  due_date: string;
+  status: "pending" | "paid" | "partially_paid" | "overdue";
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Transaction {
   id: number;
   customer: number;

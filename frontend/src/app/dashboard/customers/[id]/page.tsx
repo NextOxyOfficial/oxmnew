@@ -82,6 +82,7 @@ interface AvailableGift {
 interface TransactionForm {
   type: "due" | "advance";
   amount: string;
+  due_date: string;
   note: string;
   notifyCustomer: boolean;
 }
@@ -124,6 +125,7 @@ export default function CustomerDetailsPage() {
   const [transactionForm, setTransactionForm] = useState<TransactionForm>({
     type: "due",
     amount: "",
+    due_date: "",
     note: "",
     notifyCustomer: false,
   });
@@ -285,6 +287,7 @@ export default function CustomerDetailsPage() {
     setTransactionForm({
       type: "due",
       amount: "",
+      due_date: "",
       note: "",
       notifyCustomer: false,
     });
@@ -295,6 +298,7 @@ export default function CustomerDetailsPage() {
     setTransactionForm({
       type: "due",
       amount: "",
+      due_date: "",
       note: "",
       notifyCustomer: false,
     });
@@ -357,31 +361,49 @@ export default function CustomerDetailsPage() {
     if (!customer) return;
 
     try {
-      const transactionData = {
+      // Validate required fields
+      if (!transactionForm.amount || !transactionForm.due_date) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+
+      const amount = parseFloat(transactionForm.amount);
+      if (isNaN(amount) || amount <= 0) {
+        alert("Please enter a valid amount greater than 0.");
+        return;
+      }
+
+      // Create due payment entry
+      const duePaymentData = {
         customer: customer.id,
-        transaction_type:
-          transactionForm.type === "due"
-            ? ("payment" as const)
-            : ("adjustment" as const),
-        amount: parseFloat(transactionForm.amount),
+        amount: transactionForm.type === "advance" ? -amount : amount, // Negative for advance
+        payment_type: transactionForm.type,
+        due_date: transactionForm.due_date,
         notes: transactionForm.note,
-        notify_customer: transactionForm.notifyCustomer,
       };
 
-      // Create transaction via API
-      await customersAPI.createTransaction(transactionData);
+      // Create due payment via API
+      await customersAPI.createDuePayment(duePaymentData);
 
       alert(
-        `Transaction added successfully! ${
+        `Due payment added successfully! ${
           transactionForm.notifyCustomer
             ? "Customer will be notified via SMS."
             : ""
         }`
       );
 
-      // Refresh customer data to get updated balances
-      const updatedCustomer = await customersAPI.getCustomer(customer.id);
-      setCustomer(updatedCustomer);
+      // Send SMS notification if requested
+      if (transactionForm.notifyCustomer) {
+        const message = `Hello ${
+          customer.name
+        }, this is a reminder about your ${
+          transactionForm.type === "due" ? "due payment" : "advance payment"
+        } of $${amount.toFixed(2)}. Due date: ${formatDate(
+          transactionForm.due_date
+        )}.`;
+        await handleSendSMS(message);
+      }
 
       // Refresh due payments
       const duePaymentsData = await customersAPI.getDuePayments(customer.id);
@@ -398,8 +420,8 @@ export default function CustomerDetailsPage() {
       // Close modal and reset form
       handleCloseTransactionModal();
     } catch (error) {
-      console.error("Failed to add transaction:", error);
-      alert("Failed to add transaction. Please try again.");
+      console.error("Failed to add due payment:", error);
+      alert("Failed to add due payment. Please try again.");
     }
   };
 
@@ -1028,7 +1050,7 @@ export default function CustomerDetailsPage() {
                       onClick={handleShowTransaction}
                       className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
                     >
-                      Add Transaction
+                      Add Due Payment
                     </button>
                   </div>
 
@@ -1580,7 +1602,7 @@ export default function CustomerDetailsPage() {
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
                   <h2 className="text-xl font-semibold text-slate-100">
-                    Add Transaction
+                    Add Due Payment
                   </h2>
                   <button
                     onClick={handleCloseTransactionModal}
@@ -1607,8 +1629,8 @@ export default function CustomerDetailsPage() {
                       }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
                     >
-                      <option value="due">Due</option>
-                      <option value="advance">Payment</option>
+                      <option value="due">Due Payment</option>
+                      <option value="advance">Advance Payment</option>
                     </select>
                   </div>
 
@@ -1620,6 +1642,7 @@ export default function CustomerDetailsPage() {
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
                       value={transactionForm.amount}
                       onChange={(e) =>
                         setTransactionForm({
@@ -1629,6 +1652,26 @@ export default function CustomerDetailsPage() {
                       }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
                       placeholder="Enter amount"
+                      required
+                    />
+                  </div>
+
+                  {/* Due Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Due Date
+                    </label>
+                    <input
+                      type="date"
+                      value={transactionForm.due_date}
+                      onChange={(e) =>
+                        setTransactionForm({
+                          ...transactionForm,
+                          due_date: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
+                      required
                     />
                   </div>
 
@@ -1684,9 +1727,12 @@ export default function CustomerDetailsPage() {
                   </button>
                   <button
                     onClick={handleSubmitTransaction}
-                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
+                    disabled={
+                      !transactionForm.amount || !transactionForm.due_date
+                    }
+                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg cursor-pointer"
                   >
-                    Add Transaction
+                    Add Due Payment
                   </button>
                 </div>
               </div>
