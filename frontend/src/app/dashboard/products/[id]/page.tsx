@@ -284,12 +284,15 @@ export default function ProductDetailsPage() {
 			setProduct(updatedProduct);
 
 			// Show success message
-			showNotification("success", `Successfully added ${stockData.quantity} units to stock!`);
-
+			showNotification(
+				"success",
+				`Successfully added ${stockData.quantity} units to stock!`
+			);
 		} catch (error) {
 			console.error("Error adding stock:", error);
 			// Show error message
-			const errorMessage = error instanceof Error ? error.message : "Failed to add stock";
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to add stock";
 			showNotification("error", errorMessage);
 		} finally {
 			setIsSubmittingStock(false);
