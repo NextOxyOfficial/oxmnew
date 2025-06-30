@@ -119,6 +119,12 @@ export default function EmployeeDetailsPage() {
   });
   const [isAssigningTask, setIsAssigningTask] = useState(false);
 
+  // Photo upload state
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -548,6 +554,65 @@ export default function EmployeeDetailsPage() {
     }
   };
 
+  // Photo upload functions
+  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+      if (!validTypes.includes(file.type)) {
+        alert("Please select a valid image file (JPEG, PNG, or WebP)");
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert("File size must be less than 5MB");
+        return;
+      }
+
+      setSelectedPhoto(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      setShowPhotoModal(true);
+    }
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!selectedPhoto || !employee) return;
+
+    setIsUploadingPhoto(true);
+    try {
+      const updatedEmployee = await employeeAPI.updateEmployee(employee.id, {
+        photo: selectedPhoto,
+      });
+
+      setEmployee(updatedEmployee);
+      setShowPhotoModal(false);
+      setSelectedPhoto(null);
+      setPhotoPreview(null);
+      alert("Profile photo updated successfully!");
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      alert("Failed to upload photo. Please try again.");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleCancelPhotoUpload = () => {
+    setShowPhotoModal(false);
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
+  };
+
   const getPriorityColor = (priority: Task["priority"]) => {
     switch (priority) {
       case "urgent":
@@ -803,9 +868,21 @@ export default function EmployeeDetailsPage() {
                       <p className="text-sm text-slate-400">
                         Upload or change employee photo
                       </p>
-                      <button className="mt-2 px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-lg text-sm hover:bg-cyan-500/30 transition-colors">
-                        Change Photo
-                      </button>
+                      <div className="mt-2">
+                        <input
+                          type="file"
+                          id="photo-upload"
+                          accept="image/*"
+                          onChange={handlePhotoSelect}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="photo-upload"
+                          className="inline-block px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-lg text-sm hover:bg-cyan-500/30 transition-colors cursor-pointer"
+                        >
+                          Change Photo
+                        </label>
+                      </div>
                     </div>
                   </div>
 
@@ -2408,6 +2485,69 @@ export default function EmployeeDetailsPage() {
                     className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                   >
                     {isAssigningTask ? "Assigning..." : "Assign Task"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Photo Upload Modal */}
+        {showPhotoModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                  <h2 className="text-xl font-semibold text-slate-100">
+                    Update Profile Photo
+                  </h2>
+                  <button
+                    onClick={handleCancelPhotoUpload}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6">
+                  {photoPreview && (
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-slate-300 mb-2">
+                        Preview:
+                      </p>
+                      <div className="flex justify-center">
+                        <img
+                          src={photoPreview}
+                          alt="Photo preview"
+                          className="w-32 h-32 rounded-lg object-cover border border-slate-600"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-sm text-slate-400 space-y-1">
+                    <p>• Supported formats: JPEG, PNG, WebP</p>
+                    <p>• Maximum file size: 5MB</p>
+                    <p>• Recommended size: 400x400 pixels</p>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={handleCancelPhotoUpload}
+                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handlePhotoUpload}
+                    disabled={isUploadingPhoto || !selectedPhoto}
+                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                  >
+                    {isUploadingPhoto ? "Uploading..." : "Upload Photo"}
                   </button>
                 </div>
               </div>
