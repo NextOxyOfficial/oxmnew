@@ -47,6 +47,7 @@ class TaskSerializer(serializers.ModelSerializer):
 class DocumentSerializer(serializers.ModelSerializer):
     file_type = serializers.CharField(read_only=True)
     url = serializers.SerializerMethodField()
+    employee_id = serializers.IntegerField(write_only=True, required=False)
 
     class Meta:
         model = Document
@@ -60,6 +61,11 @@ class DocumentSerializer(serializers.ModelSerializer):
         if obj.file:
             return obj.file.url
         return None
+
+    def create(self, validated_data):
+        # Remove employee_id from validated_data as it's handled in the view
+        validated_data.pop('employee_id', None)
+        return super().create(validated_data)
 
 
 class EmployeeSerializer(serializers.ModelSerializer):

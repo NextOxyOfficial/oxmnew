@@ -263,6 +263,20 @@ class DocumentViewSet(viewsets.ModelViewSet):
         context['request'] = self.request
         return context
 
+    def perform_create(self, serializer):
+        """Override to handle employee field from request data"""
+        employee_id = self.request.data.get('employee')
+        if employee_id:
+            try:
+                employee = Employee.objects.get(id=employee_id)
+                serializer.save(employee=employee)
+                return
+            except Employee.DoesNotExist:
+                pass
+
+        # If no valid employee provided, save without employee (will cause validation error)
+        serializer.save()
+
 
 class PaymentInformationViewSet(viewsets.ModelViewSet):
     queryset = PaymentInformation.objects.all()
