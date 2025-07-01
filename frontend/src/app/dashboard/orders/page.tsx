@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ApiService } from "@/lib/api";
 import { Order } from "@/types/order";
+import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 
 export default function OrdersPage() {
   const router = useRouter();
+  const formatCurrency = useCurrencyFormatter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,14 +105,6 @@ export default function OrdersPage() {
     }
   });
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
-  };
-
   // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -204,11 +198,15 @@ export default function OrdersPage() {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-cyan-300 font-medium">Total Orders</p>
+                <p className="text-sm text-cyan-300 font-medium">
+                  Total Orders
+                </p>
                 <p className="text-base font-bold text-cyan-400">
                   {totalOrders}
                 </p>
-                <p className="text-xs text-cyan-500 opacity-80">All completed orders</p>
+                <p className="text-xs text-cyan-500 opacity-80">
+                  All completed orders
+                </p>
               </div>
             </div>
           </div>
@@ -232,11 +230,15 @@ export default function OrdersPage() {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-green-300 font-medium">Total Revenue</p>
+                <p className="text-sm text-green-300 font-medium">
+                  Total Revenue
+                </p>
                 <p className="text-base font-bold text-green-400">
                   {formatCurrency(totalRevenue)}
                 </p>
-                <p className="text-xs text-green-500 opacity-80">Total sales income</p>
+                <p className="text-xs text-green-500 opacity-80">
+                  Total sales income
+                </p>
               </div>
             </div>
           </div>
@@ -264,7 +266,9 @@ export default function OrdersPage() {
                 <p className="text-base font-bold text-blue-400">
                   {formatCurrency(averageOrderValue)}
                 </p>
-                <p className="text-xs text-blue-500 opacity-80">Per order value</p>
+                <p className="text-xs text-blue-500 opacity-80">
+                  Per order value
+                </p>
               </div>
             </div>
           </div>
@@ -294,7 +298,10 @@ export default function OrdersPage() {
                 </p>
                 <p className="text-xs text-yellow-500 opacity-80">
                   {formatCurrency(
-                    ordersToday.reduce((sum, order) => sum + order.total_amount, 0)
+                    ordersToday.reduce(
+                      (sum, order) => sum + order.total_amount,
+                      0
+                    )
                   )}{" "}
                   revenue
                 </p>
