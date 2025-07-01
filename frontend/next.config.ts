@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
 			},
 		],
 	},
+	// Reduce hydration mismatch warnings in development
+	experimental: {
+		serverComponentsExternalPackages: [],
+	},
+	// Optimize for better hydration
+	swcMinify: true,
+	reactStrictMode: true,
 };
 
 export default nextConfig;
