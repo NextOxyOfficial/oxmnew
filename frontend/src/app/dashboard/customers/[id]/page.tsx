@@ -322,14 +322,25 @@ export default function CustomerDetailsPage() {
     setIsSendingSMS(true);
     try {
       // Send SMS via API
-      await customersAPI.sendSMS(customer.id, message);
+      const response = await customersAPI.sendSMS(customer.id, message);
 
-      alert(
-        `SMS sent successfully to ${customer.phone}!\nMessage: "${message}"`
-      );
-    } catch (error) {
+      if (response.success) {
+        alert(
+          `SMS sent successfully to ${customer.phone}!\nMessage: "${message}"\nCredits used: ${response.credits_used || 1}`
+        );
+      } else {
+        throw new Error(response.message || "Failed to send SMS");
+      }
+    } catch (error: any) {
       console.error("Failed to send SMS:", error);
-      alert("Failed to send SMS. Please try again.");
+      
+      // Handle insufficient credits error specifically
+      if (error.response?.status === 402) {
+        const errorData = error.response.data;
+        alert(`SMS sending failed: ${errorData.message || 'Insufficient SMS credits. Please purchase more credits.'}`);
+      } else {
+        alert("Failed to send SMS. Please try again.");
+      }
     } finally {
       setIsSendingSMS(false);
     }

@@ -304,6 +304,8 @@ def redeem_points(request, customer_id):
 @permission_classes([IsAuthenticated])
 def send_sms(request, customer_id):
     """Send SMS to customer"""
+    from subscription.models import UserSMSCredit, SMSSentHistory
+    
     try:
         customer = Customer.objects.get(id=customer_id, user=request.user)
         message = request.data.get('message', '')
@@ -313,6 +315,27 @@ def send_sms(request, customer_id):
                 'success': False,
                 'message': 'Message is required'
             }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Calculate SMS count (160 characters per SMS)
+        sms_count = max(1, (len(message) + 159) // 160)
+        
+        # Check if user has sufficient SMS credits
+        try:
+            user_sms_credit = UserSMSCredit.objects.get(user=request.user)
+            if user_sms_credit.credits < sms_count:
+                return Response({
+                    'success': False,
+                    'message': f'Insufficient SMS credits. You need {sms_count} credits but only have {user_sms_credit.credits}.',
+                    'required_credits': sms_count,
+                    'available_credits': user_sms_credit.credits
+                }, status=status.HTTP_402_PAYMENT_REQUIRED)
+        except UserSMSCredit.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': f'No SMS credits available. You need {sms_count} credits to send this message.',
+                'required_credits': sms_count,
+                'available_credits': 0
+            }, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         # Create SMS log
         sms_log = SMSLog.objects.create(
@@ -330,15 +353,39 @@ def send_sms(request, customer_id):
             sms_log.sent_at = timezone.now()
             sms_log.sms_service_response = 'SMS sent successfully (simulated)'
             sms_log.save()
+            
+            # If SMS was sent successfully, deduct credits and log the transaction
+            user_sms_credit.credits -= sms_count
+            user_sms_credit.save()
+            
+            # Log the SMS transaction in subscription history
+            SMSSentHistory.objects.create(
+                user=request.user,
+                recipient=customer.phone,
+                message=message,
+                status='sent',
+                sms_count=sms_count
+            )
 
             return Response({
                 'success': True,
-                'message': 'SMS sent successfully'
+                'message': 'SMS sent successfully',
+                'credits_used': sms_count,
+                'remaining_credits': user_sms_credit.credits
             })
         except Exception as e:
             sms_log.status = 'failed'
             sms_log.sms_service_response = str(e)
             sms_log.save()
+            
+            # Log failed SMS attempt in subscription history (but don't deduct credits)
+            SMSSentHistory.objects.create(
+                user=request.user,
+                recipient=customer.phone,
+                message=message,
+                status='failed',
+                sms_count=sms_count
+            )
 
             return Response({
                 'success': False,

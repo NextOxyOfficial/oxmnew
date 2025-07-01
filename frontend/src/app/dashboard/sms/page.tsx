@@ -17,8 +17,9 @@ export default function SmsPage() {
 	const [employees, setEmployees] = useState<{ id: number; name: string; phone: string }[]>([]);
 	const [suppliers, setSuppliers] = useState<{ id: number; name: string; phone: string }[]>([]);
 	const [history, setHistory] = useState<any[]>([]);
+	const [smsCredits, setSmsCredits] = useState<number | null>(null);
 
-	// Fetch real data for customers, employees, suppliers, and SMS history
+	// Fetch real data for customers, employees, suppliers, SMS credits, and SMS history
 	useEffect(() => {
 		async function fetchData() {
 			try {
@@ -35,8 +36,17 @@ export default function SmsPage() {
 					const hist = await ApiService.getSmsHistory();
 					setHistory(hist || []);
 				}
+				// Fetch SMS credits
+				try {
+					const creditsData = await ApiService.getSmsCredits();
+					setSmsCredits(creditsData.credits || 0);
+				} catch (creditsError) {
+					console.error("Failed to fetch SMS credits:", creditsError);
+					setSmsCredits(0);
+				}
 			} catch (e) {
 				// fallback to empty
+				setSmsCredits(0);
 			}
 		}
 		fetchData();
@@ -87,22 +97,53 @@ export default function SmsPage() {
 			setStatus("Please enter a message and at least one contact.");
 			return;
 		}
+
+		// Calculate total SMS count needed
+		const smsPerMessage = Math.max(1, Math.ceil(message.length / 160));
+		const totalSmsNeeded = contacts.length * smsPerMessage;
+		
+		// Check if user has sufficient credits
+		if (smsCredits !== null && smsCredits < totalSmsNeeded) {
+			setStatus(`Insufficient SMS credits. You need ${totalSmsNeeded} credits but only have ${smsCredits}. Please purchase more credits.`);
+			return;
+		}
+
 		setIsSending(true);
 		setStatus(null);
 		let successCount = 0;
 		let failCount = 0;
+		let creditsUsed = 0;
+
 		for (const contact of contacts) {
 			const name = contact.name && contact.name.trim() ? contact.name : contact.number;
 			const personalizedMsg = message.replace(/\{name\}/gi, name);
 			try {
-				await ApiService.sendSmsNotification(contact.number, personalizedMsg);
-				successCount++;
-			} catch (e) {
+				const response = await ApiService.sendSmsNotification(contact.number, personalizedMsg);
+				if (response.success) {
+					successCount++;
+					creditsUsed += response.credits_used || smsPerMessage;
+				} else {
+					failCount++;
+				}
+			} catch (e: any) {
 				failCount++;
+				// Handle insufficient credits error specifically
+				if (e.response?.status === 402) {
+					const errorData = e.response.data;
+					setStatus(`Insufficient SMS credits. ${errorData.error || 'Please purchase more credits.'}`);
+					setIsSending(false);
+					return;
+				}
 			}
 		}
+
+		// Update local SMS credits count
+		if (creditsUsed > 0 && smsCredits !== null) {
+			setSmsCredits(smsCredits - creditsUsed);
+		}
+
 		if (successCount > 0) {
-			setStatus(`${successCount} SMS sent successfully to ${successCount} user${successCount > 1 ? 's' : ''}.`);
+			setStatus(`${successCount} SMS sent successfully to ${successCount} user${successCount > 1 ? 's' : ''}. ${creditsUsed} credits used.`);
 			setTimeout(() => setStatus(null), 5000);
 		} else {
 			setStatus("Failed to send SMS.");
@@ -119,6 +160,57 @@ export default function SmsPage() {
 				<p className="text-gray-400 text-base mt-2">
 					Send SMS to individuals, all customers, or all employees.
 				</p>
+			</div>
+
+			{/* SMS Credits Display */}
+			<div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 mb-6">
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-3">
+						<div className="rounded-lg bg-emerald-500/20 p-2">
+							<svg className="h-5 w-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+							</svg>
+						</div>
+						<div>
+							<div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
+							<div className="text-xs text-emerald-400/70">
+								{smsCredits === null ? "Loading..." : `${smsCredits.toLocaleString()} available`}
+							</div>
+						</div>
+					</div>
+					<a 
+						href="/dashboard/subscriptions" 
+						className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:from-emerald-600 hover:to-green-700 transition-all duration-200"
+					>
+						Buy Credits
+					</a>
+					{/* Test button to add credits - remove in production */}
+					<button 
+						onClick={async () => {
+							try {
+								const response = await ApiService.addSmsCredits(100);
+								if (response.success) {
+									setSmsCredits(response.total_credits);
+									alert(`Added 100 test credits! Total: ${response.total_credits}`);
+								}
+							} catch (e) {
+								console.error("Failed to add test credits:", e);
+								alert("Failed to add test credits");
+							}
+						}}
+						className="bg-yellow-500 text-black px-3 py-1 rounded-lg text-xs font-medium hover:bg-yellow-600 transition-all duration-200 ml-2"
+					>
+						+100 Test Credits
+					</button>
+				</div>
+				{contacts.length > 0 && message && (
+					<div className="mt-3 pt-3 border-t border-emerald-500/20">
+						<div className="text-xs text-emerald-400/70">
+							Estimated cost: {contacts.length * Math.max(1, Math.ceil(message.length / 160))} credits
+							({contacts.length} contacts × {Math.max(1, Math.ceil(message.length / 160))} SMS each)
+						</div>
+					</div>
+				)}
 			</div>
 
 			{/* Tabs */}
@@ -224,9 +316,18 @@ export default function SmsPage() {
 							</div>
 						)}
 						<button
-							className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg font-medium hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 text-sm mt-2 self-end flex items-center justify-center gap-2 cursor-pointer"
+							className={`px-6 py-2 rounded-lg font-medium focus:outline-none focus:ring-2 transition-all duration-200 text-sm mt-2 self-end flex items-center justify-center gap-2 ${
+								contacts.length === 0 || isSending || 
+								(smsCredits !== null && smsCredits < (contacts.length * Math.max(1, Math.ceil(message.length / 160))))
+									? "bg-gray-600 text-gray-400 cursor-not-allowed"
+									: "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:ring-cyan-500 cursor-pointer"
+							}`}
 							onClick={handleSend}
-							disabled={contacts.length === 0 || isSending}
+							disabled={
+								contacts.length === 0 || 
+								isSending || 
+								(smsCredits !== null && smsCredits < (contacts.length * Math.max(1, Math.ceil(message.length / 160))))
+							}
 							style={{ minWidth: 120 }}
 						>
 							{isSending && (
@@ -235,7 +336,12 @@ export default function SmsPage() {
 									<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
 								</svg>
 							)}
-							{isSending ? "Sending..." : "Send SMS"}
+							{isSending 
+								? "Sending..." 
+								: (smsCredits !== null && smsCredits < (contacts.length * Math.max(1, Math.ceil(message.length / 160))))
+									? "Insufficient Credits"
+									: "Send SMS"
+							}
 						</button>
 					</>
 				)}

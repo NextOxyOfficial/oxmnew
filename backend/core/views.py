@@ -1348,9 +1348,39 @@ def toggle_level(request, level_id):
 @permission_classes([IsAuthenticated])
 @api_view(['POST', 'GET'])
 def smsSend(request):
+    from subscription.models import UserSMSCredit, SMSSentHistory
+    
     data = request.data
     phone = data.get('phone', '').strip()
     message = data.get('message', '').strip()
+    
+    if not phone or not message:
+        return Response({
+            'success': False,
+            'error': 'Phone number and message are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Calculate SMS count (160 characters per SMS)
+    sms_count = max(1, (len(message) + 159) // 160)
+    
+    # Check if user has sufficient SMS credits
+    try:
+        user_sms_credit = UserSMSCredit.objects.get(user=request.user)
+        if user_sms_credit.credits < sms_count:
+            return Response({
+                'success': False,
+                'error': f'Insufficient SMS credits. You need {sms_count} credits but only have {user_sms_credit.credits}.',
+                'required_credits': sms_count,
+                'available_credits': user_sms_credit.credits
+            }, status=status.HTTP_402_PAYMENT_REQUIRED)
+    except UserSMSCredit.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': f'No SMS credits available. You need {sms_count} credits to send this message.',
+            'required_credits': sms_count,
+            'available_credits': 0
+        }, status=status.HTTP_402_PAYMENT_REQUIRED)
+    
     url = "http://api.smsinbd.com/sms-api/sendsms"
     payload = {
         'api_token': settings.API_SMS,
@@ -1362,17 +1392,84 @@ def smsSend(request):
     try:
         # Add timeout to prevent ECONNABORTED errors
         response = requests.get(url, params=payload, timeout=10)
-        print(response.text)
-        return Response(response.text, status=status.HTTP_200_OK)
+        
+        # If SMS was sent successfully, deduct credits and log the transaction
+        if response.status_code == 200:
+            # Deduct SMS credits
+            user_sms_credit.credits -= sms_count
+            user_sms_credit.save()
+            
+            # Log the SMS transaction
+            SMSSentHistory.objects.create(
+                user=request.user,
+                recipient=phone,
+                message=message,
+                status='sent',
+                sms_count=sms_count
+            )
+            
+            print(f"SMS sent successfully. Deducted {sms_count} credits. Remaining: {user_sms_credit.credits}")
+            return Response({
+                'success': True,
+                'message': 'SMS sent successfully',
+                'credits_used': sms_count,
+                'remaining_credits': user_sms_credit.credits,
+                'response': response.text
+            }, status=status.HTTP_200_OK)
+        else:
+            # Log failed SMS attempt (but don't deduct credits)
+            SMSSentHistory.objects.create(
+                user=request.user,
+                recipient=phone,
+                message=message,
+                status='failed',
+                sms_count=sms_count
+            )
+            return Response({
+                'success': False,
+                'error': 'SMS service error',
+                'response': response.text
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
     except requests.exceptions.Timeout:
         print("SMS API request timed out")
-        return Response({'error': 'SMS service timeout'}, status=status.HTTP_408_REQUEST_TIMEOUT)
+        SMSSentHistory.objects.create(
+            user=request.user,
+            recipient=phone,
+            message=message,
+            status='failed',
+            sms_count=sms_count
+        )
+        return Response({
+            'success': False,
+            'error': 'SMS service timeout'
+        }, status=status.HTTP_408_REQUEST_TIMEOUT)
     except requests.exceptions.ConnectionError:
         print("SMS API connection error")
-        return Response({'error': 'SMS service unavailable'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        SMSSentHistory.objects.create(
+            user=request.user,
+            recipient=phone,
+            message=message,
+            status='failed',
+            sms_count=sms_count
+        )
+        return Response({
+            'success': False,
+            'error': 'SMS service unavailable'
+        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     except requests.exceptions.RequestException as e:
         print(f"SMS API request failed: {str(e)}")
-        return Response({'error': 'SMS service error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        SMSSentHistory.objects.create(
+            user=request.user,
+            recipient=phone,
+            message=message,
+            status='failed',
+            sms_count=sms_count
+        )
+        return Response({
+            'success': False,
+            'error': 'SMS service error'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Brand Views
