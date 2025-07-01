@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ApiService } from "@/lib/api";
+import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 
 interface Category {
   id: number;
@@ -53,6 +54,7 @@ interface ProductFormData {
 export default function AddProductPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const formatCurrency = useCurrencyFormatter();
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
@@ -412,7 +414,7 @@ export default function AddProductPage() {
             reader.onerror = reject;
             reader.readAsDataURL(compressedFile);
           });
-          
+
           newPreviews.push(preview);
         } catch (error) {
           console.error("Error processing image:", error);
@@ -431,7 +433,7 @@ export default function AddProductPage() {
           photos: [...prev.photos, ...validFiles],
         }));
         setPhotoPreviews((prev) => [...prev, ...newPreviews]);
-        
+
         // Clear photo error if files were processed successfully
         if (errors.photo) {
           setErrors((prev) => ({ ...prev, photo: "" }));
@@ -445,7 +447,7 @@ export default function AddProductPage() {
       }));
     } finally {
       setIsCompressing(false);
-      
+
       // Reset input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -711,7 +713,9 @@ export default function AddProductPage() {
                     ))}
                   </select>
                   {errors.supplier && (
-                    <p className="text-red-400 text-sm mt-1">{errors.supplier}</p>
+                    <p className="text-red-400 text-sm mt-1">
+                      {errors.supplier}
+                    </p>
                   )}
                 </div>
 
@@ -730,12 +734,16 @@ export default function AddProductPage() {
                     value={formData.productCode}
                     onChange={handleInputChange}
                     className={`w-full bg-slate-800/50 border ${
-                      errors.productCode ? "border-red-500" : "border-slate-700/50"
+                      errors.productCode
+                        ? "border-red-500"
+                        : "border-slate-700/50"
                     } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
                     placeholder="Enter product or parts code (e.g., SKU, part number)"
                   />
                   {errors.productCode && (
-                    <p className="text-red-400 text-sm mt-1">{errors.productCode}</p>
+                    <p className="text-red-400 text-sm mt-1">
+                      {errors.productCode}
+                    </p>
                   )}
                 </div>
               </div>
@@ -1007,7 +1015,9 @@ export default function AddProductPage() {
                         </label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            $
+                            {formatCurrency(0)
+                              .replace(/\d|[.,]/g, "")
+                              .trim()}
                           </span>
                           <input
                             type="number"
@@ -1042,7 +1052,9 @@ export default function AddProductPage() {
                         </label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            $
+                            {formatCurrency(0)
+                              .replace(/\d|[.,]/g, "")
+                              .trim()}
                           </span>
                           <input
                             type="number"
@@ -1112,8 +1124,8 @@ export default function AddProductPage() {
                                 : "text-yellow-400"
                             }`}
                           >
-                            {profit > 0 ? "+" : profit < 0 ? "-" : ""}$
-                            {Math.abs(profit).toFixed(2)}
+                            {profit > 0 ? "+" : profit < 0 ? "-" : ""}
+                            {formatCurrency(Math.abs(profit))}
                           </p>
                           <p
                             className={`text-xs ${
@@ -1382,10 +1394,10 @@ export default function AddProductPage() {
                                   {variant.custom_variant || "-"}
                                 </span>
                                 <span className="text-red-400">
-                                  ${variant.buyPrice}
+                                  {formatCurrency(variant.buyPrice)}
                                 </span>
                                 <span className="text-green-400">
-                                  ${variant.sellPrice}
+                                  {formatCurrency(variant.sellPrice)}
                                 </span>
                                 <span className="text-cyan-400">
                                   {variant.stock} pcs
@@ -1431,8 +1443,8 @@ export default function AddProductPage() {
                                       : "text-yellow-400"
                                   }`}
                                 >
-                                  {profit > 0 ? "+" : profit < 0 ? "-" : ""}$
-                                  {Math.abs(profit).toFixed(2)}
+                                  {profit > 0 ? "+" : profit < 0 ? "-" : ""}
+                                  {formatCurrency(Math.abs(profit))}
                                 </p>
                                 <p
                                   className={`text-xs ${
@@ -1456,15 +1468,14 @@ export default function AddProductPage() {
                                 Avg Buy Price
                               </p>
                               <p className="text-sm font-bold text-slate-300">
-                                $
-                                {formData.colorSizeVariants.length > 0
-                                  ? (
-                                      formData.colorSizeVariants.reduce(
+                                {formatCurrency(
+                                  formData.colorSizeVariants.length > 0
+                                    ? formData.colorSizeVariants.reduce(
                                         (sum, v) => sum + v.buyPrice,
                                         0
                                       ) / formData.colorSizeVariants.length
-                                    ).toFixed(2)
-                                  : "0.00"}
+                                    : 0
+                                )}
                               </p>
                             </div>
                             <div>
