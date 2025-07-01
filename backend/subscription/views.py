@@ -28,7 +28,13 @@ class UserSMSCreditView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        return UserSMSCredit.objects.get(user=self.request.user)
+        try:
+            return UserSMSCredit.objects.get(user=self.request.user)
+        except UserSMSCredit.DoesNotExist:
+            # Return a dummy object with 0 credits if not found
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            return UserSMSCredit(user=self.request.user, credits=0)
 
 class SMSSentHistoryListView(generics.ListAPIView):
     serializer_class = SMSSentHistorySerializer
