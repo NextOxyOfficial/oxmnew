@@ -10,6 +10,7 @@ export default function SmsPage() {
 	const [tab, setTab] = useState("custom");
 	const [message, setMessage] = useState("");
 	const [status, setStatus] = useState<string | null>(null);
+	const [showCreditError, setShowCreditError] = useState(false);
 	const [contactsText, setContactsText] = useState("");
 	const [contacts, setContacts] = useState<{ number: string; name: string }[]>([]);
 	const [isSending, setIsSending] = useState(false);
@@ -104,12 +105,14 @@ export default function SmsPage() {
 		
 		// Check if user has sufficient credits
 		if (smsCredits !== null && smsCredits < totalSmsNeeded) {
-			setStatus(`Insufficient SMS credits. You need ${totalSmsNeeded} credits but only have ${smsCredits}. Please purchase more credits.`);
+			setStatus(`You need ${totalSmsNeeded} credits but only have ${smsCredits}.`);
+			setShowCreditError(true);
 			return;
 		}
 
 		setIsSending(true);
 		setStatus(null);
+		setShowCreditError(false);
 		let successCount = 0;
 		let failCount = 0;
 		let creditsUsed = 0;
@@ -124,15 +127,25 @@ export default function SmsPage() {
 					creditsUsed += response.credits_used || smsPerMessage;
 				} else {
 					failCount++;
+					// Set specific error message from backend
+					if (response.error) {
+						setStatus(`Error: ${response.error}`);
+					}
 				}
 			} catch (e: any) {
 				failCount++;
 				// Handle insufficient credits error specifically
 				if (e.response?.status === 402) {
 					const errorData = e.response.data;
-					setStatus(`Insufficient SMS credits. ${errorData.error || 'Please purchase more credits.'}`);
+					setStatus(errorData.error || 'Insufficient SMS credits. Please purchase more credits.');
+					setShowCreditError(true);
 					setIsSending(false);
 					return;
+				} else {
+					// Handle other types of errors
+					const errorMessage = e.response?.data?.error || e.response?.data?.message || e.message || 'Unknown error occurred';
+					setStatus(`Error sending SMS: ${errorMessage}`);
+					setShowCreditError(false);
 				}
 			}
 		}
@@ -144,9 +157,11 @@ export default function SmsPage() {
 
 		if (successCount > 0) {
 			setStatus(`${successCount} SMS sent successfully to ${successCount} user${successCount > 1 ? 's' : ''}. ${creditsUsed} credits used.`);
+			setShowCreditError(false);
 			setTimeout(() => setStatus(null), 5000);
-		} else {
-			setStatus("Failed to send SMS.");
+		} else if (failCount > 0 && !showCreditError) {
+			setStatus("Failed to send SMS. Please check the error details above.");
+			setShowCreditError(false);
 		}
 		setIsSending(false);
 	};
@@ -184,24 +199,6 @@ export default function SmsPage() {
 					>
 						Buy Credits
 					</a>
-					{/* Test button to add credits - remove in production */}
-					<button 
-						onClick={async () => {
-							try {
-								const response = await ApiService.addSmsCredits(100);
-								if (response.success) {
-									setSmsCredits(response.total_credits);
-									alert(`Added 100 test credits! Total: ${response.total_credits}`);
-								}
-							} catch (e) {
-								console.error("Failed to add test credits:", e);
-								alert("Failed to add test credits");
-							}
-						}}
-						className="bg-yellow-500 text-black px-3 py-1 rounded-lg text-xs font-medium hover:bg-yellow-600 transition-all duration-200 ml-2"
-					>
-						+100 Test Credits
-					</button>
 				</div>
 				{contacts.length > 0 && message && (
 					<div className="mt-3 pt-3 border-t border-emerald-500/20">
@@ -310,9 +307,23 @@ export default function SmsPage() {
 						</div>
 						{status && (
 							<div className="w-full flex justify-end mb-2">
-								<span className="bg-green-500/90 text-white text-xs font-semibold rounded-lg px-4 py-2 shadow animate-fade-in-out">
-									{status}
-								</span>
+								{showCreditError ? (
+									<div className="bg-red-500/90 text-white text-xs font-semibold rounded-lg px-4 py-2 shadow flex items-center gap-3">
+										<span>{status}</span>
+										<a 
+											href="/dashboard/subscriptions" 
+											className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs font-medium transition-all duration-200"
+										>
+											Buy Credits
+										</a>
+									</div>
+								) : (
+									<span className={`text-white text-xs font-semibold rounded-lg px-4 py-2 shadow animate-fade-in-out ${
+										status.includes('successfully') ? 'bg-green-500/90' : 'bg-red-500/90'
+									}`}>
+										{status}
+									</span>
+								)}
 							</div>
 						)}
 						<button

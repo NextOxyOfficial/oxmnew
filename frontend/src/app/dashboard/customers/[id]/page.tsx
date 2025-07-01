@@ -337,9 +337,15 @@ export default function CustomerDetailsPage() {
       // Handle insufficient credits error specifically
       if (error.response?.status === 402) {
         const errorData = error.response.data;
-        alert(`SMS sending failed: ${errorData.message || 'Insufficient SMS credits. Please purchase more credits.'}`);
+        const errorMsg = errorData.message || errorData.error || 'Insufficient SMS credits.';
+        const confirmed = confirm(`${errorMsg}\n\nWould you like to buy more SMS credits?`);
+        if (confirmed) {
+          window.open('/dashboard/subscriptions', '_blank');
+        }
       } else {
-        alert("Failed to send SMS. Please try again.");
+        // Handle other types of errors
+        const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Unknown error occurred';
+        alert(`Failed to send SMS: ${errorMessage}`);
       }
     } finally {
       setIsSendingSMS(false);

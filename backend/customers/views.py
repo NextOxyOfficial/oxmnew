@@ -325,14 +325,14 @@ def send_sms(request, customer_id):
             if user_sms_credit.credits < sms_count:
                 return Response({
                     'success': False,
-                    'message': f'Insufficient SMS credits. You need {sms_count} credits but only have {user_sms_credit.credits}.',
+                    'message': f'Insufficient SMS credits. You need {sms_count} credit{"s" if sms_count > 1 else ""} but only have {user_sms_credit.credits}.',
                     'required_credits': sms_count,
                     'available_credits': user_sms_credit.credits
                 }, status=status.HTTP_402_PAYMENT_REQUIRED)
         except UserSMSCredit.DoesNotExist:
             return Response({
                 'success': False,
-                'message': f'No SMS credits available. You need {sms_count} credits to send this message.',
+                'message': f'No SMS credits available. You need {sms_count} credit{"s" if sms_count > 1 else ""} to send this message.',
                 'required_credits': sms_count,
                 'available_credits': 0
             }, status=status.HTTP_402_PAYMENT_REQUIRED)

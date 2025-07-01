@@ -1369,14 +1369,14 @@ def smsSend(request):
         if user_sms_credit.credits < sms_count:
             return Response({
                 'success': False,
-                'error': f'Insufficient SMS credits. You need {sms_count} credits but only have {user_sms_credit.credits}.',
+                'error': f'Insufficient SMS credits. You need {sms_count} credit{"s" if sms_count > 1 else ""} but only have {user_sms_credit.credits}.',
                 'required_credits': sms_count,
                 'available_credits': user_sms_credit.credits
             }, status=status.HTTP_402_PAYMENT_REQUIRED)
     except UserSMSCredit.DoesNotExist:
         return Response({
             'success': False,
-            'error': f'No SMS credits available. You need {sms_count} credits to send this message.',
+            'error': f'No SMS credits available. You need {sms_count} credit{"s" if sms_count > 1 else ""} to send this message.',
             'required_credits': sms_count,
             'available_credits': 0
         }, status=status.HTTP_402_PAYMENT_REQUIRED)
@@ -1427,8 +1427,8 @@ def smsSend(request):
             )
             return Response({
                 'success': False,
-                'error': 'SMS service error',
-                'response': response.text
+                'error': f'SMS service failed to send message. Service response: {response.status_code}',
+                'service_response': response.text
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
     except requests.exceptions.Timeout:
@@ -1442,7 +1442,7 @@ def smsSend(request):
         )
         return Response({
             'success': False,
-            'error': 'SMS service timeout'
+            'error': 'SMS service is currently unavailable (timeout). Please try again later.'
         }, status=status.HTTP_408_REQUEST_TIMEOUT)
     except requests.exceptions.ConnectionError:
         print("SMS API connection error")
@@ -1455,7 +1455,7 @@ def smsSend(request):
         )
         return Response({
             'success': False,
-            'error': 'SMS service unavailable'
+            'error': 'SMS service is currently unavailable (connection error). Please try again later.'
         }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     except requests.exceptions.RequestException as e:
         print(f"SMS API request failed: {str(e)}")
@@ -1468,7 +1468,7 @@ def smsSend(request):
         )
         return Response({
             'success': False,
-            'error': 'SMS service error'
+            'error': f'SMS service error: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

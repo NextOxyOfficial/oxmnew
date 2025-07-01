@@ -937,11 +937,6 @@ export class ApiService {
 		return this.get("/my-sms-credits/");
 	}
 
-	// Add SMS credits (for testing/purchasing)
-	static async addSmsCredits(credits: number) {
-		return this.post("/add-sms-credits/", { credits });
-	}
-
 	// Banking API methods
 	static async getBankAccounts() {
 		return this.get("/banking/accounts/my_accounts/");
