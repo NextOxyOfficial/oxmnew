@@ -46,7 +46,7 @@ export const useBanking = () => {
 
   const loadEmployees = useCallback(async () => {
     try {
-      const employeesData = await ApiService.getEmployees();
+      const employeesData = await ApiService.getBankingEmployees();
       setEmployees(employeesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load employees");

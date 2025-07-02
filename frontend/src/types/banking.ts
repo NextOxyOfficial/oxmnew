@@ -20,12 +20,12 @@ export interface Transaction {
   type: "debit" | "credit";
   amount: number;
   purpose: string;
-  verified_by: string;
+  verified_by: string | null;
   status: "pending" | "verified" | "cancelled";
   date: string;
   updated_at: string;
   reference_number: string;
-  verified_by_details: {
+  verified_by_details?: {
     id: string;
     username: string;
     first_name: string;
@@ -80,7 +80,7 @@ export interface CreateTransactionData {
   type: "credit" | "debit";
   amount: number;
   purpose: string;
-  verified_by: string;
+  verified_by: string | null;
   status?: "pending" | "verified";
 }
 

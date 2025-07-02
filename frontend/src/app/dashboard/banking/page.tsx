@@ -257,9 +257,20 @@ export default function BankingPage() {
     ));
   };
 
-  const getEmployeeName = (employeeId: string) => {
+  const getEmployeeName = (employeeId: string | null, employeeDetails?: any) => {
+    // If verified_by_details is provided in the transaction, use it directly
+    if (employeeDetails) {
+      return employeeDetails.full_name || `${employeeDetails.first_name || ''} ${employeeDetails.last_name || ''}`.trim() || employeeDetails.username || "Unknown";
+    }
+    
+    // If no employeeId provided, transaction is not verified by anyone
+    if (!employeeId) {
+      return "Not Verified";
+    }
+    
+    // Otherwise, fallback to finding employee by ID from employees list
     const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? employee.full_name || `${employee.first_name} ${employee.last_name}`.trim() || employee.username : "Unknown";
+    return employee ? employee.full_name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || employee.username : "Unknown";
   };
 
   // Filter transactions (now using local state since transactions are already filtered by backend)
@@ -334,7 +345,7 @@ export default function BankingPage() {
         t.type,
         t.amount,
         `"${t.purpose}"`,
-        `"${getEmployeeName(t.verified_by)}"`,
+        `"${getEmployeeName(t.verified_by, t.verified_by_details)}"`,
         t.status,
         t.runningBalance
       ].join(','))
@@ -397,7 +408,7 @@ export default function BankingPage() {
                   <td style="color: ${t.type === 'credit' ? 'green' : 'red'}">${t.type.toUpperCase()}</td>
                   <td style="color: ${t.type === 'credit' ? 'green' : 'red'}">${t.type === 'credit' ? '+' : '-'}$${t.amount.toFixed(2)}</td>
                   <td>${t.purpose}</td>
-                  <td>${getEmployeeName(t.verified_by)}</td>
+                  <td>${getEmployeeName(t.verified_by, t.verified_by_details)}</td>
                   <td>${t.status}</td>
                   <td style="color: ${t.runningBalance >= 0 ? 'green' : 'red'}">${t.runningBalance >= 0 ? '+' : ''}$${t.runningBalance.toFixed(2)}${t.runningBalance < 0 ? ' (Overdraft)' : ''}</td>
                 </tr>
@@ -809,7 +820,7 @@ export default function BankingPage() {
                               <td className="py-3 px-4 text-slate-400 text-sm">
                                 <div className="flex items-center space-x-1.5">
                                   <User className="h-3.5 w-3.5" />
-                                  <span>{getEmployeeName(transaction.verified_by)}</span>
+                                  <span>{getEmployeeName(transaction.verified_by, transaction.verified_by_details)}</span>
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-slate-400 text-sm">

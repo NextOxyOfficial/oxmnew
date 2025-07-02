@@ -336,9 +336,12 @@ export class ApiService {
 
 	static async createBankAccount(accountData: {
 		name: string;
-		balance: number;
+		balance?: number;
 	}) {
-		return this.post("/banking/accounts/", accountData);
+		return this.post("/banking/accounts/", {
+			...accountData,
+			balance: accountData.balance || 0
+		});
 	}
 
 	static async updateBankAccount(accountId: string, accountData: {
@@ -372,7 +375,7 @@ export class ApiService {
 		type: "debit" | "credit";
 		amount: number;
 		purpose: string;
-		verified_by: string;
+		verified_by: string | null;
 		status?: string;
 	}) {
 		return this.post("/banking/transactions/", {
@@ -1052,5 +1055,10 @@ export class ApiService {
 	// Notifications
 	static async getNotifications() {
 		return this.get("/notifications/");
+	}
+
+	// Banking employees method (separate from regular employees)
+	static async getBankingEmployees() {
+		return this.get("/banking/transactions/employees/");
 	}
 }
