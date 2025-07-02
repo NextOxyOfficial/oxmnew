@@ -370,65 +370,6 @@ export default function Header({
               <Search className="h-5 w-5" />
             </button>
 
-            {/* Notifications */}
-            <div className="relative" ref={notificationRef}>
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors"
-              >
-                <Bell className="h-5 w-5" />
-                {unreadNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                  </span>
-                )}
-              </button>
-
-              {/* Notifications Dropdown */}
-              {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl z-50">
-                  <div className="p-4 border-b border-slate-700/50">
-                    <h3 className="text-sm font-semibold text-slate-200">Notifications</h3>
-                    {unreadNotifications > 0 && (
-                      <p className="text-xs text-slate-500 mt-1">{unreadNotifications} unread</p>
-                    )}
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {loadingNotifications ? (
-                      <div className="p-4 text-center text-slate-500 text-sm">
-                        <div className="animate-spin h-5 w-5 mx-auto mb-2 border-2 border-slate-600 border-t-cyan-400 rounded-full"></div>
-                        <p>Loading notifications...</p>
-                      </div>
-                    ) : notifications.length > 0 ? (
-                      notifications.slice(0, 5).map((notification) => (
-                        <div key={notification.id} className="p-3 border-b border-slate-700/30 hover:bg-slate-700/30">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h4 className="text-sm font-medium text-slate-200">{notification.title}</h4>
-                              <p className="text-xs text-slate-400 mt-1">{notification.message}</p>
-                              <p className="text-xs text-slate-500 mt-1">{notification.timestamp}</p>
-                            </div>
-                            {!notification.read && (
-                              <div className="w-2 h-2 bg-cyan-400 rounded-full ml-2 mt-1"></div>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-slate-500 text-sm">
-                        No notifications
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3 border-t border-slate-700/50">
-                    <Link href="/dashboard/notifications" className="text-xs text-cyan-400 hover:text-cyan-300">
-                      View all notifications
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Help Button */}
             <Link
               href="/dashboard/help"
