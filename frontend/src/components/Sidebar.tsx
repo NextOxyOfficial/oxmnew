@@ -207,20 +207,13 @@ function CategorizedNavigation({
   });
 
   return (
-    <div className="space-y-6">
+    <div>
       {Object.entries(categories).map(([key, category]) => {
         if (category.items.length === 0) return null;
         
         return (
           <div key={key}>
-            {key !== 'main' && (
-              <div className="px-3 mb-2">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  {category.label}
-                </h3>
-              </div>
-            )}
-            <div className="space-y-1">
+            <div>
               {category.items.map((item) => (
                 <NavItem
                   key={item.name}
