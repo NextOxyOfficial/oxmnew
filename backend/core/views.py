@@ -195,6 +195,8 @@ def profile(request):
                 'company': profile.company or '',
                 'company_address': profile.company_address or '',
                 'phone': profile.phone or '',
+                'contact_number': profile.contact_number or '',
+                'address': profile.address or '',
                 'store_logo': profile.store_logo.url if profile.store_logo else '',
                 'banner_image': profile.banner_image.url if profile.banner_image else '',
             }
@@ -223,6 +225,10 @@ def profile(request):
                 profile.company_address = request.data['company_address']
             if 'phone' in request.data:
                 profile.phone = request.data['phone']
+            if 'contact_number' in request.data:
+                profile.contact_number = request.data['contact_number']
+            if 'address' in request.data:
+                profile.address = request.data['address']
 
             profile.save()
 
@@ -239,6 +245,8 @@ def profile(request):
                     'company': profile.company or '',
                     'company_address': profile.company_address or '',
                     'phone': profile.phone or '',
+                    'contact_number': profile.contact_number or '',
+                    'address': profile.address or '',
                     'store_logo': profile.store_logo.url if profile.store_logo else '',
                     'banner_image': profile.banner_image.url if profile.banner_image else '',
                 }

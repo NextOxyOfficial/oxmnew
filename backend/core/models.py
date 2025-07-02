@@ -27,6 +27,8 @@ class UserProfile(models.Model):
     company = models.CharField(max_length=200, blank=True, null=True)
     company_address = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
+    contact_number = models.CharField(max_length=20, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
     store_logo = models.ImageField(
         upload_to='store_logos/', blank=True, null=True)
     banner_image = models.ImageField(

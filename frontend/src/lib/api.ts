@@ -213,6 +213,8 @@ export class ApiService {
 		company?: string;
 		company_address?: string;
 		phone?: string;
+		contact_number?: string;
+		address?: string;
 	}) {
 		return this.put("/auth/profile/", profileData);
 	}

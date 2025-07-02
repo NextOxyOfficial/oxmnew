@@ -29,16 +29,7 @@ interface Achievement {
   is_active: boolean;
 }
 
-interface UserProfile {
-  email: string;
-  first_name: string;
-  last_name: string;
-  company: string;
-  company_address: string;
-  phone: string;
-  store_logo: string;
-  banner_image: string;
-}
+
 
 interface GeneralSettings {
   language: string;
@@ -56,7 +47,7 @@ interface SecuritySettings {
 export default function SettingsPage() {
   const { user } = useAuth();
   const { refreshCurrency } = useCurrency();
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("categories");
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{
     isVisible: boolean;
@@ -64,17 +55,7 @@ export default function SettingsPage() {
     message: string;
   }>({ isVisible: false, type: "success", message: "" });
 
-  // Profile state
-  const [profile, setProfile] = useState<UserProfile>({
-    email: user?.email || "",
-    first_name: "",
-    last_name: "",
-    company: "",
-    company_address: "",
-    phone: "",
-    store_logo: "",
-    banner_image: "",
-  });
+
 
   // Categories state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -140,7 +121,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchCategories();
-    fetchProfile();
     fetchSettings();
     fetchGifts();
     fetchAchievements();
@@ -165,29 +145,7 @@ export default function SettingsPage() {
     }, 5000);
   };
 
-  const fetchProfile = async () => {
-    try {
-      const response = await ApiService.getProfile();
-      if (response.user && response.profile) {
-        setProfile({
-          email: response.user.email || "",
-          first_name: response.user.first_name || "",
-          last_name: response.user.last_name || "",
-          company: response.profile.company || "",
-          company_address: response.profile.company_address || "",
-          phone: response.profile.phone || "",
-          store_logo: response.profile.store_logo
-            ? ApiService.getImageUrl(response.profile.store_logo)
-            : "",
-          banner_image: response.profile.banner_image
-            ? ApiService.getImageUrl(response.profile.banner_image)
-            : "",
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-    }
-  };
+
 
   const fetchCategories = async () => {
     try {
@@ -305,92 +263,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleProfileSave = async () => {
-    setLoading(true);
-    try {
-      const response = await ApiService.updateProfile({
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        email: profile.email,
-        company: profile.company,
-        company_address: profile.company_address,
-        phone: profile.phone,
-      });
 
-      console.log("Profile saved:", response);
-      showNotification("success", "Profile updated successfully!");
-    } catch (error) {
-      console.error("Error saving profile:", error);
-      showNotification("error", "Error saving profile. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleImageUpload = async (file: File, type: "logo" | "banner") => {
-    if (file) {
-      setLoading(true);
-      try {
-        let response: any;
-        if (type === "logo") {
-          response = await ApiService.uploadStoreLogo(file);
-          setProfile((prevProfile) => ({
-            ...prevProfile,
-            store_logo: ApiService.getImageUrl(response.store_logo_url),
-          }));
-        } else {
-          response = await ApiService.uploadBannerImage(file);
-          setProfile((prevProfile) => ({
-            ...prevProfile,
-            banner_image: ApiService.getImageUrl(response.banner_image_url),
-          }));
-        }
-        console.log("Image uploaded:", response);
-        showNotification(
-          "success",
-          `${
-            type === "logo" ? "Store logo" : "Banner image"
-          } uploaded successfully!`
-        );
-      } catch (error) {
-        console.error("Error uploading image:", error);
-        showNotification("error", "Error uploading image. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  const removeImage = async (type: "logo" | "banner") => {
-    setLoading(true);
-    try {
-      if (type === "logo") {
-        await ApiService.removeStoreLogo();
-        setProfile((prevProfile) => ({
-          ...prevProfile,
-          store_logo: "",
-        }));
-      } else {
-        await ApiService.removeBannerImage();
-        setProfile((prevProfile) => ({
-          ...prevProfile,
-          banner_image: "",
-        }));
-      }
-      console.log(`${type} removed successfully`);
-      showNotification(
-        "success",
-        `${
-          type === "logo" ? "Store logo" : "Banner image"
-        } removed successfully!`
-      );
-    } catch (error) {
-      console.error(`Error removing ${type}:`, error);
-      showNotification("error", `Error removing ${type}. Please try again.`);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleAddCategory = async () => {
     if (!newCategory.trim()) return;
@@ -690,7 +563,6 @@ export default function SettingsPage() {
 
   // Gift functions
   const tabs = [
-    { id: "profile", label: "Profile" },
     { id: "categories", label: "Categories" },
     { id: "general", label: "General" },
     { id: "gift", label: "Gift" },
@@ -772,348 +644,6 @@ export default function SettingsPage() {
           </div>
 
           <div className="p-6">
-            {/* Profile Tab */}
-            {activeTab === "profile" && (
-              <div className="space-y-6">
-                <div>
-                  {/* Company Images */}
-                  <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">
-                      Company Images
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Store Logo */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Store Logo
-                        </label>
-                        <div
-                          className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group"
-                          onClick={() => {
-                            const input = document.createElement("input");
-                            input.type = "file";
-                            input.accept = "image/*";
-                            input.onchange = (e: any) => {
-                              const file = e.target.files[0];
-                              if (file) handleImageUpload(file, "logo");
-                            };
-                            input.click();
-                          }}
-                        >
-                          {profile.store_logo ? (
-                            <>
-                              <img
-                                src={profile.store_logo}
-                                alt="Store Logo"
-                                className="w-full h-full object-contain rounded-lg"
-                              />
-                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg">
-                                <div className="flex space-x-2">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const input =
-                                        document.createElement("input");
-                                      input.type = "file";
-                                      input.accept = "image/*";
-                                      input.onchange = (event: any) => {
-                                        const file = event.target.files[0];
-                                        if (file)
-                                          handleImageUpload(file, "logo");
-                                      };
-                                      input.click();
-                                    }}
-                                    className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-                                  >
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                      />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      removeImage("logo");
-                                    }}
-                                    className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-                                  >
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                      />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="text-center">
-                              <svg
-                                className="mx-auto h-12 w-12 text-slate-400"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={1}
-                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                />
-                              </svg>
-                              <div className="mt-2 text-xs text-slate-400">
-                                Click to upload logo
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Banner Image */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Banner Image
-                        </label>
-                        <div
-                          className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group"
-                          onClick={() => {
-                            const input = document.createElement("input");
-                            input.type = "file";
-                            input.accept = "image/*";
-                            input.onchange = (e: any) => {
-                              const file = e.target.files[0];
-                              if (file) handleImageUpload(file, "banner");
-                            };
-                            input.click();
-                          }}
-                        >
-                          {profile.banner_image ? (
-                            <>
-                              <img
-                                src={profile.banner_image}
-                                alt="Banner"
-                                className="w-full h-full object-cover rounded-lg"
-                              />
-                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg">
-                                <div className="flex space-x-2">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const input =
-                                        document.createElement("input");
-                                      input.type = "file";
-                                      input.accept = "image/*";
-                                      input.onchange = (event: any) => {
-                                        const file = event.target.files[0];
-                                        if (file)
-                                          handleImageUpload(file, "banner");
-                                      };
-                                      input.click();
-                                    }}
-                                    className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-                                  >
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                      />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      removeImage("banner");
-                                    }}
-                                    className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-                                  >
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                      />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="text-center">
-                              <svg
-                                className="mx-auto h-12 w-12 text-gray-400"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={1}
-                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                />
-                              </svg>
-                              <div className="mt-2 text-xs text-gray-400">
-                                Click to upload banner
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Company Address */}
-                  <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">
-                      Company Address
-                    </h4>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Address
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={profile.company_address}
-                        onChange={(e) =>
-                          setProfile({
-                            ...profile,
-                            company_address: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
-                        placeholder="Enter your company address"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Personal Information */}
-                  <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">
-                      Personal Information
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          First Name
-                        </label>
-                        <input
-                          type="text"
-                          value={profile.first_name}
-                          onChange={(e) =>
-                            setProfile({
-                              ...profile,
-                              first_name: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                          placeholder="Enter your first name"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Last Name
-                        </label>
-                        <input
-                          type="text"
-                          value={profile.last_name}
-                          onChange={(e) =>
-                            setProfile({
-                              ...profile,
-                              last_name: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                          placeholder="Enter your last name"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Company
-                        </label>
-                        <input
-                          type="text"
-                          value={profile.company}
-                          onChange={(e) =>
-                            setProfile({ ...profile, company: e.target.value })
-                          }
-                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                          placeholder="Enter your company name"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={profile.email}
-                          onChange={(e) =>
-                            setProfile({ ...profile, email: e.target.value })
-                          }
-                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                          placeholder="Enter your email"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Phone
-                        </label>
-                        <input
-                          type="tel"
-                          value={profile.phone}
-                          onChange={(e) =>
-                            setProfile({ ...profile, phone: e.target.value })
-                          }
-                          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                          placeholder="Enter your phone number"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 flex justify-end">
-                    <button
-                      onClick={handleProfileSave}
-                      disabled={loading}
-                      className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                    >
-                      {loading ? "Saving..." : "Save Changes"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Categories Tab */}
             {activeTab === "categories" && (
               <div className="space-y-6">
