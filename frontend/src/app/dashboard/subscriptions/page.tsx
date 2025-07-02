@@ -70,54 +70,9 @@ export default function SubscriptionsPage() {
 				}
 			} catch (error) {
 				console.error('Failed to fetch subscription data:', error);
-				// Fallback to hardcoded data if API fails
-				setPlans([
-					{
-						id: 1,
-						name: "free",
-						price: 0,
-						period: "forever",
-						description: "Perfect for small businesses getting started.",
-						features: [
-							"Up to 1,000 customers",
-							"Up to 50 products",
-							"Up to 5 suppliers",
-							"SMS Marketing",
-							"24/7 Support",
-						],
-						cta: "Start Free",
-						popular: false,
-					},
-					{
-						id: 2,
-						name: "pro",
-						price: 399,
-						period: "month",
-						description: "For growing businesses that need more power.",
-						features: [
-							"Unlimited customers",
-							"Unlimited products",
-							"Unlimited suppliers",
-							"SMS Marketing",
-							"Online Shop",
-							"Advanced Reporting",
-							"Banking Support",
-							"Priority 24/7 Support",
-						],
-						cta: "Upgrade to Pro",
-						popular: true,
-					},
-				]);
-				setSmsPackages([
-					{ id: 1, sms_count: 33, sms: 33, price: 10.0, popular: false },
-					{ id: 2, sms_count: 83, sms: 83, price: 25.0, popular: false },
-					{ id: 3, sms_count: 166, sms: 166, price: 50.0, popular: false },
-					{ id: 4, sms_count: 333, sms: 333, price: 100.0, popular: false },
-					{ id: 5, sms_count: 690, sms: 690, price: 200.0, popular: false },
-					{ id: 6, sms_count: 1785, sms: 1785, price: 500.0, popular: true },
-					{ id: 7, sms_count: 3700, sms: 3700, price: 1000.0, popular: false },
-					{ id: 8, sms_count: 19230, sms: 19230, price: 5000.0, popular: false },
-				]);
+				// Set empty arrays if API fails - no fallback data
+				setPlans([]);
+				setSmsPackages([]);
 			} finally {
 				setLoading(false);
 			}

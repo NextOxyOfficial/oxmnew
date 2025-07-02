@@ -934,27 +934,27 @@ export class ApiService {
 
 	// Subscription API methods
 	static async getSubscriptionPlans() {
-		return this.get("/subscription/plans/");
+		return this.get("/plans/");
 	}
 
 	static async getSmsPackages() {
-		return this.get("/subscription/sms-packages/");
+		return this.get("/sms-packages/");
 	}
 
 	static async getMySubscription() {
-		return this.get("/subscription/my-subscription/");
+		return this.get("/my-subscription/");
 	}
 
 	static async getSmsCredits() {
-		return this.get("/subscription/my-sms-credits/");
+		return this.get("/my-sms-credits/");
 	}
 
 	static async getSmsHistory() {
-		return this.get("/subscription/my-sms-history/");
+		return this.get("/my-sms-history/");
 	}
 
 	static async purchaseSmsPackage(packageId: number) {
-		return this.post("/subscription/purchase-sms/", { package_id: packageId });
+		return this.post("/add-sms-credits/", { package_id: packageId });
 	}
 
 	static async upgradeSubscription(planId: string) {
