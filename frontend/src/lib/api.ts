@@ -932,86 +932,32 @@ export class ApiService {
 		return this.post("/send-sms/", data);
 	}
 
-	// Get SMS credits for current user
+	// Subscription API methods
+	static async getSubscriptionPlans() {
+		return this.get("/subscription/plans/");
+	}
+
+	static async getSmsPackages() {
+		return this.get("/subscription/sms-packages/");
+	}
+
+	static async getMySubscription() {
+		return this.get("/subscription/my-subscription/");
+	}
+
 	static async getSmsCredits() {
-		return this.get("/my-sms-credits/");
+		return this.get("/subscription/my-sms-credits/");
 	}
 
-	// Banking API methods
-	static async getBankAccounts() {
-		return this.get("/banking/accounts/my_accounts/");
+	static async getSmsHistory() {
+		return this.get("/subscription/my-sms-history/");
 	}
 
-	static async createBankAccount(data: { name: string; balance?: number }) {
-		return this.post("/banking/accounts/", data);
+	static async purchaseSmsPackage(packageId: number) {
+		return this.post("/subscription/purchase-sms/", { package_id: packageId });
 	}
 
-	static async updateBankAccount(id: string, data: { name: string }) {
-		return this.patch(`/banking/accounts/${id}/`, data);
+	static async upgradeSubscription(planId: string) {
+		return this.post("/subscription/upgrade/", { plan_id: planId });
 	}
-
-	static async getAccountTransactions(accountId: string, filters?: {
-		type?: string;
-		status?: string;
-		date_from?: string;
-		date_to?: string;
-		search?: string;
-	}) {
-		const queryParams = new URLSearchParams();
-		
-		if (filters) {
-			Object.entries(filters).forEach(([key, value]) => {
-				if (value) queryParams.append(key, value);
-			});
-		}
-
-		const queryString = queryParams.toString();
-		const endpoint = `/banking/accounts/${accountId}/transactions/${queryString ? `?${queryString}` : ''}`;
-		
-		return this.get(endpoint);
-	}
-
-	static async createTransaction(data: {
-		account: string;
-		type: 'credit' | 'debit';
-		amount: number;
-		purpose: string;
-		verified_by: string;
-		status?: string;
-	}) {
-		return this.post("/banking/transactions/", {
-			...data,
-			status: data.status || 'verified',
-		});
-	}
-
-	static async getEmployees() {
-		return this.get("/banking/transactions/employees/");
-	}
-
-	static async getAccountSummary(accountId: string) {
-		return this.get(`/banking/accounts/${accountId}/summary/`);
-	}
-
-	static async getDashboardStats(accountId?: string) {
-		const queryParams = accountId ? `?account_id=${accountId}` : '';
-		return this.get(`/banking/transactions/dashboard_stats/${queryParams}`);
-	}
-
-	// Fix: avoid static reference to class inside itself
-	static async getSuppliers(): Promise<{ id: number; name: string; phone: string }[]> {
-		const list = await this.get("/suppliers/");
-		if (Array.isArray(list)) {
-			return list.map((s: any) => ({ id: s.id, name: s.name, phone: s.phone }));
-		} else if (list && Array.isArray(list.results)) {
-			return list.results.map((s: any) => ({ id: s.id, name: s.name, phone: s.phone }));
-		}
-		return [];
-	}
-
-	// Add a stub for getSmsHistory (returns empty for now, or implement if endpoint exists)
-	static async getSmsHistory(): Promise<any[]> {
-		// TODO: Replace with real endpoint if available
-		return [];
-	};
 }
