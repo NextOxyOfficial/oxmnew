@@ -247,61 +247,147 @@ export class ApiService {
 		return this.delete("/auth/profile/remove-banner/");
 	}
 
-	// Category methods
-	static async getCategories() {
-		return this.get("/categories/");
+	// Employee methods
+	static async getEmployees() {
+		return this.get("/employees/");
 	}
 
-	static async createCategory(categoryData: {
-		name: string;
-		description?: string;
+	static async getEmployee(id: number) {
+		return this.get(`/employees/${id}/`);
+	}
+
+	static async createEmployee(employeeData: {
+		first_name: string;
+		last_name: string;
+		email: string;
+		phone?: string;
+		position?: string;
+		department?: string;
+		salary?: number;
+		hire_date?: string;
+		photo?: File;
 	}) {
-		return this.post("/categories/", categoryData);
-	}
+		if (employeeData.photo) {
+			const formData = new FormData();
+			Object.entries(employeeData).forEach(([key, value]) => {
+				if (value !== undefined && value !== null) {
+					if (key === "photo" && value instanceof File) {
+						formData.append(key, value);
+					} else {
+						formData.append(key, value.toString());
+					}
+				}
+			});
 
-	static async updateCategory(
-		categoryId: number,
-		categoryData: {
-			name?: string;
-			description?: string;
-			is_active?: boolean;
+			return this.request("/employees/", {
+				method: "POST",
+				body: formData,
+			});
+		} else {
+			// Remove photo from data if it's undefined
+			const { photo, ...dataWithoutPhoto } = employeeData;
+			return this.post("/employees/", dataWithoutPhoto);
 		}
-	) {
-		return this.put(`/categories/${categoryId}/`, categoryData);
 	}
 
-	static async deleteCategory(categoryId: number) {
-		return this.delete(`/categories/${categoryId}/`);
-	}
-
-	static async toggleCategory(categoryId: number) {
-		return this.put(`/categories/${categoryId}/toggle/`, {});
-	}
-
-	// Settings methods
-	static async getSettings() {
-		return this.get("/auth/settings/");
-	}
-
-	static async updateSettings(settingsData: {
-		language?: string;
-		currency?: string;
-		email_notifications?: boolean;
-		marketing_notifications?: boolean;
+	static async updateEmployee(id: number, employeeData: {
+		first_name?: string;
+		last_name?: string;
+		email?: string;
+		phone?: string;
+		position?: string;
+		department?: string;
+		salary?: number;
+		hire_date?: string;
+		status?: string;
+		photo?: File;
 	}) {
-		return this.put("/auth/settings/", settingsData);
+		if (employeeData.photo) {
+			const formData = new FormData();
+			Object.entries(employeeData).forEach(([key, value]) => {
+				if (value !== undefined && value !== null) {
+					if (key === "photo" && value instanceof File) {
+						formData.append(key, value);
+					} else {
+						formData.append(key, value.toString());
+					}
+				}
+			});
+
+			return this.request(`/employees/${id}/`, {
+				method: "PATCH",
+				body: formData,
+			});
+		} else {
+			// Remove photo from data if it's undefined
+			const { photo, ...dataWithoutPhoto } = employeeData;
+			return this.patch(`/employees/${id}/`, dataWithoutPhoto);
+		}
 	}
 
-	static async changePassword(passwordData: {
-		current_password: string;
-		new_password: string;
-		confirm_password: string;
+	static async deleteEmployee(id: number) {
+		return this.delete(`/employees/${id}/`);
+	}
+
+	// Banking methods
+	static async getBankAccounts() {
+		return this.get("/banking/accounts/");
+	}
+
+	static async createBankAccount(accountData: {
+		name: string;
+		balance: number;
 	}) {
-		return this.post("/auth/change-password/", passwordData);
+		return this.post("/banking/accounts/", accountData);
 	}
 
-	static async requestPasswordReset() {
-		return this.post("/auth/request-password-reset/", {});
+	static async updateBankAccount(accountId: string, accountData: {
+		name?: string;
+		balance?: number;
+	}) {
+		return this.patch(`/banking/accounts/${accountId}/`, accountData);
+	}
+
+	static async deleteBankAccount(accountId: string) {
+		return this.delete(`/banking/accounts/${accountId}/`);
+	}
+
+	static async getAccountTransactions(accountId: string, filters?: Record<string, string>) {
+		let endpoint = `/banking/accounts/${accountId}/transactions/`;
+		
+		if (filters && Object.keys(filters).length > 0) {
+			const queryParams = new URLSearchParams();
+			Object.entries(filters).forEach(([key, value]) => {
+				if (value) queryParams.append(key, value);
+			});
+			const queryString = queryParams.toString();
+			endpoint = `${endpoint}${queryString ? `?${queryString}` : ''}`;
+		}
+		
+		return this.get(endpoint);
+	}
+
+	static async createTransaction(transactionData: {
+		account: string;
+		type: "debit" | "credit";
+		amount: number;
+		purpose: string;
+		verified_by: string;
+		status?: string;
+	}) {
+		return this.post("/banking/transactions/", {
+			...transactionData,
+			status: transactionData.status || 'verified'
+		});
+	}
+
+	static async getAccountSummary(accountId: string) {
+		return this.get(`/banking/accounts/${accountId}/summary/`);
+	}
+
+	static async getDashboardStats(accountId?: string) {
+		const queryParams = accountId ? `?account_id=${accountId}` : '';
+		return this.get(`/banking/transactions/dashboard_stats/${queryParams}`);
 	}
 
 	// Gift methods
