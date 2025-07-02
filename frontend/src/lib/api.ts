@@ -541,6 +541,10 @@ export class ApiService {
 	}
 
 	// Suppliers methods
+	static async getSuppliers() {
+		return this.get("/suppliers/");
+	}
+
 	static async createSupplier(supplierData: {
 		name: string;
 		address?: string;
