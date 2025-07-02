@@ -800,6 +800,21 @@ export class ApiService {
 		return this.get("/stock-movements/");
 	}
 
+	static async getProductStockMovements(productId: number) {
+		console.log(`Fetching stock movements for product ${productId}`);
+		const endpoint = `/stock-movements/?product=${productId}`;
+		console.log(`API endpoint: ${API_BASE_URL}${endpoint}`);
+		
+		try {
+			const result = await this.get(endpoint);
+			console.log(`Stock movements result:`, result);
+			return result;
+		} catch (error) {
+			console.error(`Error fetching stock movements for product ${productId}:`, error);
+			throw error;
+		}
+	}
+
 	// Purchase methods
 	static async getPurchases() {
 		try {

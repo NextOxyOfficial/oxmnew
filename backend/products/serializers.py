@@ -439,10 +439,18 @@ class ProductStockMovementSerializer(serializers.ModelSerializer):
     """Serializer for stock movements"""
 
     product_name = serializers.CharField(source="product.name", read_only=True)
-    variant_display = serializers.CharField(source="variant.__str__", read_only=True)
+    variant_display = serializers.SerializerMethodField()
     movement_type_display = serializers.CharField(
         source="get_movement_type_display", read_only=True
     )
+    user_name = serializers.CharField(source="user.get_full_name", read_only=True)
+    username = serializers.CharField(source="user.username", read_only=True)
+
+    def get_variant_display(self, obj):
+        """Get variant display string, handling None case"""
+        if obj.variant:
+            return str(obj.variant)
+        return None
 
     class Meta:
         model = ProductStockMovement
@@ -459,6 +467,9 @@ class ProductStockMovementSerializer(serializers.ModelSerializer):
             "new_stock",
             "reason",
             "notes",
+            "user",
+            "user_name",
+            "username",
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]

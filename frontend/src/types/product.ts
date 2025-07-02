@@ -101,9 +101,18 @@ export interface StockEntry {
   variant_details?: string;
   created_at: string;
   created_by: string;
+  // Backend fields
+  movement_type?: string;
+  movement_type_display?: string;
+  previous_stock?: number;
+  new_stock?: number;
+  user?: {
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+  };
   // Legacy fields for backward compatibility
   date?: string;
   unitPrice?: number;
-  user?: string;
   invoice?: string;
 }
