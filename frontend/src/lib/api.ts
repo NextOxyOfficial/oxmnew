@@ -962,4 +962,9 @@ export class ApiService {
 	static async upgradeSubscription(planId: string) {
 		return this.post("/subscription/upgrade/", { plan_id: planId });
 	}
+
+	// Notifications
+	static async getNotifications() {
+		return this.get("/notifications/");
+	}
 }

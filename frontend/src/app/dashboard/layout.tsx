@@ -227,34 +227,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return null;
   }
 
-  // Sample notifications for demo
-  const sampleNotifications = [
-    {
-      id: 1,
-      title: "Low Stock Alert",
-      message: "Product ABC123 is running low in inventory",
-      type: "warning" as const,
-      timestamp: "2 minutes ago",
-      read: false
-    },
-    {
-      id: 2,
-      title: "New Order Received",
-      message: "Order #12345 received from John Doe",
-      type: "success" as const,
-      timestamp: "5 minutes ago",
-      read: false
-    },
-    {
-      id: 3,
-      title: "Payment Processed",
-      message: "Payment of $1,250.00 has been processed",
-      type: "success" as const,
-      timestamp: "1 hour ago",
-      read: true
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
       {/* Sticky full width header */}
@@ -265,7 +237,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           onMenuClick={() => setSidebarOpen(true)}
           title={getPageTitle()}
           breadcrumbs={getBreadcrumbs()}
-          notifications={sampleNotifications}
           smsCredits={1250}
           darkMode={true}
         />

@@ -2,9 +2,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Sum, Count, Q
+from django.utils import timezone
 from products.models import Product
 from customers.models import Customer, Order
 from suppliers.models import Supplier
+from django.utils import timezone
 
 
 @api_view(['GET'])
@@ -167,4 +169,117 @@ def search_global(request):
         'results': results,
         'total': len(results),
         'query': query
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_notifications(request):
+    """Get dynamic notifications for the user"""
+    user = request.user
+    notifications = []
+    notification_id = 1
+    
+    try:
+        # Get user's products for stock notifications
+        products = Product.objects.filter(user=user)
+        low_stock_products = products.filter(stock__lte=5, stock__gt=0).count()
+        out_of_stock_products = products.filter(stock=0).count()
+        
+        # Low stock notification
+        if low_stock_products > 0:
+            notifications.append({
+                'id': notification_id,
+                'title': 'Low Stock Alert',
+                'message': f'{low_stock_products} product{"s" if low_stock_products != 1 else ""} running low on stock',
+                'type': 'warning',
+                'timestamp': 'Just now',
+                'read': False
+            })
+            notification_id += 1
+        
+        # Out of stock notification
+        if out_of_stock_products > 0:
+            notifications.append({
+                'id': notification_id,
+                'title': 'Out of Stock',
+                'message': f'{out_of_stock_products} product{"s" if out_of_stock_products != 1 else ""} out of stock',
+                'type': 'error',
+                'timestamp': '5 minutes ago',
+                'read': False
+            })
+            notification_id += 1
+        
+        # Check for recent customers
+        from customers.models import Customer
+        recent_customers = Customer.objects.filter(user=user).order_by('-created_at')[:1]
+        if recent_customers.exists():
+            customer = recent_customers.first()
+            notifications.append({
+                'id': notification_id,
+                'title': 'New Customer',
+                'message': f'{customer.name} has been added to your customer list',
+                'type': 'success',
+                'timestamp': '2 hours ago',
+                'read': False
+            })
+            notification_id += 1
+        
+        # Check for recent orders
+        try:
+            from customers.models import Order
+            recent_orders = Order.objects.filter(user=user).order_by('-created_at')[:1]
+            if recent_orders.exists():
+                order = recent_orders.first()
+                notifications.append({
+                    'id': notification_id,
+                    'title': 'New Order',
+                    'message': f'Order #{order.id} received from {order.customer_name}',
+                    'type': 'info',
+                    'timestamp': '3 hours ago',
+                    'read': True
+                })
+                notification_id += 1
+        except:
+            # Orders model might not exist
+            pass
+        
+        # System notifications
+        notifications.append({
+            'id': notification_id,
+            'title': 'System Update',
+            'message': 'OxyManager has been updated with new features',
+            'type': 'info',
+            'timestamp': '1 day ago',
+            'read': True
+        })
+        notification_id += 1
+        
+        # Welcome notification for new users
+        if user.date_joined and (timezone.now() - user.date_joined).days < 7:
+            notifications.insert(0, {
+                'id': notification_id,
+                'title': 'Welcome to OxyManager!',
+                'message': 'Get started by adding your first product or customer',
+                'type': 'success',
+                'timestamp': 'Welcome',
+                'read': False
+            })
+        
+    except Exception as e:
+        # Fallback notifications if there are any errors
+        notifications = [
+            {
+                'id': 1,
+                'title': 'Welcome!',
+                'message': 'Welcome to OxyManager Business Suite',
+                'type': 'info',
+                'timestamp': 'Just now',
+                'read': False
+            }
+        ]
+    
+    return Response({
+        'notifications': notifications,
+        'unread_count': len([n for n in notifications if not n['read']])
     })

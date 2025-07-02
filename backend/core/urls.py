@@ -53,4 +53,5 @@ urlpatterns = [
     # Dashboard API endpoints
     path('dashboard/stats/', api_views.dashboard_stats, name='dashboard-stats'),
     path('search/', api_views.search_global, name='search-global'),
+    path('notifications/', api_views.get_notifications, name='get-notifications'),
 ]

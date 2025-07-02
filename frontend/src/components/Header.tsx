@@ -26,6 +26,7 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { searchData, getRecentSearches, addToRecentSearches, type SearchResult } from '@/lib/searchData';
+import { ApiService } from '@/lib/api';
 
 interface User {
   id: number;
@@ -55,7 +56,6 @@ interface HeaderProps {
   onMenuClick: () => void;
   title: string;
   breadcrumbs?: BreadcrumbItem[];
-  notifications?: Notification[];
   smsCredits?: number;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
@@ -67,7 +67,6 @@ export default function Header({
   onMenuClick, 
   title, 
   breadcrumbs,
-  notifications = [],
   smsCredits = 1250,
   darkMode = true,
   onToggleDarkMode
@@ -80,8 +79,36 @@ export default function Header({
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(true);
 
   const unreadNotifications = notifications.filter(n => !n.read).length;
+
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifications(true);
+      const response = await ApiService.getNotifications();
+      setNotifications(response.notifications || []);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+      // Set empty array if fetch fails
+      setNotifications([]);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  // Load notifications on component mount
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  // Refresh notifications periodically (every 5 minutes)
+  useEffect(() => {
+    const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Handle search with debouncing
   useEffect(() => {
@@ -332,10 +359,6 @@ export default function Header({
 
             {/* Quick Stats */}
             <div className="hidden lg:flex items-center space-x-2 text-xs">
-              <div className="flex items-center space-x-1 bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md border border-emerald-500/20">
-                <MessageSquare className="h-3 w-3" />
-                <span className="font-medium">{smsCredits.toLocaleString()}</span>
-              </div>
               <div className="flex items-center space-x-1 bg-blue-500/10 text-blue-400 px-2 py-1 rounded-md border border-blue-500/20">
                 <Activity className="h-3 w-3" />
                 <span className="font-medium">Online</span>
@@ -371,7 +394,12 @@ export default function Header({
                     )}
                   </div>
                   <div className="max-h-64 overflow-y-auto">
-                    {notifications.length > 0 ? (
+                    {loadingNotifications ? (
+                      <div className="p-4 text-center text-slate-500 text-sm">
+                        <div className="animate-spin h-5 w-5 mx-auto mb-2 border-2 border-slate-600 border-t-cyan-400 rounded-full"></div>
+                        <p>Loading notifications...</p>
+                      </div>
+                    ) : notifications.length > 0 ? (
                       notifications.slice(0, 5).map((notification) => (
                         <div key={notification.id} className="p-3 border-b border-slate-700/30 hover:bg-slate-700/30">
                           <div className="flex items-start justify-between">
