@@ -29,6 +29,11 @@ export default function ProfilePage() {
 	const [loading, setLoading] = useState(true);
 	const [isEditing, setIsEditing] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
+	const [notification, setNotification] = useState<{
+		isVisible: boolean;
+		type: "success" | "error";
+		message: string;
+	}>({ isVisible: false, type: "success", message: "" });
 	const [editForm, setEditForm] = useState({
 		first_name: "",
 		last_name: "",
@@ -39,6 +44,13 @@ export default function ProfilePage() {
 		contact_number: "",
 		address: "",
 	});
+
+	const showNotification = (type: "success" | "error", message: string) => {
+		setNotification({ isVisible: true, type, message });
+		setTimeout(() => {
+			setNotification({ isVisible: false, type: "success", message: "" });
+		}, 5000);
+	};
 
 	useEffect(() => {
 		fetchProfile();
@@ -60,6 +72,7 @@ export default function ProfilePage() {
 			});
 		} catch (error) {
 			console.error("Failed to fetch profile:", error);
+			showNotification("error", "Failed to load profile data. Please refresh the page.");
 		} finally {
 			setLoading(false);
 		}
@@ -91,9 +104,10 @@ export default function ProfilePage() {
 			await ApiService.updateProfile(editForm);
 			await fetchProfile();
 			setIsEditing(false);
+			showNotification("success", "Profile updated successfully!");
 		} catch (error) {
 			console.error("Failed to update profile:", error);
-			alert("Failed to update profile. Please try again.");
+			showNotification("error", "Failed to update profile. Please try again.");
 		} finally {
 			setIsSaving(false);
 		}
@@ -110,13 +124,15 @@ export default function ProfilePage() {
 		try {
 			if (type === 'logo') {
 				await ApiService.uploadStoreLogo(file);
+				showNotification("success", "Store logo uploaded successfully!");
 			} else {
 				await ApiService.uploadBannerImage(file);
+				showNotification("success", "Banner image uploaded successfully!");
 			}
 			await fetchProfile();
 		} catch (error) {
 			console.error(`Failed to upload ${type}:`, error);
-			alert(`Failed to upload ${type}. Please try again.`);
+			showNotification("error", `Failed to upload ${type}. Please try again.`);
 		}
 	};
 
@@ -124,13 +140,15 @@ export default function ProfilePage() {
 		try {
 			if (type === 'logo') {
 				await ApiService.removeStoreLogo();
+				showNotification("success", "Store logo removed successfully!");
 			} else {
 				await ApiService.removeBannerImage();
+				showNotification("success", "Banner image removed successfully!");
 			}
 			await fetchProfile();
 		} catch (error) {
 			console.error(`Failed to remove ${type}:`, error);
-			alert(`Failed to remove ${type}. Please try again.`);
+			showNotification("error", `Failed to remove ${type}. Please try again.`);
 		}
 	};
 
@@ -167,6 +185,54 @@ export default function ProfilePage() {
 	return (
 		<div className="p-6 space-y-6">
 			<div className="max-w-4xl">
+				{/* Notification */}
+				{notification.isVisible && (
+					<div
+						className={`p-4 rounded-lg border mb-6 ${
+							notification.type === "success"
+								? "bg-green-500/10 border-green-400/30 text-green-300"
+								: "bg-red-500/10 border-red-400/30 text-red-300"
+						}`}
+					>
+						<div className="flex items-center">
+							<div className="flex-shrink-0">
+								{notification.type === "success" ? (
+									<svg
+										className="h-5 w-5"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 13l4 4L19 7"
+										/>
+									</svg>
+								) : (
+									<svg
+										className="h-5 w-5"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								)}
+							</div>
+							<div className="ml-3">
+								<p className="text-sm font-medium">{notification.message}</p>
+							</div>
+						</div>
+					</div>
+				)}
+				
 				{/* Profile Management Card */}
 				<div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
 					{/* Header */}
