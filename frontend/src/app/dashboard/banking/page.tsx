@@ -611,6 +611,20 @@ export default function BankingPage() {
                 <div className="p-3 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/30 to-slate-700/20">
                   {/* Financial Summary Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div className="bg-gradient-to-br from-cyan-500/15 to-cyan-600/8 border border-cyan-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+                      <div className="flex items-center space-x-2">
+                        <div className="rounded-md bg-cyan-500/20 p-1">
+                          <DollarSign className="h-7 w-7 text-cyan-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-cyan-300 font-medium">Balance</p>
+                          <p className={`text-sm font-bold ${selectedAccount && selectedAccount.balance >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                            {selectedAccount ? formatCurrency(selectedAccount.balance) : '$0.00'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div className="bg-gradient-to-br from-green-500/15 to-green-600/8 border border-green-500/25 rounded-lg p-2.5 backdrop-blur-sm">
                       <div className="flex items-center space-x-2">
                         <div className="rounded-md bg-green-500/20 p-1">
@@ -634,20 +648,6 @@ export default function BankingPage() {
                           <p className="text-sm text-red-300 font-medium">Debits</p>
                           <p className="text-sm font-bold text-red-400">
                             -{formatCurrency(getAccountSummary().totalDebit)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-cyan-500/15 to-cyan-600/8 border border-cyan-500/25 rounded-lg p-2.5 backdrop-blur-sm">
-                      <div className="flex items-center space-x-2">
-                        <div className="rounded-md bg-cyan-500/20 p-1">
-                          <DollarSign className="h-7 w-7 text-cyan-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-cyan-300 font-medium">Balance</p>
-                          <p className={`text-sm font-bold ${selectedAccount && selectedAccount.balance >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
-                            {selectedAccount ? formatCurrency(selectedAccount.balance) : '$0.00'}
                           </p>
                         </div>
                       </div>
