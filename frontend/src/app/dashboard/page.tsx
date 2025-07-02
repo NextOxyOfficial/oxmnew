@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 
 export default function DashboardPage() {
+  const formatCurrency = useCurrencyFormatter();
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [dateRange, setDateRange] = useState({
@@ -40,7 +42,7 @@ export default function DashboardPage() {
             Buy Price
           </p>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            $45,320
+            {formatCurrency(45320)}
           </p>
           <p className="text-xs text-red-400 mt-1">Total purchase cost</p>
         </div>
@@ -51,7 +53,7 @@ export default function DashboardPage() {
             Sell Price
           </p>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            $68,450
+            {formatCurrency(68450)}
           </p>
           <p className="text-xs text-blue-400 mt-1">Total sales revenue</p>
         </div>
@@ -62,7 +64,7 @@ export default function DashboardPage() {
             Estimated Profit
           </p>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            $23,130
+            {formatCurrency(23130)}
           </p>
           <p className="text-xs text-green-400 mt-1">+51.0% profit margin</p>
         </div>
@@ -153,7 +155,7 @@ export default function DashboardPage() {
                           Last Month
                         </button>
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center"
+                          className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center"
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowDateRangePicker(true);
@@ -248,7 +250,7 @@ export default function DashboardPage() {
                       Last Month
                     </button>
                     <button
-                      className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center"
+                      className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center"
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowDateRangePicker(true);
@@ -537,7 +539,7 @@ export default function DashboardPage() {
                   Buy Price
                 </span>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  $68,450
+                  {formatCurrency(68450)}
                 </p>
                 <p className="text-xs text-green-300 mt-0.5">
                   +12.8% vs last period
@@ -549,7 +551,7 @@ export default function DashboardPage() {
                   Sell Price
                 </span>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  $45,320
+                  {formatCurrency(45320)}
                 </p>
                 <p className="text-xs text-red-300 mt-0.5">
                   +5.2% vs last period
@@ -562,7 +564,7 @@ export default function DashboardPage() {
                   Profit
                 </span>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  $23,130
+                  {formatCurrency(23130)}
                 </p>
                 <p className="text-xs text-purple-300 mt-0.5">
                   +18.4% vs last period
@@ -577,7 +579,7 @@ export default function DashboardPage() {
                   Profit
                 </span>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  $23,130
+                  {formatCurrency(23130)}
                 </p>
                 <p className="text-xs text-purple-300 mt-0.5">
                   +18.4% vs last period
@@ -598,67 +600,67 @@ export default function DashboardPage() {
                   {
                     id: "#1245",
                     customer: "John Smith",
-                    amount: "$1,250.00",
+                    amount: 1250.0,
                     status: "Completed",
                     invoiceStatus: "completed",
                     time: "2:30 PM",
                     date: "Today",
                     color: "green",
-                    bought: "$870.00",
-                    sold: "$1,250.00",
-                    profit: "$380.00",
+                    bought: 870.0,
+                    sold: 1250.0,
+                    profit: 380.0,
                   },
                   {
                     id: "#1244",
                     customer: "Sarah Johnson",
-                    amount: "$890.50",
+                    amount: 890.5,
                     status: "Draft",
                     invoiceStatus: "draft",
                     time: "11:20 AM",
                     date: "Today",
                     color: "yellow",
-                    bought: "$650.25",
-                    sold: "$890.50",
-                    profit: "$240.25",
+                    bought: 650.25,
+                    sold: 890.5,
+                    profit: 240.25,
                   },
                   {
                     id: "#1243",
                     customer: "Michael Brown",
-                    amount: "$2,340.75",
+                    amount: 2340.75,
                     status: "Shipped",
                     invoiceStatus: "draft",
                     time: "9:15 AM",
                     date: "Today",
                     color: "blue",
-                    bought: "$1,740.50",
-                    sold: "$2,340.75",
-                    profit: "$600.25",
+                    bought: 1740.5,
+                    sold: 2340.75,
+                    profit: 600.25,
                   },
                   {
                     id: "#1242",
                     customer: "Emily Davis",
-                    amount: "$150.25",
+                    amount: 150.25,
                     status: "Completed",
                     invoiceStatus: "completed",
                     time: "4:45 PM",
                     date: "Yesterday",
                     color: "green",
-                    bought: "$98.50",
-                    sold: "$150.25",
-                    profit: "$51.75",
+                    bought: 98.5,
+                    sold: 150.25,
+                    profit: 51.75,
                   },
                   {
                     id: "#1241",
                     customer: "Robert Wilson",
-                    amount: "$3,560.00",
+                    amount: 3560.0,
                     status: "Completed",
                     invoiceStatus: "completed",
                     time: "2:10 PM",
                     date: "Yesterday",
                     color: "green",
-                    bought: "$2,780.00",
-                    sold: "$3,560.00",
-                    profit: "$780.00",
+                    bought: 2780.0,
+                    sold: 3560.0,
+                    profit: 780.0,
                   },
                 ].map((order, index) => (
                   <div
@@ -705,7 +707,7 @@ export default function DashboardPage() {
 
                       <div className="flex items-center">
                         <span className="hidden sm:inline text-sm font-bold text-white">
-                          {order.amount}
+                          {formatCurrency(order.amount)}
                         </span>
                         <button
                           className="text-gray-300 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all ml-2"
@@ -735,7 +737,7 @@ export default function DashboardPage() {
                         {order.customer}
                       </span>
                       <span className="text-sm font-bold text-white">
-                        {order.amount}
+                        {formatCurrency(order.amount)}
                       </span>
                     </div>
 
@@ -744,21 +746,21 @@ export default function DashboardPage() {
                         <div>
                           <span className="text-xs text-gray-400">Bought</span>
                           <span className="text-xs font-medium text-red-400 ml-1.5">
-                            {order.bought}
+                            {formatCurrency(order.bought)}
                           </span>
                         </div>
                         <div className="h-3 w-px bg-gray-600"></div>
                         <div>
                           <span className="text-xs text-gray-400">Sold</span>
                           <span className="text-xs font-medium text-blue-400 ml-1.5">
-                            {order.sold}
+                            {formatCurrency(order.sold)}
                           </span>
                         </div>
                         <div className="h-3 w-px bg-gray-600"></div>
                         <div>
                           <span className="text-xs text-gray-400">Profit</span>
                           <span className="text-xs font-medium text-green-400 ml-1.5">
-                            {order.profit}
+                            {formatCurrency(order.profit)}
                           </span>
                         </div>
                       </div>
@@ -886,7 +888,9 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-green-400">$260,350.95</p>
+              <p className="text-2xl font-bold text-green-400">
+                {formatCurrency(260350.95)}
+              </p>
               <p className="text-sm text-green-300">+2.3% this month</p>
             </div>
           </div>
@@ -895,25 +899,25 @@ export default function DashboardPage() {
             {[
               {
                 name: "Main Account",
-                amount: "$145,230.45",
+                amount: 145230.45,
                 color: "green",
                 status: "Primary",
               },
               {
                 name: "Business",
-                amount: "$32,450.75",
+                amount: 32450.75,
                 color: "blue",
                 status: "Operations",
               },
               {
                 name: "Investment",
-                amount: "$28,900.25",
+                amount: 28900.25,
                 color: "purple",
                 status: "Growth",
               },
               {
                 name: "Emergency",
-                amount: "$15,000.00",
+                amount: 15000.0,
                 color: "red",
                 status: "Reserve",
               },
@@ -932,7 +936,9 @@ export default function DashboardPage() {
                     className={`w-2 h-2 bg-${account.color}-400 rounded-full`}
                   ></div>
                 </div>
-                <p className="text-white font-bold text-lg">{account.amount}</p>
+                <p className="text-white font-bold text-lg">
+                  {formatCurrency(account.amount)}
+                </p>
                 <p className={`text-${account.color}-300 text-xs`}>
                   {account.status}
                 </p>
@@ -974,7 +980,7 @@ export default function DashboardPage() {
                 John Doe (+1234567890)
               </p>
               <p className="text-xs text-gray-300 mt-1">
-                "Your order #1245 has been shipped..."
+                &ldquo;Your order #1245 has been shipped...&rdquo;
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 June 25, 2025, 2:30 PM
