@@ -289,8 +289,12 @@ export default function SmsPage() {
 						<p className="text-xs text-slate-400 mb-2">
 							You can use{" "}
 							<span className="font-mono bg-slate-800 px-1 rounded">
+								{"{name}"}
 							</span>{" "}
 							in your message. It will be replaced with each contact's name.
+						</p>
+						<p className="text-xs text-slate-500 mb-2">
+							Example: "Hi {"{name}"}, your order is ready for pickup!"
 						</p>
 						<div className="relative mb-4">
 							<textarea
