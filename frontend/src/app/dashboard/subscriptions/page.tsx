@@ -41,14 +41,49 @@ export default function SubscriptionsPage() {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const [plansData, packagesData, subscriptionData] = await Promise.all([
-					ApiService.getSubscriptionPlans(),
-					ApiService.getSmsPackages(),
-					ApiService.getMySubscription().catch(() => null) // Handle case where user has no subscription
-				]);
+				console.log("Starting to fetch subscription data...");
+				
+				// Debug endpoints first
+				try {
+					await ApiService.debugSubscriptionEndpoints();
+				} catch (debugError) {
+					console.error("Debug endpoints failed:", debugError);
+				}
+				
+				// Fetch data individually to identify which endpoint is failing
+				let plansData = [];
+				let packagesData = [];
+				let subscriptionData = null;
+				
+				try {
+					console.log("Fetching subscription plans...");
+					plansData = await ApiService.getSubscriptionPlans();
+					console.log("Successfully fetched plans:", plansData);
+				} catch (planError) {
+					console.error("Failed to fetch subscription plans:", planError);
+					// Continue with empty plans array
+				}
+				
+				try {
+					console.log("Fetching SMS packages...");
+					packagesData = await ApiService.getSmsPackages();
+					console.log("Successfully fetched packages:", packagesData);
+				} catch (packageError) {
+					console.error("Failed to fetch SMS packages:", packageError);
+					// Continue with empty packages array
+				}
+				
+				try {
+					console.log("Fetching user subscription...");
+					subscriptionData = await ApiService.getMySubscription();
+					console.log("Successfully fetched subscription:", subscriptionData);
+				} catch (subscriptionError) {
+					console.error("Failed to fetch user subscription:", subscriptionError);
+					// Continue with null subscription
+				}
 
 				// Process plans data
-				const processedPlans = plansData.map((plan: any) => ({
+				const processedPlans = (plansData || []).map((plan: any) => ({
 					...plan,
 					cta: plan.name === 'free' ? 'Start Free' : `Upgrade to ${plan.name}`,
 					popular: plan.is_popular || false
@@ -56,7 +91,7 @@ export default function SubscriptionsPage() {
 				setPlans(processedPlans);
 
 				// Process SMS packages data
-				const processedPackages = packagesData.map((pkg: any) => ({
+				const processedPackages = (packagesData || []).map((pkg: any) => ({
 					...pkg,
 					sms: pkg.sms_count,
 					popular: pkg.is_popular || false
@@ -68,6 +103,8 @@ export default function SubscriptionsPage() {
 				if (subscriptionData?.plan?.name) {
 					setCurrentPlan(subscriptionData.plan.name.toLowerCase());
 				}
+				
+				console.log("Finished fetching subscription data");
 			} catch (error) {
 				console.error('Failed to fetch subscription data:', error);
 				// Set empty arrays if API fails - no fallback data

@@ -68,8 +68,13 @@ export class ApiService {
 			if (!response.ok) {
 				let errorMessage = `HTTP error! status: ${response.status}`;
 				let errorDetails = null;
+				
+				// Get response text first to check if it's HTML or JSON
+				const responseText = await response.text();
+				console.error(`API Error Response (${response.status}):`, responseText);
+				
 				try {
-					const errorData = await response.json();
+					const errorData = JSON.parse(responseText);
 					errorDetails = errorData;
 					errorMessage = errorData.error || errorData.detail || errorMessage;
 
@@ -87,10 +92,16 @@ export class ApiService {
 							errorMessage = fieldErrors.join("; ");
 						}
 					}
-				} catch {
-					// If response is not JSON, use status text
-					errorMessage = response.statusText || errorMessage;
+				} catch (parseError) {
+					// Response is not JSON, probably HTML error page
+					console.error("Response is not JSON, likely HTML error page");
+					if (responseText.includes("<html>") || responseText.includes("<!DOCTYPE")) {
+						errorMessage = `Server returned HTML instead of JSON (${response.status}). Check if the backend endpoint exists and is properly configured.`;
+					} else {
+						errorMessage = `${response.status} ${response.statusText}: ${responseText.substring(0, 200)}`;
+					}
 				}
+				
 				const error = new Error(errorMessage);
 				(error as Error & { details?: unknown }).details = errorDetails;
 				throw error;
@@ -101,10 +112,19 @@ export class ApiService {
 				return null;
 			}
 
-			const result = await response.json();
-			return result;
+			// Get response text first to check if it's valid JSON
+			const responseText = await response.text();
+			try {
+				const result = JSON.parse(responseText);
+				return result;
+			} catch (parseError) {
+				console.error("Failed to parse JSON response:", responseText);
+				throw new Error(`Server returned invalid JSON. Response: ${responseText.substring(0, 200)}`);
+			}
 		} catch (error) {
 			console.error("API request failed:", error);
+			console.error("Request URL:", url);
+			console.error("Request config:", config);
 			if (
 				error instanceof TypeError &&
 				error.message.includes("Failed to fetch")
@@ -1044,15 +1064,39 @@ export class ApiService {
 
 	// Subscription API methods
 	static async getSubscriptionPlans() {
-		return this.get("/plans/");
+		try {
+			console.log("Fetching subscription plans...");
+			const result = await this.get("/plans/");
+			console.log("Subscription plans result:", result);
+			return result;
+		} catch (error) {
+			console.error("Error fetching subscription plans:", error);
+			throw error;
+		}
 	}
 
 	static async getSmsPackages() {
-		return this.get("/sms-packages/");
+		try {
+			console.log("Fetching SMS packages...");
+			const result = await this.get("/sms-packages/");
+			console.log("SMS packages result:", result);
+			return result;
+		} catch (error) {
+			console.error("Error fetching SMS packages:", error);
+			throw error;
+		}
 	}
 
 	static async getMySubscription() {
-		return this.get("/my-subscription/");
+		try {
+			console.log("Fetching user subscription...");
+			const result = await this.get("/my-subscription/");
+			console.log("User subscription result:", result);
+			return result;
+		} catch (error) {
+			console.error("Error fetching user subscription:", error);
+			throw error;
+		}
 	}
 
 	static async getSmsCredits() {
@@ -1079,5 +1123,67 @@ export class ApiService {
 	// Banking employees method (separate from regular employees)
 	static async getBankingEmployees() {
 		return this.get("/banking/transactions/employees/");
+	}
+
+	// Debug and testing methods
+	static async testEndpoint(endpoint: string) {
+		const fullUrl = `${API_BASE_URL}${endpoint}`;
+		console.log(`Testing endpoint: ${fullUrl}`);
+		
+		try {
+			const response = await fetch(fullUrl, {
+				method: "GET",
+				headers: {
+					"Authorization": `Token ${AuthToken.get()}`,
+					"Content-Type": "application/json"
+				}
+			});
+			
+			console.log(`Endpoint ${endpoint} response status:`, response.status);
+			console.log(`Endpoint ${endpoint} response headers:`, Object.fromEntries(response.headers.entries()));
+			
+			const responseText = await response.text();
+			console.log(`Endpoint ${endpoint} response body:`, responseText);
+			
+			return {
+				status: response.status,
+				ok: response.ok,
+				body: responseText
+			};
+		} catch (error) {
+			console.error(`Error testing endpoint ${endpoint}:`, error);
+			throw error;
+		}
+	}
+
+	static async debugSubscriptionEndpoints() {
+		console.log("=== DEBUG: Testing Subscription Endpoints ===");
+		console.log("API Base URL:", API_BASE_URL);
+		console.log("Backend Base URL:", BACKEND_BASE_URL);
+		const token = AuthToken.get();
+		console.log("Auth Token:", token ? `Present (${token.substring(0, 10)}...)` : "Missing");
+		
+		const endpoints = [
+			{ path: "/plans/", requiresAuth: false },
+			{ path: "/sms-packages/", requiresAuth: false },
+			{ path: "/my-subscription/", requiresAuth: true }
+		];
+		
+		for (const endpoint of endpoints) {
+			try {
+				console.log(`\n--- Testing ${endpoint.path} (Auth required: ${endpoint.requiresAuth}) ---`);
+				await this.testEndpoint(endpoint.path);
+			} catch (error) {
+				console.error(`Failed to test ${endpoint.path}:`, error);
+			}
+		}
+		
+		// Also test if the base API is working
+		try {
+			console.log("\n--- Testing base API health ---");
+			await this.testEndpoint("/health/");
+		} catch (error) {
+			console.error("Failed to test health endpoint:", error);
+		}
 	}
 }
