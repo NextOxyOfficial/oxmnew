@@ -39,9 +39,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/dashboard",
       icon: BarChart3,
       current: pathname === "/dashboard",
-      category: "main"
+      category: "main",
     },
-    
+
     // Business Operations
     {
       name: "Products",
@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: Package,
       current: pathname.startsWith("/dashboard/products"),
       category: "business",
-      badge: "inventory"
+      badge: "inventory",
     },
     {
       name: "Orders",
@@ -57,30 +57,30 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: ShoppingCart,
       current: pathname.startsWith("/dashboard/orders"),
       category: "business",
-      badge: "sales"
+      badge: "sales",
     },
     {
       name: "Customers",
       href: "/dashboard/customers",
       icon: Users,
       current: pathname.startsWith("/dashboard/customers"),
-      category: "business"
+      category: "business",
     },
     {
       name: "Suppliers",
       href: "/dashboard/suppliers",
       icon: Truck,
       current: pathname.startsWith("/dashboard/suppliers"),
-      category: "business"
+      category: "business",
     },
-    
+
     // Financial Management
     {
       name: "Banking",
       href: "/dashboard/banking",
       icon: Building2,
       current: pathname.startsWith("/dashboard/banking"),
-      category: "finance"
+      category: "finance",
     },
     {
       name: "Due Book",
@@ -88,25 +88,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: CreditCard,
       current: pathname.startsWith("/dashboard/duebook"),
       category: "finance",
-      badge: "payments"
+      badge: "payments",
     },
-    
+
     // Human Resources
     {
       name: "Employees",
       href: "/dashboard/employees",
       icon: Briefcase,
       current: pathname.startsWith("/dashboard/employees"),
-      category: "hr"
+      category: "hr",
     },
-    
+
     // Communication & Marketing
     {
       name: "SMS Center",
       href: "/dashboard/sms",
       icon: Smartphone,
       current: pathname.startsWith("/dashboard/sms"),
-      category: "communication"
+      category: "communication",
     },
     {
       name: "Online Store",
@@ -114,16 +114,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: Store,
       current: pathname.startsWith("/dashboard/online-store"),
       category: "communication",
-      badge: "e-commerce"
+      badge: "e-commerce",
     },
-    
+
     // Tools & Utilities
     {
       name: "Notebook",
       href: "/dashboard/notebook",
       icon: BookOpen,
       current: pathname.startsWith("/dashboard/notebook"),
-      category: "tools"
+      category: "tools",
     },
     {
       name: "Subscriptions",
@@ -131,14 +131,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: Diamond,
       current: pathname.startsWith("/dashboard/subscriptions"),
       category: "tools",
-      badge: "pro"
+      badge: "pro",
     },
     {
       name: "Settings",
       href: "/dashboard/settings",
       icon: Settings,
       current: pathname.startsWith("/dashboard/settings"),
-      category: "settings"
+      category: "settings",
     },
   ];
 
