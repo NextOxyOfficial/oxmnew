@@ -1,16 +1,97 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { customersAPI } from "@/lib/api/customers";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const formatCurrency = useCurrencyFormatter();
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    status: "active" as const,
+    notes: "",
+  });
   const [dateRange, setDateRange] = useState({
     startDate: new Date(),
     endDate: new Date(),
   });
+
+  // Quick Actions handlers
+  const handleNewOrder = () => {
+    setIsNavigating(true);
+    router.push("/dashboard/orders/add");
+  };
+
+  const handleAddProduct = () => {
+    setIsNavigating(true);
+    router.push("/dashboard/products/add");
+  };
+
+  const handleNewCustomer = () => {
+    setShowNewCustomerModal(true);
+  };
+
+  const handleViewReports = () => {
+    // TODO: Implement reports functionality later
+    console.log("Reports functionality will be implemented later");
+  };
+
+  const handleCreateCustomer = async () => {
+    if (!newCustomer.name || !newCustomer.email || !newCustomer.phone) {
+      alert("Please fill in all required fields (Name, Email, Phone)");
+      return;
+    }
+
+    try {
+      setIsCreatingCustomer(true);
+      await customersAPI.createCustomer({
+        name: newCustomer.name,
+        email: newCustomer.email,
+        phone: newCustomer.phone,
+        address: newCustomer.address,
+        status: newCustomer.status,
+        notes: newCustomer.notes,
+      });
+      alert("Customer created successfully!");
+      setShowNewCustomerModal(false);
+      setNewCustomer({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        status: "active" as const,
+        notes: "",
+      });
+    } catch (err) {
+      console.error("Error creating customer:", err);
+      alert("Failed to create customer. Please try again.");
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  };
+
+  const handleCloseCustomerModal = () => {
+    setShowNewCustomerModal(false);
+    setNewCustomer({
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      status: "active" as const,
+      notes: "",
+    });
+  };
 
   useEffect(() => {
     // Add click outside listener to close dropdown and date picker
@@ -93,7 +174,11 @@ export default function DashboardPage() {
                   Recent Activities
                 </h3>
                 <div className="flex gap-2">
-                  <button className="flex-1 px-3 py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm flex items-center justify-center">
+                  <button
+                    onClick={handleNewOrder}
+                    disabled={isNavigating}
+                    className="flex-1 px-3 py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <svg
                       className="w-4 h-4 mr-2"
                       fill="none"
@@ -190,7 +275,11 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-bold text-white">
                   Recent Activities
                 </h3>
-                <button className="px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm flex items-center">
+                <button
+                  onClick={handleNewOrder}
+                  disabled={isNavigating}
+                  className="px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   <svg
                     className="w-4 h-4 mr-2"
                     fill="none"
@@ -834,7 +923,11 @@ export default function DashboardPage() {
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4">
             <h3 className="text-lg font-bold text-white mb-4">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-3">
-              <button className="p-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/30 rounded-xl hover:from-green-500/30 hover:to-emerald-500/30 transition-all duration-200 group">
+              <button
+                onClick={handleNewOrder}
+                disabled={isNavigating}
+                className="p-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/30 rounded-xl hover:from-green-500/30 hover:to-emerald-500/30 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">
                   🛒
                 </span>
@@ -842,7 +935,11 @@ export default function DashboardPage() {
                   New Order
                 </span>
               </button>
-              <button className="p-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-400/30 rounded-xl hover:from-blue-500/30 hover:to-cyan-500/30 transition-all duration-200 group">
+              <button
+                onClick={handleAddProduct}
+                disabled={isNavigating}
+                className="p-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-400/30 rounded-xl hover:from-blue-500/30 hover:to-cyan-500/30 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">
                   📦
                 </span>
@@ -850,7 +947,10 @@ export default function DashboardPage() {
                   Add Product
                 </span>
               </button>
-              <button className="p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 rounded-xl hover:from-purple-500/30 hover:to-pink-500/30 transition-all duration-200 group">
+              <button
+                onClick={handleNewCustomer}
+                className="p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 rounded-xl hover:from-purple-500/30 hover:to-pink-500/30 transition-all duration-200 group"
+              >
                 <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">
                   👥
                 </span>
@@ -858,7 +958,10 @@ export default function DashboardPage() {
                   New Customer
                 </span>
               </button>
-              <button className="p-3 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-400/30 rounded-xl hover:from-orange-500/30 hover:to-red-500/30 transition-all duration-200 group">
+              <button
+                onClick={handleViewReports}
+                className="p-3 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-400/30 rounded-xl hover:from-orange-500/30 hover:to-red-500/30 transition-all duration-200 group"
+              >
                 <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">
                   📈
                 </span>
@@ -1316,6 +1419,126 @@ export default function DashboardPage() {
           View Inventory Report
         </button>
       </div>
+
+      {/* New Customer Modal */}
+      {showNewCustomerModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+          <div className="min-h-full flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                <h2 className="text-xl font-semibold text-slate-100">
+                  Create New Customer
+                </h2>
+                <button
+                  onClick={handleCloseCustomerModal}
+                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-4">
+                {/* Customer Name */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Customer Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustomer.name}
+                    onChange={(e) =>
+                      setNewCustomer({ ...newCustomer, name: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                    placeholder="Enter customer name"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={newCustomer.email}
+                    onChange={(e) =>
+                      setNewCustomer({
+                        ...newCustomer,
+                        email: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                    placeholder="Enter email address"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    value={newCustomer.phone}
+                    onChange={(e) =>
+                      setNewCustomer({
+                        ...newCustomer,
+                        phone: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                {/* Address */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Address
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newCustomer.address}
+                    onChange={(e) =>
+                      setNewCustomer({
+                        ...newCustomer,
+                        address: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
+                    placeholder="Enter customer address (optional)"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
+                <button
+                  onClick={handleCloseCustomerModal}
+                  className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateCustomer}
+                  disabled={
+                    isCreatingCustomer ||
+                    !newCustomer.name ||
+                    !newCustomer.email ||
+                    !newCustomer.phone
+                  }
+                  className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                >
+                  {isCreatingCustomer ? "Creating..." : "Create Customer"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
