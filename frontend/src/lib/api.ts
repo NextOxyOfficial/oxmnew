@@ -68,11 +68,11 @@ export class ApiService {
 			if (!response.ok) {
 				let errorMessage = `HTTP error! status: ${response.status}`;
 				let errorDetails = null;
-				
+
 				// Get response text first to check if it's HTML or JSON
 				const responseText = await response.text();
 				console.error(`API Error Response (${response.status}):`, responseText);
-				
+
 				try {
 					const errorData = JSON.parse(responseText);
 					errorDetails = errorData;
@@ -95,13 +95,18 @@ export class ApiService {
 				} catch (parseError) {
 					// Response is not JSON, probably HTML error page
 					console.error("Response is not JSON, likely HTML error page");
-					if (responseText.includes("<html>") || responseText.includes("<!DOCTYPE")) {
+					if (
+						responseText.includes("<html>") ||
+						responseText.includes("<!DOCTYPE")
+					) {
 						errorMessage = `Server returned HTML instead of JSON (${response.status}). Check if the backend endpoint exists and is properly configured.`;
 					} else {
-						errorMessage = `${response.status} ${response.statusText}: ${responseText.substring(0, 200)}`;
+						errorMessage = `${response.status} ${
+							response.statusText
+						}: ${responseText.substring(0, 200)}`;
 					}
 				}
-				
+
 				const error = new Error(errorMessage);
 				(error as Error & { details?: unknown }).details = errorDetails;
 				throw error;
@@ -119,7 +124,12 @@ export class ApiService {
 				return result;
 			} catch (parseError) {
 				console.error("Failed to parse JSON response:", responseText);
-				throw new Error(`Server returned invalid JSON. Response: ${responseText.substring(0, 200)}`);
+				throw new Error(
+					`Server returned invalid JSON. Response: ${responseText.substring(
+						0,
+						200
+					)}`
+				);
 			}
 		} catch (error) {
 			console.error("API request failed:", error);
@@ -310,18 +320,21 @@ export class ApiService {
 		}
 	}
 
-	static async updateEmployee(id: number, employeeData: {
-		first_name?: string;
-		last_name?: string;
-		email?: string;
-		phone?: string;
-		position?: string;
-		department?: string;
-		salary?: number;
-		hire_date?: string;
-		status?: string;
-		photo?: File;
-	}) {
+	static async updateEmployee(
+		id: number,
+		employeeData: {
+			first_name?: string;
+			last_name?: string;
+			email?: string;
+			phone?: string;
+			position?: string;
+			department?: string;
+			salary?: number;
+			hire_date?: string;
+			status?: string;
+			photo?: File;
+		}
+	) {
 		if (employeeData.photo) {
 			const formData = new FormData();
 			Object.entries(employeeData).forEach(([key, value]) => {
@@ -360,14 +373,17 @@ export class ApiService {
 	}) {
 		return this.post("/banking/accounts/", {
 			...accountData,
-			balance: accountData.balance || 0
+			balance: accountData.balance || 0,
 		});
 	}
 
-	static async updateBankAccount(accountId: string, accountData: {
-		name?: string;
-		balance?: number;
-	}) {
+	static async updateBankAccount(
+		accountId: string,
+		accountData: {
+			name?: string;
+			balance?: number;
+		}
+	) {
 		return this.patch(`/banking/accounts/${accountId}/`, accountData);
 	}
 
@@ -375,18 +391,21 @@ export class ApiService {
 		return this.delete(`/banking/accounts/${accountId}/`);
 	}
 
-	static async getAccountTransactions(accountId: string, filters?: Record<string, string>) {
+	static async getAccountTransactions(
+		accountId: string,
+		filters?: Record<string, string>
+	) {
 		let endpoint = `/banking/accounts/${accountId}/transactions/`;
-		
+
 		if (filters && Object.keys(filters).length > 0) {
 			const queryParams = new URLSearchParams();
 			Object.entries(filters).forEach(([key, value]) => {
 				if (value) queryParams.append(key, value);
 			});
 			const queryString = queryParams.toString();
-			endpoint = `${endpoint}${queryString ? `?${queryString}` : ''}`;
+			endpoint = `${endpoint}${queryString ? `?${queryString}` : ""}`;
 		}
-		
+
 		return this.get(endpoint);
 	}
 
@@ -400,7 +419,7 @@ export class ApiService {
 	}) {
 		return this.post("/banking/transactions/", {
 			...transactionData,
-			status: transactionData.status || 'verified'
+			status: transactionData.status || "verified",
 		});
 	}
 
@@ -409,8 +428,61 @@ export class ApiService {
 	}
 
 	static async getDashboardStats(accountId?: string) {
-		const queryParams = accountId ? `?account_id=${accountId}` : '';
+		const queryParams = accountId ? `?account_id=${accountId}` : "";
 		return this.get(`/banking/transactions/dashboard_stats/${queryParams}`);
+	}
+
+	// Categories methods
+	static async getCategories() {
+		return this.get("/categories/");
+	}
+
+	static async createCategory(categoryData: {
+		name: string;
+		description?: string;
+	}) {
+		return this.post("/categories/", categoryData);
+	}
+
+	static async updateCategory(
+		categoryId: number,
+		categoryData: {
+			name?: string;
+			description?: string;
+			is_active?: boolean;
+		}
+	) {
+		return this.put(`/categories/${categoryId}/`, categoryData);
+	}
+
+	static async deleteCategory(categoryId: number) {
+		return this.delete(`/categories/${categoryId}/`);
+	}
+
+	static async toggleCategory(categoryId: number) {
+		return this.put(`/categories/${categoryId}/toggle/`, {});
+	}
+
+	// Settings methods
+	static async getSettings() {
+		return this.get("/auth/settings/");
+	}
+
+	static async updateSettings(settingsData: {
+		language?: string;
+		currency?: string;
+		email_notifications?: boolean;
+		marketing_notifications?: boolean;
+	}) {
+		return this.put("/auth/settings/", settingsData);
+	}
+
+	static async changePassword(passwordData: {
+		current_password: string;
+		new_password: string;
+		confirm_password: string;
+	}) {
+		return this.post("/auth/change-password/", passwordData);
 	}
 
 	// Gift methods
@@ -516,7 +588,7 @@ export class ApiService {
 		brandId: number,
 		brandData: {
 			name?: string;
-		 is_active?: boolean;
+			is_active?: boolean;
 		}
 	) {
 		return this.put(`/brands/${brandId}/`, brandData);
@@ -824,13 +896,16 @@ export class ApiService {
 		console.log(`Fetching stock movements for product ${productId}`);
 		const endpoint = `/stock-movements/?product=${productId}`;
 		console.log(`API endpoint: ${API_BASE_URL}${endpoint}`);
-		
+
 		try {
 			const result = await this.get(endpoint);
 			console.log(`Stock movements result:`, result);
 			return result;
 		} catch (error) {
-			console.error(`Error fetching stock movements for product ${productId}:`, error);
+			console.error(
+				`Error fetching stock movements for product ${productId}:`,
+				error
+			);
 			throw error;
 		}
 	}
@@ -1129,26 +1204,29 @@ export class ApiService {
 	static async testEndpoint(endpoint: string) {
 		const fullUrl = `${API_BASE_URL}${endpoint}`;
 		console.log(`Testing endpoint: ${fullUrl}`);
-		
+
 		try {
 			const response = await fetch(fullUrl, {
 				method: "GET",
 				headers: {
-					"Authorization": `Token ${AuthToken.get()}`,
-					"Content-Type": "application/json"
-				}
+					Authorization: `Token ${AuthToken.get()}`,
+					"Content-Type": "application/json",
+				},
 			});
-			
+
 			console.log(`Endpoint ${endpoint} response status:`, response.status);
-			console.log(`Endpoint ${endpoint} response headers:`, Object.fromEntries(response.headers.entries()));
-			
+			console.log(
+				`Endpoint ${endpoint} response headers:`,
+				Object.fromEntries(response.headers.entries())
+			);
+
 			const responseText = await response.text();
 			console.log(`Endpoint ${endpoint} response body:`, responseText);
-			
+
 			return {
 				status: response.status,
 				ok: response.ok,
-				body: responseText
+				body: responseText,
 			};
 		} catch (error) {
 			console.error(`Error testing endpoint ${endpoint}:`, error);
@@ -1161,23 +1239,28 @@ export class ApiService {
 		console.log("API Base URL:", API_BASE_URL);
 		console.log("Backend Base URL:", BACKEND_BASE_URL);
 		const token = AuthToken.get();
-		console.log("Auth Token:", token ? `Present (${token.substring(0, 10)}...)` : "Missing");
-		
+		console.log(
+			"Auth Token:",
+			token ? `Present (${token.substring(0, 10)}...)` : "Missing"
+		);
+
 		const endpoints = [
 			{ path: "/plans/", requiresAuth: false },
 			{ path: "/sms-packages/", requiresAuth: false },
-			{ path: "/my-subscription/", requiresAuth: true }
+			{ path: "/my-subscription/", requiresAuth: true },
 		];
-		
+
 		for (const endpoint of endpoints) {
 			try {
-				console.log(`\n--- Testing ${endpoint.path} (Auth required: ${endpoint.requiresAuth}) ---`);
+				console.log(
+					`\n--- Testing ${endpoint.path} (Auth required: ${endpoint.requiresAuth}) ---`
+				);
 				await this.testEndpoint(endpoint.path);
 			} catch (error) {
 				console.error(`Failed to test ${endpoint.path}:`, error);
 			}
 		}
-		
+
 		// Also test if the base API is working
 		try {
 			console.log("\n--- Testing base API health ---");
