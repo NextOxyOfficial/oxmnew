@@ -1104,4 +1104,36 @@ export class ApiService {
   static async getInventoryStatistics() {
     return this.get("/products/statistics/");
   }
+
+  // Sales methods
+  static async getSales(params?: {
+    product?: number;
+    variant?: number;
+    customer_name?: string;
+    ordering?: string;
+    page?: number;
+    page_size?: number;
+  }) {
+    let endpoint = "/sales/";
+
+    if (params && Object.keys(params).length > 0) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, value.toString());
+        }
+      });
+      endpoint += `?${searchParams.toString()}`;
+    }
+
+    return this.get(endpoint);
+  }
+
+  static async getSale(id: number) {
+    return this.get(`/sales/${id}/`);
+  }
+
+  static async getSalesStatistics() {
+    return this.get("/sales/statistics/");
+  }
 }

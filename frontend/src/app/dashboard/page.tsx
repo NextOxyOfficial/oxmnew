@@ -8,6 +8,7 @@ import { customersAPI } from "@/lib/api/customers";
 import { useRecentSales } from "@/hooks/useRecentSales";
 import { useLowStock } from "@/hooks/useLowStock";
 import { useInventoryStats } from "@/hooks/useInventoryStats";
+import { useRecentActivitiesStats } from "@/hooks/useRecentActivitiesStats";
 import {
   formatDateTime,
   generateOrderId,
@@ -52,6 +53,9 @@ export default function DashboardPage() {
     error: statsError,
     refetch: refetchStats,
   } = useInventoryStats();
+
+  // Use the custom hook for recent activities statistics
+  const recentActivitiesStats = useRecentActivitiesStats(recentSales);
 
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -738,39 +742,76 @@ export default function DashboardPage() {
             {/* First row: Buy Price and Sell Price (2 cards) */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
               <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl p-2.5 border border-green-400/30">
-                <span className="text-green-400 text-sm font-medium">
-                  Buy Price
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-green-400 text-sm font-medium">
+                    Buy Price
+                  </span>
+                  {isLoadingSales && (
+                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-green-400/30"></div>
+                  )}
+                </div>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {formatCurrency(68450)}
+                  {isLoadingSales ? (
+                    <span className="animate-pulse text-lg">Loading...</span>
+                  ) : salesError ? (
+                    <span className="text-red-400 text-lg">Error</span>
+                  ) : (
+                    formatCurrency(recentActivitiesStats.totalBuyPrice)
+                  )}
                 </p>
                 <p className="text-xs text-green-300 mt-0.5">
-                  +12.8% vs last period
+                  {recentActivitiesStats.salesCount} recent sales
                 </p>
               </div>
 
               <div className="bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-xl p-2.5 border border-red-400/30">
-                <span className="text-red-400 text-sm font-medium">
-                  Sell Price
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-red-400 text-sm font-medium">
+                    Sell Price
+                  </span>
+                  {isLoadingSales && (
+                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-red-400/30"></div>
+                  )}
+                </div>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {formatCurrency(45320)}
+                  {isLoadingSales ? (
+                    <span className="animate-pulse text-lg">Loading...</span>
+                  ) : salesError ? (
+                    <span className="text-red-400 text-lg">Error</span>
+                  ) : (
+                    formatCurrency(recentActivitiesStats.totalSellPrice)
+                  )}
                 </p>
                 <p className="text-xs text-red-300 mt-0.5">
-                  +5.2% vs last period
+                  Total revenue from recent sales
                 </p>
               </div>
 
               {/* Profit Card - Appears in first row on desktop, but full width in a separate row on mobile */}
               <div className="bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl p-2.5 border border-purple-400/30 hidden md:block">
-                <span className="text-purple-400 text-sm font-medium">
-                  Profit
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-purple-400 text-sm font-medium">
+                    Profit
+                  </span>
+                  {isLoadingSales && (
+                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-purple-400/30"></div>
+                  )}
+                </div>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {formatCurrency(23130)}
+                  {isLoadingSales ? (
+                    <span className="animate-pulse text-lg">Loading...</span>
+                  ) : salesError ? (
+                    <span className="text-red-400 text-lg">Error</span>
+                  ) : (
+                    formatCurrency(recentActivitiesStats.totalProfit)
+                  )}
                 </p>
                 <p className="text-xs text-purple-300 mt-0.5">
-                  +18.4% vs last period
+                  {isLoadingSales || salesError
+                    ? "Loading..."
+                    : `${recentActivitiesStats.profitMargin.toFixed(
+                        1
+                      )}% profit margin`}
                 </p>
               </div>
             </div>
@@ -778,14 +819,29 @@ export default function DashboardPage() {
             {/* Second row: Profit Card (full width on mobile only) */}
             <div className="md:hidden mb-4">
               <div className="bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl p-2.5 border border-purple-400/30">
-                <span className="text-purple-400 text-sm font-medium">
-                  Profit
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-purple-400 text-sm font-medium">
+                    Profit
+                  </span>
+                  {isLoadingSales && (
+                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-purple-400/30"></div>
+                  )}
+                </div>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {formatCurrency(23130)}
+                  {isLoadingSales ? (
+                    <span className="animate-pulse text-lg">Loading...</span>
+                  ) : salesError ? (
+                    <span className="text-red-400 text-lg">Error</span>
+                  ) : (
+                    formatCurrency(recentActivitiesStats.totalProfit)
+                  )}
                 </p>
                 <p className="text-xs text-purple-300 mt-0.5">
-                  +18.4% vs last period
+                  {isLoadingSales || salesError
+                    ? "Loading..."
+                    : `${recentActivitiesStats.profitMargin.toFixed(
+                        1
+                      )}% profit margin`}
                 </p>
               </div>
             </div>
@@ -862,7 +918,7 @@ export default function DashboardPage() {
                 ) : (
                   recentSales.map((sale) => {
                     const orderStatus = getOrderStatus(sale);
-                    const { date, time } = formatDateTime(sale.created_at);
+                    const { date, time } = formatDateTime(sale.sale_date);
                     const orderId = generateOrderId(sale.id);
 
                     return (
@@ -904,7 +960,7 @@ export default function DashboardPage() {
 
                           <div className="flex items-center">
                             <span className="hidden sm:inline text-sm font-bold text-white">
-                              {formatCurrency(sale.total_price)}
+                              {formatCurrency(sale.total_amount)}
                             </span>
                             <button
                               className="text-gray-300 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all ml-2"
@@ -934,7 +990,7 @@ export default function DashboardPage() {
                             {sale.customer_name || "Walk-in Customer"}
                           </span>
                           <span className="text-sm font-bold text-white">
-                            {formatCurrency(sale.total_price)}
+                            {formatCurrency(sale.total_amount)}
                           </span>
                         </div>
 
@@ -958,10 +1014,16 @@ export default function DashboardPage() {
                             <div className="h-3 w-px bg-gray-600"></div>
                             <div>
                               <span className="text-xs text-gray-400">
-                                Total
+                                Profit
                               </span>
-                              <span className="text-xs font-medium text-green-400 ml-1.5">
-                                {formatCurrency(sale.total_price)}
+                              <span
+                                className={`text-xs font-medium ml-1.5 ${
+                                  sale.profit >= 0
+                                    ? "text-green-400"
+                                    : "text-red-400"
+                                }`}
+                              >
+                                {formatCurrency(sale.profit)}
                               </span>
                             </div>
                           </div>
