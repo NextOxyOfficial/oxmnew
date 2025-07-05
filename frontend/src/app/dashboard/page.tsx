@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { customersAPI } from "@/lib/api/customers";
+import { useRecentSales } from "@/hooks/useRecentSales";
+import {
+  formatDateTime,
+  generateOrderId,
+  getOrderStatus,
+} from "@/lib/utils/salesUtils";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -14,6 +20,11 @@ export default function DashboardPage() {
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+
+  // Use the custom hook for recent sales
+  const { recentSales, isLoadingSales, salesError, refetchSales } =
+    useRecentSales(5);
+
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",
@@ -682,186 +693,193 @@ export default function DashboardPage() {
                 <h4 className="text-base font-medium text-white">
                   Recent Order Activities
                 </h4>
-                <span className="text-xs text-gray-400">Last 7 days</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-400">Last 7 days</span>
+                  <button
+                    onClick={refetchSales}
+                    disabled={isLoadingSales}
+                    className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                    title="Refresh sales data"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className={`h-3 w-3 text-gray-400 hover:text-white ${
+                        isLoadingSales ? "animate-spin" : ""
+                      }`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
               <div className="space-y-2 max-h-80 overflow-y-auto scrollbar-hide">
-                {[
-                  {
-                    id: "#1245",
-                    customer: "John Smith",
-                    amount: 1250.0,
-                    status: "Completed",
-                    invoiceStatus: "completed",
-                    time: "2:30 PM",
-                    date: "Today",
-                    color: "green",
-                    bought: 870.0,
-                    sold: 1250.0,
-                    profit: 380.0,
-                  },
-                  {
-                    id: "#1244",
-                    customer: "Sarah Johnson",
-                    amount: 890.5,
-                    status: "Draft",
-                    invoiceStatus: "draft",
-                    time: "11:20 AM",
-                    date: "Today",
-                    color: "yellow",
-                    bought: 650.25,
-                    sold: 890.5,
-                    profit: 240.25,
-                  },
-                  {
-                    id: "#1243",
-                    customer: "Michael Brown",
-                    amount: 2340.75,
-                    status: "Shipped",
-                    invoiceStatus: "draft",
-                    time: "9:15 AM",
-                    date: "Today",
-                    color: "blue",
-                    bought: 1740.5,
-                    sold: 2340.75,
-                    profit: 600.25,
-                  },
-                  {
-                    id: "#1242",
-                    customer: "Emily Davis",
-                    amount: 150.25,
-                    status: "Completed",
-                    invoiceStatus: "completed",
-                    time: "4:45 PM",
-                    date: "Yesterday",
-                    color: "green",
-                    bought: 98.5,
-                    sold: 150.25,
-                    profit: 51.75,
-                  },
-                  {
-                    id: "#1241",
-                    customer: "Robert Wilson",
-                    amount: 3560.0,
-                    status: "Completed",
-                    invoiceStatus: "completed",
-                    time: "2:10 PM",
-                    date: "Yesterday",
-                    color: "green",
-                    bought: 2780.0,
-                    sold: 3560.0,
-                    profit: 780.0,
-                  },
-                ].map((order, index) => (
-                  <div
-                    key={index}
-                    className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors"
-                  >
-                    {/* First row - always visible */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div
-                          className={`w-2 h-2 ${
-                            order.status === "Shipped" ||
-                            order.invoiceStatus === "completed"
-                              ? "bg-green-400"
-                              : "bg-yellow-400"
-                          } rounded-full mr-2`}
-                          title={
-                            order.status === "Shipped" ||
-                            order.invoiceStatus === "completed"
-                              ? "Invoice Completed"
-                              : "Invoice Draft"
-                          }
-                        ></div>
-                        <span className="text-sm font-medium text-white mr-2">
-                          Order {order.id}
-                        </span>
-                        <span
-                          className={`mr-2 ${
-                            order.status === "Draft"
-                              ? "text-yellow-200"
-                              : order.status === "Shipped"
-                              ? "text-blue-400"
-                              : `text-${order.color}-400`
-                          } text-xs font-medium bg-${
-                            order.color
-                          }-400/10 px-1.5 py-0.5 rounded`}
-                        >
-                          {order.status}
-                        </span>
-                        <span className="hidden sm:inline text-sm text-gray-300">
-                          {order.customer}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center">
-                        <span className="hidden sm:inline text-sm font-bold text-white">
-                          {formatCurrency(order.amount)}
-                        </span>
-                        <button
-                          className="text-gray-300 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all ml-2"
-                          title="View Invoice"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Second row - Mobile only for customer name and amount */}
-                    <div className="sm:hidden flex justify-between items-center mt-2 mb-1">
-                      <span className="text-sm text-gray-300">
-                        {order.customer}
-                      </span>
-                      <span className="text-sm font-bold text-white">
-                        {formatCurrency(order.amount)}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-between mt-2 bg-black/20 rounded-lg p-1.5">
-                      <div className="flex items-center space-x-3 px-1.5">
-                        <div>
-                          <span className="text-xs text-gray-400">Bought</span>
-                          <span className="text-xs font-medium text-red-400 ml-1.5">
-                            {formatCurrency(order.bought)}
-                          </span>
-                        </div>
-                        <div className="h-3 w-px bg-gray-600"></div>
-                        <div>
-                          <span className="text-xs text-gray-400">Sold</span>
-                          <span className="text-xs font-medium text-blue-400 ml-1.5">
-                            {formatCurrency(order.sold)}
-                          </span>
-                        </div>
-                        <div className="h-3 w-px bg-gray-600"></div>
-                        <div>
-                          <span className="text-xs text-gray-400">Profit</span>
-                          <span className="text-xs font-medium text-green-400 ml-1.5">
-                            {formatCurrency(order.profit)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-400 px-1.5 mt-1 sm:mt-0">
-                        {order.date}, {order.time}
-                      </div>
+                {isLoadingSales ? (
+                  // Loading state
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/30"></div>
+                    <span className="ml-2 text-sm text-gray-400">
+                      Loading recent sales...
+                    </span>
+                  </div>
+                ) : salesError ? (
+                  // Error state
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                      <div className="text-red-400 mb-2">⚠️</div>
+                      <p className="text-sm text-red-400">{salesError}</p>
+                      <button
+                        onClick={refetchSales}
+                        className="mt-2 px-3 py-1 bg-red-500/20 text-red-400 text-xs rounded hover:bg-red-500/30 transition-colors"
+                      >
+                        Retry
+                      </button>
                     </div>
                   </div>
-                ))}
+                ) : recentSales.length === 0 ? (
+                  // Empty state
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                      <div className="text-gray-400 mb-2">📋</div>
+                      <p className="text-sm text-gray-400">
+                        No recent sales found
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Sales will appear here once you make some
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  recentSales.map((sale) => {
+                    const orderStatus = getOrderStatus(sale);
+                    const { date, time } = formatDateTime(sale.created_at);
+                    const orderId = generateOrderId(sale.id);
+
+                    return (
+                      <div
+                        key={sale.id}
+                        className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors"
+                      >
+                        {/* First row - always visible */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div
+                              className={`w-2 h-2 ${
+                                orderStatus === "Completed"
+                                  ? "bg-green-400"
+                                  : "bg-yellow-400"
+                              } rounded-full mr-2`}
+                              title={
+                                orderStatus === "Completed"
+                                  ? "Sale Completed"
+                                  : "Sale Draft"
+                              }
+                            ></div>
+                            <span className="text-sm font-medium text-white mr-2">
+                              Order {orderId}
+                            </span>
+                            <span
+                              className={`mr-2 ${
+                                orderStatus === "Draft"
+                                  ? "text-yellow-200 bg-yellow-400/10"
+                                  : "text-green-200 bg-green-400/10"
+                              } text-xs font-medium px-1.5 py-0.5 rounded`}
+                            >
+                              {orderStatus}
+                            </span>
+                            <span className="hidden sm:inline text-sm text-gray-300">
+                              {sale.customer_name || "Walk-in Customer"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center">
+                            <span className="hidden sm:inline text-sm font-bold text-white">
+                              {formatCurrency(sale.total_price)}
+                            </span>
+                            <button
+                              className="text-gray-300 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all ml-2"
+                              title="View Sale Details"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Second row - Mobile only for customer name and amount */}
+                        <div className="sm:hidden flex justify-between items-center mt-2 mb-1">
+                          <span className="text-sm text-gray-300">
+                            {sale.customer_name || "Walk-in Customer"}
+                          </span>
+                          <span className="text-sm font-bold text-white">
+                            {formatCurrency(sale.total_price)}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between mt-2 bg-black/20 rounded-lg p-1.5">
+                          <div className="flex items-center space-x-3 px-1.5">
+                            <div>
+                              <span className="text-xs text-gray-400">
+                                Unit Price
+                              </span>
+                              <span className="text-xs font-medium text-blue-400 ml-1.5">
+                                {formatCurrency(sale.unit_price)}
+                              </span>
+                            </div>
+                            <div className="h-3 w-px bg-gray-600"></div>
+                            <div>
+                              <span className="text-xs text-gray-400">Qty</span>
+                              <span className="text-xs font-medium text-gray-300 ml-1.5">
+                                {sale.quantity}
+                              </span>
+                            </div>
+                            <div className="h-3 w-px bg-gray-600"></div>
+                            <div>
+                              <span className="text-xs text-gray-400">
+                                Total
+                              </span>
+                              <span className="text-xs font-medium text-green-400 ml-1.5">
+                                {formatCurrency(sale.total_price)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 px-1.5 mt-1 sm:mt-0">
+                            {date}, {time}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
-              <button className="w-full mt-3 py-2 bg-gradient-to-r from-blue-500/30 to-purple-500/30 hover:from-blue-500/50 hover:to-purple-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium">
-                View All Orders
+              <button
+                className="w-full mt-3 py-2 bg-gradient-to-r from-blue-500/30 to-purple-500/30 hover:from-blue-500/50 hover:to-purple-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+                onClick={() => {
+                  setIsNavigating(true);
+                  router.push("/dashboard/sales");
+                }}
+                disabled={isNavigating}
+              >
+                View All Sales
               </button>
             </div>
           </div>
