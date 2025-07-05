@@ -1095,4 +1095,13 @@ export class ApiService {
       console.error("Failed to test health endpoint:", error);
     }
   }
+
+  // Inventory statistics methods
+  static async getInventoryStats() {
+    return this.get("/products/stats/");
+  }
+
+  static async getInventoryStatistics() {
+    return this.get("/products/statistics/");
+  }
 }

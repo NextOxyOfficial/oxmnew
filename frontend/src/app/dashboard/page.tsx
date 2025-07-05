@@ -7,6 +7,7 @@ import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { customersAPI } from "@/lib/api/customers";
 import { useRecentSales } from "@/hooks/useRecentSales";
 import { useLowStock } from "@/hooks/useLowStock";
+import { useInventoryStats } from "@/hooks/useInventoryStats";
 import {
   formatDateTime,
   generateOrderId,
@@ -43,6 +44,14 @@ export default function DashboardPage() {
     stockError,
     refetchStock,
   } = useLowStock(10);
+
+  // Use the custom hook for inventory statistics
+  const {
+    stats,
+    isLoading: isLoadingStats,
+    error: statsError,
+    refetch: refetchStats,
+  } = useInventoryStats();
 
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -149,35 +158,110 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
         {/* Buy Price Card */}
         <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
-          <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
-            Buy Price
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
+              Buy Price
+            </p>
+            <div className="flex items-center space-x-1">
+              {isLoadingStats && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white/30"></div>
+              )}
+              <button
+                onClick={refetchStats}
+                disabled={isLoadingStats}
+                className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                title="Refresh stats"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-3 w-3 text-gray-400 hover:text-white ${
+                    isLoadingStats ? "animate-spin" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            {formatCurrency(45320)}
+            {isLoadingStats ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : statsError ? (
+              <span className="text-red-400 text-sm">Error</span>
+            ) : (
+              formatCurrency(stats?.total_buy_value || 0)
+            )}
           </p>
           <p className="text-xs text-red-400 mt-1">Total purchase cost</p>
         </div>
 
         {/* Sell Price Card */}
         <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
-          <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
-            Sell Price
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
+              Sell Price
+            </p>
+            <div className="flex items-center space-x-1">
+              {isLoadingStats && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white/30"></div>
+              )}
+            </div>
+          </div>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            {formatCurrency(68450)}
+            {isLoadingStats ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : statsError ? (
+              <span className="text-red-400 text-sm">Error</span>
+            ) : (
+              formatCurrency(stats?.total_sell_value || 0)
+            )}
           </p>
           <p className="text-xs text-blue-400 mt-1">Total sales revenue</p>
         </div>
 
         {/* Estimated Profit Card */}
         <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
-          <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
-            Estimated Profit
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
+              Estimated Profit
+            </p>
+            <div className="flex items-center space-x-1">
+              {isLoadingStats && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white/30"></div>
+              )}
+            </div>
+          </div>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            {formatCurrency(23130)}
+            {isLoadingStats ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : statsError ? (
+              <span className="text-red-400 text-sm">Error</span>
+            ) : (
+              formatCurrency(
+                (stats?.total_sell_value || 0) - (stats?.total_buy_value || 0)
+              )
+            )}
           </p>
-          <p className="text-xs text-green-400 mt-1">+51.0% profit margin</p>
+          <p className="text-xs text-green-400 mt-1">
+            {isLoadingStats
+              ? "Loading..."
+              : statsError
+              ? "Error"
+              : `${(
+                  (((stats?.total_sell_value || 0) -
+                    (stats?.total_buy_value || 0)) /
+                    (stats?.total_sell_value || 1)) *
+                  100
+                ).toFixed(1)}% profit margin`}
+          </p>
         </div>
 
         {/* Customers Card */}
