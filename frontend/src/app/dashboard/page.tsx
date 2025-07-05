@@ -9,6 +9,7 @@ import { useRecentSales } from "@/hooks/useRecentSales";
 import { useLowStock } from "@/hooks/useLowStock";
 import { useInventoryStats } from "@/hooks/useInventoryStats";
 import { useRecentActivitiesStats } from "@/hooks/useRecentActivitiesStats";
+import { useCustomerStats } from "@/hooks/useCustomerStats";
 import {
   formatDateTime,
   generateOrderId,
@@ -56,6 +57,14 @@ export default function DashboardPage() {
 
   // Use the custom hook for recent activities statistics
   const recentActivitiesStats = useRecentActivitiesStats(recentSales);
+
+  // Use the custom hook for customer statistics
+  const {
+    stats: customerStats,
+    isLoading: isLoadingCustomerStats,
+    error: customerStatsError,
+    refetch: refetchCustomerStats,
+  } = useCustomerStats();
 
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -270,13 +279,55 @@ export default function DashboardPage() {
 
         {/* Customers Card */}
         <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
-          <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
-            Total Customers
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
+              Total Customers
+            </p>
+            <div className="flex items-center space-x-1">
+              {isLoadingCustomerStats && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white/30"></div>
+              )}
+              <button
+                onClick={refetchCustomerStats}
+                disabled={isLoadingCustomerStats}
+                className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                title="Refresh customer stats"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-3 w-3 text-gray-400 hover:text-white ${
+                    isLoadingCustomerStats ? "animate-spin" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            856
+            {isLoadingCustomerStats ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : customerStatsError ? (
+              <span className="text-red-400 text-sm">Error</span>
+            ) : (
+              customerStats?.total_customers || 0
+            )}
           </p>
-          <p className="text-xs text-purple-400 mt-1">+15.3% from last month</p>
+          <p className="text-xs text-purple-400 mt-1">
+            {isLoadingCustomerStats
+              ? "Loading..."
+              : customerStatsError
+              ? "Error loading data"
+              : `${customerStats?.active_customers || 0} active customers`}
+          </p>
         </div>
       </div>
 
