@@ -239,12 +239,14 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
             # Validate each variant
             for i, variant_data in enumerate(variants_data):
-                print(f"Validating variant {i+1}:", variant_data)
+                print(f"Validating variant {i + 1}:", variant_data)
 
                 buy_price = variant_data.get("buyPrice", 0)
                 sell_price = variant_data.get("sellPrice", 0)
 
-                print(f"Variant {i+1} - buyPrice: {buy_price}, sellPrice: {sell_price}")
+                print(
+                    f"Variant {i + 1} - buyPrice: {buy_price}, sellPrice: {sell_price}"
+                )
 
                 # Check if variant has at least one identifying field
                 color = variant_data.get("color", "").strip()
@@ -255,7 +257,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                 has_identifying_field = bool(color or size or weight or custom_variant)
                 if not has_identifying_field:
                     raise serializers.ValidationError(
-                        f"Variant {i+1} must have at least one identifying field: color, size, weight, or custom variant"
+                        f"Variant {i + 1} must have at least one identifying field: color, size, weight, or custom variant"
                     )
 
                 if sell_price < buy_price:
@@ -347,7 +349,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         if product.has_variants and variants_data:
             print(f"Creating {len(variants_data)} variants...")
             for i, variant_data in enumerate(variants_data):
-                print(f"Processing variant {i+1}:", variant_data)
+                print(f"Processing variant {i + 1}:", variant_data)
                 # Map frontend field names to backend field names
                 variant_create_data = {
                     "product": product,
@@ -377,10 +379,36 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
 
 class ProductSaleSerializer(serializers.ModelSerializer):
-    """Serializer for product sales"""
+    """Serializer for product sales with profit calculation"""
 
     product_name = serializers.CharField(source="product.name", read_only=True)
-    variant_display = serializers.CharField(source="variant.__str__", read_only=True)
+    variant_display = serializers.SerializerMethodField()
+    buy_price = serializers.SerializerMethodField()
+    profit = serializers.SerializerMethodField()
+    profit_margin = serializers.SerializerMethodField()
+
+    def get_variant_display(self, obj):
+        """Get variant display string"""
+        return str(obj.variant) if obj.variant else None
+
+    def get_buy_price(self, obj):
+        """Get the buy price from product or variant"""
+        if obj.variant:
+            return obj.variant.buy_price
+        return obj.product.buy_price
+
+    def get_profit(self, obj):
+        """Calculate profit for this sale"""
+        buy_price = self.get_buy_price(obj)
+        sell_price = obj.unit_price
+        return (sell_price - buy_price) * obj.quantity
+
+    def get_profit_margin(self, obj):
+        """Calculate profit margin for this sale"""
+        profit = self.get_profit(obj)
+        if obj.total_amount > 0:
+            return (profit / obj.total_amount) * 100
+        return 0
 
     class Meta:
         model = ProductSale
@@ -392,7 +420,10 @@ class ProductSaleSerializer(serializers.ModelSerializer):
             "variant_display",
             "quantity",
             "unit_price",
+            "buy_price",
             "total_amount",
+            "profit",
+            "profit_margin",
             "customer_name",
             "customer_phone",
             "customer_email",

@@ -7,6 +7,26 @@ export interface Sale {
   product: number;
   product_name?: string;
   variant?: number;
+  variant_display?: string;
+  quantity: number;
+  unit_price: number;
+  buy_price: number;
+  total_amount: number;
+  profit: number;
+  profit_margin: number;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
+  notes?: string;
+  sale_date: string;
+}
+
+// For backward compatibility
+export interface LegacySale {
+  id: number;
+  product: number;
+  product_name?: string;
+  variant?: number;
   quantity: number;
   unit_price: number;
   total_price: number;
@@ -34,13 +54,19 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
     try {
       setIsLoadingSales(true);
       setSalesError(null);
-      const salesData = await ApiService.getProductSales();
+      const salesData = await ApiService.getSales({
+        ordering: "-sale_date",
+        page_size: limit,
+      });
 
-      // Sort by creation date (most recent first) and limit to specified number
-      const sortedSales = salesData
+      // Extract results from the paginated response
+      const salesResults = salesData.results || salesData;
+
+      // Sort by sale date (most recent first) and limit to specified number
+      const sortedSales = salesResults
         .sort(
           (a: Sale, b: Sale) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime()
         )
         .slice(0, limit);
 

@@ -467,46 +467,50 @@ class ProductViewSet(viewsets.ModelViewSet):
             }
         )
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def search(self, request):
         """Advanced search endpoint for products"""
-        query = request.query_params.get('q', '').strip()
-        
+        query = request.query_params.get("q", "").strip()
+
         if not query or len(query) < 2:
-            return Response({'results': [], 'total': 0})
-        
+            return Response({"results": [], "total": 0})
+
         queryset = self.get_queryset()
-        
+
         # Search in multiple fields
         search_results = queryset.filter(
-            Q(name__icontains=query) |
-            Q(details__icontains=query) |
-            Q(location__icontains=query) |
-            Q(category__name__icontains=query) |
-            Q(supplier__name__icontains=query)
+            Q(name__icontains=query)
+            | Q(details__icontains=query)
+            | Q(location__icontains=query)
+            | Q(category__name__icontains=query)
+            | Q(supplier__name__icontains=query)
         ).distinct()
-        
+
         # Format results for frontend
         results = []
         for product in search_results[:10]:  # Limit to 10 results
-            stock_level = 'HIGH_STOCK' if product.stock > 20 else 'MEDIUM_STOCK' if product.stock > 10 else 'LOW_STOCK'
-            
-            results.append({
-                'id': str(product.id),
-                'type': 'product',
-                'title': product.name,
-                'subtitle': f"{product.category.name if product.category else 'Uncategorized'} • ${product.sell_price} • {product.stock} in stock",
-                'href': f"/dashboard/products/{product.id}",
-                'badge': stock_level
-            })
-        
-        return Response({
-            'results': results,
-            'total': search_results.count(),
-            'query': query
-        })
+            stock_level = (
+                "HIGH_STOCK"
+                if product.stock > 20
+                else "MEDIUM_STOCK"
+                if product.stock > 10
+                else "LOW_STOCK"
+            )
 
-    # ...existing code...
+            results.append(
+                {
+                    "id": str(product.id),
+                    "type": "product",
+                    "title": product.name,
+                    "subtitle": f"{product.category.name if product.category else 'Uncategorized'} • ${product.sell_price} • {product.stock} in stock",
+                    "href": f"/dashboard/products/{product.id}",
+                    "badge": stock_level,
+                }
+            )
+
+        return Response(
+            {"results": results, "total": search_results.count(), "query": query}
+        )
 
 
 class ProductSaleViewSet(viewsets.ModelViewSet):

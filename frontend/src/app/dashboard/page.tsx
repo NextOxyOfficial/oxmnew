@@ -7,6 +7,9 @@ import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { customersAPI } from "@/lib/api/customers";
 import { useRecentSales } from "@/hooks/useRecentSales";
 import { useLowStock } from "@/hooks/useLowStock";
+import { useInventoryStats } from "@/hooks/useInventoryStats";
+import { useRecentActivitiesStats } from "@/hooks/useRecentActivitiesStats";
+import { useCustomerStats } from "@/hooks/useCustomerStats";
 import {
   formatDateTime,
   generateOrderId,
@@ -43,6 +46,25 @@ export default function DashboardPage() {
     stockError,
     refetchStock,
   } = useLowStock(10);
+
+  // Use the custom hook for inventory statistics
+  const {
+    stats,
+    isLoading: isLoadingStats,
+    error: statsError,
+    refetch: refetchStats,
+  } = useInventoryStats();
+
+  // Use the custom hook for recent activities statistics
+  const recentActivitiesStats = useRecentActivitiesStats(recentSales);
+
+  // Use the custom hook for customer statistics
+  const {
+    stats: customerStats,
+    isLoading: isLoadingCustomerStats,
+    error: customerStatsError,
+    refetch: refetchCustomerStats,
+  } = useCustomerStats();
 
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -149,46 +171,163 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
         {/* Buy Price Card */}
         <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
-          <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
-            Buy Price
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
+              Buy Price
+            </p>
+            <div className="flex items-center space-x-1">
+              {isLoadingStats && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white/30"></div>
+              )}
+              <button
+                onClick={refetchStats}
+                disabled={isLoadingStats}
+                className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                title="Refresh stats"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-3 w-3 text-gray-400 hover:text-white ${
+                    isLoadingStats ? "animate-spin" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            {formatCurrency(45320)}
+            {isLoadingStats ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : statsError ? (
+              <span className="text-red-400 text-sm">Error</span>
+            ) : (
+              formatCurrency(stats?.total_buy_value || 0)
+            )}
           </p>
           <p className="text-xs text-red-400 mt-1">Total purchase cost</p>
         </div>
 
         {/* Sell Price Card */}
         <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
-          <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
-            Sell Price
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
+              Sell Price
+            </p>
+            <div className="flex items-center space-x-1">
+              {isLoadingStats && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white/30"></div>
+              )}
+            </div>
+          </div>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            {formatCurrency(68450)}
+            {isLoadingStats ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : statsError ? (
+              <span className="text-red-400 text-sm">Error</span>
+            ) : (
+              formatCurrency(stats?.total_sell_value || 0)
+            )}
           </p>
           <p className="text-xs text-blue-400 mt-1">Total sales revenue</p>
         </div>
 
         {/* Estimated Profit Card */}
         <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
-          <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
-            Estimated Profit
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
+              Estimated Profit
+            </p>
+            <div className="flex items-center space-x-1">
+              {isLoadingStats && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white/30"></div>
+              )}
+            </div>
+          </div>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            {formatCurrency(23130)}
+            {isLoadingStats ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : statsError ? (
+              <span className="text-red-400 text-sm">Error</span>
+            ) : (
+              formatCurrency(
+                (stats?.total_sell_value || 0) - (stats?.total_buy_value || 0)
+              )
+            )}
           </p>
-          <p className="text-xs text-green-400 mt-1">+51.0% profit margin</p>
+          <p className="text-xs text-green-400 mt-1">
+            {isLoadingStats
+              ? "Loading..."
+              : statsError
+              ? "Error"
+              : `${(
+                  (((stats?.total_sell_value || 0) -
+                    (stats?.total_buy_value || 0)) /
+                    (stats?.total_sell_value || 1)) *
+                  100
+                ).toFixed(1)}% profit margin`}
+          </p>
         </div>
 
         {/* Customers Card */}
         <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
-          <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
-            Total Customers
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
+              Total Customers
+            </p>
+            <div className="flex items-center space-x-1">
+              {isLoadingCustomerStats && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white/30"></div>
+              )}
+              <button
+                onClick={refetchCustomerStats}
+                disabled={isLoadingCustomerStats}
+                className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                title="Refresh customer stats"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-3 w-3 text-gray-400 hover:text-white ${
+                    isLoadingCustomerStats ? "animate-spin" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
           <p className="text-lg sm:text-2xl font-bold text-white leading-none mt-1">
-            856
+            {isLoadingCustomerStats ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : customerStatsError ? (
+              <span className="text-red-400 text-sm">Error</span>
+            ) : (
+              customerStats?.total_customers || 0
+            )}
           </p>
-          <p className="text-xs text-purple-400 mt-1">+15.3% from last month</p>
+          <p className="text-xs text-purple-400 mt-1">
+            {isLoadingCustomerStats
+              ? "Loading..."
+              : customerStatsError
+              ? "Error loading data"
+              : `${customerStats?.active_customers || 0} active customers`}
+          </p>
         </div>
       </div>
 
@@ -654,39 +793,76 @@ export default function DashboardPage() {
             {/* First row: Buy Price and Sell Price (2 cards) */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
               <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl p-2.5 border border-green-400/30">
-                <span className="text-green-400 text-sm font-medium">
-                  Buy Price
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-green-400 text-sm font-medium">
+                    Buy Price
+                  </span>
+                  {isLoadingSales && (
+                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-green-400/30"></div>
+                  )}
+                </div>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {formatCurrency(68450)}
+                  {isLoadingSales ? (
+                    <span className="animate-pulse text-lg">Loading...</span>
+                  ) : salesError ? (
+                    <span className="text-red-400 text-lg">Error</span>
+                  ) : (
+                    formatCurrency(recentActivitiesStats.totalBuyPrice)
+                  )}
                 </p>
                 <p className="text-xs text-green-300 mt-0.5">
-                  +12.8% vs last period
+                  {recentActivitiesStats.salesCount} recent sales
                 </p>
               </div>
 
               <div className="bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-xl p-2.5 border border-red-400/30">
-                <span className="text-red-400 text-sm font-medium">
-                  Sell Price
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-red-400 text-sm font-medium">
+                    Sell Price
+                  </span>
+                  {isLoadingSales && (
+                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-red-400/30"></div>
+                  )}
+                </div>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {formatCurrency(45320)}
+                  {isLoadingSales ? (
+                    <span className="animate-pulse text-lg">Loading...</span>
+                  ) : salesError ? (
+                    <span className="text-red-400 text-lg">Error</span>
+                  ) : (
+                    formatCurrency(recentActivitiesStats.totalSellPrice)
+                  )}
                 </p>
                 <p className="text-xs text-red-300 mt-0.5">
-                  +5.2% vs last period
+                  Total revenue from recent sales
                 </p>
               </div>
 
               {/* Profit Card - Appears in first row on desktop, but full width in a separate row on mobile */}
               <div className="bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl p-2.5 border border-purple-400/30 hidden md:block">
-                <span className="text-purple-400 text-sm font-medium">
-                  Profit
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-purple-400 text-sm font-medium">
+                    Profit
+                  </span>
+                  {isLoadingSales && (
+                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-purple-400/30"></div>
+                  )}
+                </div>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {formatCurrency(23130)}
+                  {isLoadingSales ? (
+                    <span className="animate-pulse text-lg">Loading...</span>
+                  ) : salesError ? (
+                    <span className="text-red-400 text-lg">Error</span>
+                  ) : (
+                    formatCurrency(recentActivitiesStats.totalProfit)
+                  )}
                 </p>
                 <p className="text-xs text-purple-300 mt-0.5">
-                  +18.4% vs last period
+                  {isLoadingSales || salesError
+                    ? "Loading..."
+                    : `${recentActivitiesStats.profitMargin.toFixed(
+                        1
+                      )}% profit margin`}
                 </p>
               </div>
             </div>
@@ -694,14 +870,29 @@ export default function DashboardPage() {
             {/* Second row: Profit Card (full width on mobile only) */}
             <div className="md:hidden mb-4">
               <div className="bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl p-2.5 border border-purple-400/30">
-                <span className="text-purple-400 text-sm font-medium">
-                  Profit
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-purple-400 text-sm font-medium">
+                    Profit
+                  </span>
+                  {isLoadingSales && (
+                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-purple-400/30"></div>
+                  )}
+                </div>
                 <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {formatCurrency(23130)}
+                  {isLoadingSales ? (
+                    <span className="animate-pulse text-lg">Loading...</span>
+                  ) : salesError ? (
+                    <span className="text-red-400 text-lg">Error</span>
+                  ) : (
+                    formatCurrency(recentActivitiesStats.totalProfit)
+                  )}
                 </p>
                 <p className="text-xs text-purple-300 mt-0.5">
-                  +18.4% vs last period
+                  {isLoadingSales || salesError
+                    ? "Loading..."
+                    : `${recentActivitiesStats.profitMargin.toFixed(
+                        1
+                      )}% profit margin`}
                 </p>
               </div>
             </div>
@@ -778,7 +969,7 @@ export default function DashboardPage() {
                 ) : (
                   recentSales.map((sale) => {
                     const orderStatus = getOrderStatus(sale);
-                    const { date, time } = formatDateTime(sale.created_at);
+                    const { date, time } = formatDateTime(sale.sale_date);
                     const orderId = generateOrderId(sale.id);
 
                     return (
@@ -820,7 +1011,7 @@ export default function DashboardPage() {
 
                           <div className="flex items-center">
                             <span className="hidden sm:inline text-sm font-bold text-white">
-                              {formatCurrency(sale.total_price)}
+                              {formatCurrency(sale.total_amount)}
                             </span>
                             <button
                               className="text-gray-300 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all ml-2"
@@ -850,7 +1041,7 @@ export default function DashboardPage() {
                             {sale.customer_name || "Walk-in Customer"}
                           </span>
                           <span className="text-sm font-bold text-white">
-                            {formatCurrency(sale.total_price)}
+                            {formatCurrency(sale.total_amount)}
                           </span>
                         </div>
 
@@ -874,10 +1065,16 @@ export default function DashboardPage() {
                             <div className="h-3 w-px bg-gray-600"></div>
                             <div>
                               <span className="text-xs text-gray-400">
-                                Total
+                                Profit
                               </span>
-                              <span className="text-xs font-medium text-green-400 ml-1.5">
-                                {formatCurrency(sale.total_price)}
+                              <span
+                                className={`text-xs font-medium ml-1.5 ${
+                                  sale.profit >= 0
+                                    ? "text-green-400"
+                                    : "text-red-400"
+                                }`}
+                              >
+                                {formatCurrency(sale.profit)}
                               </span>
                             </div>
                           </div>
