@@ -10,6 +10,7 @@ import { useLowStock } from "@/hooks/useLowStock";
 import { useInventoryStats } from "@/hooks/useInventoryStats";
 import { useRecentActivitiesStats } from "@/hooks/useRecentActivitiesStats";
 import { useCustomerStats } from "@/hooks/useCustomerStats";
+import { useBankingOverview } from "@/hooks/useBankingOverview";
 import {
   formatDateTime,
   generateOrderId,
@@ -65,6 +66,14 @@ export default function DashboardPage() {
     error: customerStatsError,
     refetch: refetchCustomerStats,
   } = useCustomerStats();
+
+  // Use the custom hook for banking overview
+  const {
+    overview: bankingOverview,
+    isLoading: isLoadingBanking,
+    error: bankingError,
+    refetch: refetchBanking,
+  } = useBankingOverview();
 
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -1221,69 +1230,150 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-bold text-white">
                   Banking Overview
                 </h3>
-                <p className="text-sm text-gray-300">Across 7 accounts</p>
+                <p className="text-sm text-gray-300">
+                  {isLoadingBanking ? (
+                    "Loading..."
+                  ) : bankingError ? (
+                    "Error loading accounts"
+                  ) : (
+                    `Across ${bankingOverview?.total_accounts || 0} accounts`
+                  )}
+                </p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-green-400">
-                {formatCurrency(260350.95)}
-              </p>
-              <p className="text-sm text-green-300">+2.3% this month</p>
+            <div className="flex items-center space-x-2">
+              {isLoadingBanking && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white/30"></div>
+              )}
+              <button
+                onClick={refetchBanking}
+                disabled={isLoadingBanking}
+                className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                title="Refresh banking data"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-3 w-3 text-gray-400 hover:text-white ${
+                    isLoadingBanking ? "animate-spin" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-green-400">
+                  {isLoadingBanking ? (
+                    <span className="animate-pulse text-lg">Loading...</span>
+                  ) : bankingError ? (
+                    <span className="text-red-400 text-lg">Error</span>
+                  ) : (
+                    formatCurrency(bankingOverview?.total_balance || 0)
+                  )}
+                </p>
+                <p className="text-sm text-green-300">
+                  {isLoadingBanking
+                    ? "Loading..."
+                    : bankingError
+                    ? "Error"
+                    : `+${bankingOverview?.monthly_change_percentage || 0}% this month`}
+                </p>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {[
-              {
-                name: "Main Account",
-                amount: 145230.45,
-                color: "green",
-                status: "Primary",
-              },
-              {
-                name: "Business",
-                amount: 32450.75,
-                color: "blue",
-                status: "Operations",
-              },
-              {
-                name: "Investment",
-                amount: 28900.25,
-                color: "purple",
-                status: "Growth",
-              },
-              {
-                name: "Emergency",
-                amount: 15000.0,
-                color: "red",
-                status: "Reserve",
-              },
-            ].map((account, index) => (
-              <div
-                key={index}
-                className={`bg-gradient-to-br from-${account.color}-500/10 to-${account.color}-600/10 border border-${account.color}-400/30 rounded-xl p-3 hover:from-${account.color}-500/20 hover:to-${account.color}-600/20 transition-all duration-200`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <p
-                    className={`text-${account.color}-400 text-sm font-medium`}
-                  >
-                    {account.name}
-                  </p>
-                  <div
-                    className={`w-2 h-2 bg-${account.color}-400 rounded-full`}
-                  ></div>
+            {isLoadingBanking ? (
+              // Loading state
+              [...Array(4)].map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-500/10 border border-gray-400/30 rounded-xl p-3 animate-pulse"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="h-4 bg-gray-400/30 rounded w-20"></div>
+                    <div className="w-2 h-2 bg-gray-400/30 rounded-full"></div>
+                  </div>
+                  <div className="h-6 bg-gray-400/30 rounded w-24 mb-1"></div>
+                  <div className="h-3 bg-gray-400/30 rounded w-16"></div>
                 </div>
-                <p className="text-white font-bold text-lg">
-                  {formatCurrency(account.amount)}
-                </p>
-                <p className={`text-${account.color}-300 text-xs`}>
-                  {account.status}
-                </p>
+              ))
+            ) : bankingError ? (
+              // Error state
+              <div className="col-span-2 flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="text-red-400 mb-2">⚠️</div>
+                  <p className="text-sm text-red-400">{bankingError}</p>
+                  <button
+                    onClick={refetchBanking}
+                    className="mt-2 px-3 py-1 bg-red-500/20 text-red-400 text-xs rounded hover:bg-red-500/30 transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
               </div>
-            ))}
+            ) : bankingOverview?.accounts.length === 0 ? (
+              // Empty state
+              <div className="col-span-2 flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="text-gray-400 mb-2">🏦</div>
+                  <p className="text-sm text-gray-400">No bank accounts found</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Create your first account to get started
+                  </p>
+                </div>
+              </div>
+            ) : (
+              bankingOverview?.accounts.map((account, index) => {
+                // Define colors for accounts
+                const colors = ["green", "blue", "purple", "red"];
+                const accountColor = colors[index % colors.length];
+                const accountStatus = index === 0 ? "Primary" : 
+                                   index === 1 ? "Business" : 
+                                   index === 2 ? "Investment" : "Reserve";
+
+                return (
+                  <div
+                    key={account.id}
+                    className={`bg-gradient-to-br from-${accountColor}-500/10 to-${accountColor}-600/10 border border-${accountColor}-400/30 rounded-xl p-3 hover:from-${accountColor}-500/20 hover:to-${accountColor}-600/20 transition-all duration-200`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <p
+                        className={`text-${accountColor}-400 text-sm font-medium`}
+                      >
+                        {account.name}
+                      </p>
+                      <div
+                        className={`w-2 h-2 bg-${accountColor}-400 rounded-full`}
+                      ></div>
+                    </div>
+                    <p className="text-white font-bold text-lg">
+                      {formatCurrency(account.balance)}
+                    </p>
+                    <p className={`text-${accountColor}-300 text-xs`}>
+                      {accountStatus}
+                    </p>
+                  </div>
+                );
+              })
+            )}
           </div>
 
-          <button className="w-full mt-4 py-2 bg-gradient-to-r from-green-500/30 to-emerald-500/30 hover:from-green-500/50 hover:to-emerald-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium">
+          <button 
+            className="w-full mt-4 py-2 bg-gradient-to-r from-green-500/30 to-emerald-500/30 hover:from-green-500/50 hover:to-emerald-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+            onClick={() => {
+              setIsNavigating(true);
+              router.push("/dashboard/banking");
+            }}
+            disabled={isNavigating}
+          >
             See More Banking Details
           </button>
         </div>
