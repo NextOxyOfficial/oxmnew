@@ -60,7 +60,6 @@ export default function OnlineStorePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
   const [terms, setTerms] = useState("");
   const [privacy, setPrivacy] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -93,32 +92,35 @@ export default function OnlineStorePage() {
     }
   };
 
-  const handlePublishProducts = async (selectedProducts: Product[]) => {
+  const handlePublishProducts = async (product: Product) => {
     try {
-      const promises = selectedProducts.map(product => 
-        ApiService.post("/online-store/products/", {
-          product_id: product.id,
-          name: product.name,
-          description: product.details || "",
-          price: product.sell_price || product.price || 0,
-          category: product.category_name || "General",
-          is_published: true
-        })
-      );
+      await ApiService.post("/online-store/products/", {
+        product_id: product.id,
+        name: product.name,
+        description: product.details || "",
+        price: product.sell_price || product.price || 0,
+        category: product.category_name || "General",
+        is_published: true
+      });
       
-      await Promise.all(promises);
       await fetchData(); // Refresh the data
-      setIsProductModalOpen(false);
+      // Don't close modal to allow publishing more products
     } catch (error) {
-      console.error("Error publishing products:", error);
+      console.error("Error publishing product:", error);
     }
   };
 
   const toggleProductStatus = async (productId: number, currentStatus: boolean) => {
     try {
-      await ApiService.patch(`/online-store/products/${productId}/`, {
-        is_published: !currentStatus
-      });
+      if (currentStatus) {
+        // If currently published, unpublish (delete from online store)
+        await ApiService.delete(`/online-store/products/${productId}/`);
+      } else {
+        // If currently unpublished, publish it
+        await ApiService.patch(`/online-store/products/${productId}/`, {
+          is_published: true
+        });
+      }
       await fetchData();
     } catch (error) {
       console.error("Error updating product status:", error);
@@ -147,13 +149,10 @@ export default function OnlineStorePage() {
     }
   };
 
-  // Filter products based on search and status
+  // Filter products based on search only (all products shown are published)
   const filteredOnlineProducts = onlineProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "all" || 
-      (filterStatus === "published" && product.is_published) ||
-      (filterStatus === "draft" && !product.is_published);
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   const tabs = [
@@ -228,8 +227,6 @@ export default function OnlineStorePage() {
                 products={filteredOnlineProducts}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
-                filterStatus={filterStatus}
-                setFilterStatus={setFilterStatus}
                 onAddProducts={() => setIsProductModalOpen(true)}
                 onToggleStatus={toggleProductStatus}
                 onRefresh={fetchData}
@@ -278,8 +275,6 @@ function ProductsTab({
   products, 
   searchTerm, 
   setSearchTerm, 
-  filterStatus, 
-  setFilterStatus, 
   onAddProducts, 
   onToggleStatus,
   onRefresh 
@@ -287,8 +282,6 @@ function ProductsTab({
   products: OnlineProduct[];
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  filterStatus: string;
-  setFilterStatus: (status: string) => void;
   onAddProducts: () => void;
   onToggleStatus: (id: number, currentStatus: boolean) => void;
   onRefresh: () => void;
@@ -297,26 +290,15 @@ function ProductsTab({
     <div className="space-y-6">
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-          <div className="relative w-full sm:w-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full sm:w-64 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-            />
-          </div>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 min-w-[140px]"
-          >
-            <option value="all">All Products</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
+        <div className="relative w-full sm:w-auto">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 w-full sm:w-64 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          />
         </div>
         <div className="flex items-center space-x-3 w-full sm:w-auto">
           <button
@@ -364,24 +346,30 @@ function ProductsTab({
                 </div>
                 <button
                   onClick={() => onToggleStatus(product.id, product.is_published)}
-                  className={`p-2 rounded-lg transition-all ${
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all text-sm font-medium ${
                     product.is_published
-                      ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                      : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                      ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                      : "bg-slate-700 text-slate-400 hover:bg-slate-600 border border-slate-600"
                   }`}
                 >
-                  {product.is_published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  {product.is_published ? (
+                    <>
+                      <EyeOff className="h-4 w-4" />
+                      <span>Unpublish</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4" />
+                      <span>Publish</span>
+                    </>
+                  )}
                 </button>
               </div>
               <div className="text-sm text-slate-400 space-y-2">
                 <p className="line-clamp-2">{product.description}</p>
                 <div className="flex items-center justify-between pt-2 border-t border-slate-700">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    product.is_published
-                      ? "bg-green-500/20 text-green-400"
-                      : "bg-slate-700 text-slate-400"
-                  }`}>
-                    {product.is_published ? "Published" : "Draft"}
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                    Published
                   </span>
                   <span className="text-xs text-slate-500">
                     {new Date(product.created_at).toLocaleDateString()}
