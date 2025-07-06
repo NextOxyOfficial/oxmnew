@@ -911,12 +911,17 @@ export class ApiService {
 
   static async createPurchase(purchaseData: {
     supplier: number;
-    items: Array<{
+    date?: string;
+    amount?: number;
+    status?: string;
+    products?: string;
+    notes?: string;
+    proof_document?: string;
+    items?: Array<{
       product: number;
       quantity: number;
       price: number;
     }>;
-    notes?: string;
   }) {
     return this.post("/purchases/", purchaseData);
   }
@@ -935,10 +940,16 @@ export class ApiService {
   }
 
   static async createPayment(paymentData: {
-    type: string;
+    supplier?: number;
+    type?: string;
     amount: number;
     description?: string;
     date?: string;
+    method?: string;
+    status?: string;
+    reference?: string;
+    notes?: string;
+    proof_document?: string;
   }) {
     return this.post("/payments/", paymentData);
   }
