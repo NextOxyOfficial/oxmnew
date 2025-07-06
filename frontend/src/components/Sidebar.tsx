@@ -266,10 +266,19 @@ function NavItem({
     }
   };
 
+  // Handle online store link to open in new tab
+  const handleClick = (e: React.MouseEvent) => {
+    if (label === 'Online Store') {
+      e.preventDefault();
+      window.open(href, '_blank');
+      onClick?.();
+    }
+  };
+
   return (
     <Link
       href={href}
-      onClick={onClick}
+      onClick={label === 'Online Store' ? handleClick : onClick}
       className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200 group ${
         active 
           ? "bg-slate-800/70 text-cyan-400 shadow-sm" 
@@ -279,6 +288,9 @@ function NavItem({
       <div className="flex items-center">
         <Icon className="mr-3 h-4 w-4 flex-shrink-0" />
         <span className="truncate">{label}</span>
+        {label === 'Online Store' && (
+          <Globe className="ml-2 h-3 w-3 text-slate-400" />
+        )}
       </div>
       
       {badge && (
