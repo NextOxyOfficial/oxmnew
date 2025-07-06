@@ -33,6 +33,73 @@ interface Product {
   updated_at: string;
 }
 
+// Additional interfaces for other entities
+interface Customer {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Purchase {
+  id: number;
+  supplier: number;
+  supplier_name?: string;
+  total_amount: number;
+  items: Array<{
+    product: number;
+    product_name?: string;
+    quantity: number;
+    price: number;
+  }>;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Payment {
+  id: number;
+  type: string;
+  amount: number;
+  description?: string;
+  date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Order {
+  id: number;
+  customer: number;
+  customer_name?: string;
+  order_number: string;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled' | 'refunded';
+  total_amount: number;
+  paid_amount: number;
+  due_amount: number;
+  discount_amount: number;
+  tax_amount: number;
+  notes?: string;
+  delivery_address?: string;
+  expected_delivery_date?: string;
+  items_count: number;
+  items?: Array<{
+    id: number;
+    product: number;
+    product_name?: string;
+    variant?: number;
+    variant_name?: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+  }>;
+  created_at: string;
+  updated_at: string;
+}
+
 // Auth token management
 export const AuthToken = {
   get: () => {
@@ -706,6 +773,137 @@ export class ApiService {
     return this.post(`/suppliers/${id}/deactivate/`, {});
   }
 
+  // Products methods
+  static async getProducts() {
+    return this.get("/products/");
+  }
+
+  static async getProduct(id: number) {
+    return this.get(`/products/${id}/`);
+  }
+
+  static async createProduct(productData: {
+    name: string;
+    category?: number;
+    supplier?: number;
+    location?: string;
+    details?: string;
+    has_variants: boolean;
+    buy_price: number;
+    sell_price: number;
+    stock: number;
+    variants?: ProductVariant[];
+    is_active?: boolean;
+  }) {
+    return this.post("/products/", productData);
+  }
+
+  static async updateProduct(id: number, productData: Partial<Product>) {
+    return this.put(`/products/${id}/`, productData);
+  }
+
+  static async deleteProduct(id: number) {
+    return this.delete(`/products/${id}/`);
+  }
+
+  static async toggleProduct(id: number) {
+    return this.put(`/products/${id}/toggle/`, {});
+  }
+
+  // Customer methods
+  static async getCustomers() {
+    return this.get("/customers/");
+  }
+
+  static async getCustomer(id: number) {
+    return this.get(`/customers/${id}/`);
+  }
+
+  static async createCustomer(customerData: {
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    notes?: string;
+  }) {
+    return this.post("/customers/", customerData);
+  }
+
+  static async updateCustomer(id: number, customerData: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    notes?: string;
+  }) {
+    return this.put(`/customers/${id}/`, customerData);
+  }
+
+  static async deleteCustomer(id: number) {
+    return this.delete(`/customers/${id}/`);
+  }
+
+  // Order methods
+  static async getOrders() {
+    return this.get("/orders/");
+  }
+
+  static async getOrder(id: number) {
+    return this.get(`/orders/${id}/`);
+  }
+
+  static async createOrder(orderData: {
+    customer: number;
+    status?: string;
+    total_amount: number;
+    paid_amount?: number;
+    discount_amount?: number;
+    tax_amount?: number;
+    notes?: string;
+    delivery_address?: string;
+    expected_delivery_date?: string;
+  }) {
+    return this.post("/orders/", orderData);
+  }
+
+  static async updateOrder(id: number, orderData: Partial<Order>) {
+    return this.put(`/orders/${id}/`, orderData);
+  }
+
+  static async deleteOrder(id: number) {
+    return this.delete(`/orders/${id}/`);
+  }
+
+  // Product Sales methods
+  static async getProductSales() {
+    return this.get("/sales/");
+  }
+
+  static async getProductSale(id: number) {
+    return this.get(`/sales/${id}/`);
+  }
+
+  static async createProductSale(saleData: {
+    product: number;
+    variant?: number;
+    quantity: number;
+    unit_price: number;
+    customer_name?: string;
+    customer_phone?: string;
+    customer_email?: string;
+    notes?: string;
+  }) {
+    return this.post("/sales/", saleData);
+  }
+
+  static async updateProductSale(id: number, saleData: any) {
+    return this.put(`/sales/${id}/`, saleData);
+  }
+
+  static async deleteProductSale(id: number) {
+    return this.delete(`/sales/${id}/`);
+  }
+
   // Purchase methods
   static async getPurchases() {
     return this.get("/purchases/");
@@ -713,12 +911,12 @@ export class ApiService {
 
   static async createPurchase(purchaseData: {
     supplier: number;
-    date: string;
-    amount: number;
-    status: string;
-    products?: string;
+    items: Array<{
+      product: number;
+      quantity: number;
+      price: number;
+    }>;
     notes?: string;
-    proof_document?: File | string;
   }) {
     return this.post("/purchases/", purchaseData);
   }
@@ -737,14 +935,10 @@ export class ApiService {
   }
 
   static async createPayment(paymentData: {
-    supplier: number;
-    date: string;
+    type: string;
     amount: number;
-    method: string;
-    status: string;
-    reference?: string;
-    notes?: string;
-    proof_document?: File | string;
+    description?: string;
+    date?: string;
   }) {
     return this.post("/payments/", paymentData);
   }
