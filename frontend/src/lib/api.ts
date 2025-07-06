@@ -810,6 +810,45 @@ export class ApiService {
     return this.put(`/products/${id}/toggle/`, {});
   }
 
+  // Low stock and inventory methods
+  static async getLowStockProducts(threshold: number = 10) {
+    // Get all products and filter for low stock
+    const products = await this.get("/products/");
+    const allProducts = products.results || products;
+    
+    const lowStockProducts = allProducts.filter((product: any) => {
+      if (product.has_variants) {
+        // Check if any variant has low stock
+        return product.variants?.some((variant: any) => variant.stock <= threshold);
+      } else {
+        return product.stock <= threshold && product.stock > 0;
+      }
+    });
+    
+    return {
+      results: lowStockProducts
+    };
+  }
+
+  static async getOutOfStockProducts() {
+    // Get all products and filter for out of stock
+    const products = await this.get("/products/");
+    const allProducts = products.results || products;
+    
+    const outOfStockProducts = allProducts.filter((product: any) => {
+      if (product.has_variants) {
+        // Check if all variants are out of stock
+        return product.variants?.every((variant: any) => variant.stock === 0);
+      } else {
+        return product.stock === 0;
+      }
+    });
+    
+    return {
+      results: outOfStockProducts
+    };
+  }
+
   // Customer methods
   static async getCustomers() {
     return this.get("/customers/");
