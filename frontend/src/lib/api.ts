@@ -1065,6 +1065,28 @@ export class ApiService {
     }
   }
 
+  // Test customers endpoint specifically
+  static async testCustomersEndpoint() {
+    console.log("=== DEBUG: Testing Customers Endpoint ===");
+    console.log("API Base URL:", API_BASE_URL);
+    console.log("Backend Base URL:", BACKEND_BASE_URL);
+    const token = AuthToken.get();
+    console.log(
+      "Auth Token:",
+      token ? `Present (${token.substring(0, 10)}...)` : "Missing"
+    );
+
+    try {
+      console.log("\n--- Testing /customers/ endpoint ---");
+      const result = await this.testEndpoint("/customers/");
+      console.log("Customers endpoint test result:", result);
+      return result;
+    } catch (error) {
+      console.error("Failed to test customers endpoint:", error);
+      throw error;
+    }
+  }
+
   static async debugSubscriptionEndpoints() {
     console.log("=== DEBUG: Testing Subscription Endpoints ===");
     console.log("API Base URL:", API_BASE_URL);
