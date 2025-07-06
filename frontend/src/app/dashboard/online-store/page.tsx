@@ -184,12 +184,12 @@ export default function OnlineStorePage() {
               <Store className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-100">Online Store</h1>
-              <p className="text-base text-slate-400 mt-1">Manage your e-commerce presence</p>
+              <h1 className="text-2xl font-bold text-slate-100">Online Store</h1>
+              <p className="text-sm text-slate-400 mt-1">Manage your e-commerce presence</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="flex items-center space-x-2 px-6 py-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors">
+            <button className="flex items-center space-x-2 px-6 py-3 bg-slate-800 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors">
               <Globe className="h-5 w-5" />
               <span>View Store</span>
             </button>
@@ -305,13 +305,13 @@ function ProductsTab({
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full sm:w-64 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              className="pl-10 pr-4 py-2 w-full sm:w-64 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
           </div>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 min-w-[140px]"
+            className="px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 min-w-[140px]"
           >
             <option value="all">All Products</option>
             <option value="published">Published</option>
@@ -321,14 +321,14 @@ function ProductsTab({
         <div className="flex items-center space-x-3 w-full sm:w-auto">
           <button
             onClick={onRefresh}
-            className="flex items-center space-x-2 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-slate-700 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-600 transition-colors"
           >
             <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>
           </button>
           <button
             onClick={onAddProducts}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
+            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
           >
             <Plus className="h-4 w-4" />
             <span>Add Products</span>
@@ -342,10 +342,10 @@ function ProductsTab({
           <div className="bg-slate-800/50 rounded-lg p-6 max-w-md mx-auto">
             <Package className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-slate-300 mb-2">No products found</h3>
-            <p className="text-slate-400 mb-4">Add products to your online store to get started</p>
+            <p className="text-sm text-slate-400 mb-4">Add products to your online store to get started</p>
             <button
               onClick={onAddProducts}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
             >
               <Plus className="h-4 w-4" />
               <span>Add Products</span>
@@ -360,7 +360,7 @@ function ProductsTab({
                 <div className="flex-1">
                   <h3 className="text-lg font-medium text-slate-100 mb-1 group-hover:text-cyan-400 transition-colors">{product.name}</h3>
                   <p className="text-sm text-slate-400 mb-2">{product.category}</p>
-                  <p className="text-lg font-bold text-cyan-400">${product.price}</p>
+                  <p className="text-lg font-semibold text-cyan-400">${product.price}</p>
                 </div>
                 <button
                   onClick={() => onToggleStatus(product.id, product.is_published)}
@@ -401,7 +401,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-100">Online Orders</h2>
+        <h2 className="text-lg font-medium text-slate-100">Online Orders</h2>
         <span className="text-sm text-slate-400 bg-slate-800 px-3 py-1 rounded-lg">
           {orders.length} orders
         </span>
@@ -412,7 +412,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
           <div className="bg-slate-800/50 rounded-lg p-6 max-w-md mx-auto">
             <ShoppingCart className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-slate-300 mb-2">No orders yet</h3>
-            <p className="text-slate-400">Orders from your online store will appear here</p>
+            <p className="text-sm text-slate-400">Orders from your online store will appear here</p>
           </div>
         </div>
       ) : (
@@ -426,7 +426,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                   <p className="text-sm text-slate-400">{order.phone}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-bold text-cyan-400 mb-1">${order.total_amount}</p>
+                  <p className="text-lg font-semibold text-cyan-400 mb-1">${order.total_amount}</p>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     order.status === "completed"
                       ? "bg-green-500/20 text-green-400"
@@ -480,18 +480,18 @@ function TermsTab({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-100">Terms & Conditions</h2>
+        <h2 className="text-lg font-medium text-slate-100">Terms & Conditions</h2>
         <button
           onClick={onSave}
           disabled={isSaving}
-          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all disabled:opacity-50"
+          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all disabled:opacity-50"
         >
           {isSaving ? (
             <RefreshCw className="h-4 w-4 animate-spin" />
           ) : (
             <FileText className="h-4 w-4" />
           )}
-          <span>{isSaving ? "Saving..." : "Save Changes"}</span>
+          <span className="text-sm">{isSaving ? "Saving..." : "Save Changes"}</span>
         </button>
       </div>
 
@@ -522,18 +522,18 @@ function PrivacyTab({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-100">Privacy Policy</h2>
+        <h2 className="text-lg font-medium text-slate-100">Privacy Policy</h2>
         <button
           onClick={onSave}
           disabled={isSaving}
-          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all disabled:opacity-50"
+          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all disabled:opacity-50"
         >
           {isSaving ? (
             <RefreshCw className="h-4 w-4 animate-spin" />
           ) : (
             <Shield className="h-4 w-4" />
           )}
-          <span>{isSaving ? "Saving..." : "Save Changes"}</span>
+          <span className="text-sm">{isSaving ? "Saving..." : "Save Changes"}</span>
         </button>
       </div>
 
