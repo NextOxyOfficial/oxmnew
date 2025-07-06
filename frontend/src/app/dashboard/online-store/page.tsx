@@ -17,7 +17,6 @@ import {
   Filter,
   RefreshCw
 } from "lucide-react";
-import ProductSelectionModal from "@/components/ProductSelectionModal";
 
 interface OnlineProduct {
   id: number;
@@ -58,8 +57,8 @@ export default function OnlineStorePage() {
   const [onlineProducts, setOnlineProducts] = useState<OnlineProduct[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [terms, setTerms] = useState("");
   const [privacy, setPrivacy] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -227,7 +226,10 @@ export default function OnlineStorePage() {
                 products={filteredOnlineProducts}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
-                onAddProducts={() => setIsProductModalOpen(true)}
+                availableProducts={products.filter(p => !onlineProducts.map(op => op.product_id).includes(p.id))}
+                selectedProductId={selectedProductId}
+                setSelectedProductId={setSelectedProductId}
+                onPublish={handlePublishProducts}
                 onToggleStatus={toggleProductStatus}
                 onRefresh={fetchData}
               />
@@ -256,15 +258,6 @@ export default function OnlineStorePage() {
             )}
           </div>
         </div>
-
-        {/* Product Selection Modal */}
-        <ProductSelectionModal
-          isOpen={isProductModalOpen}
-          onClose={() => setIsProductModalOpen(false)}
-          products={products}
-          onPublish={handlePublishProducts}
-          publishedProductIds={onlineProducts.map(p => p.product_id)}
-        />
       </div>
     </div>
   );
@@ -275,17 +268,37 @@ function ProductsTab({
   products, 
   searchTerm, 
   setSearchTerm, 
-  onAddProducts, 
+  availableProducts,
+  selectedProductId,
+  setSelectedProductId,
+  onPublish,
   onToggleStatus,
   onRefresh 
 }: {
   products: OnlineProduct[];
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  onAddProducts: () => void;
+  availableProducts: Product[];
+  selectedProductId: number | null;
+  setSelectedProductId: (id: number | null) => void;
+  onPublish: (product: Product) => void;
   onToggleStatus: (id: number, currentStatus: boolean) => void;
   onRefresh: () => void;
 }) {
+  const selectedProduct = availableProducts.find(p => p.id === selectedProductId);
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  const handlePublish = async () => {
+    if (!selectedProduct) return;
+    
+    setIsPublishing(true);
+    try {
+      await onPublish(selectedProduct);
+      setSelectedProductId(null); // Reset selection after publishing
+    } finally {
+      setIsPublishing(false);
+    }
+  };
   return (
     <div className="space-y-6">
       {/* Header Actions */}
@@ -308,14 +321,68 @@ function ProductsTab({
             <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>
           </button>
+        </div>
+      </div>
+
+      {/* Add Products Section */}
+      <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-4 border border-slate-700">
+        <h3 className="text-lg font-medium text-slate-100 mb-4">Add Products to Online Store</h3>
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <select
+              value={selectedProductId || ""}
+              onChange={(e) => setSelectedProductId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            >
+              <option value="">Select a product to publish...</option>
+              {availableProducts.map((product) => (
+                <option key={product.id} value={product.id}>
+                  {product.name} - ${product.sell_price || product.price || 0}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
-            onClick={onAddProducts}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
+            onClick={handlePublish}
+            disabled={isPublishing || !selectedProduct}
+            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus className="h-4 w-4" />
-            <span>Add Products</span>
+            {isPublishing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Publishing...</span>
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                <span>Publish</span>
+              </>
+            )}
           </button>
         </div>
+        
+        {/* Selected Product Details */}
+        {selectedProduct && (
+          <div className="mt-4 p-4 rounded-lg border border-slate-600 bg-slate-900/50">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h4 className="font-medium text-slate-100 text-sm mb-1">{selectedProduct.name}</h4>
+                <p className="text-sm text-slate-400 mb-2">{selectedProduct.category_name || "Uncategorized"}</p>
+                {selectedProduct.details && (
+                  <p className="text-xs text-slate-500 mb-2">{selectedProduct.details}</p>
+                )}
+                <div className="flex items-center gap-4">
+                  <p className="text-sm font-semibold text-cyan-400">
+                    ${selectedProduct.sell_price || selectedProduct.price || 0}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Stock: {selectedProduct.stock || 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Products Grid */}
@@ -323,15 +390,8 @@ function ProductsTab({
         <div className="text-center py-12">
           <div className="bg-slate-800/50 rounded-lg p-6 max-w-md mx-auto">
             <Package className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-300 mb-2">No products found</h3>
-            <p className="text-sm text-slate-400 mb-4">Add products to your online store to get started</p>
-            <button
-              onClick={onAddProducts}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Products</span>
-            </button>
+            <h3 className="text-lg font-medium text-slate-300 mb-2">No products published</h3>
+            <p className="text-sm text-slate-400 mb-4">Use the dropdown above to publish products to your online store</p>
           </div>
         </div>
       ) : (
