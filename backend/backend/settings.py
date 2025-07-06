@@ -25,7 +25,7 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['168.231.119.200', 'localhost', '127.0.0.1', '*']
 
 # Application definition
 INSTALLED_APPS = [
@@ -49,6 +49,9 @@ INSTALLED_APPS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
+    'http://168.231.119.200',
+    'http://168.231.119.200:3000',
+    'https://168.231.119.200',
     'https://localhost',
     'http://localhost:3000',
     'http://localhost:3001',
@@ -70,6 +73,8 @@ CORS_ALLOWED_HEADERS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
+    'http://168.231.119.200',
+    'https://168.231.119.200',
     'https://localhost',
     'http://localhost:3000',
     'http://localhost:3001',

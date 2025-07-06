@@ -1,0 +1,52 @@
+{
+  "folders": [
+    {
+      "name": "Backend",
+      "path": "./backend"
+    },
+    {
+      "name": "Frontend", 
+      "path": "./frontend"
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "./backend/venv/bin/python",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.formatting.provider": "black",
+    "editor.formatOnSave": true,
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/*.pyc": true,
+      "**/node_modules": true,
+      "**/venv": true,
+      "**/.next": true,
+      "**/staticfiles": true
+    },
+    "search.exclude": {
+      "**/__pycache__": true,
+      "**/node_modules": true,
+      "**/venv": true,
+      "**/.next": true,
+      "**/staticfiles": true
+    },
+    "git.ignoreLimitWarning": true,
+    "terminal.integrated.env.linux": {
+      "PATH": "${workspaceFolder}/backend/venv/bin:${env:PATH}"
+    },
+    "terminal.integrated.env.osx": {
+      "PATH": "${workspaceFolder}/backend/venv/bin:${env:PATH}"
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "bradlc.vscode-tailwindcss",
+      "esbenp.prettier-vscode",
+      "ms-vscode.vscode-typescript-next",
+      "ms-vscode.vscode-json",
+      "batisteo.vscode-django"
+    ]
+  }
+}
