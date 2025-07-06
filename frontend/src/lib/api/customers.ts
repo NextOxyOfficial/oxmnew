@@ -206,7 +206,7 @@ export const customersAPI = {
     if (params?.ordering) queryParams.append("ordering", params.ordering);
 
     const response = await fetch(
-      `${API_BASE_URL}/api/customers/?${queryParams}`,
+      `${API_BASE_URL}/customers/?${queryParams}`,
       {
         headers: customersAPI.getHeaders(),
       }
@@ -220,7 +220,7 @@ export const customersAPI = {
   },
 
   getCustomer: async (id: number): Promise<Customer> => {
-    const response = await fetch(`${API_BASE_URL}/api/customers/${id}/`, {
+    const response = await fetch(`${API_BASE_URL}/customers/${id}/`, {
       headers: customersAPI.getHeaders(),
     });
 

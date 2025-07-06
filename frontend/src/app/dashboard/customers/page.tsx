@@ -3,7 +3,25 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
-import { customersAPI, type Customer } from "@/lib/api/customers";
+import { ApiService } from "@/lib/api";
+
+// Customer type (simplified to match the main API)
+interface Customer {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  status?: string;
+  total_orders?: number;
+  total_spent?: number;
+  last_order_date?: string;
+  active_gifts_count?: number;
+  total_points?: number;
+  created_at: string;
+  updated_at: string;
+}
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 
 // Import dev auth helper in development
@@ -59,17 +77,7 @@ export default function CustomersPage() {
         setIsLoading(true);
         setError(null);
 
-        const fetchedCustomers = await customersAPI.getCustomers({
-          search: searchTerm || undefined,
-          status: filterStatus === "all" ? undefined : filterStatus,
-          ordering:
-            sortBy === "name"
-              ? "name"
-              : sortBy === "created_at"
-              ? "-created_at"
-              : "-total_spent",
-        });
-
+        const fetchedCustomers = await ApiService.getCustomers();
         setCustomers(fetchedCustomers);
       } catch (err) {
         console.error("Error fetching customers:", err);
@@ -100,7 +108,7 @@ export default function CustomersPage() {
   ) => {
     try {
       setIsLoading(true);
-      const newCustomer = await customersAPI.createCustomer(customerData);
+      const newCustomer = await ApiService.createCustomer(customerData);
       setCustomers((prev) => [newCustomer, ...prev]);
       setShowCreateModal(false);
       setNewCustomer({
@@ -159,7 +167,7 @@ export default function CustomersPage() {
     try {
       setIsDeleting(true);
 
-      await customersAPI.deleteCustomer(customerToDelete.id);
+      await ApiService.deleteCustomer(customerToDelete.id);
       setCustomers((prev) => prev.filter((c) => c.id !== customerToDelete.id));
       setCustomerToDelete(null);
       setShowDeleteModal(false);
@@ -220,8 +228,8 @@ export default function CustomersPage() {
     .filter((customer) => {
       const matchesSearch =
         customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone.includes(searchTerm);
+        (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (customer.phone && customer.phone.includes(searchTerm));
       const matchesStatus =
         filterStatus === "all" || customer.status === filterStatus;
       return matchesSearch && matchesStatus;
