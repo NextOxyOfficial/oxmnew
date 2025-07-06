@@ -1081,6 +1081,12 @@ export class ApiService {
     return this.get("/banking/transactions/employees/");
   }
 
+  // Update getDashboardStats to be more specific for transactions
+  static async getTransactionDashboardStats(accountId?: string) {
+    const queryParams = accountId ? `?account_id=${accountId}` : "";
+    return this.get(`/banking/transactions/dashboard_stats/${queryParams}`);
+  }
+
   // Debug and testing methods
   static async testEndpoint(endpoint: string) {
     const fullUrl = `${API_BASE_URL}${endpoint}`;

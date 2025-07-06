@@ -245,7 +245,7 @@ export const customersAPI = {
       | "updated_at"
     >
   ): Promise<Customer> => {
-    const response = await fetch(`${API_BASE_URL}/api/customers/`, {
+    const response = await fetch(`${API_BASE_URL}/customers/`, {
       method: "POST",
       headers: customersAPI.getHeaders(),
       body: JSON.stringify(customer),
@@ -262,7 +262,7 @@ export const customersAPI = {
     id: number,
     customer: Partial<Customer>
   ): Promise<Customer> => {
-    const response = await fetch(`${API_BASE_URL}/api/customers/${id}/`, {
+    const response = await fetch(`${API_BASE_URL}/customers/${id}/`, {
       method: "PATCH",
       headers: customersAPI.getHeaders(),
       body: JSON.stringify(customer),
@@ -276,7 +276,7 @@ export const customersAPI = {
   },
 
   deleteCustomer: async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/customers/${id}/`, {
+    const response = await fetch(`${API_BASE_URL}/customers/${id}/`, {
       method: "DELETE",
       headers: customersAPI.getHeaders(),
     });
@@ -288,7 +288,7 @@ export const customersAPI = {
 
   getCustomerSummary: async (id: number) => {
     const response = await fetch(
-      `${API_BASE_URL}/api/customers/${id}/summary/`,
+      `${API_BASE_URL}/customers/${id}/summary/`,
       {
         headers: customersAPI.getHeaders(),
       }
@@ -314,7 +314,7 @@ export const customersAPI = {
       queryParams.append("status", params.status);
     if (params?.ordering) queryParams.append("ordering", params.ordering);
 
-    const response = await fetch(`${API_BASE_URL}/api/orders/?${queryParams}`, {
+    const response = await fetch(`${API_BASE_URL}/orders/?${queryParams}`, {
       headers: customersAPI.getHeaders(),
     });
 
@@ -326,7 +326,7 @@ export const customersAPI = {
   },
 
   createOrder: async (order: Partial<Order>): Promise<Order> => {
-    const response = await fetch(`${API_BASE_URL}/api/orders/`, {
+    const response = await fetch(`${API_BASE_URL}/orders/`, {
       method: "POST",
       headers: customersAPI.getHeaders(),
       body: JSON.stringify(order),
@@ -345,7 +345,7 @@ export const customersAPI = {
     if (customerId) queryParams.append("customer", customerId.toString());
 
     const response = await fetch(
-      `${API_BASE_URL}/api/customer-gifts/?${queryParams}`,
+      `${API_BASE_URL}/customer-gifts/?${queryParams}`,
       {
         headers: customersAPI.getHeaders(),
       }
@@ -364,7 +364,7 @@ export const customersAPI = {
     value: number;
     description?: string;
   }): Promise<CustomerGift> => {
-    const response = await fetch(`${API_BASE_URL}/api/customer-gifts/`, {
+    const response = await fetch(`${API_BASE_URL}/customer-gifts/`, {
       method: "POST",
       headers: customersAPI.getHeaders(),
       body: JSON.stringify(gift),
@@ -379,7 +379,7 @@ export const customersAPI = {
 
   redeemGift: async (giftId: number) => {
     const response = await fetch(
-      `${API_BASE_URL}/api/customer-gifts/${giftId}/redeem/`,
+      `${API_BASE_URL}/customer-gifts/${giftId}/redeem/`,
       {
         method: "POST",
         headers: customersAPI.getHeaders(),
@@ -399,7 +399,7 @@ export const customersAPI = {
     if (customerId) queryParams.append("customer", customerId.toString());
 
     const response = await fetch(
-      `${API_BASE_URL}/api/due-payments/?${queryParams}`,
+      `${API_BASE_URL}/due-payments/?${queryParams}`,
       {
         headers: customersAPI.getHeaders(),
       }
@@ -420,7 +420,7 @@ export const customersAPI = {
     due_date: string;
     notes?: string;
   }): Promise<DuePayment> => {
-    const response = await fetch(`${API_BASE_URL}/api/due-payments/`, {
+    const response = await fetch(`${API_BASE_URL}/due-payments/`, {
       method: "POST",
       headers: customersAPI.getHeaders(),
       body: JSON.stringify(payment),
@@ -444,7 +444,7 @@ export const customersAPI = {
     notes?: string;
     notify_customer?: boolean;
   }): Promise<Transaction> => {
-    const response = await fetch(`${API_BASE_URL}/api/transactions/`, {
+    const response = await fetch(`${API_BASE_URL}/transactions/`, {
       method: "POST",
       headers: customersAPI.getHeaders(),
       body: JSON.stringify(transaction),
@@ -460,7 +460,7 @@ export const customersAPI = {
   // Customer Actions
   sendSMS: async (customerId: number, message: string) => {
     const response = await fetch(
-      `${API_BASE_URL}/api/customers/${customerId}/send-sms/`,
+      `${API_BASE_URL}/customers/${customerId}/send-sms/`,
       {
         method: "POST",
         headers: customersAPI.getHeaders(),
@@ -477,7 +477,7 @@ export const customersAPI = {
 
   redeemPoints: async (customerId: number, amount: number) => {
     const response = await fetch(
-      `${API_BASE_URL}/api/customers/${customerId}/redeem-points/`,
+      `${API_BASE_URL}/customers/${customerId}/redeem-points/`,
       {
         method: "POST",
         headers: customersAPI.getHeaders(),
@@ -494,7 +494,7 @@ export const customersAPI = {
 
   // Available data
   getAvailableGifts: async (): Promise<AvailableGift[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/available-gifts/`, {
+    const response = await fetch(`${API_BASE_URL}/available-gifts/`, {
       headers: customersAPI.getHeaders(),
     });
 
@@ -506,7 +506,7 @@ export const customersAPI = {
   },
 
   getAvailableLevels: async (): Promise<AvailableLevel[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/available-levels/`, {
+    const response = await fetch(`${API_BASE_URL}/available-levels/`, {
       headers: customersAPI.getHeaders(),
     });
 
@@ -519,7 +519,7 @@ export const customersAPI = {
 
   getAvailableAchievements: async (): Promise<AvailableAchievement[]> => {
     const response = await fetch(
-      `${API_BASE_URL}/api/available-achievements/`,
+      `${API_BASE_URL}/available-achievements/`,
       {
         headers: customersAPI.getHeaders(),
       }
@@ -538,7 +538,7 @@ export const customersAPI = {
     level: number;
     notes?: string;
   }): Promise<CustomerLevel> => {
-    const response = await fetch(`${API_BASE_URL}/api/customer-levels/`, {
+    const response = await fetch(`${API_BASE_URL}/customer-levels/`, {
       method: "POST",
       headers: customersAPI.getHeaders(),
       body: JSON.stringify(level),
@@ -553,7 +553,7 @@ export const customersAPI = {
 
   // Statistics
   getCustomerStats: async (): Promise<CustomerStats> => {
-    const response = await fetch(`${API_BASE_URL}/api/customers/statistics/`, {
+    const response = await fetch(`${API_BASE_URL}/customers/statistics/`, {
       headers: customersAPI.getHeaders(),
     });
 
@@ -584,7 +584,7 @@ export const customersAPI = {
       searchParams.append("custom_date", params.custom_date);
 
     const response = await fetch(
-      `${API_BASE_URL}/api/duebook/customers/?${searchParams.toString()}`,
+      `${API_BASE_URL}/duebook/customers/?${searchParams.toString()}`,
       {
         headers: customersAPI.getHeaders(),
       }

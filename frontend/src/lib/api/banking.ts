@@ -22,7 +22,7 @@ export const bankingAPI = {
 
   // Get all bank accounts
   getAccounts: async (): Promise<BankAccount[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/banking/accounts/`, {
+    const response = await fetch(`${API_BASE_URL}/banking/accounts/`, {
       headers: bankingAPI.getHeaders(),
     });
 
@@ -35,36 +35,25 @@ export const bankingAPI = {
 
   // Get banking overview statistics
   getBankingOverview: async (): Promise<BankingOverviewStats> => {
-    const response = await fetch(
-      `${API_BASE_URL}/api/banking/accounts/overview/`,
-      {
-        headers: bankingAPI.getHeaders(),
-      }
+    // Since there's no overview endpoint, we'll calculate from accounts
+    const accounts = await bankingAPI.getAccounts();
+    const totalBalance = accounts.reduce(
+      (sum, account) => sum + account.balance,
+      0
     );
 
-    if (!response.ok) {
-      // If overview endpoint doesn't exist, fall back to getting accounts and calculating stats
-      const accounts = await bankingAPI.getAccounts();
-      const totalBalance = accounts.reduce(
-        (sum, account) => sum + account.balance,
-        0
-      );
-
-      return {
-        total_accounts: accounts.length,
-        total_balance: totalBalance,
-        accounts: accounts.slice(0, 4), // Show first 4 accounts
-        monthly_change_percentage: 2.3, // Mock value for now
-      };
-    }
-
-    return response.json();
+    return {
+      total_accounts: accounts.length,
+      total_balance: totalBalance,
+      accounts: accounts.slice(0, 4), // Show first 4 accounts
+      monthly_change_percentage: 2.3, // Mock value for now
+    };
   },
 
   // Get a specific bank account
   getAccount: async (id: string): Promise<BankAccount> => {
     const response = await fetch(
-      `${API_BASE_URL}/api/banking/accounts/${id}/`,
+      `${API_BASE_URL}/banking/accounts/${id}/`,
       {
         headers: bankingAPI.getHeaders(),
       }
@@ -93,7 +82,7 @@ export const bankingAPI = {
     if (params?.search) queryParams.append("search", params.search);
 
     const response = await fetch(
-      `${API_BASE_URL}/api/banking/transactions/?${queryParams}`,
+      `${API_BASE_URL}/banking/transactions/?${queryParams}`,
       {
         headers: bankingAPI.getHeaders(),
       }
@@ -111,7 +100,7 @@ export const bankingAPI = {
     name: string;
     balance?: number;
   }): Promise<BankAccount> => {
-    const response = await fetch(`${API_BASE_URL}/api/banking/accounts/`, {
+    const response = await fetch(`${API_BASE_URL}/banking/accounts/`, {
       method: "POST",
       headers: bankingAPI.getHeaders(),
       body: JSON.stringify(data),
@@ -133,7 +122,7 @@ export const bankingAPI = {
     verified_by?: string;
     status?: "pending" | "verified";
   }): Promise<Transaction> => {
-    const response = await fetch(`${API_BASE_URL}/api/banking/transactions/`, {
+    const response = await fetch(`${API_BASE_URL}/banking/transactions/`, {
       method: "POST",
       headers: bankingAPI.getHeaders(),
       body: JSON.stringify(data),
@@ -152,7 +141,7 @@ export const bankingAPI = {
     data: { name: string }
   ): Promise<BankAccount> => {
     const response = await fetch(
-      `${API_BASE_URL}/api/banking/accounts/${id}/`,
+      `${API_BASE_URL}/banking/accounts/${id}/`,
       {
         method: "PATCH",
         headers: bankingAPI.getHeaders(),
@@ -170,7 +159,7 @@ export const bankingAPI = {
   // Delete a bank account
   deleteAccount: async (id: string): Promise<void> => {
     const response = await fetch(
-      `${API_BASE_URL}/api/banking/accounts/${id}/`,
+      `${API_BASE_URL}/banking/accounts/${id}/`,
       {
         method: "DELETE",
         headers: bankingAPI.getHeaders(),

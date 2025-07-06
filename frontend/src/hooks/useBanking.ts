@@ -161,7 +161,7 @@ export const useBanking = () => {
   // Get dashboard stats
   const getDashboardStats = useCallback(async (accountId?: string): Promise<DashboardStats> => {
     try {
-      return await ApiService.getDashboardStats(accountId);
+      return await ApiService.getTransactionDashboardStats(accountId);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to get dashboard stats";
       setError(errorMessage);
