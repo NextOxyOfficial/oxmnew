@@ -181,9 +181,10 @@ export default function SuppliersPage() {
         try {
           const purchasesResponse = await ApiService.getPurchases();
           console.log("Purchases fetched successfully:", purchasesResponse);
-          setPurchases(purchasesResponse);
+          setPurchases(Array.isArray(purchasesResponse) ? purchasesResponse : []);
         } catch (purchasesError) {
           console.error("Error fetching purchases:", purchasesError);
+          setPurchases([]); // Set empty array as fallback
           showNotification("error", "Failed to load purchases");
         }
 
@@ -191,9 +192,10 @@ export default function SuppliersPage() {
         try {
           const paymentsResponse = await ApiService.getPayments();
           console.log("Payments fetched successfully:", paymentsResponse);
-          setPayments(paymentsResponse);
+          setPayments(Array.isArray(paymentsResponse) ? paymentsResponse : []);
         } catch (paymentsError) {
           console.error("Error fetching payments:", paymentsError);
+          setPayments([]); // Set empty array as fallback
           showNotification("error", "Failed to load payments");
         }
       } catch (error) {
@@ -378,6 +380,14 @@ export default function SuppliersPage() {
         throw new Error("No supplier selected");
       }
 
+      // Handle file upload if present
+      let proofDocumentUrl = "";
+      if (purchaseForm.proofFile) {
+        // In a real app, you would upload the file to a server here
+        // For now, we'll create a local URL
+        proofDocumentUrl = URL.createObjectURL(purchaseForm.proofFile);
+      }
+
       const newPurchase = await ApiService.createPurchase({
         supplier: selectedSupplierForAction.id,
         date: purchaseForm.date,
@@ -385,7 +395,7 @@ export default function SuppliersPage() {
         status: purchaseForm.status,
         products: purchaseForm.products,
         notes: purchaseForm.notes || undefined,
-        proof_document: purchaseForm.proofFile || undefined,
+        proof_document: proofDocumentUrl || undefined,
       });
 
       // Add the new purchase to the state
@@ -409,7 +419,7 @@ export default function SuppliersPage() {
       // Refresh purchases list to make sure we have the latest data
       try {
         const updatedPurchases = await ApiService.getPurchases();
-        setPurchases(updatedPurchases);
+        setPurchases(Array.isArray(updatedPurchases) ? updatedPurchases : []);
       } catch (refreshError) {
         console.error("Failed to refresh purchases:", refreshError);
       }
@@ -430,6 +440,14 @@ export default function SuppliersPage() {
         throw new Error("No supplier selected");
       }
 
+      // Handle file upload if present
+      let proofDocumentUrl = "";
+      if (paymentForm.proofFile) {
+        // In a real app, you would upload the file to a server here
+        // For now, we'll create a local URL
+        proofDocumentUrl = URL.createObjectURL(paymentForm.proofFile);
+      }
+
       const newPayment = await ApiService.createPayment({
         supplier: selectedSupplierForAction.id,
         date: paymentForm.date,
@@ -438,7 +456,7 @@ export default function SuppliersPage() {
         status: paymentForm.status,
         reference: paymentForm.reference || "",
         notes: paymentForm.notes || undefined,
-        proof_document: paymentForm.proofFile || undefined,
+        proof_document: proofDocumentUrl || undefined,
       });
 
       // Add the new payment to the state
@@ -463,7 +481,7 @@ export default function SuppliersPage() {
       // Refresh payments list to make sure we have the latest data
       try {
         const updatedPayments = await ApiService.getPayments();
-        setPayments(updatedPayments);
+        setPayments(Array.isArray(updatedPayments) ? updatedPayments : []);
       } catch (refreshError) {
         console.error("Failed to refresh payments:", refreshError);
       }

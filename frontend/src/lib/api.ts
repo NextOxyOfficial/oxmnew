@@ -706,240 +706,51 @@ export class ApiService {
     return this.post(`/suppliers/${id}/deactivate/`, {});
   }
 
-  // Product methods
-  static async getProducts(params?: {
-    category?: string;
-    supplier?: string;
-    has_variants?: boolean;
-    is_active?: boolean;
-    search?: string;
-    ordering?: string;
-    page?: number;
-    page_size?: number;
+  // Purchase methods
+  static async getPurchases() {
+    return this.get("/purchases/");
+  }
+
+  static async createPurchase(purchaseData: {
+    supplier: number;
+    date: string;
+    amount: number;
+    status: string;
+    products?: string;
+    notes?: string;
+    proof_document?: File | string;
   }) {
-    let endpoint = "/products/";
-
-    if (params && Object.keys(params).length > 0) {
-      const searchParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          searchParams.append(key, value.toString());
-        }
-      });
-      endpoint += `?${searchParams.toString()}`;
-    }
-
-    return this.get(endpoint);
+    return this.post("/purchases/", purchaseData);
   }
 
-  static async getProduct(id: number) {
-    return this.get(`/products/${id}/`);
+  static async updatePurchase(id: number, purchaseData: any) {
+    return this.put(`/purchases/${id}/`, purchaseData);
   }
 
-  static async createProduct(productData: {
-    name: string;
-    category?: number;
-    supplier?: number;
-    location?: string;
-    details?: string;
-    has_variants?: boolean;
-    buy_price?: number;
-    sell_price?: number;
-    stock?: number;
-    colorSizeVariants?: ProductVariant[];
-    photos?: File[];
-  }) {
-    const formData = new FormData();
-
-    // Add basic product data
-    Object.entries(productData).forEach(([key, value]) => {
-      if (
-        value !== undefined &&
-        value !== null &&
-        key !== "photos" &&
-        key !== "colorSizeVariants"
-      ) {
-        formData.append(key, value.toString());
-      }
-    });
-
-    // Add variants as JSON string
-    if (productData.colorSizeVariants) {
-      formData.append(
-        "colorSizeVariants",
-        JSON.stringify(productData.colorSizeVariants)
-      );
-    }
-
-    // Add photos
-    if (productData.photos && productData.photos.length > 0) {
-      productData.photos.forEach((photo) => {
-        formData.append(`photos`, photo);
-      });
-    }
-
-    return this.request("/products/", {
-      method: "POST",
-      body: formData,
-    });
-  }
-
-  static async updateProduct(
-    id: number,
-    productData: {
-      name?: string;
-      category?: number;
-      supplier?: number;
-      location?: string;
-      details?: string;
-      has_variants?: boolean;
-      buy_price?: number;
-      sell_price?: number;
-      stock?: number;
-      is_active?: boolean;
-    }
-  ) {
-    return this.patch(`/products/${id}/`, productData);
-  }
-
-  static async deleteProduct(id: number) {
-    return this.delete(`/products/${id}/`);
-  }
-
-  // Low stock alert methods
-  static async getLowStockProducts(threshold: number = 10) {
-    const params = {
-      is_active: true,
-      ordering: "stock",
-    };
-
-    const response = await this.getProducts(params);
-
-    // Filter products with low stock
-    const lowStockProducts =
-      response.results?.filter((product: Product) => {
-        if (product.has_variants) {
-          // For products with variants, check if any variant has low stock
-          return product.variants?.some(
-            (variant: ProductVariant) => variant.stock <= threshold
-          );
-        } else {
-          // For simple products, check the main stock
-          return product.stock <= threshold;
-        }
-      }) || [];
-
-    return { results: lowStockProducts, count: lowStockProducts.length };
-  }
-
-  static async getOutOfStockProducts() {
-    return this.getLowStockProducts(0);
+  static async deletePurchase(id: number) {
+    return this.delete(`/purchases/${id}/`);
   }
 
   // Payment methods
   static async getPayments() {
-    try {
-      const result = await this.get("/payments/");
-      return result;
-    } catch (error) {
-      console.error("Error in getPayments:", error);
-      throw error;
-    }
+    return this.get("/payments/");
   }
 
   static async createPayment(paymentData: {
     supplier: number;
     date: string;
     amount: number;
-    method: "cash" | "card" | "bank_transfer" | "check";
-    status: "pending" | "completed" | "failed";
+    method: string;
+    status: string;
     reference?: string;
     notes?: string;
-    proof_document?: File;
+    proof_document?: File | string;
   }) {
-    const formData = new FormData();
-    formData.append("supplier", paymentData.supplier.toString());
-    formData.append("date", paymentData.date);
-    formData.append("amount", paymentData.amount.toString());
-    formData.append("method", paymentData.method);
-    formData.append("status", paymentData.status);
-
-    if (paymentData.reference) {
-      formData.append("reference", paymentData.reference);
-    }
-
-    if (paymentData.notes) {
-      formData.append("notes", paymentData.notes);
-    }
-
-    if (paymentData.proof_document) {
-      formData.append("proof_document", paymentData.proof_document);
-    }
-
-    return this.request("/payments/", {
-      method: "POST",
-      body: formData,
-    });
+    return this.post("/payments/", paymentData);
   }
 
-  static async updatePayment(
-    id: number,
-    paymentData: {
-      supplier?: number;
-      date?: string;
-      amount?: number;
-      method?: "cash" | "card" | "bank_transfer" | "check";
-      status?: "pending" | "completed" | "failed";
-      reference?: string;
-      notes?: string;
-      proof_document?: File;
-    }
-  ) {
-    // If we have a file, use FormData
-    if (paymentData.proof_document) {
-      const formData = new FormData();
-
-      if (paymentData.supplier) {
-        formData.append("supplier", paymentData.supplier.toString());
-      }
-      if (paymentData.date) {
-        formData.append("date", paymentData.date);
-      }
-      if (paymentData.amount) {
-        formData.append("amount", paymentData.amount.toString());
-      }
-      if (paymentData.method) {
-        formData.append("method", paymentData.method);
-      }
-      if (paymentData.status) {
-        formData.append("status", paymentData.status);
-      }
-      if (paymentData.reference) {
-        formData.append("reference", paymentData.reference);
-      }
-      if (paymentData.notes) {
-        formData.append("notes", paymentData.notes);
-      }
-      formData.append("proof_document", paymentData.proof_document);
-
-      return this.request(`/payments/${id}/`, {
-        method: "PUT",
-        body: formData,
-      });
-    } else {
-      // For simple updates like status, use JSON
-      const updateData: Record<string, unknown> = {};
-
-      if (paymentData.supplier) updateData.supplier = paymentData.supplier;
-      if (paymentData.date) updateData.date = paymentData.date;
-      if (paymentData.amount) updateData.amount = paymentData.amount;
-      if (paymentData.method) updateData.method = paymentData.method;
-      if (paymentData.status) updateData.status = paymentData.status;
-      if (paymentData.reference) updateData.reference = paymentData.reference;
-      if (paymentData.notes) updateData.notes = paymentData.notes;
-
-      return this.patch(`/payments/${id}/`, updateData);
-    }
+  static async updatePayment(id: number, paymentData: any) {
+    return this.put(`/payments/${id}/`, paymentData);
   }
 
   static async deletePayment(id: number) {
