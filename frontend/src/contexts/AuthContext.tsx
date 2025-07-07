@@ -1,7 +1,13 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ApiService, AuthToken } from '@/lib/api';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+import { ApiService, AuthToken } from "@/lib/api";
 
 interface User {
   id: number;
@@ -11,10 +17,37 @@ interface User {
   last_name: string;
   date_joined?: string;
   last_login?: string;
+  is_active?: boolean;
+  is_staff?: boolean;
+  is_superuser?: boolean;
+}
+
+interface UserProfile {
+  company?: string;
+  company_address?: string;
+  phone?: string;
+  contact_number?: string;
+  address?: string;
+  store_logo?: string;
+  banner_image?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface UserSettings {
+  language?: string;
+  currency?: string;
+  currency_symbol?: string;
+  email_notifications?: boolean;
+  marketing_notifications?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface AuthContextType {
   user: User | null;
+  profile: UserProfile | null;
+  settings: UserSettings | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
@@ -34,6 +67,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -42,17 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  // Only run auth check after component is mounted
-  useEffect(() => {
-    if (mounted) {
-      checkAuth();
-    }
-  }, [mounted]);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     // Only check auth after component is mounted
     if (!mounted) return;
-    
+
     try {
       // First check if we have a token before making API call
       const token = AuthToken.get();
@@ -60,25 +88,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
-      
+
       if (ApiService.isAuthenticated()) {
-        const profile = await ApiService.getProfile();
-        setUser(profile.user);
+        const profileData = await ApiService.getProfile();
+        setUser(profileData.user);
+        setProfile(profileData.profile);
+        setSettings(profileData.settings);
       }
-    } catch (error) {
+    } catch {
       // Token might be invalid, remove it
       AuthToken.remove();
       setUser(null);
+      setProfile(null);
+      setSettings(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [mounted]);
+
+  // Only run auth check after component is mounted
+  useEffect(() => {
+    if (mounted) {
+      checkAuth();
+    }
+  }, [mounted, checkAuth]);
 
   const login = async (username: string, password: string) => {
     setLoading(true);
     try {
       const response = await ApiService.login({ username, password });
       setUser(response.user);
+      setProfile(response.profile);
+      setSettings(response.settings);
     } catch (error) {
       throw error;
     } finally {
@@ -91,6 +132,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await ApiService.register(userData);
       setUser(response.user);
+      setProfile(response.profile);
+      setSettings(response.settings);
     } catch (error) {
       throw error;
     } finally {
@@ -104,15 +147,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await ApiService.logout();
     } catch (error) {
       // Even if logout fails on server, clear local state
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
       setUser(null);
+      setProfile(null);
+      setSettings(null);
       setLoading(false);
     }
   };
 
   const value = {
     user,
+    profile,
+    settings,
     loading: loading || !mounted, // Keep loading true until mounted
     login,
     register,
@@ -126,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

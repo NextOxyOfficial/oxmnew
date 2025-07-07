@@ -76,7 +76,14 @@ interface Order {
   customer: number;
   customer_name?: string;
   order_number: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled' | 'refunded';
+  status:
+    | "pending"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "completed"
+    | "cancelled"
+    | "refunded";
   total_amount: number;
   paid_amount: number;
   due_amount: number;
@@ -815,18 +822,20 @@ export class ApiService {
     // Get all products and filter for low stock
     const products = await this.get("/products/");
     const allProducts = products.results || products;
-    
+
     const lowStockProducts = allProducts.filter((product: any) => {
       if (product.has_variants) {
         // Check if any variant has low stock
-        return product.variants?.some((variant: any) => variant.stock <= threshold);
+        return product.variants?.some(
+          (variant: any) => variant.stock <= threshold
+        );
       } else {
         return product.stock <= threshold && product.stock > 0;
       }
     });
-    
+
     return {
-      results: lowStockProducts
+      results: lowStockProducts,
     };
   }
 
@@ -834,7 +843,7 @@ export class ApiService {
     // Get all products and filter for out of stock
     const products = await this.get("/products/");
     const allProducts = products.results || products;
-    
+
     const outOfStockProducts = allProducts.filter((product: any) => {
       if (product.has_variants) {
         // Check if all variants are out of stock
@@ -843,9 +852,9 @@ export class ApiService {
         return product.stock === 0;
       }
     });
-    
+
     return {
-      results: outOfStockProducts
+      results: outOfStockProducts,
     };
   }
 
@@ -868,13 +877,16 @@ export class ApiService {
     return this.post("/customers/", customerData);
   }
 
-  static async updateCustomer(id: number, customerData: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    address?: string;
-    notes?: string;
-  }) {
+  static async updateCustomer(
+    id: number,
+    customerData: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      address?: string;
+      notes?: string;
+    }
+  ) {
     return this.put(`/customers/${id}/`, customerData);
   }
 
@@ -1218,5 +1230,28 @@ export class ApiService {
 
   static async getSalesStatistics() {
     return this.get("/sales/statistics/");
+  }
+
+  // Payment gateway methods
+  static async makePayment(params: {
+    amount: number;
+    order_id: string;
+    currency: string;
+    customer_name: string;
+    customer_address: string;
+    customer_phone: string;
+    customer_city: string;
+    customer_post_code: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      queryParams.append(key, value.toString());
+    });
+
+    return this.get(`/pay/?${queryParams.toString()}`);
+  }
+
+  static async verifyPayment(orderId: string) {
+    return this.get(`/verify-payment/?sp_order_id=${orderId}`);
   }
 }
