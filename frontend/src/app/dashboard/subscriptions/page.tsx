@@ -93,6 +93,16 @@ export default function SubscriptionsPage() {
                 setCurrentPlan(pendingPlan);
                 localStorage.removeItem('pending_subscription_plan');
                 console.log(`Successfully upgraded to ${pendingPlan} plan`);
+                
+                // Refresh subscription data to get the latest state
+                try {
+                  const subscriptionData = await ApiService.getMySubscription();
+                  if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
+                    setCurrentPlan(subscriptionData.subscription.plan.name.toLowerCase());
+                  }
+                } catch (refreshError) {
+                  console.error('Failed to refresh subscription data:', refreshError);
+                }
               } catch (upgradeError) {
                 console.error('Failed to upgrade subscription after payment:', upgradeError);
                 // Still show success modal but log the error
@@ -189,8 +199,8 @@ export default function SubscriptionsPage() {
 
         try {
           console.log("Fetching user subscription...");
-          //   subscriptionData = await ApiService.getMySubscription();
-          //   console.log("Successfully fetched subscription:", subscriptionData);
+          subscriptionData = await ApiService.getMySubscription();
+          console.log("Successfully fetched subscription:", subscriptionData);
         } catch (subscriptionError) {
           console.error(
             "Failed to fetch user subscription:",
@@ -223,10 +233,17 @@ export default function SubscriptionsPage() {
         );
         setSmsPackages(processedPackages);
 
-        // // Set current subscription
-        // if (subscriptionData?.plan?.name) {
-        //   setCurrentPlan(subscriptionData.plan.name.toLowerCase());
-        // }
+        // Set current subscription - default to free if no subscription found
+        console.log("Subscription data received:", subscriptionData);
+        if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
+          const planName = subscriptionData.subscription.plan.name.toLowerCase();
+          console.log("Setting current plan to:", planName);
+          setCurrentPlan(planName);
+        } else {
+          // Default to free plan for all users
+          console.log("No subscription found, defaulting to free plan");
+          setCurrentPlan("free");
+        }
 
         console.log("Finished fetching subscription data");
       } catch (error) {
@@ -249,11 +266,15 @@ export default function SubscriptionsPage() {
     try {
       await ApiService.upgradeSubscription(planName);
       setCurrentPlan(planName);
-      // Optionally refresh subscription data
-      //   const subscriptionData = await ApiService.getMySubscription();
-      //   if (subscriptionData?.plan?.name) {
-      //     setCurrentPlan(subscriptionData.plan.name.toLowerCase());
-      //   }
+      // Refresh subscription data
+      try {
+        const subscriptionData = await ApiService.getMySubscription();
+        if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
+          setCurrentPlan(subscriptionData.subscription.plan.name.toLowerCase());
+        }
+      } catch (error) {
+        console.error("Failed to refresh subscription data:", error);
+      }
     } catch (error) {
       console.error("Failed to upgrade subscription:", error);
       alert("Failed to upgrade subscription. Please try again.");
@@ -410,9 +431,7 @@ export default function SubscriptionsPage() {
                 ? "border-cyan-500 ring-2 ring-cyan-500"
                 : "border-slate-700/50"
             } ${
-              plan.name === "free"
-                ? "ring-2 ring-green-500"
-                : currentPlan === plan.name
+              currentPlan === plan.name
                 ? "ring-2 ring-green-500"
                 : ""
             }`}
@@ -461,19 +480,16 @@ export default function SubscriptionsPage() {
             </ul>
             <button
               className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-200 mt-auto text-sm ${
-                plan.name === "free"
-                  ? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
-                  : currentPlan === plan.name ||
-                    isProcessing ||
-                    isSubscriptionPaymentLoading ||
-                    isUpdatingPlan
+                currentPlan === plan.name ||
+                isProcessing ||
+                isSubscriptionPaymentLoading ||
+                isUpdatingPlan
                   ? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
                   : plan.popular
                   ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                   : "bg-slate-700 text-white hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500"
               }`}
               disabled={
-                plan.name === "free" ||
                 currentPlan === plan.name ||
                 isProcessing ||
                 isSubscriptionPaymentLoading ||
@@ -488,9 +504,7 @@ export default function SubscriptionsPage() {
                 }
               }}
             >
-              {plan.name === "free"
-                ? "Current Plan"
-                : currentPlan === plan.name
+              {currentPlan === plan.name
                 ? "Current Plan"
                 : isProcessing || isSubscriptionPaymentLoading
                 ? "Processing..."

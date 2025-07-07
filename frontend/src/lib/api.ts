@@ -1058,7 +1058,7 @@ export class ApiService {
   static async getMySubscription() {
     try {
       console.log("Fetching user subscription...");
-      const result = await this.get("/my-subscription/");
+      const result = await this.get("/get-my-subscription/");
       console.log("User subscription result:", result);
       return result;
     } catch (error) {
@@ -1076,7 +1076,7 @@ export class ApiService {
   }
 
   static async purchaseSmsPackage(packageId: number) {
-    return this.post("/add-sms-credits/", { package_id: packageId });
+    return this.post("/purchase-sms-package/", { package_id: packageId });
   }
 
   static async upgradeSubscription(planId: string) {
