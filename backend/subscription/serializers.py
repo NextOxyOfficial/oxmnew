@@ -13,6 +13,8 @@ class SMSPackageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class UserSubscriptionSerializer(serializers.ModelSerializer):
+    plan = SubscriptionPlanSerializer(read_only=True)
+    
     class Meta:
         model = UserSubscription
         fields = '__all__'

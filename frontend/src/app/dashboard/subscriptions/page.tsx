@@ -58,17 +58,38 @@ export default function SubscriptionsPage() {
   const [isSmsPaymentLoading, setIsSmsPaymentLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Payment verification states
   const [verifyPaymentDetails, setVerifyPaymentDetails] =
     useState<PaymentVerificationDetails | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showError, setShowError] = useState(false);
   const [paymentVerificationLoader, setPaymentVerificationLoader] =
     useState(false);
 
   const { user, profile } = useAuth();
   const searchParams = useSearchParams();
+
+  // Function to refresh subscription data
+  const refreshSubscriptionData = async () => {
+    try {
+      console.log("Refreshing subscription data...");
+      const subscriptionData = await ApiService.getMySubscription();
+      console.log("Refreshed subscription data:", subscriptionData);
+      if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
+        const planName = subscriptionData.subscription.plan.name.toLowerCase();
+        console.log("Setting current plan to:", planName);
+        setCurrentPlan(planName);
+      } else {
+        console.log("No subscription found, defaulting to free plan");
+        setCurrentPlan("free");
+      }
+    } catch (error) {
+      console.error("Failed to refresh subscription data:", error);
+      setCurrentPlan("free");
+    }
+  };
 
   // Payment verification function
   const verifyPayment = async (orderId: string) => {
@@ -81,31 +102,39 @@ export default function SubscriptionsPage() {
 
         // Show success modal if payment was successful
         if (response.shurjopay_message === "Success") {
-          setShowPaymentModal(true);
-          
           // Handle subscription upgrade after successful payment
           if (orderId.startsWith('SUB-')) {
             const pendingPlan = localStorage.getItem('pending_subscription_plan');
             if (pendingPlan) {
               try {
                 setIsUpdatingPlan(true);
-                await ApiService.upgradeSubscription(pendingPlan);
+                console.log('Upgrading subscription to:', pendingPlan);
+                const upgradeResponse = await ApiService.upgradeSubscription(pendingPlan);
+                console.log('Upgrade response:', upgradeResponse);
                 setCurrentPlan(pendingPlan);
                 localStorage.removeItem('pending_subscription_plan');
                 console.log(`Successfully upgraded to ${pendingPlan} plan`);
                 
+                // Show success message for subscription upgrade
+                setSuccessMessage(
+                  pendingPlan === 'pro' 
+                    ? "🎉 Congratulations! Your Pro subscription is now active. You now have access to all premium features!"
+                    : `Successfully upgraded to ${pendingPlan.charAt(0).toUpperCase() + pendingPlan.slice(1)} plan!`
+                );
+                setShowSuccessMessage(true);
+                
                 // Refresh subscription data to get the latest state
                 try {
-                  const subscriptionData = await ApiService.getMySubscription();
-                  if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
-                    setCurrentPlan(subscriptionData.subscription.plan.name.toLowerCase());
-                  }
+                  console.log('Refreshing subscription data after upgrade...');
+                  // Add a small delay to ensure database is updated
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  await refreshSubscriptionData();
                 } catch (refreshError) {
                   console.error('Failed to refresh subscription data:', refreshError);
                 }
               } catch (upgradeError) {
                 console.error('Failed to upgrade subscription after payment:', upgradeError);
-                // Still show success modal but log the error
+                setShowError(true);
               } finally {
                 setIsUpdatingPlan(false);
               }
@@ -120,12 +149,21 @@ export default function SubscriptionsPage() {
                 await ApiService.purchaseSmsPackage(parseInt(pendingPackageId));
                 localStorage.removeItem('pending_sms_package');
                 console.log(`Successfully purchased SMS package ${pendingPackageId}`);
+                
+                // Show success message for SMS package purchase
+                setSuccessMessage("✅ SMS package purchased successfully! Your SMS credits have been added to your account.");
+                setShowSuccessMessage(true);
               } catch (purchaseError) {
                 console.error('Failed to add SMS credits after payment:', purchaseError);
-                // Still show success modal but log the error
+                setShowError(true);
               }
             }
           }
+          
+          // Remove order_id from URL
+          const url = new URL(window.location.href);
+          url.searchParams.delete("order_id");
+          window.history.replaceState({}, "", url.toString());
         }
       } else if (response && response.error) {
         console.error("Payment verification failed:", response.error);
@@ -152,6 +190,28 @@ export default function SubscriptionsPage() {
       verifyPayment(orderId);
     }
   }, [searchParams]);
+
+  // Auto-hide success message after 10 seconds
+  useEffect(() => {
+    if (showSuccessMessage) {
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 10000); // Hide after 10 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessMessage]);
+
+  // Periodic refresh of subscription data
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!loading && !paymentVerificationLoader) {
+        refreshSubscriptionData();
+      }
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [loading, paymentVerificationLoader]);
 
   // Cleanup effect to remove pending items when component unmounts
   useEffect(() => {
@@ -264,17 +324,12 @@ export default function SubscriptionsPage() {
 
     setIsProcessing(true);
     try {
-      await ApiService.upgradeSubscription(planName);
-      setCurrentPlan(planName);
+      console.log('Upgrading subscription via handlePlanSelect to:', planName);
+      const upgradeResponse = await ApiService.upgradeSubscription(planName);
+      console.log('Upgrade response:', upgradeResponse);
+      
       // Refresh subscription data
-      try {
-        const subscriptionData = await ApiService.getMySubscription();
-        if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
-          setCurrentPlan(subscriptionData.subscription.plan.name.toLowerCase());
-        }
-      } catch (error) {
-        console.error("Failed to refresh subscription data:", error);
-      }
+      await refreshSubscriptionData();
     } catch (error) {
       console.error("Failed to upgrade subscription:", error);
       alert("Failed to upgrade subscription. Please try again.");
@@ -421,6 +476,29 @@ export default function SubscriptionsPage() {
         </p>
       </div>
 
+      {/* Success Message Banner */}
+      {showSuccessMessage && (
+        <div className="relative bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg mb-8">
+          <button
+            onClick={() => setShowSuccessMessage(false)}
+            className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <div className="flex items-center">
+            <svg className="w-8 h-8 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <div>
+              <h3 className="text-lg font-semibold mb-1">Payment Successful!</h3>
+              <p className="text-sm opacity-90">{successMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Plans */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
         {plans.map((plan) => (
@@ -432,13 +510,20 @@ export default function SubscriptionsPage() {
                 : "border-slate-700/50"
             } ${
               currentPlan === plan.name
-                ? "ring-2 ring-green-500"
+                ? currentPlan === 'pro' 
+                  ? "ring-2 ring-gradient-to-r from-green-400 to-green-500 bg-gradient-to-br from-green-500/10 to-green-600/10"
+                  : "ring-2 ring-green-500"
                 : ""
             }`}
           >
             {plan.popular && (
               <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-4 py-1 rounded-full text-xs font-semibold shadow">
                 Most Popular
+              </span>
+            )}
+            {currentPlan === plan.name && plan.name === 'pro' && (
+              <span className="absolute -top-4 right-4 bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow">
+                ✓ Active
               </span>
             )}
             <h2 className="text-xl font-bold text-white mb-2">{plan.name}</h2>
@@ -565,106 +650,6 @@ export default function SubscriptionsPage() {
           ))}
         </div>
       </div>
-
-      {/* Payment Success Modal */}
-      {showPaymentModal && verifyPaymentDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div className="text-center">
-              {/* Success Icon */}
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900 mb-4">
-                <svg
-                  className="h-8 w-8 text-green-600 dark:text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-
-              {/* Success Message */}
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Payment Successful!
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                {verifyPaymentDetails.order_id?.startsWith('SUB-') 
-                  ? 'Your subscription has been upgraded successfully.'
-                  : verifyPaymentDetails.order_id?.startsWith('SMS-')
-                  ? 'Your SMS package has been purchased successfully.'
-                  : 'Your payment has been processed successfully.'}
-              </p>
-
-              {/* Payment Details */}
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
-                <div className="space-y-2 text-sm">
-                  {verifyPaymentDetails.order_id && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Order ID:
-                      </span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {verifyPaymentDetails.order_id}
-                      </span>
-                    </div>
-                  )}
-                  {verifyPaymentDetails.transaction_id && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Transaction ID:
-                      </span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {verifyPaymentDetails.transaction_id}
-                      </span>
-                    </div>
-                  )}
-                  {verifyPaymentDetails.amount && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Amount:
-                      </span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        ৳{verifyPaymentDetails.amount}
-                      </span>
-                    </div>
-                  )}
-                  {verifyPaymentDetails.status && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Status:
-                      </span>
-                      <span className="font-medium text-green-600 dark:text-green-400">
-                        {verifyPaymentDetails.status}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Close Button */}
-              <button
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  // Remove order_id from URL
-                  const url = new URL(window.location.href);
-                  url.searchParams.delete("order_id");
-                  window.history.replaceState({}, "", url.toString());
-                  // Refresh the page data after successful payment
-                  window.location.reload();
-                }}
-                className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 font-medium"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Payment Error Modal */}
       {showError && (

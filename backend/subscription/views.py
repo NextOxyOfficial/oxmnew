@@ -117,8 +117,10 @@ def upgrade_subscription(request):
         }, status=status.HTTP_400_BAD_REQUEST)
     
     try:
-        # Get the plan
-        plan = SubscriptionPlan.objects.get(name=plan_id)
+        # Get the plan (case-insensitive lookup)
+        plan = SubscriptionPlan.objects.get(name__iexact=plan_id)
+        
+        print(f"Upgrading user {request.user.username} to plan {plan.name}")
         
         # Get or create user subscription
         user_subscription, created = UserSubscription.objects.get_or_create(
@@ -131,9 +133,14 @@ def upgrade_subscription(request):
         
         if not created:
             # Update existing subscription
+            print(f"Updating existing subscription from {user_subscription.plan.name} to {plan.name}")
             user_subscription.plan = plan
             user_subscription.active = True
             user_subscription.save()
+        else:
+            print(f"Created new subscription for {plan.name}")
+        
+        print(f"Subscription upgrade completed for user {request.user.username}")
         
         return Response({
             'success': True,
@@ -201,18 +208,21 @@ def purchase_sms_package(request):
 def get_my_subscription(request):
     """Get current user's subscription"""
     try:
+        print(f"Getting subscription for user: {request.user.username}")
         user_subscription = UserSubscription.objects.filter(
             user=request.user,
             active=True
         ).first()
         
         if user_subscription:
+            print(f"Found subscription: {user_subscription.plan.name}")
             serializer = UserSubscriptionSerializer(user_subscription)
             return Response({
                 'success': True,
                 'subscription': serializer.data
             }, status=status.HTTP_200_OK)
         else:
+            print("No subscription found, returning free plan")
             # User has no subscription, default to free plan
             try:
                 free_plan = SubscriptionPlan.objects.get(name='free')
@@ -241,6 +251,7 @@ def get_my_subscription(request):
                 }, status=status.HTTP_200_OK)
         
     except Exception as e:
+        print(f"Error getting subscription: {str(e)}")
         return Response({
             'success': False,
             'message': str(e)
