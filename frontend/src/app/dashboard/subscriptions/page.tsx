@@ -57,6 +57,7 @@ export default function SubscriptionsPage() {
     useState(false);
   const [isSmsPaymentLoading, setIsSmsPaymentLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
 
   // Payment verification states
   const [verifyPaymentDetails, setVerifyPaymentDetails] =
@@ -81,14 +82,54 @@ export default function SubscriptionsPage() {
         // Show success modal if payment was successful
         if (response.shurjopay_message === "Success") {
           setShowPaymentModal(true);
+          
+          // Handle subscription upgrade after successful payment
+          if (orderId.startsWith('SUB-')) {
+            const pendingPlan = localStorage.getItem('pending_subscription_plan');
+            if (pendingPlan) {
+              try {
+                setIsUpdatingPlan(true);
+                await ApiService.upgradeSubscription(pendingPlan);
+                setCurrentPlan(pendingPlan);
+                localStorage.removeItem('pending_subscription_plan');
+                console.log(`Successfully upgraded to ${pendingPlan} plan`);
+              } catch (upgradeError) {
+                console.error('Failed to upgrade subscription after payment:', upgradeError);
+                // Still show success modal but log the error
+              } finally {
+                setIsUpdatingPlan(false);
+              }
+            }
+          }
+          
+          // Handle SMS package purchase after successful payment
+          if (orderId.startsWith('SMS-')) {
+            const pendingPackageId = localStorage.getItem('pending_sms_package');
+            if (pendingPackageId) {
+              try {
+                await ApiService.purchaseSmsPackage(parseInt(pendingPackageId));
+                localStorage.removeItem('pending_sms_package');
+                console.log(`Successfully purchased SMS package ${pendingPackageId}`);
+              } catch (purchaseError) {
+                console.error('Failed to add SMS credits after payment:', purchaseError);
+                // Still show success modal but log the error
+              }
+            }
+          }
         }
       } else if (response && response.error) {
         console.error("Payment verification failed:", response.error);
         setShowError(true);
+        // Clean up pending items if payment failed
+        localStorage.removeItem('pending_subscription_plan');
+        localStorage.removeItem('pending_sms_package');
       }
     } catch (error) {
       console.error("Error verifying payment:", error);
       setShowError(true);
+      // Clean up pending items if verification failed
+      localStorage.removeItem('pending_subscription_plan');
+      localStorage.removeItem('pending_sms_package');
     } finally {
       setPaymentVerificationLoader(false);
     }
@@ -101,6 +142,15 @@ export default function SubscriptionsPage() {
       verifyPayment(orderId);
     }
   }, [searchParams]);
+
+  // Cleanup effect to remove pending items when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clean up any pending items on component unmount
+      localStorage.removeItem('pending_subscription_plan');
+      localStorage.removeItem('pending_sms_package');
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -225,18 +275,20 @@ export default function SubscriptionsPage() {
       }
 
       // Generate a unique order ID using timestamp
-      const uniqueOrderId = `SMS-${Date.now()}-${Math.floor(
+      const uniqueOrderId = `SMS-${packageId}-${Date.now()}-${Math.floor(
         Math.random() * 1000
       )}`;
+
+      // Store the package ID for later use after payment verification
+      localStorage.setItem('pending_sms_package', packageId.toString());
 
       // Validate required fields and provide defaults if missing
       const firstName = user.first_name || "User";
       const lastName = user.last_name || "";
-      const address = profile?.address || "N/A"; // Use profile address if available
-      const company_address = profile?.company_address || "N/A"; // Use profile address if available
-      const phone = profile?.phone || profile?.contact_number || "N/A"; // Use profile phone if available
-      // Default city for SMS purchases
-      const zip = "0000"; // Default zip for SMS purchases
+      const address = profile?.address || "N/A";
+      const company_address = profile?.company_address || "N/A";
+      const phone = profile?.phone || profile?.contact_number || "N/A";
+      const zip = "0000";
 
       // Create payment request
       const payment = await ApiService.makePayment({
@@ -259,6 +311,7 @@ export default function SubscriptionsPage() {
     } catch (error) {
       console.error("Failed to purchase SMS package:", error);
       alert("Failed to purchase SMS package. Please try again.");
+      localStorage.removeItem('pending_sms_package');
     } finally {
       setIsSmsPaymentLoading(false);
     }
@@ -277,19 +330,20 @@ export default function SubscriptionsPage() {
       }
 
       // Generate a unique order ID using timestamp
-      const uniqueOrderId = `SUB-${Date.now()}-${Math.floor(
+      const uniqueOrderId = `SUB-${planName.toUpperCase()}-${Date.now()}-${Math.floor(
         Math.random() * 1000
       )}`;
 
-      // Validate required fields and provide defaults if missing
+      // Store the plan name for later use after payment verification
+      localStorage.setItem('pending_subscription_plan', planName);
+
       // Validate required fields and provide defaults if missing
       const firstName = user.first_name || "User";
       const lastName = user.last_name || "";
-      const address = profile?.address || "N/A"; // Use profile address if available
-      const company_address = profile?.company_address || "N/A"; // Use profile address if available
-      const phone = profile?.phone || profile?.contact_number || "N/A"; // Use profile phone if available
-      // Default city for SMS purchases
-      const zip = "0000"; // Default zip for SMS purchases
+      const address = profile?.address || "N/A";
+      const company_address = profile?.company_address || "N/A";
+      const phone = profile?.phone || profile?.contact_number || "N/A";
+      const zip = "0000";
 
       // Create payment request
       const payment = await ApiService.makePayment({
@@ -314,6 +368,7 @@ export default function SubscriptionsPage() {
     } catch (error) {
       console.error("Failed to process subscription payment:", error);
       alert("Failed to process subscription payment. Please try again.");
+      localStorage.removeItem('pending_subscription_plan');
     } finally {
       setIsSubscriptionPaymentLoading(false);
     }
@@ -410,7 +465,8 @@ export default function SubscriptionsPage() {
                   ? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
                   : currentPlan === plan.name ||
                     isProcessing ||
-                    isSubscriptionPaymentLoading
+                    isSubscriptionPaymentLoading ||
+                    isUpdatingPlan
                   ? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
                   : plan.popular
                   ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
@@ -420,13 +476,17 @@ export default function SubscriptionsPage() {
                 plan.name === "free" ||
                 currentPlan === plan.name ||
                 isProcessing ||
-                isSubscriptionPaymentLoading
+                isSubscriptionPaymentLoading ||
+                isUpdatingPlan
               }
-              onClick={() =>
-                plan.price > 0
-                  ? handleSubscriptionPayment(plan.name, plan.price)
-                  : handlePlanSelect(plan.name)
-              }
+              onClick={() => {
+                console.log('Plan clicked:', plan.name, 'Price:', plan.price);
+                if (plan.price > 0) {
+                  handleSubscriptionPayment(plan.name, plan.price);
+                } else {
+                  handlePlanSelect(plan.name);
+                }
+              }}
             >
               {plan.name === "free"
                 ? "Current Plan"
@@ -434,8 +494,10 @@ export default function SubscriptionsPage() {
                 ? "Current Plan"
                 : isProcessing || isSubscriptionPaymentLoading
                 ? "Processing..."
+                : isUpdatingPlan
+                ? "Updating Plan..."
                 : plan.price > 0
-                ? `Pay ৳${plan.price} - ${plan.cta}`
+                ? `Pay ৳${plan.price} - Upgrade to ${plan.name.charAt(0).toUpperCase() + plan.name.slice(1)}`
                 : plan.cta}
             </button>
           </div>
@@ -517,7 +579,11 @@ export default function SubscriptionsPage() {
                 Payment Successful!
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                Your payment has been processed successfully.
+                {verifyPaymentDetails.order_id?.startsWith('SUB-') 
+                  ? 'Your subscription has been upgraded successfully.'
+                  : verifyPaymentDetails.order_id?.startsWith('SMS-')
+                  ? 'Your SMS package has been purchased successfully.'
+                  : 'Your payment has been processed successfully.'}
               </p>
 
               {/* Payment Details */}
@@ -574,6 +640,8 @@ export default function SubscriptionsPage() {
                   const url = new URL(window.location.href);
                   url.searchParams.delete("order_id");
                   window.history.replaceState({}, "", url.toString());
+                  // Refresh the page data after successful payment
+                  window.location.reload();
                 }}
                 className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 font-medium"
               >
