@@ -74,15 +74,11 @@ export default function SubscriptionsPage() {
   // Function to refresh subscription data
   const refreshSubscriptionData = async () => {
     try {
-      console.log("Refreshing subscription data...");
       const subscriptionData = await ApiService.getMySubscription();
-      console.log("Refreshed subscription data:", subscriptionData);
       if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
         const planName = subscriptionData.subscription.plan.name.toLowerCase();
-        console.log("Setting current plan to:", planName);
         setCurrentPlan(planName);
       } else {
-        console.log("No subscription found, defaulting to free plan");
         setCurrentPlan("free");
       }
     } catch (error) {
@@ -96,7 +92,6 @@ export default function SubscriptionsPage() {
     setPaymentVerificationLoader(true);
     try {
       const response = await ApiService.verifyPayment(orderId);
-      console.log(response, "verify payment response 💸💸💸💸");
       if (response) {
         setVerifyPaymentDetails(response);
 
@@ -108,16 +103,11 @@ export default function SubscriptionsPage() {
             if (pendingPlan) {
               try {
                 setIsUpdatingPlan(true);
-                console.log('Upgrading subscription to:', pendingPlan);
-                console.log('Making API call to upgrade subscription...');
                 
                 const upgradeResponse = await ApiService.upgradeSubscription(pendingPlan);
-                console.log('Upgrade response:', upgradeResponse);
                 
                 if (upgradeResponse && upgradeResponse.success) {
-                  console.log('Subscription upgraded successfully');
                   localStorage.removeItem('pending_subscription_plan');
-                  console.log(`Successfully upgraded to ${pendingPlan} plan`);
                   
                   // Show success message for subscription upgrade
                   setSuccessMessage(
@@ -131,41 +121,17 @@ export default function SubscriptionsPage() {
                   setCurrentPlan(pendingPlan);
                   
                   // Refresh subscription data to get the latest state
-                  try {
-                    console.log('Refreshing subscription data after upgrade...');
-                    // Add a longer delay to ensure database is updated
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                    await refreshSubscriptionData();
-                  } catch (refreshError) {
-                    console.error('Failed to refresh subscription data:', refreshError);
-                  }
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                  await refreshSubscriptionData();
                 } else {
-                  console.error('Upgrade failed:', upgradeResponse);
                   setShowError(true);
                 }
               } catch (upgradeError) {
                 console.error('Failed to upgrade subscription after payment:', upgradeError);
-                console.error('Error details:', upgradeError);
-                
-                // Show detailed error message
-                let errorMessage = 'Failed to upgrade subscription. Please contact support.';
-                if (upgradeError && typeof upgradeError === 'object') {
-                  const err = upgradeError as any;
-                  if (err.message) {
-                    errorMessage += ` Error: ${err.message}`;
-                  }
-                  if (err.error) {
-                    errorMessage += ` Details: ${err.error}`;
-                  }
-                }
-                
-                console.error('Upgrade error message:', errorMessage);
                 setShowError(true);
               } finally {
                 setIsUpdatingPlan(false);
               }
-            } else {
-              console.error('No pending plan found in localStorage');
             }
           }
           
@@ -176,7 +142,6 @@ export default function SubscriptionsPage() {
               try {
                 await ApiService.purchaseSmsPackage(parseInt(pendingPackageId));
                 localStorage.removeItem('pending_sms_package');
-                console.log(`Successfully purchased SMS package ${pendingPackageId}`);
                 
                 // Show success message for SMS package purchase
                 setSuccessMessage("✅ SMS package purchased successfully! Your SMS credits have been added to your account.");
@@ -236,78 +201,44 @@ export default function SubscriptionsPage() {
       if (!loading && !paymentVerificationLoader) {
         refreshSubscriptionData();
       }
-    }, 30000); // Refresh every 30 seconds
+    }, 60000); // Refresh every minute
 
     return () => clearInterval(interval);
   }, [loading, paymentVerificationLoader]);
 
-  // Cleanup effect to remove pending items when component unmounts
-  useEffect(() => {
-    return () => {
-      // Clean up any pending items on component unmount
-      localStorage.removeItem('pending_subscription_plan');
-      localStorage.removeItem('pending_sms_package');
-    };
-  }, []);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log("Starting to fetch subscription data...");
-
-        // Debug endpoints first
-        try {
-          await ApiService.debugSubscriptionEndpoints();
-        } catch (debugError) {
-          console.error("Debug endpoints failed:", debugError);
-        }
-
         // Fetch data individually to identify which endpoint is failing
         let plansData = [];
         let packagesData = [];
         let subscriptionData = null;
 
         try {
-          console.log("Fetching subscription plans...");
           plansData = await ApiService.getSubscriptionPlans();
-          console.log("Successfully fetched plans:", plansData);
         } catch (planError) {
           console.error("Failed to fetch subscription plans:", planError);
-          // Continue with empty plans array
         }
 
         try {
-          console.log("Fetching SMS packages...");
           packagesData = await ApiService.getSmsPackages();
-          console.log("Successfully fetched packages:", packagesData);
         } catch (packageError) {
           console.error("Failed to fetch SMS packages:", packageError);
-          // Continue with empty packages array
         }
 
         try {
-          console.log("Fetching user subscription...");
           subscriptionData = await ApiService.getMySubscription();
-          console.log("Successfully fetched subscription:", subscriptionData);
         } catch (subscriptionError) {
-          console.error(
-            "Failed to fetch user subscription:",
-            subscriptionError
-          );
-          // Continue with null subscription
+          console.error("Failed to fetch user subscription:", subscriptionError);
         }
 
         // Process plans data
         const processedPlans = (plansData || []).map(
-          (plan: SubscriptionPlan) => {
-            console.log('Processing plan:', plan.name, 'features:', plan.features);
-            return {
-              ...plan,
-              cta:
-                plan.name === "free" ? "Start Free" : `Upgrade to ${plan.name}`,
-              popular: plan.is_popular || false,
-            };
-          }
+          (plan: SubscriptionPlan) => ({
+            ...plan,
+            cta: plan.name === "free" ? "Start Free" : `Upgrade to ${plan.name}`,
+            popular: plan.is_popular || false,
+          })
         );
         setPlans(processedPlans);
 
@@ -322,21 +253,14 @@ export default function SubscriptionsPage() {
         setSmsPackages(processedPackages);
 
         // Set current subscription - default to free if no subscription found
-        console.log("Subscription data received:", subscriptionData);
         if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
           const planName = subscriptionData.subscription.plan.name.toLowerCase();
-          console.log("Setting current plan to:", planName);
           setCurrentPlan(planName);
         } else {
-          // Default to free plan for all users
-          console.log("No subscription found, defaulting to free plan");
           setCurrentPlan("free");
         }
-
-        console.log("Finished fetching subscription data");
       } catch (error) {
         console.error("Failed to fetch subscription data:", error);
-        // Set empty arrays if API fails - no fallback data
         setPlans([]);
         setSmsPackages([]);
       } finally {
@@ -352,12 +276,14 @@ export default function SubscriptionsPage() {
 
     setIsProcessing(true);
     try {
-      console.log('Upgrading subscription via handlePlanSelect to:', planName);
       const upgradeResponse = await ApiService.upgradeSubscription(planName);
-      console.log('Upgrade response:', upgradeResponse);
       
-      // Refresh subscription data
-      await refreshSubscriptionData();
+      if (upgradeResponse && upgradeResponse.success) {
+        // Refresh subscription data
+        await refreshSubscriptionData();
+      } else {
+        alert("Failed to upgrade subscription. Please try again.");
+      }
     } catch (error) {
       console.error("Failed to upgrade subscription:", error);
       alert("Failed to upgrade subscription. Please try again.");
@@ -527,46 +453,6 @@ export default function SubscriptionsPage() {
         </div>
       )}
 
-      {/* Manual Upgrade Button for Testing */}
-      {currentPlan === 'free' && (
-        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-yellow-200 mb-1">Already Paid for Pro?</h3>
-              <p className="text-sm text-yellow-300">If you've already completed payment, click below to activate your Pro subscription</p>
-            </div>
-            <button
-              onClick={async () => {
-                try {
-                  setIsUpdatingPlan(true);
-                  console.log('Manual upgrade to pro...');
-                  const upgradeResponse = await ApiService.upgradeSubscription('pro');
-                  console.log('Manual upgrade response:', upgradeResponse);
-                  
-                  if (upgradeResponse && upgradeResponse.success) {
-                    setCurrentPlan('pro');
-                    setSuccessMessage("🎉 Pro subscription activated successfully!");
-                    setShowSuccessMessage(true);
-                    await refreshSubscriptionData();
-                  } else {
-                    alert('Failed to upgrade subscription. Please contact support.');
-                  }
-                } catch (error) {
-                  console.error('Manual upgrade failed:', error);
-                  alert('Failed to upgrade subscription. Please contact support.');
-                } finally {
-                  setIsUpdatingPlan(false);
-                }
-              }}
-              disabled={isUpdatingPlan}
-              className="bg-yellow-500 text-black px-6 py-2 rounded-lg hover:bg-yellow-400 transition-colors font-medium disabled:opacity-50"
-            >
-              {isUpdatingPlan ? 'Activating...' : 'Activate Pro Subscription'}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Plans */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
         {plans.map((plan) => (
@@ -627,7 +513,7 @@ export default function SubscriptionsPage() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  {typeof feature === 'string' ? feature : feature?.name || feature?.description || JSON.stringify(feature)}
+                  {typeof feature === 'string' ? feature : feature?.name || feature?.description || 'Feature'}
                 </li>
               ))}
             </ul>
@@ -649,7 +535,6 @@ export default function SubscriptionsPage() {
                 isUpdatingPlan
               }
               onClick={() => {
-                console.log('Plan clicked:', plan.name, 'Price:', plan.price);
                 if (plan.price > 0) {
                   handleSubscriptionPayment(plan.name, plan.price);
                 } else {

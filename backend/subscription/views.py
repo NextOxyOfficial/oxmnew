@@ -109,16 +109,9 @@ def add_sms_credits(request):
 @permission_classes([permissions.IsAuthenticated])
 def upgrade_subscription(request):
     """Upgrade user subscription plan"""
-    # Add debugging
-    print(f"=== UPGRADE SUBSCRIPTION REQUEST ===")
-    print(f"User: {request.user if request.user.is_authenticated else 'Anonymous'}")
-    print(f"Request data: {request.data}")
-    print(f"Request headers: {dict(request.headers)}")
-    
     plan_id = request.data.get('plan_id')
     
     if not plan_id:
-        print("ERROR: Plan ID is required")
         return Response({
             'success': False,
             'message': 'Plan ID is required'
@@ -127,8 +120,6 @@ def upgrade_subscription(request):
     try:
         # Get the plan (case-insensitive lookup)
         plan = SubscriptionPlan.objects.get(name__iexact=plan_id)
-        
-        print(f"Upgrading user {request.user.username} to plan {plan.name}")
         
         # Get or create user subscription (only one subscription per user)
         user_subscription, created = UserSubscription.objects.get_or_create(
@@ -139,28 +130,11 @@ def upgrade_subscription(request):
             }
         )
         
-        if created:
-            print(f"Created new subscription for {plan.name} (ID: {user_subscription.id})")
-        else:
+        if not created:
             # Update existing subscription
-            old_plan = user_subscription.plan.name
             user_subscription.plan = plan
             user_subscription.active = True
             user_subscription.save()
-            print(f"Updated subscription from {old_plan} to {plan.name} (ID: {user_subscription.id})")
-        
-        # Verify the subscription was updated correctly
-        verification_sub = UserSubscription.objects.filter(
-            user=request.user,
-            active=True
-        ).first()
-        
-        if verification_sub:
-            print(f"Verification: Active subscription is now {verification_sub.plan.name}")
-        else:
-            print("ERROR: No active subscription found after upgrade!")
-        
-        print(f"Subscription upgrade completed for user {request.user.username}")
         
         return Response({
             'success': True,
@@ -169,13 +143,11 @@ def upgrade_subscription(request):
         }, status=status.HTTP_200_OK)
         
     except SubscriptionPlan.DoesNotExist:
-        print(f"ERROR: Plan '{plan_id}' not found")
         return Response({
             'success': False,
             'message': 'Plan not found'
         }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        print(f"ERROR: {str(e)}")
         return Response({
             'success': False,
             'message': str(e)
@@ -230,8 +202,6 @@ def purchase_sms_package(request):
 def get_my_subscription(request):
     """Get current user's subscription"""
     try:
-        print(f"Getting subscription for user: {request.user.username}")
-        
         # Get or create user subscription (only one per user)
         user_subscription, created = UserSubscription.objects.get_or_create(
             user=request.user,
@@ -241,11 +211,6 @@ def get_my_subscription(request):
             }
         )
         
-        if created:
-            print(f"Created new subscription for {request.user.username}: {user_subscription.plan.name}")
-        else:
-            print(f"Found existing subscription: {user_subscription.plan.name}")
-        
         serializer = UserSubscriptionSerializer(user_subscription)
         return Response({
             'success': True,
@@ -253,7 +218,6 @@ def get_my_subscription(request):
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        print(f"Error getting subscription: {str(e)}")
         return Response({
             'success': False,
             'message': str(e)
