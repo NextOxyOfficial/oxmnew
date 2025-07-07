@@ -286,9 +286,9 @@ export default function SubscriptionsPage() {
       const firstName = user.first_name || "User";
       const lastName = user.last_name || "";
       const address = profile?.address || "N/A";
-      const company_address = profile?.company_address || "N/A";
+      const city = profile?.city || "N/A";
       const phone = profile?.phone || profile?.contact_number || "N/A";
-      const zip = "0000";
+      const zip = profile?.post_code || "0000";
 
       // Create payment request
       const payment = await ApiService.makePayment({
@@ -296,9 +296,9 @@ export default function SubscriptionsPage() {
         order_id: uniqueOrderId,
         currency: "BDT",
         customer_name: `${firstName} ${lastName}`,
-        customer_address: company_address,
+        customer_address: address,
         customer_phone: phone,
-        customer_city: address,
+        customer_city: city,
         customer_post_code: zip,
       });
 
@@ -341,9 +341,9 @@ export default function SubscriptionsPage() {
       const firstName = user.first_name || "User";
       const lastName = user.last_name || "";
       const address = profile?.address || "N/A";
-      const company_address = profile?.company_address || "N/A";
+      const city = profile?.city || "N/A";
       const phone = profile?.phone || profile?.contact_number || "N/A";
-      const zip = "0000";
+      const zip = profile?.post_code || "0000";
 
       // Create payment request
       const payment = await ApiService.makePayment({
@@ -351,9 +351,9 @@ export default function SubscriptionsPage() {
         order_id: uniqueOrderId,
         currency: "BDT",
         customer_name: `${firstName} ${lastName}`,
-        customer_address: company_address,
+        customer_address: address,
         customer_phone: phone,
-        customer_city: address,
+        customer_city: city,
         customer_post_code: zip,
       });
 

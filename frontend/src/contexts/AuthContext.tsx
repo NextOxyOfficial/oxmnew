@@ -28,6 +28,8 @@ interface UserProfile {
   phone?: string;
   contact_number?: string;
   address?: string;
+  city?: string;
+  post_code?: string;
   store_logo?: string;
   banner_image?: string;
   created_at?: string;

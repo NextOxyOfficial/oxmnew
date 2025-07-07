@@ -4,10 +4,29 @@ from .models import UserProfile, Category, UserSettings, Gift, Achievement, Leve
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'company', 'phone', 'created_at', 'updated_at')
-    list_filter = ('created_at', 'updated_at')
-    search_fields = ('user__username', 'user__email', 'company', 'phone')
+    list_display = ('user', 'company', 'phone', 'city', 'post_code', 'created_at', 'updated_at')
+    list_filter = ('created_at', 'updated_at', 'city')
+    search_fields = ('user__username', 'user__email', 'company', 'phone', 'city', 'post_code')
     readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('User Information', {
+            'fields': ('user',)
+        }),
+        ('Company Information', {
+            'fields': ('company', 'company_address')
+        }),
+        ('Contact Information', {
+            'fields': ('phone', 'contact_number', 'address', 'city', 'post_code')
+        }),
+        ('Media', {
+            'fields': ('store_logo', 'banner_image')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(Category)

@@ -22,6 +22,8 @@ interface ProfileData {
     phone: string;
     contact_number: string;
     address: string;
+    city: string;
+    post_code: string;
     store_logo: string;
     banner_image: string;
     created_at: string;
@@ -57,6 +59,8 @@ export default function ProfilePage() {
     phone: "",
     contact_number: "",
     address: "",
+    city: "",
+    post_code: "",
   });
 
   const showNotification = (type: "success" | "error", message: string) => {
@@ -83,6 +87,8 @@ export default function ProfilePage() {
         phone: data.profile.phone || "",
         contact_number: data.profile.contact_number || "",
         address: data.profile.address || "",
+        city: data.profile.city || "",
+        post_code: data.profile.post_code || "",
       });
     } catch (error) {
       console.error("Failed to fetch profile:", error);
@@ -111,6 +117,8 @@ export default function ProfilePage() {
         phone: profileData.profile.phone || "",
         contact_number: profileData.profile.contact_number || "",
         address: profileData.profile.address || "",
+        city: profileData.profile.city || "",
+        post_code: profileData.profile.post_code || "",
       });
     }
   };
@@ -637,6 +645,72 @@ export default function ProfilePage() {
                         />
                       </svg>
                       {profileData.profile.address || "Not provided"}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    City
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editForm.city}
+                      onChange={(e) =>
+                        handleInputChange("city", e.target.value)
+                      }
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter your city"
+                    />
+                  ) : (
+                    <div className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm text-slate-100 text-sm flex items-center gap-2">
+                      <svg
+                        className="w-4 h-4 text-slate-400 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                        />
+                      </svg>
+                      {profileData.profile.city || "Not provided"}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Post Code
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editForm.post_code}
+                      onChange={(e) =>
+                        handleInputChange("post_code", e.target.value)
+                      }
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      placeholder="Enter your post code"
+                    />
+                  ) : (
+                    <div className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm text-slate-100 text-sm flex items-center gap-2">
+                      <svg
+                        className="w-4 h-4 text-slate-400 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                      </svg>
+                      {profileData.profile.post_code || "Not provided"}
                     </div>
                   )}
                 </div>

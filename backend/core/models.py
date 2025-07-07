@@ -27,6 +27,8 @@ class UserProfile(models.Model):
     phone = models.CharField(max_length=20, blank=True, null=True)
     contact_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    post_code = models.CharField(max_length=20, blank=True, null=True)
     store_logo = models.ImageField(upload_to="store_logos/", blank=True, null=True)
     banner_image = models.ImageField(upload_to="banner_images/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
