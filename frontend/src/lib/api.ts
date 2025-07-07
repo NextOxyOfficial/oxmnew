@@ -1080,7 +1080,19 @@ export class ApiService {
   }
 
   static async upgradeSubscription(planId: string) {
-    return this.post("/subscription/upgrade/", { plan_id: planId });
+    console.log(`=== UPGRADING SUBSCRIPTION ===`);
+    console.log(`Plan ID: ${planId}`);
+    console.log(`API endpoint: /subscription/upgrade/`);
+    console.log(`Request data:`, { plan_id: planId });
+    
+    try {
+      const response = await this.post("/subscription/upgrade/", { plan_id: planId });
+      console.log(`Upgrade response:`, response);
+      return response;
+    } catch (error) {
+      console.error(`Upgrade subscription error:`, error);
+      throw error;
+    }
   }
 
   // Notifications

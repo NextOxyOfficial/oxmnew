@@ -21,16 +21,15 @@ class UserSubscriptionView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        try:
-            return UserSubscription.objects.get(user=self.request.user, active=True)
-        except UserSubscription.DoesNotExist:
-            # Create a default free subscription if none exists
-            free_plan = SubscriptionPlan.objects.get(name='free')
-            return UserSubscription.objects.create(
-                user=self.request.user,
-                plan=free_plan,
-                active=True
-            )
+        # Get or create user subscription (only one per user)
+        user_subscription, created = UserSubscription.objects.get_or_create(
+            user=self.request.user,
+            defaults={
+                'plan': SubscriptionPlan.objects.get(name='free'),
+                'active': True
+            }
+        )
+        return user_subscription
 
 class UserSMSCreditView(generics.RetrieveAPIView):
     serializer_class = UserSMSCreditSerializer
@@ -57,6 +56,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAdminUser
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])  # Only admin users can add credits
@@ -108,9 +109,16 @@ def add_sms_credits(request):
 @permission_classes([permissions.IsAuthenticated])
 def upgrade_subscription(request):
     """Upgrade user subscription plan"""
+    # Add debugging
+    print(f"=== UPGRADE SUBSCRIPTION REQUEST ===")
+    print(f"User: {request.user if request.user.is_authenticated else 'Anonymous'}")
+    print(f"Request data: {request.data}")
+    print(f"Request headers: {dict(request.headers)}")
+    
     plan_id = request.data.get('plan_id')
     
     if not plan_id:
+        print("ERROR: Plan ID is required")
         return Response({
             'success': False,
             'message': 'Plan ID is required'
@@ -122,7 +130,7 @@ def upgrade_subscription(request):
         
         print(f"Upgrading user {request.user.username} to plan {plan.name}")
         
-        # Get or create user subscription
+        # Get or create user subscription (only one subscription per user)
         user_subscription, created = UserSubscription.objects.get_or_create(
             user=request.user,
             defaults={
@@ -131,29 +139,43 @@ def upgrade_subscription(request):
             }
         )
         
-        if not created:
+        if created:
+            print(f"Created new subscription for {plan.name} (ID: {user_subscription.id})")
+        else:
             # Update existing subscription
-            print(f"Updating existing subscription from {user_subscription.plan.name} to {plan.name}")
+            old_plan = user_subscription.plan.name
             user_subscription.plan = plan
             user_subscription.active = True
             user_subscription.save()
+            print(f"Updated subscription from {old_plan} to {plan.name} (ID: {user_subscription.id})")
+        
+        # Verify the subscription was updated correctly
+        verification_sub = UserSubscription.objects.filter(
+            user=request.user,
+            active=True
+        ).first()
+        
+        if verification_sub:
+            print(f"Verification: Active subscription is now {verification_sub.plan.name}")
         else:
-            print(f"Created new subscription for {plan.name}")
+            print("ERROR: No active subscription found after upgrade!")
         
         print(f"Subscription upgrade completed for user {request.user.username}")
         
         return Response({
             'success': True,
-            'message': f'Successfully upgraded to {plan.get_name_display()} plan',
+            'message': f'Successfully upgraded to {plan.name} plan',
             'plan': plan.name
         }, status=status.HTTP_200_OK)
         
     except SubscriptionPlan.DoesNotExist:
+        print(f"ERROR: Plan '{plan_id}' not found")
         return Response({
             'success': False,
             'message': 'Plan not found'
         }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
+        print(f"ERROR: {str(e)}")
         return Response({
             'success': False,
             'message': str(e)
@@ -209,46 +231,26 @@ def get_my_subscription(request):
     """Get current user's subscription"""
     try:
         print(f"Getting subscription for user: {request.user.username}")
-        user_subscription = UserSubscription.objects.filter(
-            user=request.user,
-            active=True
-        ).first()
         
-        if user_subscription:
-            print(f"Found subscription: {user_subscription.plan.name}")
-            serializer = UserSubscriptionSerializer(user_subscription)
-            return Response({
-                'success': True,
-                'subscription': serializer.data
-            }, status=status.HTTP_200_OK)
+        # Get or create user subscription (only one per user)
+        user_subscription, created = UserSubscription.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'plan': SubscriptionPlan.objects.get(name='free'),
+                'active': True
+            }
+        )
+        
+        if created:
+            print(f"Created new subscription for {request.user.username}: {user_subscription.plan.name}")
         else:
-            print("No subscription found, returning free plan")
-            # User has no subscription, default to free plan
-            try:
-                free_plan = SubscriptionPlan.objects.get(name='free')
-                return Response({
-                    'success': True,
-                    'subscription': {
-                        'plan': {
-                            'name': 'free',
-                            'price': 0,
-                            'description': free_plan.description
-                        },
-                        'active': True
-                    }
-                }, status=status.HTTP_200_OK)
-            except SubscriptionPlan.DoesNotExist:
-                return Response({
-                    'success': True,
-                    'subscription': {
-                        'plan': {
-                            'name': 'free',
-                            'price': 0,
-                            'description': 'Free plan'
-                        },
-                        'active': True
-                    }
-                }, status=status.HTTP_200_OK)
+            print(f"Found existing subscription: {user_subscription.plan.name}")
+        
+        serializer = UserSubscriptionSerializer(user_subscription)
+        return Response({
+            'success': True,
+            'subscription': serializer.data
+        }, status=status.HTTP_200_OK)
         
     except Exception as e:
         print(f"Error getting subscription: {str(e)}")
@@ -256,3 +258,14 @@ def get_my_subscription(request):
             'success': False,
             'message': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def debug_auth(request):
+    """Debug endpoint to check authentication"""
+    return Response({
+        'authenticated': request.user.is_authenticated,
+        'user': request.user.username if request.user.is_authenticated else None,
+        'token_header': request.META.get('HTTP_AUTHORIZATION', 'Not found'),
+        'success': True
+    })

@@ -35,19 +35,29 @@ def verifyPayment(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
     oid = request.query_params.get("sp_order_id")
+    
+    print(f"=== PAYMENT VERIFICATION REQUEST ===")
+    print(f"Order ID: {oid}")
+    
     try:
         payment_details = engine.verify_payment(oid)
+        
+        print(f"Payment details received: {payment_details}")
 
         if hasattr(payment_details, "__dict__"):
             payment_details_dict = payment_details.__dict__
+            print(f"Payment details dict: {payment_details_dict}")
         else:
+            print("ERROR: Payment details could not be serialized")
             return Response(
                 {"error": "Payment details could not be serialized."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        print(f"Returning payment verification response: {payment_details_dict}")
         return Response(payment_details_dict, status=status.HTTP_200_OK)
     except Exception as e:
+        print(f"Payment verification error: {str(e)}")
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

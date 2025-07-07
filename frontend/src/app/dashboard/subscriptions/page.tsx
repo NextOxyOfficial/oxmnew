@@ -109,35 +109,63 @@ export default function SubscriptionsPage() {
               try {
                 setIsUpdatingPlan(true);
                 console.log('Upgrading subscription to:', pendingPlan);
+                console.log('Making API call to upgrade subscription...');
+                
                 const upgradeResponse = await ApiService.upgradeSubscription(pendingPlan);
                 console.log('Upgrade response:', upgradeResponse);
-                setCurrentPlan(pendingPlan);
-                localStorage.removeItem('pending_subscription_plan');
-                console.log(`Successfully upgraded to ${pendingPlan} plan`);
                 
-                // Show success message for subscription upgrade
-                setSuccessMessage(
-                  pendingPlan === 'pro' 
-                    ? "🎉 Congratulations! Your Pro subscription is now active. You now have access to all premium features!"
-                    : `Successfully upgraded to ${pendingPlan.charAt(0).toUpperCase() + pendingPlan.slice(1)} plan!`
-                );
-                setShowSuccessMessage(true);
-                
-                // Refresh subscription data to get the latest state
-                try {
-                  console.log('Refreshing subscription data after upgrade...');
-                  // Add a small delay to ensure database is updated
-                  await new Promise(resolve => setTimeout(resolve, 1000));
-                  await refreshSubscriptionData();
-                } catch (refreshError) {
-                  console.error('Failed to refresh subscription data:', refreshError);
+                if (upgradeResponse && upgradeResponse.success) {
+                  console.log('Subscription upgraded successfully');
+                  localStorage.removeItem('pending_subscription_plan');
+                  console.log(`Successfully upgraded to ${pendingPlan} plan`);
+                  
+                  // Show success message for subscription upgrade
+                  setSuccessMessage(
+                    pendingPlan === 'pro' 
+                      ? "🎉 Congratulations! Your Pro subscription is now active. You now have access to all premium features!"
+                      : `Successfully upgraded to ${pendingPlan.charAt(0).toUpperCase() + pendingPlan.slice(1)} plan!`
+                  );
+                  setShowSuccessMessage(true);
+                  
+                  // Update the current plan immediately
+                  setCurrentPlan(pendingPlan);
+                  
+                  // Refresh subscription data to get the latest state
+                  try {
+                    console.log('Refreshing subscription data after upgrade...');
+                    // Add a longer delay to ensure database is updated
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    await refreshSubscriptionData();
+                  } catch (refreshError) {
+                    console.error('Failed to refresh subscription data:', refreshError);
+                  }
+                } else {
+                  console.error('Upgrade failed:', upgradeResponse);
+                  setShowError(true);
                 }
               } catch (upgradeError) {
                 console.error('Failed to upgrade subscription after payment:', upgradeError);
+                console.error('Error details:', upgradeError);
+                
+                // Show detailed error message
+                let errorMessage = 'Failed to upgrade subscription. Please contact support.';
+                if (upgradeError && typeof upgradeError === 'object') {
+                  const err = upgradeError as any;
+                  if (err.message) {
+                    errorMessage += ` Error: ${err.message}`;
+                  }
+                  if (err.error) {
+                    errorMessage += ` Details: ${err.error}`;
+                  }
+                }
+                
+                console.error('Upgrade error message:', errorMessage);
                 setShowError(true);
               } finally {
                 setIsUpdatingPlan(false);
               }
+            } else {
+              console.error('No pending plan found in localStorage');
             }
           }
           
@@ -495,6 +523,46 @@ export default function SubscriptionsPage() {
               <h3 className="text-lg font-semibold mb-1">Payment Successful!</h3>
               <p className="text-sm opacity-90">{successMessage}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Upgrade Button for Testing */}
+      {currentPlan === 'free' && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-200 mb-1">Already Paid for Pro?</h3>
+              <p className="text-sm text-yellow-300">If you've already completed payment, click below to activate your Pro subscription</p>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  setIsUpdatingPlan(true);
+                  console.log('Manual upgrade to pro...');
+                  const upgradeResponse = await ApiService.upgradeSubscription('pro');
+                  console.log('Manual upgrade response:', upgradeResponse);
+                  
+                  if (upgradeResponse && upgradeResponse.success) {
+                    setCurrentPlan('pro');
+                    setSuccessMessage("🎉 Pro subscription activated successfully!");
+                    setShowSuccessMessage(true);
+                    await refreshSubscriptionData();
+                  } else {
+                    alert('Failed to upgrade subscription. Please contact support.');
+                  }
+                } catch (error) {
+                  console.error('Manual upgrade failed:', error);
+                  alert('Failed to upgrade subscription. Please contact support.');
+                } finally {
+                  setIsUpdatingPlan(false);
+                }
+              }}
+              disabled={isUpdatingPlan}
+              className="bg-yellow-500 text-black px-6 py-2 rounded-lg hover:bg-yellow-400 transition-colors font-medium disabled:opacity-50"
+            >
+              {isUpdatingPlan ? 'Activating...' : 'Activate Pro Subscription'}
+            </button>
           </div>
         </div>
       )}
