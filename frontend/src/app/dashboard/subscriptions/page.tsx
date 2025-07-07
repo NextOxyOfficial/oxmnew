@@ -11,7 +11,7 @@ interface SubscriptionPlan {
   price: number;
   period: string;
   description: string;
-  features: string[];
+  features: (string | { name?: string; description?: string; [key: string]: any })[];
   cta?: string;
   is_popular?: boolean;
   popular?: boolean;
@@ -151,12 +151,15 @@ export default function SubscriptionsPage() {
 
         // Process plans data
         const processedPlans = (plansData || []).map(
-          (plan: SubscriptionPlan) => ({
-            ...plan,
-            cta:
-              plan.name === "free" ? "Start Free" : `Upgrade to ${plan.name}`,
-            popular: plan.is_popular || false,
-          })
+          (plan: SubscriptionPlan) => {
+            console.log('Processing plan:', plan.name, 'features:', plan.features);
+            return {
+              ...plan,
+              cta:
+                plan.name === "free" ? "Start Free" : `Upgrade to ${plan.name}`,
+              popular: plan.is_popular || false,
+            };
+          }
         );
         setPlans(processedPlans);
 
@@ -379,7 +382,7 @@ export default function SubscriptionsPage() {
               )}
             </div>
             <ul className="mb-6 space-y-2 w-full">
-              {plan.features.map((feature, idx) => (
+              {(plan.features || []).map((feature, idx) => (
                 <li
                   key={idx}
                   className="flex items-center text-slate-300 text-sm"
@@ -397,7 +400,7 @@ export default function SubscriptionsPage() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  {feature}
+                  {typeof feature === 'string' ? feature : feature?.name || feature?.description || JSON.stringify(feature)}
                 </li>
               ))}
             </ul>
