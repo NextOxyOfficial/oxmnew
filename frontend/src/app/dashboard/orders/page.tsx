@@ -721,9 +721,7 @@ export default function OrdersPage() {
                           </h4>
                           {order.variant && (
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                              {order.variant.color} - {order.variant.size}
-                              {order.variant.custom_variant &&
-                                ` - ${order.variant.custom_variant}`}
+                              {order.variant_display}
                             </p>
                           )}
                         </div>
@@ -842,9 +840,7 @@ export default function OrdersPage() {
                                 </div>
                                 {order.variant && (
                                   <div className="text-xs text-slate-500 dark:text-slate-400">
-                                    {order.variant.color} - {order.variant.size}
-                                    {order.variant.custom_variant &&
-                                      ` - ${order.variant.custom_variant}`}
+                                    {order.variant_display}
                                   </div>
                                 )}
                               </div>
