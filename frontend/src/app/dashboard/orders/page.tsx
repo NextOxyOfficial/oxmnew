@@ -14,7 +14,7 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCustomer, setFilterCustomer] = useState("all");
-  const [sortBy, setSortBy] = useState("date");
+  const [filterBy, setFilterBy] = useState("date");
   const [isNavigating, setIsNavigating] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -45,6 +45,20 @@ export default function OrdersPage() {
     }, 300);
   };
 
+  // Get context-aware search placeholder
+  const getSearchPlaceholder = () => {
+    switch (filterBy) {
+      case "product":
+        return "Search product names...";
+      case "customer":
+        return "Search customer names and phones...";
+      case "today":
+        return "Search today's orders by product or customer...";
+      default:
+        return "Search orders, customers, products...";
+    }
+  };
+
   const handleOrderClick = (order: Order) => {
     // TODO: Navigate to order details page
     console.log("Order clicked:", order);
@@ -71,31 +85,88 @@ export default function OrdersPage() {
 
   // Filter and sort orders
   const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      (order.product_name &&
-        order.product_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.customer_name &&
-        order.customer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.customer_phone && order.customer_phone.includes(searchTerm));
+    // Search logic based on filter selection
+    let matchesSearch = false;
+
+    if (filterBy === "product") {
+      // Only search in product names
+      matchesSearch =
+        !searchTerm ||
+        Boolean(
+          order.product_name &&
+            order.product_name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    } else if (filterBy === "customer") {
+      // Only search in customer names and phones
+      matchesSearch =
+        !searchTerm ||
+        Boolean(
+          (order.customer_name &&
+            order.customer_name
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase())) ||
+            (order.customer_phone && order.customer_phone.includes(searchTerm))
+        );
+    } else {
+      // Default search in all fields (for "today", "date", and amount/quantity filters)
+      matchesSearch =
+        !searchTerm ||
+        Boolean(
+          (order.product_name &&
+            order.product_name
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase())) ||
+            (order.customer_name &&
+              order.customer_name
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase())) ||
+            (order.customer_phone && order.customer_phone.includes(searchTerm))
+        );
+    }
 
     const matchesCustomer =
       filterCustomer === "all" ||
       (filterCustomer === "with_customer" && order.customer_name) ||
       (filterCustomer === "without_customer" && !order.customer_name);
 
-    // Date range filtering
-    const orderDate = new Date(order.sale_date);
-    const fromDate = dateFrom ? new Date(dateFrom) : null;
-    const toDate = dateTo ? new Date(dateTo + "T23:59:59") : null; // Include full day
+    // Date filtering logic
+    let matchesDateRange = true;
 
-    const matchesDateRange =
-      (!fromDate || orderDate >= fromDate) && (!toDate || orderDate <= toDate);
+    if (filterBy === "today") {
+      // Show only today's orders
+      const orderDate = new Date(order.sale_date);
+      const today = new Date();
+      const todayStart = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+      const todayEnd = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        23,
+        59,
+        59
+      );
+      matchesDateRange = orderDate >= todayStart && orderDate <= todayEnd;
+    } else {
+      // Use date range picker (ignore if "today" is selected)
+      const orderDate = new Date(order.sale_date);
+      const fromDate = dateFrom ? new Date(dateFrom) : null;
+      const toDate = dateTo ? new Date(dateTo + "T23:59:59") : null;
+
+      matchesDateRange =
+        (!fromDate || orderDate >= fromDate) &&
+        (!toDate || orderDate <= toDate);
+    }
 
     return matchesSearch && matchesCustomer && matchesDateRange;
   });
 
   const sortedOrders = filteredOrders.sort((a, b) => {
-    switch (sortBy) {
+    switch (filterBy) {
+      case "today":
       case "date":
         return (
           new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime()
@@ -408,7 +479,7 @@ export default function OrdersPage() {
                 </div>
                 <input
                   type="text"
-                  placeholder="Search orders, customers, products..."
+                  placeholder={getSearchPlaceholder()}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
@@ -427,7 +498,8 @@ export default function OrdersPage() {
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="block w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm [color-scheme:light] dark:[color-scheme:dark]"
+                      disabled={filterBy === "today"}
+                      className="block w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm [color-scheme:light] dark:[color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <span className="text-slate-500 dark:text-slate-400 text-sm">
                       to
@@ -436,9 +508,10 @@ export default function OrdersPage() {
                       type="date"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}
-                      className="block w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm [color-scheme:light] dark:[color-scheme:dark]"
+                      disabled={filterBy === "today"}
+                      className="block w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm [color-scheme:light] dark:[color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
                     />
-                    {(dateFrom || dateTo) && (
+                    {(dateFrom || dateTo) && filterBy !== "today" && (
                       <button
                         onClick={() => {
                           setDateFrom("");
@@ -481,17 +554,26 @@ export default function OrdersPage() {
                   </select>
                 </div>
 
-                {/* Sort */}
+                {/* Filter By */}
                 <div className="flex items-center gap-3">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                    Sort by:
+                    Filter by:
                   </label>
                   <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    value={filterBy}
+                    onChange={(e) => {
+                      const newFilterBy = e.target.value;
+                      setFilterBy(newFilterBy);
+                      // Clear date range when switching to "today"
+                      if (newFilterBy === "today") {
+                        setDateFrom("");
+                        setDateTo("");
+                      }
+                    }}
                     className="block w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
                   >
                     <option value="date">Date (Newest)</option>
+                    <option value="today">Date (Today)</option>
                     <option value="product">Product Name</option>
                     <option value="customer">Customer Name</option>
                     <option value="amount-high">Amount: High to Low</option>
@@ -501,6 +583,77 @@ export default function OrdersPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Filter Status/Help Text */}
+              {filterBy === "today" && (
+                <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="h-4 w-4 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span>
+                      Showing today&apos;s orders only. Search works for product
+                      and customer names. Date range is disabled.
+                    </span>
+                  </div>
+                </div>
+              )}
+              {filterBy === "product" && searchTerm && (
+                <div className="text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="h-4 w-4 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                    <span>
+                      Searching in product names only for &ldquo;{searchTerm}
+                      &rdquo;
+                    </span>
+                  </div>
+                </div>
+              )}
+              {filterBy === "customer" && searchTerm && (
+                <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="h-4 w-4 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                    <span>
+                      Searching in customer names and phones only for &ldquo;
+                      {searchTerm}&rdquo;
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Results */}
