@@ -16,6 +16,8 @@ export default function OrdersPage() {
   const [filterCustomer, setFilterCustomer] = useState("all");
   const [sortBy, setSortBy] = useState("date");
   const [isNavigating, setIsNavigating] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // Fetch orders
   useEffect(() => {
@@ -81,7 +83,15 @@ export default function OrdersPage() {
       (filterCustomer === "with_customer" && order.customer_name) ||
       (filterCustomer === "without_customer" && !order.customer_name);
 
-    return matchesSearch && matchesCustomer;
+    // Date range filtering
+    const orderDate = new Date(order.sale_date);
+    const fromDate = dateFrom ? new Date(dateFrom) : null;
+    const toDate = dateTo ? new Date(dateTo + "T23:59:59") : null; // Include full day
+
+    const matchesDateRange =
+      (!fromDate || orderDate >= fromDate) && (!toDate || orderDate <= toDate);
+
+    return matchesSearch && matchesCustomer && matchesDateRange;
   });
 
   const sortedOrders = filteredOrders.sort((a, b) => {
@@ -313,80 +323,77 @@ export default function OrdersPage() {
         </div>
 
         {/* Orders Table/List */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-          <div className="sm:p-4 p-2">
-            {/* Header and filters */}
-            <div className="flex flex-col gap-4 mb-6">
-              <h3 className="text-xl font-bold text-slate-200">
-                Order History
-              </h3>
+        <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-xl shadow-sm">
+          <div className="p-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  Order History
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  {filteredOrders.length} of {orders.length} orders
+                </p>
+              </div>
 
-              {/* Controls */}
-              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
-                {/* Add Order Button */}
-                <button
-                  onClick={handleAddOrder}
-                  disabled={isNavigating}
-                  className={`px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 flex-shrink-0 ${
-                    isNavigating
-                      ? "opacity-50 cursor-not-allowed"
-                      : "cursor-pointer"
-                  }`}
-                >
-                  {isNavigating ? (
-                    <>
-                      <svg
-                        className="animate-spin h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
+              <button
+                onClick={handleAddOrder}
+                disabled={isNavigating}
+                className={`inline-flex items-center px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm ${
+                  isNavigating ? "cursor-not-allowed" : ""
+                }`}
+              >
+                {isNavigating ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
                         stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      </svg>
-                      Add Order
-                    </>
-                  )}
-                </button>
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="-ml-1 mr-2 h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      />
+                    </svg>
+                    Add Order
+                  </>
+                )}
+              </button>
+            </div>
 
-                {/* Search */}
-                <div className="relative flex-1 min-w-0">
-                  <input
-                    type="text"
-                    placeholder="Search orders, customers..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-10 pr-4 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
-                  />
+            {/* Filters */}
+            <div className="space-y-4 mb-6">
+              {/* Search */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg
-                    className="w-5 h-5 text-gray-400 absolute left-3 top-2.5"
+                    className="h-5 w-5 text-slate-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -399,274 +406,334 @@ export default function OrdersPage() {
                     />
                   </svg>
                 </div>
+                <input
+                  type="text"
+                  placeholder="Search orders, customers, products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
+                />
+              </div>
+
+              {/* Filter Row */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Date Range */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:flex-1">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                    Date Range:
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="block w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm [color-scheme:light] dark:[color-scheme:dark]"
+                    />
+                    <span className="text-slate-500 dark:text-slate-400 text-sm">
+                      to
+                    </span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="block w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm [color-scheme:light] dark:[color-scheme:dark]"
+                    />
+                    {(dateFrom || dateTo) && (
+                      <button
+                        onClick={() => {
+                          setDateFrom("");
+                          setDateTo("");
+                        }}
+                        className="inline-flex items-center px-2.5 py-1.5 border border-slate-300 dark:border-slate-600 text-xs font-medium rounded text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
+                      >
+                        <svg
+                          className="h-3 w-3 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
 
                 {/* Customer Filter */}
-                <select
-                  value={filterCustomer}
-                  onChange={(e) => setFilterCustomer(e.target.value)}
-                  className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[160px]"
-                >
-                  <option value="all" className="bg-slate-800">
-                    All Orders
-                  </option>
-                  <option value="with_customer" className="bg-slate-800">
-                    With Customer
-                  </option>
-                  <option value="without_customer" className="bg-slate-800">
-                    Without Customer
-                  </option>
-                </select>
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                    Customer:
+                  </label>
+                  <select
+                    value={filterCustomer}
+                    onChange={(e) => setFilterCustomer(e.target.value)}
+                    className="block w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
+                  >
+                    <option value="all">All Orders</option>
+                    <option value="with_customer">With Customer</option>
+                    <option value="without_customer">Without Customer</option>
+                  </select>
+                </div>
 
                 {/* Sort */}
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[180px]"
-                >
-                  <option value="date" className="bg-slate-800">
-                    Date (Newest)
-                  </option>
-                  <option value="product" className="bg-slate-800">
-                    Product Name
-                  </option>
-                  <option value="customer" className="bg-slate-800">
-                    Customer Name
-                  </option>
-                  <option value="amount-high" className="bg-slate-800">
-                    Amount: High to Low
-                  </option>
-                  <option value="amount-low" className="bg-slate-800">
-                    Amount: Low to High
-                  </option>
-                  <option value="quantity-high" className="bg-slate-800">
-                    Quantity: High to Low
-                  </option>
-                  <option value="quantity-low" className="bg-slate-800">
-                    Quantity: Low to High
-                  </option>
-                </select>
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                    Sort by:
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="block w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
+                  >
+                    <option value="date">Date (Newest)</option>
+                    <option value="product">Product Name</option>
+                    <option value="customer">Customer Name</option>
+                    <option value="amount-high">Amount: High to Low</option>
+                    <option value="amount-low">Amount: Low to High</option>
+                    <option value="quantity-high">Quantity: High to Low</option>
+                    <option value="quantity-low">Quantity: Low to High</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            {/* Mobile Card Layout */}
-            <div className="block lg:hidden space-y-4">
-              {sortedOrders.length === 0 ? (
-                <div className="text-center py-12">
-                  <svg
-                    className="w-16 h-16 text-slate-600 mx-auto mb-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                    />
-                  </svg>
-                  <h3 className="text-xl font-medium text-slate-300 mb-2">
-                    No orders found
-                  </h3>
-                  <p className="text-slate-400 mb-6">
-                    {orders.length === 0
-                      ? "Get started by creating your first order."
-                      : "Try adjusting your search or filter criteria."}
-                  </p>
-                  <button
-                    onClick={handleAddOrder}
-                    className="px-6 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-                  >
-                    Create First Order
-                  </button>
-                </div>
-              ) : (
-                sortedOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/70 transition-all duration-200 cursor-pointer"
-                    onClick={() => handleOrderClick(order)}
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1 min-w-0 pr-2">
-                        <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 transition-colors">
-                          {order?.product_name || "Unknown Product"}
-                        </h4>
-                        {order.variant && (
-                          <p className="text-slate-400 text-sm mt-1">
-                            {order.variant.color} - {order.variant.size}
-                            {order.variant.custom_variant &&
-                              ` - ${order.variant.custom_variant}`}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-cyan-400">
-                          {formatCurrency(order.total_amount)}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {formatDate(order.sale_date)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-slate-400">Customer</p>
-                        {order.customer_name ? (
-                          <div>
-                            <p className="text-sm text-slate-100">
-                              {order.customer_name}
-                            </p>
-                            {order.customer_phone && (
-                              <p className="text-xs text-slate-400">
-                                {order.customer_phone}
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-slate-500">
-                            No customer info
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-400">
-                          Quantity & Price
-                        </p>
-                        <p className="text-sm font-medium text-slate-100">
-                          {order.quantity} × {formatCurrency(order.unit_price)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Notes */}
-                    {order.notes && (
-                      <div className="mt-3 pt-3 border-t border-slate-700/50">
-                        <p className="text-xs text-slate-400">Notes</p>
-                        <p className="text-sm text-slate-300">{order.notes}</p>
-                      </div>
-                    )}
+            {/* Results */}
+            {sortedOrders.length === 0 ? (
+              <div className="text-center py-12">
+                <svg
+                  className="mx-auto h-12 w-12 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1}
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+                <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-slate-100">
+                  No orders found
+                </h3>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                  {orders.length === 0
+                    ? "Get started by creating your first order."
+                    : "Try adjusting your search or filter criteria."}
+                </p>
+                {orders.length === 0 && (
+                  <div className="mt-6">
+                    <button
+                      onClick={handleAddOrder}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
+                    >
+                      <svg
+                        className="-ml-1 mr-2 h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                      Create First Order
+                    </button>
                   </div>
-                ))
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Mobile Cards */}
+                <div className="block lg:hidden space-y-4">
+                  {sortedOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg p-4 hover:shadow-md dark:hover:bg-slate-800/70 transition-all duration-200 cursor-pointer"
+                      onClick={() => handleOrderClick(order)}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1 min-w-0 pr-3">
+                          <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                            {order?.product_name || "Unknown Product"}
+                          </h4>
+                          {order.variant && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                              {order.variant.color} - {order.variant.size}
+                              {order.variant.custom_variant &&
+                                ` - ${order.variant.custom_variant}`}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-cyan-600 dark:text-cyan-400">
+                            {formatCurrency(order.total_amount)}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {formatDate(order.sale_date)}
+                          </p>
+                        </div>
+                      </div>
 
-            {/* Desktop Table Layout */}
-            <div className="hidden lg:block">
-              {sortedOrders.length === 0 ? (
-                <div className="text-center py-12">
-                  <svg
-                    className="w-16 h-16 text-slate-600 mx-auto mb-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                    />
-                  </svg>
-                  <h3 className="text-xl font-medium text-slate-300 mb-2">
-                    No orders found
-                  </h3>
-                  <p className="text-slate-400 mb-6">
-                    {orders.length === 0
-                      ? "Get started by creating your first order."
-                      : "Try adjusting your search or filter criteria."}
-                  </p>
-                  <button
-                    onClick={handleAddOrder}
-                    className="px-6 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-                  >
-                    Create First Order
-                  </button>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-700/50">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Product
-                        </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Customer
-                        </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Quantity
-                        </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Unit Price
-                        </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Total
-                        </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Date
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedOrders.map((order) => (
-                        <tr
-                          key={order.id}
-                          className="border-b border-slate-700/30 hover:bg-slate-800/30 transition-colors cursor-pointer"
-                          onClick={() => handleOrderClick(order)}
-                        >
-                          <td className="py-4 px-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                            Customer
+                          </p>
+                          {order.customer_name ? (
                             <div>
-                              <p className="text-sm font-medium text-slate-100">
-                                {order?.product_name || "Unknown Product"}
+                              <p className="text-slate-900 dark:text-slate-100 font-medium">
+                                {order.customer_name}
                               </p>
-                              {order.variant && (
-                                <p className="text-xs text-slate-400">
-                                  {order.variant.color} - {order.variant.size}
-                                  {order.variant.custom_variant &&
-                                    ` - ${order.variant.custom_variant}`}
+                              {order.customer_phone && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                  {order.customer_phone}
                                 </p>
                               )}
                             </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            {order.customer_name ? (
+                          ) : (
+                            <p className="text-slate-400 dark:text-slate-500 italic">
+                              No customer info
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                            Quantity & Price
+                          </p>
+                          <p className="text-slate-900 dark:text-slate-100 font-medium">
+                            {order.quantity} ×{" "}
+                            {formatCurrency(order.unit_price)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {order.notes && (
+                        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                            Notes
+                          </p>
+                          <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                            {order.notes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden lg:block">
+                  <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-slate-700 rounded-lg">
+                    <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                      <thead className="bg-slate-50 dark:bg-slate-800">
+                        <tr>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                          >
+                            Product
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                          >
+                            Customer
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                          >
+                            Quantity
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                          >
+                            Unit Price
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                          >
+                            Total
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                          >
+                            Date
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-700">
+                        {sortedOrders.map((order) => (
+                          <tr
+                            key={order.id}
+                            className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors duration-150"
+                            onClick={() => handleOrderClick(order)}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
                               <div>
-                                <p className="text-sm text-slate-100">
-                                  {order.customer_name}
-                                </p>
-                                {order.customer_phone && (
-                                  <p className="text-xs text-slate-400">
-                                    {order.customer_phone}
-                                  </p>
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {order?.product_name || "Unknown Product"}
+                                </div>
+                                {order.variant && (
+                                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    {order.variant.color} - {order.variant.size}
+                                    {order.variant.custom_variant &&
+                                      ` - ${order.variant.custom_variant}`}
+                                  </div>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-xs text-slate-500">
-                                No customer info
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-slate-100">
-                            {order.quantity}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-slate-100">
-                            {formatCurrency(order.unit_price)}
-                          </td>
-                          <td className="py-4 px-4 text-sm font-medium text-cyan-400">
-                            {formatCurrency(order.total_amount)}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-slate-400">
-                            {formatDate(order.sale_date)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {order.customer_name ? (
+                                <div>
+                                  <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                    {order.customer_name}
+                                  </div>
+                                  {order.customer_phone && (
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                      {order.customer_phone}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-sm text-slate-400 dark:text-slate-500 italic">
+                                  No customer info
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-slate-100">
+                              {order.quantity}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-slate-100">
+                              {formatCurrency(order.unit_price)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-cyan-600 dark:text-cyan-400">
+                              {formatCurrency(order.total_amount)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                              {formatDate(order.sale_date)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>
