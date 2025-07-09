@@ -301,29 +301,6 @@ function ProductsTab({
   };
   return (
     <div className="space-y-6">
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="relative w-full sm:w-auto">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 w-full sm:w-64 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-          />
-        </div>
-        <div className="flex items-center space-x-3 w-full sm:w-auto">
-          <button
-            onClick={onRefresh}
-            className="flex items-center space-x-2 px-4 py-2 bg-slate-700 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-600 transition-colors"
-          >
-            <RefreshCw className="h-4 w-4" />
-            <span>Refresh</span>
-          </button>
-        </div>
-      </div>
-
       {/* Add Products Section */}
       <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-4 border border-slate-700">
         <h3 className="text-lg font-medium text-slate-100 mb-4">Add Products to Online Store</h3>
