@@ -54,4 +54,14 @@ urlpatterns = [
     path('dashboard/stats/', api_views.dashboard_stats, name='dashboard-stats'),
     path('search/', api_views.search_global, name='search-global'),
     path('notifications/', api_views.get_notifications, name='get-notifications'),
+    
+    # Custom Domain endpoints
+    path('custom-domain/', views.custom_domain_view, name='custom-domain'),
+    path('custom-domain/delete/', views.delete_custom_domain, name='delete-custom-domain'),
+    path('custom-domain/verify/', views.verify_custom_domain, name='verify-custom-domain'),
+    path('dns-records/', views.dns_records_view, name='dns-records'),
+    path('dns-records/<int:record_id>/delete/', views.delete_dns_record, name='delete-dns-record'),
+    
+    # Public store access by domain
+    path('store/<str:domain>/', views.get_store_by_domain, name='store-by-domain'),
 ]

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, Category, UserSettings, Gift, Achievement, Level, Brand, PaymentMethod
+from .models import UserProfile, Category, UserSettings, Gift, Achievement, Level, Brand, PaymentMethod, CustomDomain, DNSRecord
 
 
 @admin.register(UserProfile)
@@ -134,3 +134,56 @@ class PaymentMethodAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return qs
         return qs.filter(user=request.user)
+
+
+@admin.register(CustomDomain)
+class CustomDomainAdmin(admin.ModelAdmin):
+    list_display = ('user', 'full_domain', 'status', 'is_active', 'ssl_enabled', 'verified_at', 'created_at')
+    list_filter = ('status', 'is_active', 'ssl_enabled', 'created_at', 'verified_at')
+    search_fields = ('user__username', 'user__email', 'domain', 'subdomain')
+    readonly_fields = ('created_at', 'updated_at', 'verified_at')
+    ordering = ('-created_at',)
+    
+    fieldsets = (
+        ('Domain Information', {
+            'fields': ('user', 'domain', 'subdomain')
+        }),
+        ('Status', {
+            'fields': ('status', 'is_active', 'ssl_enabled', 'verified_at')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(user=request.user)
+
+
+@admin.register(DNSRecord)
+class DNSRecordAdmin(admin.ModelAdmin):
+    list_display = ('custom_domain', 'record_type', 'name', 'value', 'ttl', 'priority', 'created_at')
+    list_filter = ('record_type', 'created_at', 'custom_domain__domain')
+    search_fields = ('custom_domain__domain', 'custom_domain__subdomain', 'name', 'value')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('custom_domain', 'record_type', 'name')
+    
+    fieldsets = (
+        ('DNS Record Information', {
+            'fields': ('custom_domain', 'record_type', 'name', 'value', 'ttl', 'priority')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(custom_domain__user=request.user)

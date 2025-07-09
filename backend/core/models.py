@@ -218,3 +218,64 @@ class PaymentMethod(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.user.username}"
+
+
+class CustomDomain(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('verified', 'Verified'),
+        ('failed', 'Failed'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="custom_domain")
+    domain = models.CharField(max_length=255, unique=True, help_text="Custom domain (e.g., example.com)")
+    subdomain = models.CharField(max_length=100, blank=True, null=True, help_text="Optional subdomain prefix")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    is_active = models.BooleanField(default=False)
+    ssl_enabled = models.BooleanField(default=False)
+    verified_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Custom Domain"
+        verbose_name_plural = "Custom Domains"
+        ordering = ["-created_at"]
+    
+    def __str__(self):
+        full_domain = f"{self.subdomain}.{self.domain}" if self.subdomain else self.domain
+        return f"{self.user.username} - {full_domain}"
+    
+    @property
+    def full_domain(self):
+        """Returns the complete domain with subdomain if present"""
+        return f"{self.subdomain}.{self.domain}" if self.subdomain else self.domain
+
+
+class DNSRecord(models.Model):
+    RECORD_TYPES = [
+        ('A', 'A Record'),
+        ('AAAA', 'AAAA Record'),
+        ('CNAME', 'CNAME Record'),
+        ('MX', 'MX Record'),
+        ('TXT', 'TXT Record'),
+        ('NS', 'NS Record'),
+    ]
+    
+    custom_domain = models.ForeignKey(CustomDomain, on_delete=models.CASCADE, related_name="dns_records")
+    record_type = models.CharField(max_length=10, choices=RECORD_TYPES)
+    name = models.CharField(max_length=255, help_text="DNS record name (e.g., @, www, mail)")
+    value = models.TextField(help_text="DNS record value")
+    ttl = models.IntegerField(default=3600, help_text="Time to live in seconds")
+    priority = models.IntegerField(blank=True, null=True, help_text="Priority for MX records")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "DNS Record"
+        verbose_name_plural = "DNS Records"
+        ordering = ["record_type", "name"]
+        unique_together = ["custom_domain", "record_type", "name"]
+    
+    def __str__(self):
+        return f"{self.custom_domain.full_domain} - {self.record_type} {self.name}"

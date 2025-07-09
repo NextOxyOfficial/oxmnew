@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { ApiService } from '@/lib/api';
 
 interface CustomDomainSettingsProps {
   loading: boolean;
@@ -9,30 +10,30 @@ interface CustomDomainSettingsProps {
 
 interface CustomDomainSettings {
   customDomain: string;
+  subdomain?: string;
   isConfigured: boolean;
 }
 
 interface DNSRecord {
   id: number;
-  type: string;
+  record_type: string;
   name: string;
   value: string;
   ttl: number;
+  priority?: number;
 }
 
 export default function CustomDomainSettings({ loading, onSave }: CustomDomainSettingsProps) {
   const [settings, setSettings] = useState<CustomDomainSettings>({
     customDomain: '',
+    subdomain: '',
     isConfigured: false
   });
 
-  const [dnsRecords, setDnsRecords] = useState<DNSRecord[]>([
-    { id: 1, type: 'A', name: '@', value: '192.168.1.1', ttl: 3600 },
-    { id: 2, type: 'CNAME', name: 'www', value: 'yourdomain.com', ttl: 3600 }
-  ]);
+  const [dnsRecords, setDnsRecords] = useState<DNSRecord[]>([]);
 
   const [newRecord, setNewRecord] = useState<Omit<DNSRecord, 'id'>>({
-    type: 'A',
+    record_type: 'A',
     name: '',
     value: '',
     ttl: 3600
@@ -40,12 +41,37 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Nameservers that users need to point their domain to
   const nameservers = [
     'ns1.yourplatform.com',
     'ns2.yourplatform.com'
   ];
+
+  // Load existing domain settings
+  useEffect(() => {
+    loadDomainSettings();
+  }, []);
+
+  const loadDomainSettings = async () => {
+    setIsLoading(true);
+    try {
+      const response = await ApiService.get('/custom-domain/');
+      if (response.custom_domain) {
+        setSettings({
+          customDomain: response.custom_domain.domain,
+          subdomain: response.custom_domain.subdomain || '',
+          isConfigured: response.custom_domain.is_active
+        });
+        setDnsRecords(response.dns_records || []);
+      }
+    } catch (error) {
+      console.error('Error loading domain settings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!settings.customDomain.trim()) {
@@ -55,11 +81,20 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
 
     setIsSaving(true);
     try {
-      await onSave(settings);
+      const domainData = {
+        domain: settings.customDomain,
+        subdomain: settings.subdomain || ''
+      };
+      
+      await ApiService.post('/custom-domain/', domainData);
+      await loadDomainSettings(); // Reload the settings
       setIsEditing(false);
-      setSettings({ ...settings, isConfigured: true });
+      
+      // Call the parent onSave if needed
+      await onSave(settings);
     } catch (error) {
       console.error('Error saving custom domain settings:', error);
+      alert('Failed to save domain settings. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -67,30 +102,42 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
 
   const handleCancel = () => {
     setIsEditing(false);
+    loadDomainSettings(); // Reload to reset any unsaved changes
   };
 
-  const addDnsRecord = () => {
+  const addDnsRecord = async () => {
     if (!newRecord.name || !newRecord.value) {
       alert('Please fill in all DNS record fields');
       return;
     }
 
-    const record: DNSRecord = {
-      id: Date.now(),
-      ...newRecord
-    };
-
-    setDnsRecords([...dnsRecords, record]);
-    setNewRecord({
-      type: 'A',
-      name: '',
-      value: '',
-      ttl: 3600
-    });
+    try {
+      await ApiService.post('/dns-records/', newRecord);
+      await loadDomainSettings(); // Reload to get updated records
+      setNewRecord({
+        record_type: 'A',
+        name: '',
+        value: '',
+        ttl: 3600
+      });
+    } catch (error) {
+      console.error('Error adding DNS record:', error);
+      alert('Failed to add DNS record. Please try again.');
+    }
   };
 
-  const deleteDnsRecord = (id: number) => {
-    setDnsRecords(dnsRecords.filter(record => record.id !== id));
+  const deleteDnsRecord = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this DNS record?')) {
+      return;
+    }
+
+    try {
+      await ApiService.delete(`/dns-records/${id}/delete/`);
+      await loadDomainSettings(); // Reload to get updated records
+    } catch (error) {
+      console.error('Error deleting DNS record:', error);
+      alert('Failed to delete DNS record. Please try again.');
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -98,12 +145,20 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
     alert('Copied to clipboard!');
   };
 
-  const deleteDomain = () => {
+  const deleteDomain = async () => {
     if (confirm('Are you sure you want to delete this custom domain? This action cannot be undone.')) {
-      setSettings({
-        customDomain: '',
-        isConfigured: false
-      });
+      try {
+        await ApiService.delete('/custom-domain/delete/');
+        setSettings({
+          customDomain: '',
+          subdomain: '',
+          isConfigured: false
+        });
+        setDnsRecords([]);
+      } catch (error) {
+        console.error('Error deleting domain:', error);
+        alert('Failed to delete domain. Please try again.');
+      }
     }
   };
 
@@ -134,20 +189,38 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
       {isEditing ? (
         <div className="space-y-6">
           {/* Domain Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Domain Name
-            </label>
-            <input
-              type="text"
-              value={settings.customDomain}
-              onChange={(e) => setSettings({ ...settings, customDomain: e.target.value })}
-              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-              placeholder="e.g., yourdomain.com"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Enter your domain name without www or protocol
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Subdomain (optional)
+              </label>
+              <input
+                type="text"
+                value={settings.subdomain || ''}
+                onChange={(e) => setSettings({ ...settings, subdomain: e.target.value })}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                placeholder="shop, store, etc."
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Optional subdomain prefix (e.g., shop.yourdomain.com)
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Domain Name *
+              </label>
+              <input
+                type="text"
+                value={settings.customDomain}
+                onChange={(e) => setSettings({ ...settings, customDomain: e.target.value })}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+                placeholder="e.g., yourdomain.com"
+                required
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Enter your domain name without www or protocol
+              </p>
+            </div>
           </div>
 
           {/* Action Buttons */}
@@ -224,8 +297,8 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
             {/* Add New Record */}
             <div className="grid grid-cols-4 gap-2 mb-4">
               <select
-                value={newRecord.type}
-                onChange={(e) => setNewRecord({ ...newRecord, type: e.target.value })}
+                value={newRecord.record_type}
+                onChange={(e) => setNewRecord({ ...newRecord, record_type: e.target.value })}
                 className="px-2 py-2 bg-white/10 border border-white/20 rounded text-white text-xs backdrop-blur-sm"
               >
                 <option value="A" className="bg-gray-800">A</option>
@@ -262,7 +335,7 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
                 <div key={record.id} className="flex items-center justify-between bg-white/5 rounded-md p-2">
                   <div className="flex items-center space-x-3">
                     <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded border border-blue-400/30">
-                      {record.type}
+                      {record.record_type}
                     </span>
                     <span className="text-sm text-gray-300 font-mono">{record.name}</span>
                     <span className="text-sm text-gray-400">→</span>

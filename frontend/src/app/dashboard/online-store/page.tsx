@@ -62,6 +62,12 @@ export default function OnlineStorePage() {
   const [terms, setTerms] = useState("");
   const [privacy, setPrivacy] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [customDomain, setCustomDomain] = useState<{
+    domain: string;
+    subdomain?: string;
+    full_domain: string;
+    is_active: boolean;
+  } | null>(null);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -71,12 +77,13 @@ export default function OnlineStorePage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [productsData, onlineProductsData, ordersData, termsData, privacyData] = await Promise.all([
+      const [productsData, onlineProductsData, ordersData, termsData, privacyData, domainData] = await Promise.all([
         ApiService.get("/products/"),
         ApiService.get("/online-store/products/").catch(() => ({ results: [] })),
         ApiService.get("/online-store/orders/").catch(() => ({ results: [] })),
         ApiService.get("/online-store/terms/").catch(() => ({ content: "" })),
-        ApiService.get("/online-store/privacy/").catch(() => ({ content: "" }))
+        ApiService.get("/online-store/privacy/").catch(() => ({ content: "" })),
+        ApiService.get("/custom-domain/").catch(() => ({ custom_domain: null }))
       ]);
       
       setProducts(productsData.results || []);
@@ -84,6 +91,16 @@ export default function OnlineStorePage() {
       setOrders(ordersData.results || []);
       setTerms(termsData.content || "");
       setPrivacy(privacyData.content || "");
+      
+      // Set custom domain info
+      if (domainData.custom_domain) {
+        setCustomDomain({
+          domain: domainData.custom_domain.domain,
+          subdomain: domainData.custom_domain.subdomain,
+          full_domain: domainData.custom_domain.full_domain,
+          is_active: domainData.custom_domain.is_active
+        });
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -184,13 +201,34 @@ export default function OnlineStorePage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-100">Online Store</h1>
               <p className="text-sm text-slate-400 mt-1">Manage your e-commerce presence</p>
+              {customDomain && customDomain.is_active && (
+                <div className="flex items-center space-x-2 mt-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <span className="text-sm text-green-400 font-medium">
+                    Live at: {customDomain.full_domain}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="flex items-center space-x-2 px-6 py-3 bg-slate-800 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors">
-              <Globe className="h-5 w-5" />
-              <span>View Store</span>
-            </button>
+            {customDomain && customDomain.is_active ? (
+              <button 
+                onClick={() => window.open(`https://${customDomain.full_domain}`, '_blank')}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 transition-colors"
+              >
+                <Globe className="h-5 w-5" />
+                <span>Visit Store</span>
+              </button>
+            ) : (
+              <button 
+                onClick={() => window.open('/dashboard/settings', '_self')}
+                className="flex items-center space-x-2 px-6 py-3 bg-slate-800 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors"
+              >
+                <Globe className="h-5 w-5" />
+                <span>Setup Domain</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -232,6 +270,7 @@ export default function OnlineStorePage() {
                 onPublish={handlePublishProducts}
                 onToggleStatus={toggleProductStatus}
                 onRefresh={fetchData}
+                customDomain={customDomain}
               />
             )}
 
@@ -273,7 +312,8 @@ function ProductsTab({
   setSelectedProductId,
   onPublish,
   onToggleStatus,
-  onRefresh 
+  onRefresh,
+  customDomain 
 }: {
   products: OnlineProduct[];
   searchTerm: string;
@@ -284,6 +324,12 @@ function ProductsTab({
   onPublish: (product: Product) => void;
   onToggleStatus: (id: number, currentStatus: boolean) => void;
   onRefresh: () => void;
+  customDomain: {
+    domain: string;
+    subdomain?: string;
+    full_domain: string;
+    is_active: boolean;
+  } | null;
 }) {
   const selectedProduct = availableProducts.find(p => p.id === selectedProductId);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -304,6 +350,50 @@ function ProductsTab({
       {/* Add Products Section */}
       <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-4 border border-slate-700">
         <h3 className="text-lg font-medium text-slate-100 mb-4">Add Products to Online Store</h3>
+        
+        {/* Domain Status Info */}
+        {customDomain ? (
+          <div className="mb-4 p-3 rounded-lg border border-slate-600 bg-slate-900/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-200">
+                  Store URL: <span className="text-cyan-400">{customDomain.full_domain}</span>
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Status: {customDomain.is_active ? (
+                    <span className="text-green-400">Active & Live</span>
+                  ) : (
+                    <span className="text-yellow-400">Domain Configured (Verification Pending)</span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => window.open('/dashboard/settings', '_self')}
+                className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+              >
+                Manage Domain
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 p-3 rounded-lg border border-slate-600 bg-slate-900/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-200">No custom domain configured</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Products will be accessible via your default store URL
+                </p>
+              </div>
+              <button
+                onClick={() => window.open('/dashboard/settings', '_self')}
+                className="px-3 py-1 bg-cyan-500/20 text-cyan-400 text-sm rounded hover:bg-cyan-500/30 transition-colors"
+              >
+                Setup Domain
+              </button>
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <select

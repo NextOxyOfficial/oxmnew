@@ -549,12 +549,12 @@ export default function SettingsPage() {
   const handleCustomDomainSave = async (settings: any) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Custom domain settings saved:", settings);
+      // The API call is now handled within the CustomDomainSettings component
+      // This function is kept for compatibility but the actual save happens in the component
       showNotification("success", "Custom domain settings saved successfully!");
     } catch (error) {
       console.error("Error saving custom domain settings:", error);
+      showNotification("error", "Failed to save custom domain settings!");
       throw error;
     } finally {
       setLoading(false);
