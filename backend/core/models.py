@@ -29,6 +29,8 @@ class UserProfile(models.Model):
     address = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
     post_code = models.CharField(max_length=20, blank=True, null=True)
+    balance = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
+    sms_balance = models.IntegerField(default=0)
     store_logo = models.ImageField(upload_to="store_logos/", blank=True, null=True)
     banner_image = models.ImageField(upload_to="banner_images/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -101,7 +103,6 @@ class UserSettings(models.Model):
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
-        UserSettings.objects.create(user=instance)
         UserSettings.objects.create(user=instance)
 
 
