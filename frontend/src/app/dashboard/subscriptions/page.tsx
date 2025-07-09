@@ -708,7 +708,8 @@ export default function SubscriptionsPage() {
                 currentPlan === plan.name ||
                 isProcessing ||
                 isSubscriptionPaymentLoading ||
-                isUpdatingPlan
+                isUpdatingPlan ||
+                (plan.name === "free" && currentPlan === "pro") // Disable free plan when user has pro
                   ? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
                   : plan.popular
                   ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
@@ -718,7 +719,8 @@ export default function SubscriptionsPage() {
                 currentPlan === plan.name ||
                 isProcessing ||
                 isSubscriptionPaymentLoading ||
-                isUpdatingPlan
+                isUpdatingPlan ||
+                (plan.name === "free" && currentPlan === "pro") // Disable free plan when user has pro
               }
               onClick={() => {
                 if (plan.price > 0) {
@@ -734,6 +736,8 @@ export default function SubscriptionsPage() {
                 ? "Processing..."
                 : isUpdatingPlan
                 ? "Updating Plan..."
+                : plan.name === "free" && currentPlan === "pro"
+                ? "Pro Active"
                 : plan.price > 0
                 ? `Pay ৳${plan.price} - Upgrade to ${
                     plan.name.charAt(0).toUpperCase() + plan.name.slice(1)
