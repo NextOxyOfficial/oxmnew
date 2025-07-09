@@ -70,9 +70,11 @@ export default function OrdersPage() {
   // Filter and sort orders
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
-      order.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer_phone?.includes(searchTerm);
+      (order.product_name &&
+        order.product_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.customer_name &&
+        order.customer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.customer_phone && order.customer_phone.includes(searchTerm));
 
     const matchesCustomer =
       filterCustomer === "all" ||
@@ -89,7 +91,7 @@ export default function OrdersPage() {
           new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime()
         );
       case "product":
-        return a.product.name.localeCompare(b.product.name);
+        return (a.product_name || "").localeCompare(b.product_name || "");
       case "customer":
         return (a.customer_name || "").localeCompare(b.customer_name || "");
       case "amount-high":
@@ -488,7 +490,7 @@ export default function OrdersPage() {
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1 min-w-0 pr-2">
                         <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 transition-colors">
-                          {order.product.name}
+                          {order?.product_name || "Unknown Product"}
                         </h4>
                         {order.variant && (
                           <p className="text-slate-400 text-sm mt-1">
@@ -617,7 +619,7 @@ export default function OrdersPage() {
                           <td className="py-4 px-4">
                             <div>
                               <p className="text-sm font-medium text-slate-100">
-                                {order.product.name}
+                                {order?.product_name || "Unknown Product"}
                               </p>
                               {order.variant && (
                                 <p className="text-xs text-slate-400">

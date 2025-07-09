@@ -17,6 +17,7 @@ export interface Order {
     name: string;
     has_variants: boolean;
   };
+  product_name: string; // Direct product name field
   variant?: {
     id: number;
     color: string;
