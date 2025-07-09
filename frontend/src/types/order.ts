@@ -12,16 +12,21 @@ export interface Customer {
 
 export interface Order {
   id: number;
-  product: number; // Product ID
-  product_name: string; // Product name from serializer
-  variant?: number; // Variant ID
-  variant_display?: string; // Variant display string from serializer
+  product: {
+    id: number;
+    name: string;
+    has_variants: boolean;
+  };
+  product_name: string; // Direct product name field
+  variant?: {
+    id: number;
+    color: string;
+    size: string;
+    custom_variant?: string;
+  };
   quantity: number;
   unit_price: number;
-  buy_price?: number; // From serializer for profit calculation
   total_amount: number;
-  profit?: number; // From serializer
-  profit_margin?: number; // From serializer
   customer_name?: string;
   customer_phone?: string;
   customer_email?: string;
