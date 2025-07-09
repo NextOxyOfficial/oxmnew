@@ -11,7 +11,6 @@ from .models import (
     Product,
     ProductVariant,
     ProductPhoto,
-    ProductSale,
     ProductStockMovement,
 )
 from .serializers import (
@@ -20,7 +19,6 @@ from .serializers import (
     ProductCreateSerializer,
     ProductVariantSerializer,
     ProductPhotoSerializer,
-    ProductSaleSerializer,
     ProductStockMovementSerializer,
 )
 
@@ -513,53 +511,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         )
 
 
-class ProductSaleViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing product sales"""
-
-    serializer_class = ProductSaleSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [
-        DjangoFilterBackend,
-        filters.SearchFilter,
-        filters.OrderingFilter,
-    ]
-    filterset_fields = ["product", "variant"]
-    search_fields = ["customer_name", "customer_phone", "customer_email", "notes"]
-    ordering_fields = ["sale_date", "total_amount", "quantity"]
-    ordering = ["-sale_date"]
-
-    def get_queryset(self):
-        """Return sales for the authenticated user"""
-        return ProductSale.objects.filter(user=self.request.user).select_related(
-            "product", "variant"
-        )
-
-    @action(detail=False, methods=["get"])
-    def statistics(self, request):
-        """Get sales statistics"""
-        queryset = self.get_queryset()
-
-        total_sales = queryset.count()
-        total_revenue = queryset.aggregate(total=Sum("total_amount"))["total"] or 0
-        total_quantity = queryset.aggregate(total=Sum("quantity"))["total"] or 0
-
-        # Top selling products
-        top_products = (
-            queryset.values("product__name")
-            .annotate(total_quantity=Sum("quantity"), total_revenue=Sum("total_amount"))
-            .order_by("-total_quantity")[:10]
-        )
-
-        return Response(
-            {
-                "total_sales": total_sales,
-                "total_revenue": total_revenue,
-                "total_quantity_sold": total_quantity,
-                "top_products": list(top_products),
-            }
-        )
-
-
 class ProductStockMovementViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for viewing stock movements"""
 
@@ -574,4 +525,4 @@ class ProductStockMovementViewSet(viewsets.ReadOnlyModelViewSet):
         """Return stock movements for the authenticated user"""
         return ProductStockMovement.objects.filter(
             user=self.request.user
-        ).select_related("product", "variant", "reference_sale")
+        ).select_related("product", "variant")

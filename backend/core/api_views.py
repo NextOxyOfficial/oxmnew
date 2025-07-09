@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Sum
 from django.utils import timezone
-from products.models import Product, ProductSale
+from products.models import Product
 from customers.models import Customer
 from suppliers.models import Supplier
 
@@ -30,14 +30,21 @@ def dashboard_stats(request):
     customer_count = customers.count()
     vip_customers = customers.filter(status="active").count()
 
-    # Order stats using ProductSale model
-    sales = ProductSale.objects.filter(user=user)
-    order_count = sales.count()
-    # All sales are considered completed
-    completed_orders = order_count
-    total_revenue = sales.aggregate(total=Sum("total_amount"))["total"] or 0
-    # No pending orders in ProductSale model
-    pending_orders = 0
+    # Order stats using Order model
+    try:
+        from orders.models import Order
+
+        orders = Order.objects.filter(user=user)
+        order_count = orders.count()
+        completed_orders = orders.filter(status="completed").count()
+        total_revenue = orders.aggregate(total=Sum("total_amount"))["total"] or 0
+        pending_orders = orders.filter(status="pending").count()
+    except ImportError:
+        # Fallback if orders app not available yet
+        order_count = 0
+        completed_orders = 0
+        total_revenue = 0
+        pending_orders = 0
 
     # Supplier stats
     supplier_count = Supplier.objects.filter(user=user).count()
@@ -231,21 +238,28 @@ def get_notifications(request):
             )
             notification_id += 1
 
-        # Check for recent orders (using ProductSale)
-        recent_sales = ProductSale.objects.filter(user=user).order_by("-sale_date")[:1]
-        if recent_sales.exists():
-            sale = recent_sales.first()
-            notifications.append(
-                {
-                    "id": notification_id,
-                    "title": "New Order",
-                    "message": f"Sale #{sale.id} to {sale.customer_name or 'Guest'}",
-                    "type": "info",
-                    "timestamp": "3 hours ago",
-                    "read": True,
-                }
-            )
-            notification_id += 1
+        # Check for recent orders (using Order model)
+        try:
+            from orders.models import Order
+
+            recent_orders = Order.objects.filter(user=user).order_by("-created_at")[:1]
+            if recent_orders.exists():
+                order = recent_orders.first()
+                customer_name = order.customer.name if order.customer else "Guest"
+                notifications.append(
+                    {
+                        "id": notification_id,
+                        "title": "New Order",
+                        "message": f"Order #{order.order_number} to {customer_name}",
+                        "type": "info",
+                        "timestamp": "3 hours ago",
+                        "read": True,
+                    }
+                )
+                notification_id += 1
+        except ImportError:
+            # Orders app not available yet
+            pass
 
         # System notifications
         notifications.append(
@@ -274,7 +288,7 @@ def get_notifications(request):
                 },
             )
 
-    except Exception as e:
+    except Exception:
         # Fallback notifications if there are any errors
         notifications = [
             {

@@ -3,11 +3,11 @@ from rest_framework.routers import DefaultRouter
 from . import views
 
 router = DefaultRouter()
-router.register(r'products', views.ProductViewSet, basename='product')
-router.register(r'sales', views.ProductSaleViewSet, basename='product-sale')
-router.register(r'stock-movements',
-                views.ProductStockMovementViewSet, basename='stock-movement')
+router.register(r"products", views.ProductViewSet, basename="product")
+router.register(
+    r"stock-movements", views.ProductStockMovementViewSet, basename="stock-movement"
+)
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path("", include(router.urls)),
 ]

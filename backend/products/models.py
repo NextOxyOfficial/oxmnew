@@ -10,43 +10,49 @@ import os
 
 def product_photo_upload_path(instance, filename):
     """Generate upload path for product photos"""
-    ext = filename.split('.')[-1]
+    ext = filename.split(".")[-1]
     filename = f"{uuid.uuid4()}.{ext}"
-    return os.path.join('products', str(instance.product.id), 'photos', filename)
+    return os.path.join("products", str(instance.product.id), "photos", filename)
 
 
 class Product(models.Model):
     """Main product model"""
+
     name = models.CharField(max_length=200)
     category = models.ForeignKey(
-        Category, on_delete=models.SET_NULL, null=True, related_name='products')
+        Category, on_delete=models.SET_NULL, null=True, related_name="products"
+    )
     supplier = models.ForeignKey(
-        Supplier, on_delete=models.SET_NULL, null=True, related_name='products')
+        Supplier, on_delete=models.SET_NULL, null=True, related_name="products"
+    )
     location = models.CharField(max_length=200, help_text="Storage location")
     details = models.TextField(
-        blank=True, null=True, help_text="Product description and details")
+        blank=True, null=True, help_text="Product description and details"
+    )
 
     # Pricing mode
     has_variants = models.BooleanField(
-        default=False, help_text="True if product has color/size variants")
+        default=False, help_text="True if product has color/size variants"
+    )
 
     # Single pricing (used when has_variants=False)
     buy_price = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
+    )
     sell_price = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
+    )
     stock = models.PositiveIntegerField(default=0)
 
     # Meta fields
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='products')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="products")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
-        unique_together = ['name', 'user']
+        ordering = ["-created_at"]
+        unique_together = ["name", "user"]
 
     def __str__(self):
         return self.name
@@ -55,21 +61,21 @@ class Product(models.Model):
     def total_stock(self):
         """Calculate total stock across all variants or return single stock"""
         if self.has_variants:
-            return self.variants.aggregate(total=Sum('stock'))['total'] or 0
+            return self.variants.aggregate(total=Sum("stock"))["total"] or 0
         return self.stock
 
     @property
     def average_buy_price(self):
         """Calculate average buy price across variants or return single price"""
         if self.has_variants:
-            return self.variants.aggregate(avg=Avg('buy_price'))['avg'] or 0
+            return self.variants.aggregate(avg=Avg("buy_price"))["avg"] or 0
         return self.buy_price
 
     @property
     def average_sell_price(self):
         """Calculate average sell price across variants or return single price"""
         if self.has_variants:
-            return self.variants.aggregate(avg=Avg('sell_price'))['avg'] or 0
+            return self.variants.aggregate(avg=Avg("sell_price"))["avg"] or 0
         return self.sell_price
 
     @property
@@ -114,17 +120,18 @@ class Product(models.Model):
     def sold(self):
         """Calculate total sold quantity from sales"""
         from django.db.models import Sum
+
         total_sold = 0
         if self.has_variants:
             # Sum sales from all variants
             for variant in self.variants.all():
-                variant_sold = variant.sales.aggregate(
-                    total=Sum('quantity'))['total'] or 0
+                variant_sold = (
+                    variant.sales.aggregate(total=Sum("quantity"))["total"] or 0
+                )
                 total_sold += variant_sold
         else:
             # Sum sales from main product
-            total_sold = self.sales.aggregate(
-                total=Sum('quantity'))['total'] or 0
+            total_sold = self.sales.aggregate(total=Sum("quantity"))["total"] or 0
         return total_sold
 
     @property
@@ -141,29 +148,34 @@ class Product(models.Model):
 
 class ProductVariant(models.Model):
     """Product variants for color, size, and other attributes"""
+
     WEIGHT_UNITS = [
-        ('g', 'Grams'),
-        ('kg', 'Kilograms'),
-        ('lb', 'Pounds'),
-        ('oz', 'Ounces'),
+        ("g", "Grams"),
+        ("kg", "Kilograms"),
+        ("lb", "Pounds"),
+        ("oz", "Ounces"),
     ]
 
     product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name='variants')
+        Product, on_delete=models.CASCADE, related_name="variants"
+    )
     color = models.CharField(max_length=50)
     size = models.CharField(max_length=50)
-    weight = models.DecimalField(
-        max_digits=8, decimal_places=2, blank=True, null=True)
+    weight = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
     weight_unit = models.CharField(
-        max_length=5, choices=WEIGHT_UNITS, blank=True, null=True)
+        max_length=5, choices=WEIGHT_UNITS, blank=True, null=True
+    )
     custom_variant = models.CharField(
-        max_length=100, blank=True, null=True, help_text="Custom variant description")
+        max_length=100, blank=True, null=True, help_text="Custom variant description"
+    )
 
     # Pricing for this variant
     buy_price = models.DecimalField(
-        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
+    )
     sell_price = models.DecimalField(
-        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
+    )
     stock = models.PositiveIntegerField(default=0)
 
     # Meta fields
@@ -171,8 +183,8 @@ class ProductVariant(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['color', 'size']
-        unique_together = ['product', 'color', 'size', 'custom_variant']
+        ordering = ["color", "size"]
+        unique_together = ["product", "color", "size", "custom_variant"]
 
     def __str__(self):
         variant_name = f"{self.color} - {self.size}"
@@ -202,15 +214,17 @@ class ProductVariant(models.Model):
 
 class ProductPhoto(models.Model):
     """Product photos with support for multiple images"""
+
     product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name='photos')
+        Product, on_delete=models.CASCADE, related_name="photos"
+    )
     image = models.ImageField(upload_to=product_photo_upload_path)
     alt_text = models.CharField(max_length=200, blank=True, null=True)
     order = models.PositiveIntegerField(default=0, help_text="Display order")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['order', 'created_at']
+        ordering = ["order", "created_at"]
 
     def __str__(self):
         return f"Photo for {self.product.name}"
@@ -223,82 +237,46 @@ class ProductPhoto(models.Model):
         super().delete(*args, **kwargs)
 
 
-class ProductSale(models.Model):
-    """Track product sales"""
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name='sales')
-    variant = models.ForeignKey(
-        ProductVariant, on_delete=models.CASCADE, null=True, blank=True, related_name='sales')
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='product_sales')
-
-    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
-    unit_price = models.DecimalField(
-        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
-    total_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
-
-    customer_name = models.CharField(max_length=200, blank=True, null=True)
-    customer_phone = models.CharField(max_length=20, blank=True, null=True)
-    customer_email = models.EmailField(blank=True, null=True)
-
-    notes = models.TextField(blank=True, null=True)
-    sale_date = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-sale_date']
-
-    def __str__(self):
-        variant_info = f" - {self.variant}" if self.variant else ""
-        return f"Sale of {self.product.name}{variant_info} - {self.quantity} units"
-
-    def save(self, *args, **kwargs):
-        """Calculate total amount and update stock"""
-        self.total_amount = self.quantity * self.unit_price
-
-        # Update stock
-        if self.variant:
-            self.variant.stock -= self.quantity
-            self.variant.save()
-        else:
-            self.product.stock -= self.quantity
-            self.product.save()
-
-        super().save(*args, **kwargs)
-
-
 class ProductStockMovement(models.Model):
     """Track stock movements for inventory management"""
+
     MOVEMENT_TYPES = [
-        ('in', 'Stock In'),
-        ('out', 'Stock Out'),
-        ('adjustment', 'Adjustment'),
-        ('sale', 'Sale'),
-        ('return', 'Return'),
+        ("in", "Stock In"),
+        ("out", "Stock Out"),
+        ("adjustment", "Adjustment"),
+        ("sale", "Sale"),
+        ("return", "Return"),
     ]
 
     product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name='stock_movements')
-    variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE,
-                                null=True, blank=True, related_name='stock_movements')
+        Product, on_delete=models.CASCADE, related_name="stock_movements"
+    )
+    variant = models.ForeignKey(
+        ProductVariant,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="stock_movements",
+    )
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='stock_movements')
+        User, on_delete=models.CASCADE, related_name="stock_movements"
+    )
 
     movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES)
     quantity = models.IntegerField(
-        help_text="Positive for stock in, negative for stock out")
+        help_text="Positive for stock in, negative for stock out"
+    )
     previous_stock = models.PositiveIntegerField()
     new_stock = models.PositiveIntegerField()
 
     reason = models.CharField(max_length=200, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
-    reference_sale = models.ForeignKey(
-        ProductSale, on_delete=models.SET_NULL, null=True, blank=True)
+    # Removed reference_sale field since ProductSale model is moved to orders app
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def __str__(self):
         variant_info = f" - {self.variant}" if self.variant else ""

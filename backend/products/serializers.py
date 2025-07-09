@@ -3,7 +3,6 @@ from .models import (
     Product,
     ProductVariant,
     ProductPhoto,
-    ProductSale,
     ProductStockMovement,
 )
 from core.models import Category
@@ -376,94 +375,6 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             ProductPhoto.objects.create(product=product, image=photo, order=i)
 
         return product
-
-
-class ProductSaleSerializer(serializers.ModelSerializer):
-    """Serializer for product sales with profit calculation"""
-
-    product_name = serializers.CharField(source="product.name", read_only=True)
-    variant_display = serializers.SerializerMethodField()
-    buy_price = serializers.SerializerMethodField()
-    profit = serializers.SerializerMethodField()
-    profit_margin = serializers.SerializerMethodField()
-
-    def get_variant_display(self, obj):
-        """Get variant display string"""
-        return str(obj.variant) if obj.variant else None
-
-    def get_buy_price(self, obj):
-        """Get the buy price from product or variant"""
-        if obj.variant:
-            return obj.variant.buy_price
-        return obj.product.buy_price
-
-    def get_profit(self, obj):
-        """Calculate profit for this sale"""
-        buy_price = self.get_buy_price(obj)
-        sell_price = obj.unit_price
-        return (sell_price - buy_price) * obj.quantity
-
-    def get_profit_margin(self, obj):
-        """Calculate profit margin for this sale"""
-        profit = self.get_profit(obj)
-        if obj.total_amount > 0:
-            return (profit / obj.total_amount) * 100
-        return 0
-
-    class Meta:
-        model = ProductSale
-        fields = [
-            "id",
-            "product",
-            "product_name",
-            "variant",
-            "variant_display",
-            "quantity",
-            "unit_price",
-            "buy_price",
-            "total_amount",
-            "profit",
-            "profit_margin",
-            "customer_name",
-            "customer_phone",
-            "customer_email",
-            "notes",
-            "sale_date",
-        ]
-        read_only_fields = ["id", "total_amount", "sale_date"]
-
-    def validate(self, data):
-        """Validate sale data"""
-        product = data.get("product")
-        variant = data.get("variant")
-        quantity = data.get("quantity", 0)
-
-        # Ensure product belongs to user
-        if product.user != self.context["request"].user:
-            raise serializers.ValidationError("Product not found")
-
-        # Validate variant belongs to product
-        if variant and variant.product != product:
-            raise serializers.ValidationError("Variant does not belong to this product")
-
-        # Check stock availability
-        if variant:
-            if variant.stock < quantity:
-                raise serializers.ValidationError(
-                    f"Insufficient stock. Available: {variant.stock}"
-                )
-        else:
-            if product.stock < quantity:
-                raise serializers.ValidationError(
-                    f"Insufficient stock. Available: {product.stock}"
-                )
-
-        return data
-
-    def create(self, validated_data):
-        """Create sale and update stock"""
-        validated_data["user"] = self.context["request"].user
-        return super().create(validated_data)
 
 
 class ProductStockMovementSerializer(serializers.ModelSerializer):

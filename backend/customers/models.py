@@ -5,7 +5,6 @@ from django.db.models import Sum, Count, F
 from django.utils import timezone
 from decimal import Decimal
 from core.models import Gift, Achievement, Level
-from products.models import Product, ProductVariant
 
 
 class Customer(models.Model):
@@ -45,33 +44,31 @@ class Customer(models.Model):
     @property
     def total_orders(self):
         """Calculate total number of orders for this customer"""
-        from products.models import ProductSale
+        from orders.models import Order
 
-        return ProductSale.objects.filter(
-            user=self.user, customer_name=self.name
-        ).count()
+        return Order.objects.filter(user=self.user, customer=self).count()
 
     @property
     def total_spent(self):
         """Calculate total amount spent by this customer"""
-        from products.models import ProductSale
+        from orders.models import Order
 
-        total = ProductSale.objects.filter(
-            user=self.user, customer_name=self.name
-        ).aggregate(total=Sum("total_amount"))["total"]
+        total = Order.objects.filter(user=self.user, customer=self).aggregate(
+            total=Sum("total_amount")
+        )["total"]
         return total or Decimal("0.00")
 
     @property
     def last_order_date(self):
         """Get the date of the last order"""
-        from products.models import ProductSale
+        from orders.models import Order
 
-        last_sale = (
-            ProductSale.objects.filter(user=self.user, customer_name=self.name)
-            .order_by("-sale_date")
+        last_order = (
+            Order.objects.filter(user=self.user, customer=self)
+            .order_by("-created_at")
             .first()
         )
-        return last_sale.sale_date if last_sale else None
+        return last_order.created_at if last_order else None
 
     @property
     def active_gifts_count(self):
@@ -94,103 +91,6 @@ class Customer(models.Model):
         return self.customer_levels.filter(is_current=True).first()
 
 
-class Order(models.Model):
-    """Order model to track customer purchases"""
-
-    STATUS_CHOICES = [
-        ("pending", "Pending"),
-        ("processing", "Processing"),
-        ("completed", "Completed"),
-        ("cancelled", "Cancelled"),
-        ("refunded", "Refunded"),
-    ]
-
-    customer = models.ForeignKey(
-        Customer, on_delete=models.CASCADE, related_name="orders"
-    )
-    order_number = models.CharField(max_length=20, unique=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    total_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
-    )
-    paid_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
-    )
-    discount_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
-    )
-    tax_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
-    )
-
-    # Order details
-    notes = models.TextField(blank=True, null=True)
-    delivery_address = models.TextField(blank=True, null=True)
-    expected_delivery_date = models.DateField(blank=True, null=True)
-
-    # Metadata
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"Order #{self.order_number} - {self.customer.name}"
-
-    @property
-    def items_count(self):
-        """Count total items in this order"""
-        return self.items.aggregate(total=Sum("quantity"))["total"] or 0
-
-    @property
-    def due_amount(self):
-        """Calculate remaining due amount"""
-        return self.total_amount - self.paid_amount
-
-    def save(self, *args, **kwargs):
-        if not self.order_number:
-            # Generate unique order number
-            import datetime
-
-            today = datetime.date.today()
-            count = Order.objects.filter(created_at__date=today).count() + 1
-            self.order_number = f"ORD{today.strftime('%Y%m%d')}{count:04d}"
-        super().save(*args, **kwargs)
-
-
-class OrderItem(models.Model):
-    """Individual items in an order"""
-
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    variant = models.ForeignKey(
-        ProductVariant, on_delete=models.CASCADE, blank=True, null=True
-    )
-    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
-    unit_price = models.DecimalField(
-        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
-    )
-    total_price = models.DecimalField(
-        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = ["order", "product", "variant"]
-
-    def __str__(self):
-        variant_info = f" - {self.variant}" if self.variant else ""
-        return f"{self.product.name}{variant_info} x {self.quantity}"
-
-    def save(self, *args, **kwargs):
-        self.total_price = self.quantity * self.unit_price
-        super().save(*args, **kwargs)
-
-
 class CustomerGift(models.Model):
     """Track gifts given to customers"""
 
@@ -211,9 +111,7 @@ class CustomerGift(models.Model):
     description = models.TextField(blank=True, null=True)
     expiry_date = models.DateField(blank=True, null=True)
     used_date = models.DateTimeField(blank=True, null=True)
-    used_in_order = models.ForeignKey(
-        Order, on_delete=models.SET_NULL, blank=True, null=True
-    )
+    # Removed used_in_order field since Order model is moved to orders app
 
     # Metadata
     user = models.ForeignKey(
@@ -298,7 +196,7 @@ class DuePayment(models.Model):
         Customer, on_delete=models.CASCADE, related_name="due_payments"
     )
     order = models.ForeignKey(
-        Order,
+        "orders.Order",
         on_delete=models.CASCADE,
         related_name="due_payments",
         blank=True,
@@ -349,7 +247,7 @@ class Transaction(models.Model):
         Customer, on_delete=models.CASCADE, related_name="transactions"
     )
     order = models.ForeignKey(
-        Order,
+        "orders.Order",
         on_delete=models.CASCADE,
         related_name="transactions",
         blank=True,
@@ -406,7 +304,9 @@ class SMSLog(models.Model):
     )
 
     # Related objects
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, blank=True, null=True)
+    order = models.ForeignKey(
+        "orders.Order", on_delete=models.CASCADE, blank=True, null=True
+    )
     transaction = models.ForeignKey(
         Transaction, on_delete=models.CASCADE, blank=True, null=True
     )

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "employees",
     "banking",
     "subscription",  # Added subscription app
+    "orders",  # New orders app
     "online_store",  # Added online store app
 ]
 

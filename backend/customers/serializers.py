@@ -1,8 +1,6 @@
 from rest_framework import serializers
 from .models import (
     Customer,
-    Order,
-    OrderItem,
     CustomerGift,
     CustomerAchievement,
     CustomerLevel,
@@ -57,55 +55,6 @@ class CustomerSerializer(serializers.ModelSerializer):
                 "notes": current_level.notes,
             }
         return None
-
-
-class OrderItemSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source="product.name", read_only=True)
-    variant_name = serializers.CharField(source="variant.name", read_only=True)
-
-    class Meta:
-        model = OrderItem
-        fields = [
-            "id",
-            "product",
-            "product_name",
-            "variant",
-            "variant_name",
-            "quantity",
-            "unit_price",
-            "total_price",
-        ]
-        read_only_fields = ["total_price"]
-
-
-class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True)
-    customer_name = serializers.CharField(source="customer.name", read_only=True)
-    items_count = serializers.ReadOnlyField()
-    due_amount = serializers.ReadOnlyField()
-
-    class Meta:
-        model = Order
-        fields = [
-            "id",
-            "customer",
-            "customer_name",
-            "order_number",
-            "status",
-            "total_amount",
-            "paid_amount",
-            "due_amount",
-            "discount_amount",
-            "tax_amount",
-            "notes",
-            "delivery_address",
-            "expected_delivery_date",
-            "items_count",
-            "items",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = ["order_number", "created_at", "updated_at"]
 
 
 class CustomerGiftSerializer(serializers.ModelSerializer):
@@ -289,7 +238,6 @@ class LevelForCustomerSerializer(serializers.ModelSerializer):
 class CustomerDetailSerializer(CustomerSerializer):
     """Detailed customer serializer including related data"""
 
-    orders = OrderSerializer(many=True, read_only=True)
     customer_gifts = CustomerGiftSerializer(many=True, read_only=True)
     customer_achievements = CustomerAchievementSerializer(many=True, read_only=True)
     customer_levels = CustomerLevelSerializer(many=True, read_only=True)
@@ -298,7 +246,6 @@ class CustomerDetailSerializer(CustomerSerializer):
 
     class Meta(CustomerSerializer.Meta):
         fields = CustomerSerializer.Meta.fields + [
-            "orders",
             "customer_gifts",
             "customer_achievements",
             "customer_levels",

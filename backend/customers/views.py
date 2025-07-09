@@ -10,8 +10,6 @@ from datetime import datetime, timedelta
 
 from .models import (
     Customer,
-    Order,
-    OrderItem,
     CustomerGift,
     CustomerAchievement,
     CustomerLevel,
@@ -23,7 +21,6 @@ from .serializers import (
     CustomerSerializer,
     CustomerDetailSerializer,
     CustomerCreateUpdateSerializer,
-    OrderSerializer,
     CustomerGiftSerializer,
     CustomerAchievementSerializer,
     CustomerLevelSerializer,
@@ -75,33 +72,6 @@ class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ["PUT", "PATCH"]:
             return CustomerCreateUpdateSerializer
         return CustomerDetailSerializer
-
-
-class OrderListCreateView(generics.ListCreateAPIView):
-    """List all orders or create a new order"""
-
-    serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ["status", "customer"]
-    ordering_fields = ["created_at", "total_amount"]
-    ordering = ["-created_at"]
-
-    def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-
-class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """Retrieve, update or delete an order"""
-
-    serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
 
 
 class CustomerGiftListCreateView(generics.ListCreateAPIView):
@@ -449,6 +419,10 @@ def customer_statistics(request):
     # Basic statistics
     total_customers = Customer.objects.filter(user=user).count()
     active_customers = Customer.objects.filter(user=user, status="active").count()
+
+    # Import Order from orders app
+    from orders.models import Order
+
     total_orders = Order.objects.filter(user=user).count()
 
     # Revenue statistics
@@ -483,8 +457,13 @@ def customer_summary(request, customer_id):
     try:
         customer = Customer.objects.get(id=customer_id, user=request.user)
 
-        # Get recent orders
-        recent_orders = customer.orders.order_by("-created_at")[:10]
+        # Get recent orders from orders app
+        from orders.models import Order
+        from orders.serializers import OrderSerializer
+
+        recent_orders = Order.objects.filter(
+            customer=customer, user=request.user
+        ).order_by("-created_at")[:10]
 
         # Get active gifts
         active_gifts = customer.customer_gifts.filter(status="active")
