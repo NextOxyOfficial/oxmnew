@@ -20,6 +20,16 @@ class OnlineProduct(models.Model):
         unique_together = ['user', 'product']
         ordering = ['-created_at']
 
+    def save(self, *args, **kwargs):
+        # Auto-populate fields from product if this is a new instance
+        if not self.pk and self.product:
+            self.name = self.product.name
+            self.description = self.product.details or ''
+            self.price = self.product.sell_price or 0
+            self.category = self.product.category.name if self.product.category else 'General'
+            self.image_url = self.product.main_photo
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.name} - {self.user.username}"
 

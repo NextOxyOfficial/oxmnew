@@ -95,16 +95,13 @@ export default function OnlineStorePage() {
       setPrivacy(privacyData.content || "");
       
       // Set custom domain info
-      console.log("Domain data received:", domainData);
       if (domainData && domainData.custom_domain) {
-        console.log("Setting custom domain:", domainData.custom_domain);
         setCustomDomain({
           domain: domainData.custom_domain.domain,
           full_domain: domainData.custom_domain.full_domain,
           is_active: domainData.custom_domain.is_active
         });
       } else {
-        console.log("No custom domain found or domainData is null");
         setCustomDomain(null);
       }
     } catch (error) {
@@ -116,19 +113,26 @@ export default function OnlineStorePage() {
 
   const handlePublishProducts = async (product: Product) => {
     try {
-      await ApiService.post("/online-store/products/", {
+      const payload = {
         product_id: product.id,
         name: product.name,
         description: product.details || "",
         price: product.sell_price || product.price || 0,
         category: product.category_name || "General",
         is_published: true
-      });
+      };
+      
+      const response = await ApiService.post("/online-store/products/", payload);
       
       await fetchData(); // Refresh the data
       // Don't close modal to allow publishing more products
     } catch (error) {
       console.error("Error publishing product:", error);
+      if (error instanceof Error) {
+        alert(`Failed to publish product: ${error.message}`);
+      } else {
+        alert("Failed to publish product. Please try again.");
+      }
     }
   };
 
