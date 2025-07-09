@@ -229,9 +229,8 @@ class CustomDomain(models.Model):
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="custom_domain")
     domain = models.CharField(max_length=255, unique=True, help_text="Custom domain (e.g., example.com)")
-    subdomain = models.CharField(max_length=100, blank=True, null=True, help_text="Optional subdomain prefix")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    is_active = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
     ssl_enabled = models.BooleanField(default=False)
     verified_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -243,13 +242,12 @@ class CustomDomain(models.Model):
         ordering = ["-created_at"]
     
     def __str__(self):
-        full_domain = f"{self.subdomain}.{self.domain}" if self.subdomain else self.domain
-        return f"{self.user.username} - {full_domain}"
+        return f"{self.user.username} - {self.domain}"
     
     @property
     def full_domain(self):
-        """Returns the complete domain with subdomain if present"""
-        return f"{self.subdomain}.{self.domain}" if self.subdomain else self.domain
+        """Returns the complete domain"""
+        return self.domain
 
 
 class DNSRecord(models.Model):
