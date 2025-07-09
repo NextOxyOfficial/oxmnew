@@ -64,7 +64,6 @@ export default function OnlineStorePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [customDomain, setCustomDomain] = useState<{
     domain: string;
-    subdomain?: string;
     full_domain: string;
     is_active: boolean;
   } | null>(null);
@@ -83,7 +82,10 @@ export default function OnlineStorePage() {
         ApiService.get("/online-store/orders/").catch(() => ({ results: [] })),
         ApiService.get("/online-store/terms/").catch(() => ({ content: "" })),
         ApiService.get("/online-store/privacy/").catch(() => ({ content: "" })),
-        ApiService.get("/custom-domain/").catch(() => ({ custom_domain: null }))
+        ApiService.get("/custom-domain/").catch((error) => {
+          console.error("Error fetching custom domain:", error);
+          return { custom_domain: null };
+        })
       ]);
       
       setProducts(productsData.results || []);
@@ -93,13 +95,17 @@ export default function OnlineStorePage() {
       setPrivacy(privacyData.content || "");
       
       // Set custom domain info
-      if (domainData.custom_domain) {
+      console.log("Domain data received:", domainData);
+      if (domainData && domainData.custom_domain) {
+        console.log("Setting custom domain:", domainData.custom_domain);
         setCustomDomain({
           domain: domainData.custom_domain.domain,
-          subdomain: domainData.custom_domain.subdomain,
           full_domain: domainData.custom_domain.full_domain,
           is_active: domainData.custom_domain.is_active
         });
+      } else {
+        console.log("No custom domain found or domainData is null");
+        setCustomDomain(null);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -326,7 +332,6 @@ function ProductsTab({
   onRefresh: () => void;
   customDomain: {
     domain: string;
-    subdomain?: string;
     full_domain: string;
     is_active: boolean;
   } | null;

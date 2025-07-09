@@ -2062,7 +2062,6 @@ def custom_domain_view(request):
                 'custom_domain': {
                     'id': custom_domain.id,
                     'domain': custom_domain.domain,
-                    'subdomain': custom_domain.subdomain,
                     'full_domain': custom_domain.full_domain,
                     'status': custom_domain.status,
                     'is_active': custom_domain.is_active,
@@ -2092,7 +2091,6 @@ def custom_domain_view(request):
     elif request.method == 'POST':
         try:
             domain = request.data.get('domain', '').strip().lower()
-            subdomain = request.data.get('subdomain', '').strip().lower()
             
             if not domain:
                 return Response(
@@ -2106,8 +2104,7 @@ def custom_domain_view(request):
             
             # Check if domain already exists for another user
             existing_domain = CustomDomain.objects.filter(
-                domain=domain, 
-                subdomain=subdomain
+                domain=domain
             ).exclude(user=request.user).first()
             
             if existing_domain:
@@ -2121,16 +2118,14 @@ def custom_domain_view(request):
                 user=request.user,
                 defaults={
                     'domain': domain,
-                    'subdomain': subdomain,
                     'status': 'pending',
-                    'is_active': False,
+                    'is_active': True,
                 }
             )
             
             if not created:
                 # Update existing domain
                 custom_domain.domain = domain
-                custom_domain.subdomain = subdomain
                 custom_domain.status = 'pending'
                 custom_domain.save()
             
@@ -2139,7 +2134,6 @@ def custom_domain_view(request):
                 'custom_domain': {
                     'id': custom_domain.id,
                     'domain': custom_domain.domain,
-                    'subdomain': custom_domain.subdomain,
                     'full_domain': custom_domain.full_domain,
                     'status': custom_domain.status,
                     'is_active': custom_domain.is_active,
@@ -2362,43 +2356,56 @@ def get_store_by_domain(request, domain):
         # Find the custom domain
         custom_domain = CustomDomain.objects.get(
             domain=domain,
-            is_active=True,
-            status='verified'
+            is_active=True
         )
         
         # Get the user's online store products
-        from products.models import Product
-        
-        # Import here to avoid circular imports
         online_products = []
         try:
-            # You'll need to adapt this based on your online store model structure
-            # from your_online_store_app.models import OnlineProduct
-            # online_products = OnlineProduct.objects.filter(
-            #     user=custom_domain.user,
-            #     is_published=True
-            # )
-            pass
-        except:
+            from online_store.models import OnlineProduct
+            from online_store.serializers import PublicOnlineProductSerializer
+            
+            online_products_queryset = OnlineProduct.objects.filter(
+                user=custom_domain.user,
+                is_published=True
+            )
+            online_products = PublicOnlineProductSerializer(online_products_queryset, many=True).data
+            
+        except Exception as e:
+            print(f"Error fetching online products: {e}")
             pass
         
         # Get user profile for store info
         user_profile = UserProfile.objects.get(user=custom_domain.user)
         
+        # Get store settings if available
+        store_settings = None
+        try:
+            from online_store.models import StoreSettings
+            store_settings = StoreSettings.objects.get(user=custom_domain.user)
+        except:
+            pass
+        
         return Response({
             'store_info': {
                 'domain': custom_domain.full_domain,
                 'store_name': user_profile.company or custom_domain.user.get_full_name() or custom_domain.user.username,
-                'description': 'Welcome to our online store',
+                'description': store_settings.store_description if store_settings else 'Welcome to our online store',
                 'logo': user_profile.store_logo.url if user_profile.store_logo else None,
                 'banner': user_profile.banner_image.url if user_profile.banner_image else None,
+                'contact_email': store_settings.contact_email if store_settings else user_profile.user.email,
+                'contact_phone': store_settings.contact_phone if store_settings else user_profile.phone,
             },
-            'products': [],  # Will be populated when you integrate with online store
+            'products': online_products,
             'owner': {
                 'username': custom_domain.user.username,
                 'company': user_profile.company,
                 'phone': user_profile.phone,
                 'address': user_profile.address,
+            },
+            'store_settings': {
+                'terms_and_conditions': store_settings.terms_and_conditions if store_settings else '',
+                'privacy_policy': store_settings.privacy_policy if store_settings else '',
             }
         }, status=status.HTTP_200_OK)
         

@@ -10,7 +10,6 @@ interface CustomDomainSettingsProps {
 
 interface CustomDomainSettings {
   customDomain: string;
-  subdomain?: string;
   isConfigured: boolean;
 }
 
@@ -26,7 +25,6 @@ interface DNSRecord {
 export default function CustomDomainSettings({ loading, onSave }: CustomDomainSettingsProps) {
   const [settings, setSettings] = useState<CustomDomainSettings>({
     customDomain: '',
-    subdomain: '',
     isConfigured: false
   });
 
@@ -45,8 +43,8 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
 
   // Nameservers that users need to point their domain to
   const nameservers = [
-    'ns1.yourplatform.com',
-    'ns2.yourplatform.com'
+    'ns1.oxymanager.com',
+    'ns2.oxymanager.com'
   ];
 
   // Load existing domain settings
@@ -61,7 +59,6 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
       if (response.custom_domain) {
         setSettings({
           customDomain: response.custom_domain.domain,
-          subdomain: response.custom_domain.subdomain || '',
           isConfigured: response.custom_domain.is_active
         });
         setDnsRecords(response.dns_records || []);
@@ -82,8 +79,7 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
     setIsSaving(true);
     try {
       const domainData = {
-        domain: settings.customDomain,
-        subdomain: settings.subdomain || ''
+        domain: settings.customDomain
       };
       
       await ApiService.post('/custom-domain/', domainData);
@@ -151,7 +147,6 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
         await ApiService.delete('/custom-domain/delete/');
         setSettings({
           customDomain: '',
-          subdomain: '',
           isConfigured: false
         });
         setDnsRecords([]);
@@ -189,38 +184,21 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
       {isEditing ? (
         <div className="space-y-6">
           {/* Domain Input */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Subdomain (optional)
-              </label>
-              <input
-                type="text"
-                value={settings.subdomain || ''}
-                onChange={(e) => setSettings({ ...settings, subdomain: e.target.value })}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                placeholder="shop, store, etc."
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Optional subdomain prefix (e.g., shop.yourdomain.com)
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Domain Name *
-              </label>
-              <input
-                type="text"
-                value={settings.customDomain}
-                onChange={(e) => setSettings({ ...settings, customDomain: e.target.value })}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                placeholder="e.g., yourdomain.com"
-                required
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Enter your domain name without www or protocol
-              </p>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Domain Name *
+            </label>
+            <input
+              type="text"
+              value={settings.customDomain}
+              onChange={(e) => setSettings({ ...settings, customDomain: e.target.value })}
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
+              placeholder="e.g., yourdomain.com"
+              required
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Enter your domain name without www or protocol
+            </p>
           </div>
 
           {/* Action Buttons */}
