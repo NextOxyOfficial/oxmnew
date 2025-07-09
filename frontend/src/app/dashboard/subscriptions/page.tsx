@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { ApiService } from "../../../lib/api";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -11,7 +11,10 @@ interface SubscriptionPlan {
   price: number;
   period: string;
   description: string;
-  features: (string | { name?: string; description?: string; [key: string]: any })[];
+  features: (
+    | string
+    | { name?: string; description?: string; [key: string]: any }
+  )[];
   cta?: string;
   is_popular?: boolean;
   popular?: boolean;
@@ -72,10 +75,13 @@ export default function SubscriptionsPage() {
   const searchParams = useSearchParams();
 
   // Function to refresh subscription data
-  const refreshSubscriptionData = async () => {
+  const refreshSubscriptionData = useCallback(async () => {
     try {
       const subscriptionData = await ApiService.getMySubscription();
-      if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
+      if (
+        subscriptionData?.success &&
+        subscriptionData?.subscription?.plan?.name
+      ) {
         const planName = subscriptionData.subscription.plan.name.toLowerCase();
         setCurrentPlan(planName);
       } else {
@@ -85,96 +91,115 @@ export default function SubscriptionsPage() {
       console.error("Failed to refresh subscription data:", error);
       setCurrentPlan("free");
     }
-  };
+  }, [setCurrentPlan]);
 
   // Payment verification function
-  const verifyPayment = async (orderId: string) => {
-    setPaymentVerificationLoader(true);
-    try {
-      const response = await ApiService.verifyPayment(orderId);
-      if (response) {
-        setVerifyPaymentDetails(response);
+  const verifyPayment = useCallback(
+    async (orderId: string) => {
+      setPaymentVerificationLoader(true);
+      try {
+        const response = await ApiService.verifyPayment(orderId);
+        if (response) {
+          setVerifyPaymentDetails(response);
 
-        // Show success modal if payment was successful
-        if (response.shurjopay_message === "Success") {
-          // Handle subscription upgrade after successful payment
-          if (orderId.startsWith('SUB-')) {
-            const pendingPlan = localStorage.getItem('pending_subscription_plan');
-            if (pendingPlan) {
-              try {
-                setIsUpdatingPlan(true);
-                
-                const upgradeResponse = await ApiService.upgradeSubscription(pendingPlan);
-                
-                if (upgradeResponse && upgradeResponse.success) {
-                  localStorage.removeItem('pending_subscription_plan');
-                  
-                  // Show success message for subscription upgrade
+          if (response.shurjopay_message === "Success") {
+            if (orderId.startsWith("SUB-")) {
+              const pendingPlan = localStorage.getItem(
+                "pending_subscription_plan"
+              );
+              if (pendingPlan) {
+                try {
+                  setIsUpdatingPlan(true);
+
+                  const upgradeResponse = await ApiService.upgradeSubscription(
+                    pendingPlan
+                  );
+
+                  if (upgradeResponse && upgradeResponse.success) {
+                    localStorage.removeItem("pending_subscription_plan");
+
+                    setSuccessMessage(
+                      pendingPlan === "pro"
+                        ? "🎉 Congratulations! Your Pro subscription is now active. You now have access to all premium features!"
+                        : `Successfully upgraded to ${
+                            pendingPlan.charAt(0).toUpperCase() +
+                            pendingPlan.slice(1)
+                          } plan!`
+                    );
+                    setShowSuccessMessage(true);
+                    setCurrentPlan(pendingPlan);
+
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                    await refreshSubscriptionData();
+                  } else {
+                    setShowError(true);
+                  }
+                } catch (upgradeError) {
+                  console.error(
+                    "Failed to upgrade subscription after payment:",
+                    upgradeError
+                  );
+                  setShowError(true);
+                } finally {
+                  setIsUpdatingPlan(false);
+                }
+              }
+            }
+
+            if (orderId.startsWith("SMS-")) {
+              const pendingPackageId = localStorage.getItem(
+                "pending_sms_package"
+              );
+              if (pendingPackageId) {
+                try {
+                  await ApiService.purchaseSmsPackage(
+                    parseInt(pendingPackageId)
+                  );
+                  localStorage.removeItem("pending_sms_package");
                   setSuccessMessage(
-                    pendingPlan === 'pro' 
-                      ? "🎉 Congratulations! Your Pro subscription is now active. You now have access to all premium features!"
-                      : `Successfully upgraded to ${pendingPlan.charAt(0).toUpperCase() + pendingPlan.slice(1)} plan!`
+                    "✅ SMS package purchased successfully! Your SMS credits have been added to your account."
                   );
                   setShowSuccessMessage(true);
-                  
-                  // Update the current plan immediately
-                  setCurrentPlan(pendingPlan);
-                  
-                  // Refresh subscription data to get the latest state
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                  await refreshSubscriptionData();
-                } else {
+                } catch (purchaseError) {
+                  console.error(
+                    "Failed to add SMS credits after payment:",
+                    purchaseError
+                  );
                   setShowError(true);
                 }
-              } catch (upgradeError) {
-                console.error('Failed to upgrade subscription after payment:', upgradeError);
-                setShowError(true);
-              } finally {
-                setIsUpdatingPlan(false);
               }
             }
+
+            const url = new URL(window.location.href);
+            url.searchParams.delete("order_id");
+            window.history.replaceState({}, "", url.toString());
           }
-          
-          // Handle SMS package purchase after successful payment
-          if (orderId.startsWith('SMS-')) {
-            const pendingPackageId = localStorage.getItem('pending_sms_package');
-            if (pendingPackageId) {
-              try {
-                await ApiService.purchaseSmsPackage(parseInt(pendingPackageId));
-                localStorage.removeItem('pending_sms_package');
-                
-                // Show success message for SMS package purchase
-                setSuccessMessage("✅ SMS package purchased successfully! Your SMS credits have been added to your account.");
-                setShowSuccessMessage(true);
-              } catch (purchaseError) {
-                console.error('Failed to add SMS credits after payment:', purchaseError);
-                setShowError(true);
-              }
-            }
-          }
-          
-          // Remove order_id from URL
-          const url = new URL(window.location.href);
-          url.searchParams.delete("order_id");
-          window.history.replaceState({}, "", url.toString());
+        } else if (response && response.error) {
+          console.error("Payment verification failed:", response.error);
+          setShowError(true);
+          localStorage.removeItem("pending_subscription_plan");
+          localStorage.removeItem("pending_sms_package");
         }
-      } else if (response && response.error) {
-        console.error("Payment verification failed:", response.error);
+      } catch (error) {
+        console.error("Error verifying payment:", error);
         setShowError(true);
-        // Clean up pending items if payment failed
-        localStorage.removeItem('pending_subscription_plan');
-        localStorage.removeItem('pending_sms_package');
+        localStorage.removeItem("pending_subscription_plan");
+        localStorage.removeItem("pending_sms_package");
+      } finally {
+        setPaymentVerificationLoader(false);
       }
-    } catch (error) {
-      console.error("Error verifying payment:", error);
-      setShowError(true);
-      // Clean up pending items if verification failed
-      localStorage.removeItem('pending_subscription_plan');
-      localStorage.removeItem('pending_sms_package');
-    } finally {
-      setPaymentVerificationLoader(false);
-    }
-  };
+    },
+    [
+      refreshSubscriptionData,
+      setCurrentPlan,
+      setIsUpdatingPlan,
+      setPaymentVerificationLoader,
+      setShowError,
+      setShowSuccessMessage,
+      setSuccessMessage,
+      setVerifyPaymentDetails,
+    ]
+  );
 
   // Check for payment verification on page load
   useEffect(() => {
@@ -182,7 +207,7 @@ export default function SubscriptionsPage() {
     if (orderId) {
       verifyPayment(orderId);
     }
-  }, [searchParams]);
+  }, [searchParams, verifyPayment]);
 
   // Auto-hide success message after 10 seconds
   useEffect(() => {
@@ -204,7 +229,7 @@ export default function SubscriptionsPage() {
     }, 60000); // Refresh every minute
 
     return () => clearInterval(interval);
-  }, [loading, paymentVerificationLoader]);
+  }, [loading, paymentVerificationLoader, refreshSubscriptionData]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -229,14 +254,18 @@ export default function SubscriptionsPage() {
         try {
           subscriptionData = await ApiService.getMySubscription();
         } catch (subscriptionError) {
-          console.error("Failed to fetch user subscription:", subscriptionError);
+          console.error(
+            "Failed to fetch user subscription:",
+            subscriptionError
+          );
         }
 
         // Process plans data
         const processedPlans = (plansData || []).map(
           (plan: SubscriptionPlan) => ({
             ...plan,
-            cta: plan.name === "free" ? "Start Free" : `Upgrade to ${plan.name}`,
+            cta:
+              plan.name === "free" ? "Start Free" : `Upgrade to ${plan.name}`,
             popular: plan.is_popular || false,
           })
         );
@@ -253,8 +282,12 @@ export default function SubscriptionsPage() {
         setSmsPackages(processedPackages);
 
         // Set current subscription - default to free if no subscription found
-        if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
-          const planName = subscriptionData.subscription.plan.name.toLowerCase();
+        if (
+          subscriptionData?.success &&
+          subscriptionData?.subscription?.plan?.name
+        ) {
+          const planName =
+            subscriptionData.subscription.plan.name.toLowerCase();
           setCurrentPlan(planName);
         } else {
           setCurrentPlan("free");
@@ -277,7 +310,7 @@ export default function SubscriptionsPage() {
     setIsProcessing(true);
     try {
       const upgradeResponse = await ApiService.upgradeSubscription(planName);
-      
+
       if (upgradeResponse && upgradeResponse.success) {
         // Refresh subscription data
         await refreshSubscriptionData();
@@ -310,7 +343,7 @@ export default function SubscriptionsPage() {
       )}`;
 
       // Store the package ID for later use after payment verification
-      localStorage.setItem('pending_sms_package', packageId.toString());
+      localStorage.setItem("pending_sms_package", packageId.toString());
 
       // Validate required fields and provide defaults if missing
       const firstName = user.first_name || "User";
@@ -341,7 +374,7 @@ export default function SubscriptionsPage() {
     } catch (error) {
       console.error("Failed to purchase SMS package:", error);
       alert("Failed to purchase SMS package. Please try again.");
-      localStorage.removeItem('pending_sms_package');
+      localStorage.removeItem("pending_sms_package");
     } finally {
       setIsSmsPaymentLoading(false);
     }
@@ -365,7 +398,7 @@ export default function SubscriptionsPage() {
       )}`;
 
       // Store the plan name for later use after payment verification
-      localStorage.setItem('pending_subscription_plan', planName);
+      localStorage.setItem("pending_subscription_plan", planName);
 
       // Validate required fields and provide defaults if missing
       const firstName = user.first_name || "User";
@@ -398,7 +431,7 @@ export default function SubscriptionsPage() {
     } catch (error) {
       console.error("Failed to process subscription payment:", error);
       alert("Failed to process subscription payment. Please try again.");
-      localStorage.removeItem('pending_subscription_plan');
+      localStorage.removeItem("pending_subscription_plan");
     } finally {
       setIsSubscriptionPaymentLoading(false);
     }
@@ -437,16 +470,38 @@ export default function SubscriptionsPage() {
             onClick={() => setShowSuccessMessage(false)}
             className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
           <div className="flex items-center">
-            <svg className="w-8 h-8 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <svg
+              className="w-8 h-8 mr-4 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
             </svg>
             <div>
-              <h3 className="text-lg font-semibold mb-1">Payment Successful!</h3>
+              <h3 className="text-lg font-semibold mb-1">
+                Payment Successful!
+              </h3>
               <p className="text-sm opacity-90">{successMessage}</p>
             </div>
           </div>
@@ -464,7 +519,7 @@ export default function SubscriptionsPage() {
                 : "border-slate-700/50"
             } ${
               currentPlan === plan.name
-                ? currentPlan === 'pro' 
+                ? currentPlan === "pro"
                   ? "ring-2 ring-gradient-to-r from-green-400 to-green-500 bg-gradient-to-br from-green-500/10 to-green-600/10"
                   : "ring-2 ring-green-500"
                 : ""
@@ -475,7 +530,7 @@ export default function SubscriptionsPage() {
                 Most Popular
               </span>
             )}
-            {currentPlan === plan.name && plan.name === 'pro' && (
+            {currentPlan === plan.name && plan.name === "pro" && (
               <span className="absolute -top-4 right-4 bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow">
                 ✓ Active
               </span>
@@ -513,7 +568,9 @@ export default function SubscriptionsPage() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  {typeof feature === 'string' ? feature : feature?.name || feature?.description || 'Feature'}
+                  {typeof feature === "string"
+                    ? feature
+                    : feature?.name || feature?.description || "Feature"}
                 </li>
               ))}
             </ul>
@@ -549,7 +606,9 @@ export default function SubscriptionsPage() {
                 : isUpdatingPlan
                 ? "Updating Plan..."
                 : plan.price > 0
-                ? `Pay ৳${plan.price} - Upgrade to ${plan.name.charAt(0).toUpperCase() + plan.name.slice(1)}`
+                ? `Pay ৳${plan.price} - Upgrade to ${
+                    plan.name.charAt(0).toUpperCase() + plan.name.slice(1)
+                  }`
                 : plan.cta}
             </button>
           </div>
