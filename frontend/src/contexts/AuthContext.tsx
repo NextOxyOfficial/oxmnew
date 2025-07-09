@@ -32,6 +32,7 @@ interface UserProfile {
   post_code?: string;
   store_logo?: string;
   banner_image?: string;
+  sms_credits?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -54,6 +55,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -158,6 +160,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshProfile = async () => {
+    try {
+      if (ApiService.isAuthenticated()) {
+        const profileData = await ApiService.getProfile();
+        setUser(profileData.user);
+        setProfile(profileData.profile);
+        setSettings(profileData.settings);
+      }
+    } catch (error) {
+      console.error("Failed to refresh profile:", error);
+    }
+  };
+
   const value = {
     user,
     profile,
@@ -166,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     register,
     logout,
+    refreshProfile,
     isAuthenticated: mounted && !!user, // Only show as authenticated after mounting
   };
 

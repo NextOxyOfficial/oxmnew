@@ -30,12 +30,41 @@ interface SmsPackage {
 }
 
 interface PaymentVerificationDetails {
-  shurjopay_message?: string;
-  order_id?: string;
-  amount?: number;
+  payment_id?: number;
+  shurjopay_order_id?: string;
+  merchant_invoice_no?: string;
+  bank_trx_id?: string;
   currency?: string;
-  transaction_id?: string;
+  amount?: number;
+  payable_amount?: number;
+  received_amount?: number;
+  discount_amount?: number;
+  discount_percent?: number;
+  usd_amount?: number;
+  usd_rate?: number;
+  card_holder_name?: string;
+  card_number?: string;
+  transaction_status?: string;
+  payment_method?: string;
+  payment_confirmed_at?: string;
+  payment_verification_status?: boolean;
+  bank_status?: string;
+  customer_order_id?: string;
+  shurjopay_message?: string;
+  shurjopay_code?: string;
+  customer_phone_no?: string;
+  customer_name?: string;
+  customer_email?: string;
+  customer_address?: string;
+  customer_city?: string;
+  value1?: string;
+  value2?: string;
+  value3?: string;
+  value4?: string;
+  // Legacy structure for backward compatibility
+  order_id?: string;
   status?: string;
+  transaction_id?: string;
   data?: {
     shurjopay_message?: string;
     order_id?: string;
@@ -71,7 +100,7 @@ export default function SubscriptionsPage() {
   const [paymentVerificationLoader, setPaymentVerificationLoader] =
     useState(false);
 
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const searchParams = useSearchParams();
 
   // Function to refresh subscription data
@@ -99,11 +128,31 @@ export default function SubscriptionsPage() {
       setPaymentVerificationLoader(true);
       try {
         const response = await ApiService.verifyPayment(orderId);
+        console.log("Payment verification response:", response);
+
         if (response) {
           setVerifyPaymentDetails(response);
 
-          if (response.shurjopay_message === "Success") {
-            if (orderId.startsWith("SUB-")) {
+          // Check for successful payment - handle multiple possible response structures
+          const isSuccessful =
+            response.shurjopay_message === "Success" ||
+            response.data?.shurjopay_message === "Success" ||
+            response.payment_verification_status === true ||
+            response.bank_status === "Completed";
+
+          console.log("Payment verification success check:", {
+            shurjopay_message: response.shurjopay_message,
+            data_shurjopay_message: response.data?.shurjopay_message,
+            payment_verification_status: response.payment_verification_status,
+            bank_status: response.bank_status,
+            isSuccessful,
+          });
+
+          if (isSuccessful) {
+            // Use customer_order_id or fallback to orderId parameter
+            const actualOrderId = response.customer_order_id || orderId;
+
+            if (actualOrderId.startsWith("SUB-")) {
               const pendingPlan = localStorage.getItem(
                 "pending_subscription_plan"
               );
@@ -146,20 +195,81 @@ export default function SubscriptionsPage() {
               }
             }
 
-            if (orderId.startsWith("SMS-")) {
+            if (actualOrderId.startsWith("SMS-")) {
               const pendingPackageId = localStorage.getItem(
                 "pending_sms_package"
               );
+              console.log("SMS order processing:", {
+                actualOrderId,
+                pendingPackageId,
+                localStorageKeys: Object.keys(localStorage),
+                localStorage: {
+                  pending_sms_package: localStorage.getItem(
+                    "pending_sms_package"
+                  ),
+                  pending_subscription_plan: localStorage.getItem(
+                    "pending_subscription_plan"
+                  ),
+                },
+              });
+
               if (pendingPackageId) {
                 try {
-                  await ApiService.purchaseSmsPackage(
+                  console.log(
+                    "Processing SMS package purchase for package ID:",
+                    pendingPackageId
+                  );
+
+                  const purchaseResponse = await ApiService.purchaseSmsPackage(
                     parseInt(pendingPackageId)
                   );
-                  localStorage.removeItem("pending_sms_package");
-                  setSuccessMessage(
-                    "✅ SMS package purchased successfully! Your SMS credits have been added to your account."
+
+                  console.log(
+                    "SMS package purchase response:",
+                    purchaseResponse
                   );
-                  setShowSuccessMessage(true);
+
+                  if (purchaseResponse && purchaseResponse.success !== false) {
+                    localStorage.removeItem("pending_sms_package");
+
+                    // Show success message with package details
+                    const packageData = smsPackages.find(
+                      (pkg) => pkg.id === parseInt(pendingPackageId)
+                    );
+                    const creditsAdded =
+                      purchaseResponse.credits_added ||
+                      packageData?.sms_count ||
+                      packageData?.sms ||
+                      0;
+
+                    setSuccessMessage(
+                      `✅ SMS package purchased successfully! ${creditsAdded.toLocaleString()} SMS credits have been added to your account.`
+                    );
+                    setShowSuccessMessage(true);
+
+                    // Wait a moment for backend to process, then refresh user data
+                    setTimeout(async () => {
+                      try {
+                        // Trigger a refresh of user profile data in AuthContext
+                        await refreshProfile();
+                        await refreshSubscriptionData();
+
+                        console.log("User data refreshed after SMS purchase");
+                      } catch (refreshError) {
+                        console.error(
+                          "Failed to refresh user data:",
+                          refreshError
+                        );
+                        // Don't reload on error, user can manually refresh
+                      }
+                    }, 1500);
+                  } else {
+                    console.error(
+                      "SMS package purchase failed:",
+                      purchaseResponse
+                    );
+                    setShowError(true);
+                  }
                 } catch (purchaseError) {
                   console.error(
                     "Failed to add SMS credits after payment:",
@@ -167,12 +277,29 @@ export default function SubscriptionsPage() {
                   );
                   setShowError(true);
                 }
+              } else {
+                console.error(
+                  "No pending SMS package ID found in localStorage"
+                );
+                // Don't show error for this - might be a refresh or different scenario
+                console.log(
+                  "No pending SMS package found - this might be expected"
+                );
               }
             }
 
             const url = new URL(window.location.href);
             url.searchParams.delete("order_id");
             window.history.replaceState({}, "", url.toString());
+          } else {
+            // Payment was not successful
+            console.log("Payment verification failed - not successful:", {
+              response,
+              isSuccessful,
+            });
+            setShowError(true);
+            localStorage.removeItem("pending_subscription_plan");
+            localStorage.removeItem("pending_sms_package");
           }
         } else if (response && response.error) {
           console.error("Payment verification failed:", response.error);
@@ -191,6 +318,8 @@ export default function SubscriptionsPage() {
     },
     [
       refreshSubscriptionData,
+      refreshProfile,
+      smsPackages,
       setCurrentPlan,
       setIsUpdatingPlan,
       setPaymentVerificationLoader,

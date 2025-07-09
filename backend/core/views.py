@@ -107,6 +107,15 @@ def register(request):
         profile = UserProfile.objects.get(user=user)
         settings = UserSettings.objects.get(user=user)
 
+        # Get SMS credits
+        from subscription.models import UserSMSCredit
+
+        try:
+            sms_credit = UserSMSCredit.objects.get(user=user)
+            sms_credits = sms_credit.credits
+        except UserSMSCredit.DoesNotExist:
+            sms_credits = 0
+
         return Response(
             {
                 "message": "User registered successfully",
@@ -134,6 +143,7 @@ def register(request):
                     else "",
                     "created_at": profile.created_at,
                     "updated_at": profile.updated_at,
+                    "sms_credits": sms_credits,
                 },
                 "settings": {
                     "language": settings.language,
@@ -183,6 +193,15 @@ def login(request):
         profile, profile_created = UserProfile.objects.get_or_create(user=user)
         settings, settings_created = UserSettings.objects.get_or_create(user=user)
 
+        # Get SMS credits
+        from subscription.models import UserSMSCredit
+
+        try:
+            sms_credit = UserSMSCredit.objects.get(user=user)
+            sms_credits = sms_credit.credits
+        except UserSMSCredit.DoesNotExist:
+            sms_credits = 0
+
         return Response(
             {
                 "message": "Login successful",
@@ -210,6 +229,7 @@ def login(request):
                     else "",
                     "created_at": profile.created_at,
                     "updated_at": profile.updated_at,
+                    "sms_credits": sms_credits,
                 },
                 "settings": {
                     "language": settings.language,
@@ -259,6 +279,15 @@ def profile(request):
         # Get user settings
         settings, settings_created = UserSettings.objects.get_or_create(user=user)
 
+        # Get SMS credits
+        from subscription.models import UserSMSCredit
+
+        try:
+            sms_credit = UserSMSCredit.objects.get(user=user)
+            sms_credits = sms_credit.credits
+        except UserSMSCredit.DoesNotExist:
+            sms_credits = 0
+
         return Response(
             {
                 "user": {
@@ -285,6 +314,7 @@ def profile(request):
                     else "",
                     "created_at": profile.created_at,
                     "updated_at": profile.updated_at,
+                    "sms_credits": sms_credits,
                 },
                 "settings": {
                     "language": settings.language,
@@ -2047,111 +2077,119 @@ def toggle_payment_method(request, payment_method_id):
 
 # ======================= CUSTOM DOMAIN API VIEWS =======================
 
-@api_view(['GET', 'POST'])
+
+@api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def custom_domain_view(request):
     """
     Get or create/update custom domain for authenticated user
     """
-    if request.method == 'GET':
+    if request.method == "GET":
         try:
             custom_domain = CustomDomain.objects.get(user=request.user)
             dns_records = DNSRecord.objects.filter(custom_domain=custom_domain)
-            
-            return Response({
-                'custom_domain': {
-                    'id': custom_domain.id,
-                    'domain': custom_domain.domain,
-                    'full_domain': custom_domain.full_domain,
-                    'status': custom_domain.status,
-                    'is_active': custom_domain.is_active,
-                    'ssl_enabled': custom_domain.ssl_enabled,
-                    'verified_at': custom_domain.verified_at,
-                    'created_at': custom_domain.created_at,
-                    'updated_at': custom_domain.updated_at,
+
+            return Response(
+                {
+                    "custom_domain": {
+                        "id": custom_domain.id,
+                        "domain": custom_domain.domain,
+                        "full_domain": custom_domain.full_domain,
+                        "status": custom_domain.status,
+                        "is_active": custom_domain.is_active,
+                        "ssl_enabled": custom_domain.ssl_enabled,
+                        "verified_at": custom_domain.verified_at,
+                        "created_at": custom_domain.created_at,
+                        "updated_at": custom_domain.updated_at,
+                    },
+                    "dns_records": [
+                        {
+                            "id": record.id,
+                            "record_type": record.record_type,
+                            "name": record.name,
+                            "value": record.value,
+                            "ttl": record.ttl,
+                            "priority": record.priority,
+                        }
+                        for record in dns_records
+                    ],
                 },
-                'dns_records': [
-                    {
-                        'id': record.id,
-                        'record_type': record.record_type,
-                        'name': record.name,
-                        'value': record.value,
-                        'ttl': record.ttl,
-                        'priority': record.priority,
-                    } for record in dns_records
-                ]
-            }, status=status.HTTP_200_OK)
-            
+                status=status.HTTP_200_OK,
+            )
+
         except CustomDomain.DoesNotExist:
-            return Response({
-                'custom_domain': None,
-                'dns_records': []
-            }, status=status.HTTP_200_OK)
-    
-    elif request.method == 'POST':
+            return Response(
+                {"custom_domain": None, "dns_records": []}, status=status.HTTP_200_OK
+            )
+
+    elif request.method == "POST":
         try:
-            domain = request.data.get('domain', '').strip().lower()
-            
+            domain = request.data.get("domain", "").strip().lower()
+
             if not domain:
                 return Response(
-                    {'error': 'Domain is required'}, 
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Domain is required"}, status=status.HTTP_400_BAD_REQUEST
                 )
-            
+
             # Remove protocol if present
-            domain = domain.replace('http://', '').replace('https://', '')
-            domain = domain.replace('www.', '')
-            
+            domain = domain.replace("http://", "").replace("https://", "")
+            domain = domain.replace("www.", "")
+
             # Check if domain already exists for another user
-            existing_domain = CustomDomain.objects.filter(
-                domain=domain
-            ).exclude(user=request.user).first()
-            
+            existing_domain = (
+                CustomDomain.objects.filter(domain=domain)
+                .exclude(user=request.user)
+                .first()
+            )
+
             if existing_domain:
                 return Response(
-                    {'error': 'This domain is already taken by another user'}, 
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "This domain is already taken by another user"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             # Create or update custom domain
             custom_domain, created = CustomDomain.objects.get_or_create(
                 user=request.user,
                 defaults={
-                    'domain': domain,
-                    'status': 'pending',
-                    'is_active': True,
-                }
+                    "domain": domain,
+                    "status": "pending",
+                    "is_active": True,
+                },
             )
-            
+
             if not created:
                 # Update existing domain
                 custom_domain.domain = domain
-                custom_domain.status = 'pending'
+                custom_domain.status = "pending"
                 custom_domain.save()
-            
-            return Response({
-                'message': 'Custom domain saved successfully',
-                'custom_domain': {
-                    'id': custom_domain.id,
-                    'domain': custom_domain.domain,
-                    'full_domain': custom_domain.full_domain,
-                    'status': custom_domain.status,
-                    'is_active': custom_domain.is_active,
-                    'ssl_enabled': custom_domain.ssl_enabled,
-                    'verified_at': custom_domain.verified_at,
-                    'created_at': custom_domain.created_at,
-                    'updated_at': custom_domain.updated_at,
-                }
-            }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
-            
+
+            return Response(
+                {
+                    "message": "Custom domain saved successfully",
+                    "custom_domain": {
+                        "id": custom_domain.id,
+                        "domain": custom_domain.domain,
+                        "full_domain": custom_domain.full_domain,
+                        "status": custom_domain.status,
+                        "is_active": custom_domain.is_active,
+                        "ssl_enabled": custom_domain.ssl_enabled,
+                        "verified_at": custom_domain.verified_at,
+                        "created_at": custom_domain.created_at,
+                        "updated_at": custom_domain.updated_at,
+                    },
+                },
+                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+            )
+
         except Exception as e:
             return Response(
-                {'error': f'Error saving custom domain: {str(e)}'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": f"Error saving custom domain: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_custom_domain(request):
     """
@@ -2160,25 +2198,23 @@ def delete_custom_domain(request):
     try:
         custom_domain = CustomDomain.objects.get(user=request.user)
         custom_domain.delete()
-        
+
         return Response(
-            {'message': 'Custom domain deleted successfully'}, 
-            status=status.HTTP_200_OK
+            {"message": "Custom domain deleted successfully"}, status=status.HTTP_200_OK
         )
-        
+
     except CustomDomain.DoesNotExist:
         return Response(
-            {'error': 'Custom domain not found'}, 
-            status=status.HTTP_404_NOT_FOUND
+            {"error": "Custom domain not found"}, status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
         return Response(
-            {'error': f'Error deleting custom domain: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": f"Error deleting custom domain: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def verify_custom_domain(request):
     """
@@ -2186,45 +2222,47 @@ def verify_custom_domain(request):
     """
     try:
         custom_domain = CustomDomain.objects.get(user=request.user)
-        
+
         # Here you would implement actual DNS verification logic
         # For now, we'll just mark it as verified
         from django.utils import timezone
-        
-        custom_domain.status = 'verified'
+
+        custom_domain.status = "verified"
         custom_domain.is_active = True
         custom_domain.verified_at = timezone.now()
         custom_domain.save()
-        
-        return Response({
-            'message': 'Domain verified successfully',
-            'custom_domain': {
-                'id': custom_domain.id,
-                'domain': custom_domain.domain,
-                'subdomain': custom_domain.subdomain,
-                'full_domain': custom_domain.full_domain,
-                'status': custom_domain.status,
-                'is_active': custom_domain.is_active,
-                'ssl_enabled': custom_domain.ssl_enabled,
-                'verified_at': custom_domain.verified_at,
-                'created_at': custom_domain.created_at,
-                'updated_at': custom_domain.updated_at,
-            }
-        }, status=status.HTTP_200_OK)
-        
+
+        return Response(
+            {
+                "message": "Domain verified successfully",
+                "custom_domain": {
+                    "id": custom_domain.id,
+                    "domain": custom_domain.domain,
+                    "subdomain": custom_domain.subdomain,
+                    "full_domain": custom_domain.full_domain,
+                    "status": custom_domain.status,
+                    "is_active": custom_domain.is_active,
+                    "ssl_enabled": custom_domain.ssl_enabled,
+                    "verified_at": custom_domain.verified_at,
+                    "created_at": custom_domain.created_at,
+                    "updated_at": custom_domain.updated_at,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
     except CustomDomain.DoesNotExist:
         return Response(
-            {'error': 'Custom domain not found'}, 
-            status=status.HTTP_404_NOT_FOUND
+            {"error": "Custom domain not found"}, status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
         return Response(
-            {'error': f'Error verifying domain: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": f"Error verifying domain: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
-@api_view(['GET', 'POST'])
+@api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def dns_records_view(request):
     """
@@ -2234,85 +2272,92 @@ def dns_records_view(request):
         custom_domain = CustomDomain.objects.get(user=request.user)
     except CustomDomain.DoesNotExist:
         return Response(
-            {'error': 'Custom domain not found. Please configure a domain first.'}, 
-            status=status.HTTP_404_NOT_FOUND
+            {"error": "Custom domain not found. Please configure a domain first."},
+            status=status.HTTP_404_NOT_FOUND,
         )
-    
-    if request.method == 'GET':
+
+    if request.method == "GET":
         dns_records = DNSRecord.objects.filter(custom_domain=custom_domain)
-        
-        return Response({
-            'dns_records': [
-                {
-                    'id': record.id,
-                    'record_type': record.record_type,
-                    'name': record.name,
-                    'value': record.value,
-                    'ttl': record.ttl,
-                    'priority': record.priority,
-                    'created_at': record.created_at,
-                    'updated_at': record.updated_at,
-                } for record in dns_records
-            ]
-        }, status=status.HTTP_200_OK)
-    
-    elif request.method == 'POST':
+
+        return Response(
+            {
+                "dns_records": [
+                    {
+                        "id": record.id,
+                        "record_type": record.record_type,
+                        "name": record.name,
+                        "value": record.value,
+                        "ttl": record.ttl,
+                        "priority": record.priority,
+                        "created_at": record.created_at,
+                        "updated_at": record.updated_at,
+                    }
+                    for record in dns_records
+                ]
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    elif request.method == "POST":
         try:
-            record_type = request.data.get('record_type', '').upper()
-            name = request.data.get('name', '').strip()
-            value = request.data.get('value', '').strip()
-            ttl = request.data.get('ttl', 3600)
-            priority = request.data.get('priority', None)
-            
+            record_type = request.data.get("record_type", "").upper()
+            name = request.data.get("name", "").strip()
+            value = request.data.get("value", "").strip()
+            ttl = request.data.get("ttl", 3600)
+            priority = request.data.get("priority", None)
+
             if not all([record_type, name, value]):
                 return Response(
-                    {'error': 'record_type, name, and value are required'}, 
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "record_type, name, and value are required"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             valid_types = [choice[0] for choice in DNSRecord.RECORD_TYPES]
             if record_type not in valid_types:
                 return Response(
-                    {'error': f'Invalid record type. Valid types: {valid_types}'}, 
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": f"Invalid record type. Valid types: {valid_types}"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             dns_record = DNSRecord.objects.create(
                 custom_domain=custom_domain,
                 record_type=record_type,
                 name=name,
                 value=value,
                 ttl=ttl,
-                priority=priority
+                priority=priority,
             )
-            
-            return Response({
-                'message': 'DNS record created successfully',
-                'dns_record': {
-                    'id': dns_record.id,
-                    'record_type': dns_record.record_type,
-                    'name': dns_record.name,
-                    'value': dns_record.value,
-                    'ttl': dns_record.ttl,
-                    'priority': dns_record.priority,
-                    'created_at': dns_record.created_at,
-                    'updated_at': dns_record.updated_at,
-                }
-            }, status=status.HTTP_201_CREATED)
-            
+
+            return Response(
+                {
+                    "message": "DNS record created successfully",
+                    "dns_record": {
+                        "id": dns_record.id,
+                        "record_type": dns_record.record_type,
+                        "name": dns_record.name,
+                        "value": dns_record.value,
+                        "ttl": dns_record.ttl,
+                        "priority": dns_record.priority,
+                        "created_at": dns_record.created_at,
+                        "updated_at": dns_record.updated_at,
+                    },
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
         except IntegrityError:
             return Response(
-                {'error': 'DNS record with this type and name already exists'}, 
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "DNS record with this type and name already exists"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
             return Response(
-                {'error': f'Error creating DNS record: {str(e)}'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": f"Error creating DNS record: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_dns_record(request, record_id):
     """
@@ -2322,30 +2367,27 @@ def delete_dns_record(request, record_id):
         custom_domain = CustomDomain.objects.get(user=request.user)
         dns_record = DNSRecord.objects.get(id=record_id, custom_domain=custom_domain)
         dns_record.delete()
-        
+
         return Response(
-            {'message': 'DNS record deleted successfully'}, 
-            status=status.HTTP_200_OK
+            {"message": "DNS record deleted successfully"}, status=status.HTTP_200_OK
         )
-        
+
     except CustomDomain.DoesNotExist:
         return Response(
-            {'error': 'Custom domain not found'}, 
-            status=status.HTTP_404_NOT_FOUND
+            {"error": "Custom domain not found"}, status=status.HTTP_404_NOT_FOUND
         )
     except DNSRecord.DoesNotExist:
         return Response(
-            {'error': 'DNS record not found'}, 
-            status=status.HTTP_404_NOT_FOUND
+            {"error": "DNS record not found"}, status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
         return Response(
-            {'error': f'Error deleting DNS record: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": f"Error deleting DNS record: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def get_store_by_domain(request, domain):
     """
@@ -2354,68 +2396,86 @@ def get_store_by_domain(request, domain):
     """
     try:
         # Find the custom domain
-        custom_domain = CustomDomain.objects.get(
-            domain=domain,
-            is_active=True
-        )
-        
+        custom_domain = CustomDomain.objects.get(domain=domain, is_active=True)
+
         # Get the user's online store products
         online_products = []
         try:
             from online_store.models import OnlineProduct
             from online_store.serializers import PublicOnlineProductSerializer
-            
+
             online_products_queryset = OnlineProduct.objects.filter(
-                user=custom_domain.user,
-                is_published=True
+                user=custom_domain.user, is_published=True
             )
-            online_products = PublicOnlineProductSerializer(online_products_queryset, many=True).data
-            
+            online_products = PublicOnlineProductSerializer(
+                online_products_queryset, many=True
+            ).data
+
         except Exception as e:
             print(f"Error fetching online products: {e}")
             pass
-        
+
         # Get user profile for store info
         user_profile = UserProfile.objects.get(user=custom_domain.user)
-        
+
         # Get store settings if available
         store_settings = None
         try:
             from online_store.models import StoreSettings
+
             store_settings = StoreSettings.objects.get(user=custom_domain.user)
         except:
             pass
-        
-        return Response({
-            'store_info': {
-                'domain': custom_domain.full_domain,
-                'store_name': user_profile.company or custom_domain.user.get_full_name() or custom_domain.user.username,
-                'description': store_settings.store_description if store_settings else 'Welcome to our online store',
-                'logo': user_profile.store_logo.url if user_profile.store_logo else None,
-                'banner': user_profile.banner_image.url if user_profile.banner_image else None,
-                'contact_email': store_settings.contact_email if store_settings else user_profile.user.email,
-                'contact_phone': store_settings.contact_phone if store_settings else user_profile.phone,
+
+        return Response(
+            {
+                "store_info": {
+                    "domain": custom_domain.full_domain,
+                    "store_name": user_profile.company
+                    or custom_domain.user.get_full_name()
+                    or custom_domain.user.username,
+                    "description": store_settings.store_description
+                    if store_settings
+                    else "Welcome to our online store",
+                    "logo": user_profile.store_logo.url
+                    if user_profile.store_logo
+                    else None,
+                    "banner": user_profile.banner_image.url
+                    if user_profile.banner_image
+                    else None,
+                    "contact_email": store_settings.contact_email
+                    if store_settings
+                    else user_profile.user.email,
+                    "contact_phone": store_settings.contact_phone
+                    if store_settings
+                    else user_profile.phone,
+                },
+                "products": online_products,
+                "owner": {
+                    "username": custom_domain.user.username,
+                    "company": user_profile.company,
+                    "phone": user_profile.phone,
+                    "address": user_profile.address,
+                },
+                "store_settings": {
+                    "terms_and_conditions": store_settings.terms_and_conditions
+                    if store_settings
+                    else "",
+                    "privacy_policy": store_settings.privacy_policy
+                    if store_settings
+                    else "",
+                },
             },
-            'products': online_products,
-            'owner': {
-                'username': custom_domain.user.username,
-                'company': user_profile.company,
-                'phone': user_profile.phone,
-                'address': user_profile.address,
-            },
-            'store_settings': {
-                'terms_and_conditions': store_settings.terms_and_conditions if store_settings else '',
-                'privacy_policy': store_settings.privacy_policy if store_settings else '',
-            }
-        }, status=status.HTTP_200_OK)
-        
+            status=status.HTTP_200_OK,
+        )
+
     except CustomDomain.DoesNotExist:
         return Response(
-            {'error': 'Store not found for this domain'}, 
-            status=status.HTTP_404_NOT_FOUND
+            {"error": "Store not found for this domain"},
+            status=status.HTTP_404_NOT_FOUND,
         )
     except Exception as e:
         return Response(
-            {'error': f'Error retrieving store: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": f"Error retrieving store: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
