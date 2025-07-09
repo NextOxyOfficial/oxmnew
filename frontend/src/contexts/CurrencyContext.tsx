@@ -105,12 +105,21 @@ export function useCurrency() {
 export function useCurrencyFormatter() {
   const { currencySymbol } = useCurrency();
 
-  return (amount: number | string): string => {
+  return (amount: number | string | null | undefined): string => {
+    // Handle null, undefined, or empty values
+    if (amount === null || amount === undefined || amount === "") {
+      return `${currencySymbol}0.00`;
+    }
+
     const numAmount =
       typeof amount === "string" ? parseFloat(amount) || 0 : amount;
 
+    // Ensure we have a valid number
+    const validAmount =
+      typeof numAmount === "number" && !isNaN(numAmount) ? numAmount : 0;
+
     // Format number with 2 decimal places
-    const formattedAmount = numAmount.toFixed(2);
+    const formattedAmount = validAmount.toFixed(2);
 
     return `${currencySymbol}${formattedAmount}`;
   };
@@ -118,14 +127,23 @@ export function useCurrencyFormatter() {
 
 // Utility function to format currency with the current symbol
 export function formatCurrency(
-  amount: number | string,
+  amount: number | string | null | undefined,
   symbol?: string
 ): string {
+  // Handle null, undefined, or empty values
+  if (amount === null || amount === undefined || amount === "") {
+    return `${symbol || "$"}0.00`;
+  }
+
   const numAmount =
     typeof amount === "string" ? parseFloat(amount) || 0 : amount;
 
+  // Ensure we have a valid number
+  const validAmount =
+    typeof numAmount === "number" && !isNaN(numAmount) ? numAmount : 0;
+
   // Format number with 2 decimal places
-  const formattedAmount = numAmount.toFixed(2);
+  const formattedAmount = validAmount.toFixed(2);
 
   return `${symbol || "$"}${formattedAmount}`;
 }

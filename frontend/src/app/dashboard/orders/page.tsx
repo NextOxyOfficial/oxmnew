@@ -27,7 +27,10 @@ export default function OrdersPage() {
       setIsLoading(true);
       setError(null);
       const response = await ApiService.getProductSales();
-      setOrders(Array.isArray(response) ? response : response?.results || []);
+      const ordersData = Array.isArray(response)
+        ? response
+        : response?.results || [];
+      setOrders(ordersData);
     } catch (error) {
       console.error("Error fetching orders:", error);
       setError("Failed to load orders");
@@ -50,11 +53,14 @@ export default function OrdersPage() {
 
   // Calculate statistics
   const totalOrders = orders.length;
-  const totalRevenue = orders.reduce(
-    (sum, order) => sum + order.total_amount,
-    0
-  );
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+  const totalRevenue = orders.reduce((sum, order) => {
+    const amount = parseFloat(String(order.total_amount || 0));
+    const validAmount = isNaN(amount) ? 0 : amount;
+    return sum + validAmount;
+  }, 0);
+  const averageOrderValue =
+    totalOrders > 0 && totalRevenue > 0 ? totalRevenue / totalOrders : 0;
 
   // Today's orders
   const today = new Date();
@@ -66,6 +72,12 @@ export default function OrdersPage() {
   const ordersToday = orders.filter(
     (order) => new Date(order.sale_date) >= todayStart
   );
+
+  // Calculate today's revenue properly
+  const todaysRevenue = ordersToday.reduce((sum, order) => {
+    const amount = parseFloat(String(order.total_amount || 0));
+    return sum + (isNaN(amount) ? 0 : amount);
+  }, 0);
 
   // Filter and sort orders
   const filteredOrders = orders.filter((order) => {
@@ -95,9 +107,15 @@ export default function OrdersPage() {
       case "customer":
         return (a.customer_name || "").localeCompare(b.customer_name || "");
       case "amount-high":
-        return b.total_amount - a.total_amount;
+        return (
+          parseFloat(String(b.total_amount || 0)) -
+          parseFloat(String(a.total_amount || 0))
+        );
       case "amount-low":
-        return a.total_amount - b.total_amount;
+        return (
+          parseFloat(String(a.total_amount || 0)) -
+          parseFloat(String(b.total_amount || 0))
+        );
       case "quantity-high":
         return b.quantity - a.quantity;
       case "quantity-low":
@@ -236,7 +254,7 @@ export default function OrdersPage() {
                   Total Revenue
                 </p>
                 <p className="text-base font-bold text-green-400">
-                  {formatCurrency(totalRevenue)}
+                  {formatCurrency(totalRevenue || 0)}
                 </p>
                 <p className="text-xs text-green-500 opacity-80">
                   Total sales income
@@ -266,7 +284,7 @@ export default function OrdersPage() {
               <div>
                 <p className="text-sm text-blue-300 font-medium">Avg. Order</p>
                 <p className="text-base font-bold text-blue-400">
-                  {formatCurrency(averageOrderValue)}
+                  {formatCurrency(averageOrderValue || 0)}
                 </p>
                 <p className="text-xs text-blue-500 opacity-80">
                   Per order value
@@ -299,13 +317,7 @@ export default function OrdersPage() {
                   {ordersToday.length}
                 </p>
                 <p className="text-xs text-yellow-500 opacity-80">
-                  {formatCurrency(
-                    ordersToday.reduce(
-                      (sum, order) => sum + order.total_amount,
-                      0
-                    )
-                  )}{" "}
-                  revenue
+                  {formatCurrency(todaysRevenue || 0)} revenue
                 </p>
               </div>
             </div>
@@ -502,7 +514,7 @@ export default function OrdersPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-cyan-400">
-                          {formatCurrency(order.total_amount)}
+                          {formatCurrency(order.total_amount || 0)}
                         </p>
                         <p className="text-xs text-slate-400">
                           {formatDate(order.sale_date)}
@@ -535,7 +547,8 @@ export default function OrdersPage() {
                           Quantity & Price
                         </p>
                         <p className="text-sm font-medium text-slate-100">
-                          {order.quantity} × {formatCurrency(order.unit_price)}
+                          {order.quantity} ×{" "}
+                          {formatCurrency(order.unit_price || 0)}
                         </p>
                       </div>
                     </div>
@@ -652,10 +665,10 @@ export default function OrdersPage() {
                             {order.quantity}
                           </td>
                           <td className="py-4 px-4 text-sm text-slate-100">
-                            {formatCurrency(order.unit_price)}
+                            {formatCurrency(order.unit_price || 0)}
                           </td>
                           <td className="py-4 px-4 text-sm font-medium text-cyan-400">
-                            {formatCurrency(order.total_amount)}
+                            {formatCurrency(order.total_amount || 0)}
                           </td>
                           <td className="py-4 px-4 text-sm text-slate-400">
                             {formatDate(order.sale_date)}
