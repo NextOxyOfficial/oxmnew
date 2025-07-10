@@ -65,6 +65,12 @@ interface RegisterData {
   password: string;
   first_name?: string;
   last_name?: string;
+  // Profile fields
+  company?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  post_code?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

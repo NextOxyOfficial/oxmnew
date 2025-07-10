@@ -302,6 +302,12 @@ export class ApiService {
     password: string;
     first_name?: string;
     last_name?: string;
+    // Profile fields
+    company?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    post_code?: string;
   }) {
     const response = await this.request("/auth/register/", {
       method: "POST",

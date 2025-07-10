@@ -73,6 +73,13 @@ def register(request):
         password = request.data.get("password")
         first_name = request.data.get("first_name", "")
         last_name = request.data.get("last_name", "")
+        
+        # Profile fields (optional)
+        company = request.data.get("company", "")
+        phone = request.data.get("phone", "")
+        address = request.data.get("address", "")
+        city = request.data.get("city", "")
+        post_code = request.data.get("post_code", "")
 
         if not username or not email or not password:
             return Response(
@@ -106,6 +113,22 @@ def register(request):
         # Get user profile and settings (they are auto-created via signals)
         profile = UserProfile.objects.get(user=user)
         settings = UserSettings.objects.get(user=user)
+        
+        # Update profile with provided data
+        if company:
+            profile.company = company
+        if phone:
+            profile.phone = phone
+        if address:
+            profile.address = address
+        if city:
+            profile.city = city
+        if post_code:
+            profile.post_code = post_code
+        
+        # Save profile if any fields were updated
+        if company or phone or address or city or post_code:
+            profile.save()
 
         # Get SMS credits
         from subscription.models import UserSMSCredit
@@ -119,6 +142,7 @@ def register(request):
         return Response(
             {
                 "message": "User registered successfully",
+                "token": token.key,
                 "user": {
                     "id": user.id,
                     "username": user.username,
@@ -137,6 +161,8 @@ def register(request):
                     "phone": profile.phone or "",
                     "contact_number": profile.contact_number or "",
                     "address": profile.address or "",
+                    "city": profile.city or "",
+                    "post_code": profile.post_code or "",
                     "store_logo": profile.store_logo.url if profile.store_logo else "",
                     "banner_image": profile.banner_image.url
                     if profile.banner_image
