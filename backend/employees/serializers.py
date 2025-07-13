@@ -1,23 +1,26 @@
 from rest_framework import serializers
-from .models import Employee, PaymentInformation, Incentive, SalaryRecord, Task, Document
+
+from .models import (
+    Document,
+    Employee,
+    Incentive,
+    PaymentInformation,
+    SalaryRecord,
+    Task,
+)
 
 
 class PaymentInformationSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentInformation
-        fields = '__all__'
-        extra_kwargs = {
-            'employee': {'read_only': True}
-        }
+        fields = "__all__"
+        extra_kwargs = {"employee": {"read_only": True}}
 
 
 class IncentiveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Incentive
-        fields = '__all__'
-        extra_kwargs = {
-            'employee': {'read_only': True}
-        }
+        fields = "__all__"
 
 
 class SalaryRecordSerializer(serializers.ModelSerializer):
@@ -25,10 +28,10 @@ class SalaryRecordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SalaryRecord
-        fields = '__all__'
+        fields = "__all__"
         extra_kwargs = {
-            'employee': {'read_only': True},
-            'net_salary': {'read_only': True}
+            "employee": {"read_only": True},
+            "net_salary": {"read_only": True},
         }
 
     def get_overtime_pay(self, obj):
@@ -38,10 +41,8 @@ class SalaryRecordSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = '__all__'
-        extra_kwargs = {
-            'employee': {'read_only': True}
-        }
+        fields = "__all__"
+        extra_kwargs = {"employee": {"read_only": True}}
 
 
 class DocumentSerializer(serializers.ModelSerializer):
@@ -51,11 +52,8 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Document
-        fields = '__all__'
-        extra_kwargs = {
-            'employee': {'read_only': True},
-            'size': {'read_only': True}
-        }
+        fields = "__all__"
+        extra_kwargs = {"employee": {"read_only": True}, "size": {"read_only": True}}
 
     def get_url(self, obj):
         if obj.file:
@@ -64,7 +62,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Remove employee_id from validated_data as it's handled in the view
-        validated_data.pop('employee_id', None)
+        validated_data.pop("employee_id", None)
         return super().create(validated_data)
 
 
@@ -82,7 +80,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Employee
-        fields = '__all__'
+        fields = "__all__"
 
     def get_total_incentives(self, obj):
         return float(sum(incentive.amount for incentive in obj.incentives.all()))
@@ -93,11 +91,12 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return 0
 
     def get_pending_tasks(self, obj):
-        return obj.tasks.filter(status__in=['pending', 'in_progress']).count()
+        return obj.tasks.filter(status__in=["pending", "in_progress"]).count()
 
 
 class EmployeeListSerializer(serializers.ModelSerializer):
     """Simplified serializer for employee list view"""
+
     total_incentives = serializers.SerializerMethodField()
     completion_rate = serializers.SerializerMethodField()
     pending_tasks = serializers.SerializerMethodField()
@@ -105,11 +104,26 @@ class EmployeeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = [
-            'id', 'employee_id', 'name', 'email', 'phone', 'address',
-            'role', 'department', 'manager', 'salary', 'hiring_date',
-            'photo', 'status', 'tasks_assigned', 'tasks_completed',
-            'total_incentives', 'completion_rate', 'pending_tasks',
-            'created_at', 'updated_at'
+            "id",
+            "employee_id",
+            "name",
+            "email",
+            "phone",
+            "address",
+            "role",
+            "department",
+            "manager",
+            "salary",
+            "hiring_date",
+            "photo",
+            "status",
+            "tasks_assigned",
+            "tasks_completed",
+            "total_incentives",
+            "completion_rate",
+            "pending_tasks",
+            "created_at",
+            "updated_at",
         ]
 
     def get_total_incentives(self, obj):
@@ -121,34 +135,51 @@ class EmployeeListSerializer(serializers.ModelSerializer):
         return 0
 
     def get_pending_tasks(self, obj):
-        return obj.tasks.filter(status__in=['pending', 'in_progress']).count()
+        return obj.tasks.filter(status__in=["pending", "in_progress"]).count()
 
 
 class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating employees"""
+
     class Meta:
         model = Employee
         fields = [
-            'id', 'employee_id', 'name', 'email', 'phone', 'address',
-            'role', 'department', 'manager', 'salary', 'hiring_date',
-            'photo', 'status'
+            "id",
+            "employee_id",
+            "name",
+            "email",
+            "phone",
+            "address",
+            "role",
+            "department",
+            "manager",
+            "salary",
+            "hiring_date",
+            "photo",
+            "status",
         ]
-        extra_kwargs = {
-            'id': {'read_only': True}
-        }
+        extra_kwargs = {"id": {"read_only": True}}
 
     def validate_employee_id(self, value):
         """Ensure employee_id is unique"""
-        instance = getattr(self, 'instance', None)
-        if Employee.objects.filter(employee_id=value).exclude(pk=instance.pk if instance else None).exists():
-            raise serializers.ValidationError(
-                "Employee with this ID already exists.")
+        instance = getattr(self, "instance", None)
+        if (
+            Employee.objects.filter(employee_id=value)
+            .exclude(pk=instance.pk if instance else None)
+            .exists()
+        ):
+            raise serializers.ValidationError("Employee with this ID already exists.")
         return value
 
     def validate_email(self, value):
         """Ensure email is unique"""
-        instance = getattr(self, 'instance', None)
-        if Employee.objects.filter(email=value).exclude(pk=instance.pk if instance else None).exists():
+        instance = getattr(self, "instance", None)
+        if (
+            Employee.objects.filter(email=value)
+            .exclude(pk=instance.pk if instance else None)
+            .exists()
+        ):
             raise serializers.ValidationError(
-                "Employee with this email already exists.")
+                "Employee with this email already exists."
+            )
         return value

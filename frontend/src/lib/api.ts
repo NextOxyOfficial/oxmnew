@@ -472,6 +472,18 @@ export class ApiService {
     return this.delete(`/employees/${id}/`);
   }
 
+  // Incentive methods
+  static async createIncentive(incentiveData: {
+    employee: number;
+    title: string;
+    description?: string;
+    amount: number;
+    type: "bonus" | "commission" | "achievement" | "performance";
+    status?: "pending" | "approved" | "paid";
+  }) {
+    return this.post("/incentives/", incentiveData);
+  }
+
   // Banking methods
   static async getBankAccounts() {
     return this.get("/banking/accounts/");
@@ -1090,9 +1102,11 @@ export class ApiService {
     console.log(`Plan ID: ${planId}`);
     console.log(`API endpoint: /subscription/upgrade/`);
     console.log(`Request data:`, { plan_id: planId });
-    
+
     try {
-      const response = await this.post("/subscription/upgrade/", { plan_id: planId });
+      const response = await this.post("/subscription/upgrade/", {
+        plan_id: planId,
+      });
       console.log(`Upgrade response:`, response);
       return response;
     } catch (error) {

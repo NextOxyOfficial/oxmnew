@@ -637,6 +637,50 @@ export default function AddOrderPage() {
         await ApiService.createProductSale(saleData);
       }
 
+      // Create incentive record if employee is selected and incentive amount is greater than 0
+      if (orderForm.employee_id && orderForm.incentive_amount > 0) {
+        const selectedEmployee = employees.find(
+          (e) => e.id === orderForm.employee_id
+        );
+        const incentiveData = {
+          employee: orderForm.employee_id,
+          title: `Sales Incentive - Order for ${orderForm.customer.name}`,
+          description: `Sales incentive for order containing ${
+            orderForm.items.length
+          } items. Total order value: ${formatCurrency(
+            orderForm.total
+          )}. Items: ${orderForm.items
+            .map(
+              (item) =>
+                `${item.product_name}${
+                  item.variant_details ? ` (${item.variant_details})` : ""
+                } x${item.quantity}`
+            )
+            .join(", ")}`,
+          amount: orderForm.incentive_amount,
+          type: "commission" as const,
+          status: "pending" as const,
+        };
+
+        try {
+          await ApiService.createIncentive(incentiveData);
+          console.log(
+            "Incentive created successfully for employee:",
+            selectedEmployee?.name
+          );
+        } catch (incentiveError) {
+          console.error("Error creating incentive:", incentiveError);
+          // Don't fail the whole order creation if incentive creation fails
+          setError(
+            `Order created successfully, but failed to create incentive: ${
+              incentiveError instanceof Error
+                ? incentiveError.message
+                : "Unknown error"
+            }`
+          );
+        }
+      }
+
       // Navigate back to orders page
       router.push("/dashboard/orders");
     } catch (error) {
@@ -1780,6 +1824,61 @@ export default function AddOrderPage() {
                               min="0"
                               step="0.01"
                             />
+                            {/* Incentive creation note */}
+                            {orderForm.employee_id &&
+                              orderForm.incentive_amount > 0 && (
+                                <div className="mt-2 p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                                  <div className="flex items-center gap-2">
+                                    <svg
+                                      className="w-4 h-4 text-green-400 flex-shrink-0"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                      />
+                                    </svg>
+                                    <p className="text-green-400 text-xs">
+                                      Incentive of{" "}
+                                      {formatCurrency(
+                                        orderForm.incentive_amount
+                                      )}{" "}
+                                      will be created for the selected employee
+                                      when order is submitted.
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            {/* Warning when employee is selected but no incentive amount */}
+                            {orderForm.employee_id &&
+                              orderForm.incentive_amount === 0 && (
+                                <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                  <div className="flex items-center gap-2">
+                                    <svg
+                                      className="w-4 h-4 text-amber-400 flex-shrink-0"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
+                                      />
+                                    </svg>
+                                    <p className="text-amber-400 text-xs">
+                                      Employee selected but no incentive amount
+                                      set. Enter an amount above to create an
+                                      incentive.
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
                           </div>
 
                           {/* Net Profit Display */}
