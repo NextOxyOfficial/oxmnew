@@ -26,7 +26,13 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = ["168.231.119.200", "localhost", "127.0.0.1", "*"]
+ALLOWED_HOSTS = [
+    'localhost', 
+    '127.0.0.1', 
+    '168.231.119.200',
+    'oxymanager.com',
+    'www.oxymanager.com'
+]
 
 # Application definition
 INSTALLED_APPS = [
@@ -59,6 +65,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
     "http://127.0.0.1:3000",
+    "http://oxymanager.com",
+    "https://oxymanager.com",
+    "http://www.oxymanager.com",
+    "https://www.oxymanager.com"
 ]
 
 CORS_ALLOW_ALL_ORIGINS = False
@@ -82,6 +92,10 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
     "http://127.0.0.1:3000",
+    "http://oxymanager.com",
+    "https://oxymanager.com",
+    "http://www.oxymanager.com",
+    "https://www.oxymanager.com"
 ]
 
 REST_FRAMEWORK = {
@@ -188,6 +202,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SP_USERNAME = "lyriczsoft"
 SP_PASSWORD = "lyrikskdzprvz&ud"
 SP_ENDPOINT = "https://engine.shurjopayment.com"
-SP_RETURN = "http://localhost:3000/dashboard/subscriptions"
-SP_CANCEL = "http://localhost:3000/dashboard/subscriptions"
+SP_RETURN = "http://oxymanager.com/dashboard/subscriptions"
+SP_CANCEL = "http://oxymanager.com/dashboard/subscriptions"
 SP_PREFIX = "OXMPAY_"
