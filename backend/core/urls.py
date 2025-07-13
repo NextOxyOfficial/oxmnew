@@ -9,6 +9,7 @@ urlpatterns = [
     path('auth/login/', views.login, name='login'),
     path('auth/logout/', views.logout, name='logout'),
     path('auth/profile/', views.profile, name='profile'),
+    path('auth/user/', views.user, name='user'),  # Alias for profile - frontend expects this
     path('auth/profile/upload-logo/',
          views.upload_store_logo, name='upload-store-logo'),
     path('auth/profile/upload-banner/',

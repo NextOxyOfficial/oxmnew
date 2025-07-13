@@ -2505,3 +2505,13 @@ def get_store_by_domain(request, domain):
             {"error": f"Error retrieving store: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user(request):
+    """
+    Get user data - alias for profile endpoint
+    This endpoint is expected by the frontend for user authentication check
+    """
+    return profile(request)
