@@ -1,30 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
-import { customersAPI } from "@/lib/api/customers";
-import { useRecentSales } from "@/hooks/useRecentSales";
-import { useLowStock } from "@/hooks/useLowStock";
-import { useInventoryStats } from "@/hooks/useInventoryStats";
-import { useRecentActivitiesStats } from "@/hooks/useRecentActivitiesStats";
-import { useCustomerStats } from "@/hooks/useCustomerStats";
 import { useBankingOverview } from "@/hooks/useBankingOverview";
+import { useCustomerStats } from "@/hooks/useCustomerStats";
+import { useInventoryStats } from "@/hooks/useInventoryStats";
+import { useLowStock } from "@/hooks/useLowStock";
+import { useRecentActivitiesStats } from "@/hooks/useRecentActivitiesStats";
+import { useRecentSales } from "@/hooks/useRecentSales";
+import { customersAPI } from "@/lib/api/customers";
 import {
   formatDateTime,
   generateOrderId,
   getOrderStatus,
 } from "@/lib/utils/salesUtils";
 import {
+  formatVariantName,
+  getLowestStockVariant,
+  getRestockSuggestion,
   getStockStatus,
-  getTotalStock,
   getStockStatusColor,
   getStockStatusText,
-  getLowestStockVariant,
-  formatVariantName,
-  getRestockSuggestion,
+  getTotalStock,
 } from "@/lib/utils/stockUtils";
+import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -103,9 +103,9 @@ export default function DashboardPage() {
     setShowNewCustomerModal(true);
   };
 
-  const handleViewReports = () => {
-    // TODO: Implement reports functionality later
-    console.log("Reports functionality will be implemented later");
+  const handleDueBook = () => {
+    setIsNavigating(true);
+    router.push("/dashboard/duebook");
   };
 
   const handleCreateCustomer = async () => {
@@ -1202,15 +1202,14 @@ export default function DashboardPage() {
                 </span>
               </button>
               <button
-                onClick={handleViewReports}
-                className="p-3 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-400/30 rounded-xl hover:from-orange-500/30 hover:to-red-500/30 transition-all duration-200 group"
+                onClick={handleDueBook}
+                disabled={isNavigating}
+                className="p-3 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-400/30 rounded-xl hover:from-orange-500/30 hover:to-red-500/30 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">
-                  📈
+                  �
                 </span>
-                <span className="text-sm text-white font-medium">
-                  View Reports
-                </span>
+                <span className="text-sm text-white font-medium">Due Book</span>
               </button>
             </div>
           </div>
@@ -1231,13 +1230,11 @@ export default function DashboardPage() {
                   Banking Overview
                 </h3>
                 <p className="text-sm text-gray-300">
-                  {isLoadingBanking ? (
-                    "Loading..."
-                  ) : bankingError ? (
-                    "Error loading accounts"
-                  ) : (
-                    `Across ${bankingOverview?.total_accounts || 0} accounts`
-                  )}
+                  {isLoadingBanking
+                    ? "Loading..."
+                    : bankingError
+                    ? "Error loading accounts"
+                    : `Across ${bankingOverview?.total_accounts || 0} accounts`}
                 </p>
               </div>
             </div>
@@ -1283,7 +1280,9 @@ export default function DashboardPage() {
                     ? "Loading..."
                     : bankingError
                     ? "Error"
-                    : `+${bankingOverview?.monthly_change_percentage || 0}% this month`}
+                    : `+${
+                        bankingOverview?.monthly_change_percentage || 0
+                      }% this month`}
                 </p>
               </div>
             </div>
@@ -1324,7 +1323,9 @@ export default function DashboardPage() {
               <div className="col-span-2 flex items-center justify-center py-8">
                 <div className="text-center">
                   <div className="text-gray-400 mb-2">🏦</div>
-                  <p className="text-sm text-gray-400">No bank accounts found</p>
+                  <p className="text-sm text-gray-400">
+                    No bank accounts found
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Create your first account to get started
                   </p>
@@ -1335,9 +1336,14 @@ export default function DashboardPage() {
                 // Define colors for accounts
                 const colors = ["green", "blue", "purple", "red"];
                 const accountColor = colors[index % colors.length];
-                const accountStatus = index === 0 ? "Primary" : 
-                                   index === 1 ? "Business" : 
-                                   index === 2 ? "Investment" : "Reserve";
+                const accountStatus =
+                  index === 0
+                    ? "Primary"
+                    : index === 1
+                    ? "Business"
+                    : index === 2
+                    ? "Investment"
+                    : "Reserve";
 
                 return (
                   <div
@@ -1366,7 +1372,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <button 
+          <button
             className="w-full mt-4 py-2 bg-gradient-to-r from-green-500/30 to-emerald-500/30 hover:from-green-500/50 hover:to-emerald-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium"
             onClick={() => {
               setIsNavigating(true);
