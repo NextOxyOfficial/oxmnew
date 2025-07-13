@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Product } from "@/types/product";
-import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 // Customer interface
 interface Customer {
@@ -22,7 +22,10 @@ interface Employee {
   name: string;
   email: string;
   department?: string;
-  position?: string;
+  role?: string;
+  employee_id?: string;
+  phone?: string;
+  status?: string;
 }
 
 // Types for the order
@@ -227,45 +230,10 @@ export default function AddOrderPage() {
   const fetchEmployees = async () => {
     try {
       setIsLoadingEmployees(true);
-      // Mock employee data - replace with actual API call when available
-      const mockEmployees: Employee[] = [
-        {
-          id: 1,
-          name: "Sarah Johnson",
-          email: "sarah@company.com",
-          department: "Sales",
-          position: "Sales Manager",
-        },
-        {
-          id: 2,
-          name: "Mike Chen",
-          email: "mike@company.com",
-          department: "Sales",
-          position: "Sales Representative",
-        },
-        {
-          id: 3,
-          name: "Emily Davis",
-          email: "emily@company.com",
-          department: "Sales",
-          position: "Account Executive",
-        },
-        {
-          id: 4,
-          name: "James Wilson",
-          email: "james@company.com",
-          department: "Sales",
-          position: "Sales Associate",
-        },
-        {
-          id: 5,
-          name: "Lisa Brown",
-          email: "lisa@company.com",
-          department: "Marketing",
-          position: "Marketing Coordinator",
-        },
-      ];
-      setEmployees(mockEmployees);
+      const response = await ApiService.getEmployees();
+      setEmployees(
+        Array.isArray(response) ? response : response?.results || []
+      );
     } catch (error) {
       console.error("Error fetching employees:", error);
       setError("Failed to load employees");
@@ -717,7 +685,7 @@ export default function AddOrderPage() {
     return (
       employee.name.toLowerCase().includes(search) ||
       employee.email.toLowerCase().includes(search) ||
-      (employee.position && employee.position.toLowerCase().includes(search))
+      (employee.role && employee.role.toLowerCase().includes(search))
     );
   });
 
@@ -1738,7 +1706,10 @@ export default function AddOrderPage() {
                                               employee_id: employee.id,
                                             }));
                                             setEmployeeSearch(
-                                              `${employee.name} - ${employee.position}`
+                                              `${employee.name} - ${
+                                                employee.role ||
+                                                employee.department
+                                              }`
                                             );
                                             setIsEmployeeDropdownOpen(false);
                                           }}
@@ -1748,8 +1719,9 @@ export default function AddOrderPage() {
                                             {employee.name}
                                           </div>
                                           <div className="text-slate-400 text-sm">
-                                            {employee.position} •{" "}
-                                            {employee.email}
+                                            {employee.role ||
+                                              employee.department}{" "}
+                                            • {employee.email}
                                           </div>
                                         </div>
                                       ))}
