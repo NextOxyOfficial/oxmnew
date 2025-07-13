@@ -13,7 +13,10 @@ interface Customer {
   email: string;
   phone: string;
   address?: string;
-  previous_due?: number; // Customer's existing debt
+  previous_due?: number; // Customer's existing debt - calculated field
+  status?: string;
+  total_orders?: number;
+  total_spent?: number;
 }
 
 // Employee interface
@@ -183,42 +186,23 @@ export default function AddOrderPage() {
   const fetchCustomers = async () => {
     try {
       setIsLoadingCustomers(true);
-      // Mock customer data - replace with actual API call when available
-      const mockCustomers: Customer[] = [
-        {
-          id: 1,
-          name: "John Doe",
-          email: "john@example.com",
-          phone: "+1 (555) 123-4567",
-          address: "123 Main St, New York, NY 10001",
-          previous_due: 150.75, // Has existing debt
-        },
-        {
-          id: 2,
-          name: "Jane Smith",
-          email: "jane@example.com",
-          phone: "+1 (555) 234-5678",
-          address: "456 Oak Ave, Los Angeles, CA 90210",
-          previous_due: 0, // No existing debt
-        },
-        {
-          id: 3,
-          name: "Bob Wilson",
-          email: "bob@example.com",
-          phone: "+1 (555) 345-6789",
-          address: "789 Pine St, Chicago, IL 60601",
-          previous_due: 89.5, // Has existing debt
-        },
-        {
-          id: 4,
-          name: "Alice Johnson",
-          email: "alice@example.com",
-          phone: "+1 (555) 456-7890",
-          address: "321 Elm Dr, Miami, FL 33101",
-          previous_due: 0, // No existing debt
-        },
-      ];
-      setCustomers(mockCustomers);
+      console.log("Fetching customers from API...");
+      const response = await ApiService.getCustomers();
+      console.log("Customer API response:", response);
+      const customers = Array.isArray(response)
+        ? response
+        : response?.results || [];
+      console.log("Processed customers:", customers);
+
+      // For each customer, we'll set previous_due to 0 initially
+      // In a real scenario, you might want to fetch due payment info from a separate endpoint
+      const customersWithDue = customers.map((customer: Customer) => ({
+        ...customer,
+        previous_due: customer.previous_due || 0, // Use existing value or default to 0
+      }));
+
+      setCustomers(customersWithDue);
+      console.log("Customers set to state:", customersWithDue);
     } catch (error) {
       console.error("Error fetching customers:", error);
       setError("Failed to load customers");
