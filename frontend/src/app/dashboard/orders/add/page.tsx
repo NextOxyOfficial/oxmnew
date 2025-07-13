@@ -341,17 +341,19 @@ export default function AddOrderPage() {
     }
 
     // Check for existing customer if email or phone is being changed
+    // Only validate if the field has a value (since these fields are optional for new customers)
     if ((field === "email" || field === "phone") && value.trim()) {
       const existingCustomer = customers.find(
         (c) =>
           (field === "email" &&
+            c.email &&
             c.email.toLowerCase() === value.toLowerCase()) ||
-          (field === "phone" && c.phone === value)
+          (field === "phone" && c.phone && c.phone === value)
       );
 
       if (existingCustomer) {
         setCustomerValidationError(
-          `A customer with this ${field} already exists: ${existingCustomer.name}`
+          `A customer with this ${field} already exists: ${existingCustomer.name}. You may want to select them from existing customers instead, or use a different ${field}.`
         );
       }
     }
@@ -588,8 +590,10 @@ export default function AddOrderPage() {
       return;
     }
 
-    if (customerValidationError) {
-      setError("Please fix the customer validation errors before submitting");
+    // Only block submission for validation errors if we're dealing with existing customers
+    // For guest customers, we allow them to proceed even if there might be duplicate email/phone
+    if (customerValidationError && customerType === "existing") {
+      setError("Please fix the customer selection issues before submitting");
       return;
     }
 
@@ -617,11 +621,13 @@ export default function AddOrderPage() {
           quantity: item.quantity,
           unit_price: item.unit_price,
           customer_name: orderForm.customer.name,
-          customer_phone: orderForm.customer.phone || undefined,
-          customer_email: orderForm.customer.email || undefined,
+          customer_phone: orderForm.customer.phone?.trim() || undefined,
+          customer_email: orderForm.customer.email?.trim() || undefined,
           notes: `Order Status: ${status}\nDue Date: ${
             orderForm.due_date
-          }\nCustomer Address: ${orderForm.customer.address}\n${
+          }\nCustomer Address: ${
+            orderForm.customer.address || "Not provided"
+          }\n${
             orderForm.customer.company
               ? `Company: ${orderForm.customer.company}\n`
               : ""
@@ -885,12 +891,33 @@ export default function AddOrderPage() {
                   {/* New Customer Form */}
                   {customerType === "guest" && (
                     <div>
-                      {/* Customer Validation Error */}
+                      {/* Customer Validation Warning */}
                       {customerValidationError && (
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
-                          <p className="text-red-400 text-sm">
-                            {customerValidationError}
-                          </p>
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+                          <div className="flex items-start gap-2">
+                            <svg
+                              className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
+                              />
+                            </svg>
+                            <div>
+                              <p className="text-amber-400 text-sm font-medium">
+                                Note:
+                              </p>
+                              <p className="text-amber-300 text-sm">
+                                {customerValidationError} You can still proceed
+                                with creating this order.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -925,7 +952,7 @@ export default function AddOrderPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                            Email
+                            Email (Optional)
                           </label>
                           <input
                             type="email"
@@ -934,12 +961,12 @@ export default function AddOrderPage() {
                               handleCustomerChange("email", e.target.value)
                             }
                             className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                            placeholder="customer@email.com"
+                            placeholder="customer@email.com (optional)"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                            Phone
+                            Phone (Optional)
                           </label>
                           <input
                             type="tel"
@@ -948,12 +975,12 @@ export default function AddOrderPage() {
                               handleCustomerChange("phone", e.target.value)
                             }
                             className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                            placeholder="Phone number"
+                            placeholder="Phone number (optional)"
                           />
                         </div>
                         <div className="md:col-span-2">
                           <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                            Address
+                            Address (Optional)
                           </label>
                           <textarea
                             value={orderForm.customer.address}
@@ -962,7 +989,7 @@ export default function AddOrderPage() {
                             }
                             rows={2}
                             className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                            placeholder="Customer address"
+                            placeholder="Customer address (optional)"
                           />
                         </div>
                       </div>
