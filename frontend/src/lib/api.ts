@@ -835,6 +835,26 @@ export class ApiService {
     return this.put(`/products/${id}/toggle/`, {});
   }
 
+  // Stock management methods
+  static async adjustProductStock(
+    productId: number,
+    stockData: {
+      quantity: number;
+      reason: string;
+      notes?: string;
+      variant_id?: number;
+    }
+  ) {
+    return this.post(`/products/${productId}/adjust_stock/`, stockData);
+  }
+
+  static async getProductStockMovements(productId?: number) {
+    const url = productId
+      ? `/stock-movements/?product=${productId}`
+      : "/stock-movements/";
+    return this.get(url);
+  }
+
   // Low stock and inventory methods
   static async getLowStockProducts(threshold: number = 10) {
     // Get all products and filter for low stock
