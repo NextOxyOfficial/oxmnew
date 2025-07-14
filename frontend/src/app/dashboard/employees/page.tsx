@@ -274,9 +274,7 @@ export default function EmployeesPage() {
       `${emp.name}\n${emp.phone}`,
       `${emp.department}\n${emp.role}`,
       emp.status.charAt(0).toUpperCase() + emp.status.slice(1),
-      `${emp.bank_name || "N/A"} - ${emp.bank_branch || "N/A"}\n${
-        emp.account_number || "N/A"
-      }`,
+      `Bank: N/A\nAccount: N/A`,
       `${currencySymbol}${emp.salary}`,
     ]);
 
