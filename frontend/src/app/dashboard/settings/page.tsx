@@ -1518,7 +1518,7 @@ export default function SettingsPage() {
                     </h6>
                     <div className="bg-slate-900/50 border border-slate-600/50 rounded p-3 mb-4">
                       <code className="text-slate-300 text-sm">
-                        Authorization: ApiKey your_api_key_here
+                        Authorization: Bearer your_api_key_here
                       </code>
                     </div>
 
@@ -1528,7 +1528,7 @@ export default function SettingsPage() {
                     <div className="bg-slate-900/50 border border-slate-600/50 rounded p-3 mb-4">
                       <pre className="text-slate-300 text-sm overflow-x-auto">
                         {`curl -X GET "${window.location.origin}/api/public/products/" \\
-  -H "Authorization: ApiKey your_api_key_here" \\
+  -H "Authorization: Bearer your_api_key_here" \\
   -H "Content-Type: application/json"`}
                       </pre>
                     </div>
@@ -1539,7 +1539,7 @@ export default function SettingsPage() {
                     <div className="bg-slate-900/50 border border-slate-600/50 rounded p-3 mb-4">
                       <pre className="text-slate-300 text-sm overflow-x-auto">
                         {`curl -X GET "${window.location.origin}/api/public/products/1/" \\
-  -H "Authorization: ApiKey your_api_key_here" \\
+  -H "Authorization: Bearer your_api_key_here" \\
   -H "Content-Type: application/json"`}
                       </pre>
                     </div>
