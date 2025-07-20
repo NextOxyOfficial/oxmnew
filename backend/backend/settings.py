@@ -10,9 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-from pathlib import Path
 import os
-from datetime import timedelta
+from pathlib import Path
+
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,11 +27,11 @@ SECRET_KEY = config(
 DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS = [
-    'localhost', 
-    '127.0.0.1', 
-    '168.231.119.200',
-    'oxymanager.com',
-    'www.oxymanager.com'
+    "localhost",
+    "127.0.0.1",
+    "168.231.119.200",
+    "oxymanager.com",
+    "www.oxymanager.com",
 ]
 
 # Application definition
@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "subscription",  # Added subscription app
     "orders",  # New orders app
     "online_store",  # Added online store app
+    "public_api",  # Public API app for external access
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -68,7 +69,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://oxymanager.com",
     "https://oxymanager.com",
     "http://www.oxymanager.com",
-    "https://www.oxymanager.com"
+    "https://www.oxymanager.com",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = False
@@ -95,7 +96,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://oxymanager.com",
     "https://oxymanager.com",
     "http://www.oxymanager.com",
-    "https://www.oxymanager.com"
+    "https://www.oxymanager.com",
 ]
 
 REST_FRAMEWORK = {
