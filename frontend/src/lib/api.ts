@@ -135,6 +135,51 @@ export const AuthToken = {
   },
 };
 
+// API Key interfaces
+interface APIKey {
+  id: number;
+  key: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  last_used: string | null;
+  requests_per_hour: number;
+  requests_per_day: number;
+}
+
+interface APIKeyUsageLog {
+  id: number;
+  api_key: number;
+  endpoint: string;
+  ip_address: string;
+  user_agent: string;
+  response_status: number;
+  response_time_ms: number | null;
+  timestamp: string;
+}
+
+interface APIKeyUsageStats {
+  api_key: string;
+  is_active: boolean;
+  created_at: string;
+  last_used: string | null;
+  rate_limits: {
+    requests_per_hour: number;
+    requests_per_day: number;
+  };
+  stats_last_30_days: {
+    total_requests: number;
+    successful_requests: number;
+    failed_requests: number;
+    success_rate: number;
+  };
+  daily_usage_last_7_days: Array<{
+    date: string;
+    requests: number;
+  }>;
+}
+
 export class ApiService {
   private static async request(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -1305,5 +1350,68 @@ export class ApiService {
 
   static async verifyPayment(orderId: string) {
     return this.get(`/verify-payment/?sp_order_id=${orderId}`);
+  }
+
+  // API Key management methods
+  static async getAPIKeys(): Promise<APIKey[]> {
+    const response = await this.get("/public/manage/api-keys/");
+    console.log("Raw API Keys response:", response);
+
+    // Handle both paginated and non-paginated responses
+    if (response.results) {
+      console.log("Found paginated results:", response.results);
+      return response.results;
+    }
+    // If it's not paginated, it should be an array
+    const result = Array.isArray(response) ? response : [];
+    console.log("Processed API Keys result:", result);
+    return result;
+  }
+
+  static async createAPIKey(data: { name: string }): Promise<APIKey> {
+    return this.post("/public/manage/api-keys/", data);
+  }
+
+  static async updateAPIKey(
+    id: number,
+    data: { name?: string; is_active?: boolean }
+  ): Promise<APIKey> {
+    return this.put(`/public/manage/api-keys/${id}/`, data);
+  }
+
+  static async deleteAPIKey(id: number): Promise<void> {
+    return this.delete(`/public/manage/api-keys/${id}/`);
+  }
+
+  static async regenerateAPIKey(): Promise<APIKey> {
+    return this.post("/public/manage/api-keys/regenerate/", {});
+  }
+
+  static async getAPIKeyUsageStats(): Promise<APIKeyUsageStats> {
+    return this.get("/public/manage/api-keys/usage-stats/");
+  }
+
+  static async getAPIKeyUsageLogs(params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<{
+    results: APIKeyUsageLog[];
+    count: number;
+    next: string | null;
+    previous: string | null;
+  }> {
+    let endpoint = "/public/manage/usage-logs/";
+
+    if (params && Object.keys(params).length > 0) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, value.toString());
+        }
+      });
+      endpoint += `?${searchParams.toString()}`;
+    }
+
+    return this.get(endpoint);
   }
 }

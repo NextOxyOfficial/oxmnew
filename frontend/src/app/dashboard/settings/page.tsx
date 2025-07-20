@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import CustomDomainSettings from "@/components/CustomDomainSettings";
+import AchievementsTab from "@/components/settings/AchievementsTab";
+import BrandTab from "@/components/settings/BrandTab";
+import GiftsTab from "@/components/settings/GiftsTab";
+import LevelTab from "@/components/settings/LevelTab";
+import PaymentMethodsTab from "@/components/settings/PaymentMethodsTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import CustomDomainSettings from "@/components/CustomDomainSettings";
-import GiftsTab from "@/components/settings/GiftsTab";
-import AchievementsTab from "@/components/settings/AchievementsTab";
-import LevelTab from "@/components/settings/LevelTab";
-import BrandTab from "@/components/settings/BrandTab";
-import PaymentMethodsTab from "@/components/settings/PaymentMethodsTab";
 import { ApiService } from "@/lib/api";
+import { useEffect, useState } from "react";
 
 interface Category {
   id: number;
@@ -29,7 +29,29 @@ interface Achievement {
   is_active: boolean;
 }
 
+interface APIKey {
+  id: number;
+  key: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  last_used: string | null;
+  requests_per_hour: number;
+  requests_per_day: number;
+}
 
+interface APIKeyUsageStats {
+  total_requests: number;
+  requests_today: number;
+  requests_this_hour: number;
+  success_rate: number;
+  avg_response_time: number;
+  most_used_endpoints: Array<{
+    endpoint: string;
+    count: number;
+  }>;
+}
 
 interface GeneralSettings {
   language: string;
@@ -54,8 +76,6 @@ export default function SettingsPage() {
     type: "success" | "error";
     message: string;
   }>({ isVisible: false, type: "success", message: "" });
-
-
 
   // Categories state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -119,6 +139,16 @@ export default function SettingsPage() {
     confirmPassword: "",
   });
 
+  // API Keys state
+  const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
+  const [usageStats, setUsageStats] = useState<APIKeyUsageStats | null>(null);
+  const [showApiKeyValue, setShowApiKeyValue] = useState<number | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [apiKeyDeleteModal, setApiKeyDeleteModal] = useState<{
+    isOpen: boolean;
+    apiKey: APIKey | null;
+  }>({ isOpen: false, apiKey: null });
+
   useEffect(() => {
     fetchCategories();
     fetchSettings();
@@ -127,14 +157,18 @@ export default function SettingsPage() {
     fetchLevels();
     fetchBrands();
     fetchPaymentMethods();
+    fetchApiKeys();
   }, []);
 
-  // Fetch achievements when the achievements tab becomes active
+  // Fetch data when specific tabs become active
   useEffect(() => {
     if (activeTab === "achievements") {
       fetchAchievements();
     } else if (activeTab === "levels") {
       fetchLevels();
+    } else if (activeTab === "api-keys") {
+      fetchApiKeys();
+      fetchUsageStats();
     }
   }, [activeTab]);
 
@@ -144,8 +178,6 @@ export default function SettingsPage() {
       setNotification({ isVisible: false, type: "success", message: "" });
     }, 5000);
   };
-
-
 
   const fetchCategories = async () => {
     try {
@@ -263,7 +295,40 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchApiKeys = async () => {
+    console.log("=== FETCHING API KEYS ===");
+    try {
+      const apiKeys = await ApiService.getAPIKeys();
+      console.log("API Keys fetched:", apiKeys);
+      console.log("API Keys length:", apiKeys.length);
+      if (apiKeys.length > 0) {
+        console.log("First API Key details:", apiKeys[0]);
+      }
+      setApiKeys(apiKeys);
 
+      // Also fetch usage stats if we have API keys
+      if (apiKeys && apiKeys.length > 0) {
+        console.log("Fetching usage stats...");
+        await fetchUsageStats();
+      }
+    } catch (error) {
+      console.error("Error fetching API keys:", error);
+      setApiKeys([]);
+      showNotification("error", "Failed to load API keys");
+    }
+  };
+
+  const fetchUsageStats = async () => {
+    console.log("=== FETCHING USAGE STATS ===");
+    try {
+      const stats = await ApiService.getAPIKeyUsageStats();
+      console.log("Usage stats fetched:", stats);
+      setUsageStats(stats || null);
+    } catch (error) {
+      console.error("Error fetching usage stats:", error);
+      setUsageStats(null);
+    }
+  };
 
   const handleAddCategory = async () => {
     if (!newCategory.trim()) return;
@@ -561,10 +626,126 @@ export default function SettingsPage() {
     }
   };
 
+  // API Key functions
+  const handleCreateApiKey = async () => {
+    setLoading(true);
+    try {
+      const apiKey = await ApiService.createAPIKey({
+        name: "My API Key", // Default name since it's not user-provided anymore
+      });
+      // Since users can only have one API key, replace the array
+      setApiKeys([apiKey]);
+      setShowApiKeyValue(apiKey.id);
+      showNotification("success", "API key generated successfully!");
+      // Refresh usage stats
+      fetchUsageStats();
+    } catch (error) {
+      console.error("Error creating API key:", error);
+      showNotification("error", "Error generating API key. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleApiKey = async (id: number) => {
+    setLoading(true);
+    try {
+      const apiKey = apiKeys.find((key) => key.id === id);
+      if (!apiKey) return;
+
+      const updatedApiKey = await ApiService.updateAPIKey(id, {
+        is_active: !apiKey.is_active,
+      });
+      // Update the single API key
+      setApiKeys([updatedApiKey]);
+      showNotification(
+        "success",
+        `API key ${
+          updatedApiKey.is_active ? "activated" : "deactivated"
+        } successfully!`
+      );
+    } catch (error) {
+      console.error("Error toggling API key:", error);
+      showNotification("error", "Error updating API key. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const regenerateApiKey = async () => {
+    setLoading(true);
+    try {
+      const apiKey = await ApiService.regenerateAPIKey();
+      // Update the single API key
+      setApiKeys([apiKey]);
+      setShowApiKeyValue(apiKey.id);
+      showNotification("success", "API key regenerated successfully!");
+    } catch (error) {
+      console.error("Error regenerating API key:", error);
+      showNotification(
+        "error",
+        "Error regenerating API key. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteApiKey = async (id: number) => {
+    setLoading(true);
+    try {
+      await ApiService.deleteAPIKey(id);
+      setApiKeys([]); // Clear the single API key
+      setApiKeyDeleteModal({ isOpen: false, apiKey: null });
+      showNotification("success", "API key deleted successfully!");
+      // Refresh usage stats
+      fetchUsageStats();
+    } catch (error) {
+      console.error("Error deleting API key:", error);
+      showNotification("error", "Error deleting API key. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    if (!text) {
+      showNotification("error", "No API key to copy");
+      return;
+    }
+
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopySuccess(true);
+        showNotification("success", "API key copied to clipboard!");
+        setTimeout(() => setCopySuccess(false), 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy text: ", err);
+        showNotification("error", "Failed to copy API key");
+      });
+  };
+
+  const handleApiKeyDeleteClick = (apiKey: APIKey) => {
+    setApiKeyDeleteModal({ isOpen: true, apiKey });
+  };
+
+  const handleApiKeyDeleteConfirm = () => {
+    if (apiKeyDeleteModal.apiKey) {
+      deleteApiKey(apiKeyDeleteModal.apiKey.id);
+    }
+  };
+
+  const handleApiKeyDeleteCancel = () => {
+    setApiKeyDeleteModal({ isOpen: false, apiKey: null });
+  };
+
   // Gift functions
   const tabs = [
     { id: "categories", label: "Categories" },
     { id: "general", label: "General" },
+    { id: "api-keys", label: "API Keys" },
     { id: "gift", label: "Gift" },
     { id: "achievements", label: "Achievements" },
     { id: "levels", label: "Level" },
@@ -940,6 +1121,520 @@ export default function SettingsPage() {
                     loading={loading}
                     onSave={handleCustomDomainSave}
                   />
+                </div>
+              </div>
+            )}
+
+            {/* API Keys Tab */}
+            {activeTab === "api-keys" && (
+              <div className="space-y-6">
+                {/* Usage Statistics */}
+                {usageStats && (
+                  <div className="mb-8">
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Usage Statistics
+                    </h4>
+                    {usageStats ? (
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                          <div className="text-2xl font-bold text-cyan-400">
+                            {usageStats.stats_last_30_days?.total_requests?.toLocaleString() ||
+                              "0"}
+                          </div>
+                          <div className="text-sm text-slate-400">
+                            Total Requests (30 days)
+                          </div>
+                        </div>
+                        <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                          <div className="text-2xl font-bold text-green-400">
+                            {usageStats.stats_last_30_days?.successful_requests?.toLocaleString() ||
+                              "0"}
+                          </div>
+                          <div className="text-sm text-slate-400">
+                            Successful
+                          </div>
+                        </div>
+                        <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                          <div className="text-2xl font-bold text-red-400">
+                            {usageStats.stats_last_30_days?.failed_requests?.toLocaleString() ||
+                              "0"}
+                          </div>
+                          <div className="text-sm text-slate-400">Failed</div>
+                        </div>
+                        <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                          <div className="text-2xl font-bold text-purple-400">
+                            {usageStats.stats_last_30_days?.success_rate?.toFixed(
+                              1
+                            ) || "0"}
+                            %
+                          </div>
+                          <div className="text-sm text-slate-400">
+                            Success Rate
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-6 text-center">
+                        <div className="text-slate-400">
+                          No usage data available yet
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Create New API Key - Only show if user doesn't have one */}
+                {apiKeys.length === 0 && (
+                  <div className="mb-8">
+                    <h4 className="text-lg font-medium text-slate-100 mb-4">
+                      Generate API Key
+                    </h4>
+                    <div className="flex flex-col items-center gap-4 max-w-md">
+                      <button
+                        onClick={handleCreateApiKey}
+                        disabled={loading}
+                        className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer flex items-center gap-2"
+                      >
+                        {loading ? (
+                          <>
+                            <svg
+                              className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
+                              />
+                            </svg>
+                            Generate API Key
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-400 text-center max-w-md">
+                      Note: You can only have one API key per account.
+                      Generating a new one will replace any existing key.
+                    </p>
+                  </div>
+                )}
+
+                {/* Existing API Keys */}
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-medium text-slate-100">
+                      Your API Key
+                    </h4>
+                    {apiKeys.length > 0 && (
+                      <button
+                        onClick={regenerateApiKey}
+                        disabled={loading}
+                        className="px-3 py-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+                      >
+                        Regenerate
+                      </button>
+                    )}
+                  </div>
+
+                  {apiKeys.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 bg-slate-800/25 rounded-lg border border-slate-700/50">
+                      <div className="mb-2">
+                        <svg
+                          className="w-12 h-12 mx-auto text-slate-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-lg font-medium text-slate-300">
+                        No API Key Generated
+                      </p>
+                      <p className="mt-1">
+                        Create your first API key to access your products data
+                        programmatically.
+                      </p>
+                      {/* Debug info */}
+                      <div className="mt-4 text-xs text-slate-500">
+                        Debug: apiKeys.length = {apiKeys.length}, usageStats ={" "}
+                        {usageStats ? "exists" : "null"}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {apiKeys.map((apiKey) => (
+                        <div
+                          key={apiKey.id}
+                          className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <h5 className="font-medium text-slate-100">
+                                {apiKey.name}
+                              </h5>
+                              <div className="flex items-center gap-4 mt-1 text-sm text-slate-400">
+                                <span>
+                                  Created:{" "}
+                                  {new Date(
+                                    apiKey.created_at
+                                  ).toLocaleDateString()}
+                                </span>
+                                {apiKey.last_used && (
+                                  <span>
+                                    Last used:{" "}
+                                    {new Date(
+                                      apiKey.last_used
+                                    ).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 ${
+                                  apiKey.is_active
+                                    ? "bg-green-500/20 text-green-300 border border-green-400/30 hover:bg-green-500/30"
+                                    : "bg-gray-500/20 text-gray-300 border border-gray-400/30 hover:bg-gray-500/30"
+                                }`}
+                                onClick={() => toggleApiKey(apiKey.id)}
+                                title="Click to toggle active/inactive status"
+                              >
+                                {apiKey.is_active ? "Active" : "Inactive"}
+                              </span>
+                              <button
+                                onClick={() => handleApiKeyDeleteClick(apiKey)}
+                                className="p-1.5 bg-red-500/20 text-red-300 rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200 cursor-pointer"
+                                title="Delete API key"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-900/50 border border-slate-600/50 rounded p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <label className="block text-xs font-medium text-slate-400 mb-1">
+                                  API Key
+                                </label>
+                                {showApiKeyValue === apiKey.id ? (
+                                  <div className="font-mono text-sm text-slate-100 break-all">
+                                    {apiKey.key}
+                                  </div>
+                                ) : (
+                                  <div className="font-mono text-sm text-slate-400">
+                                    pak_••••••••••••••••••••••••••••••••
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex gap-2 ml-3">
+                                <button
+                                  onClick={() =>
+                                    setShowApiKeyValue(
+                                      showApiKeyValue === apiKey.id
+                                        ? null
+                                        : apiKey.id
+                                    )
+                                  }
+                                  className="p-1.5 bg-slate-700/50 text-slate-300 rounded-md hover:bg-slate-600/50 transition-all duration-200"
+                                  title={
+                                    showApiKeyValue === apiKey.id
+                                      ? "Hide key"
+                                      : "Show key"
+                                  }
+                                >
+                                  {showApiKeyValue === apiKey.id ? (
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
+                                      />
+                                    </svg>
+                                  ) : (
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                      />
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                      />
+                                    </svg>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => copyToClipboard(apiKey.key)}
+                                  className="p-1.5 bg-cyan-600/50 text-cyan-300 rounded-md hover:bg-cyan-500/50 transition-all duration-200 relative"
+                                  title="Copy API key"
+                                >
+                                  {copySuccess ? (
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M5 13l4 4L19 7"
+                                      />
+                                    </svg>
+                                  ) : (
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                      />
+                                    </svg>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                            <div>
+                              <span className="text-slate-400">
+                                Rate Limit (hourly):
+                              </span>
+                              <span className="ml-2 text-slate-100">
+                                {apiKey.requests_per_hour?.toLocaleString() ||
+                                  "N/A"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400">
+                                Rate Limit (daily):
+                              </span>
+                              <span className="ml-2 text-slate-100">
+                                {apiKey.requests_per_day?.toLocaleString() ||
+                                  "N/A"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* API Documentation */}
+                <div className="mb-8">
+                  <h4 className="text-lg font-medium text-slate-100 mb-4">
+                    API Documentation
+                  </h4>
+                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-6">
+                    <h5 className="font-medium text-slate-100 mb-3">
+                      Getting Started
+                    </h5>
+                    <p className="text-slate-400 mb-4">
+                      Use your API key to access your products data
+                      programmatically. Include the API key in the Authorization
+                      header of your requests.
+                    </p>
+
+                    <h6 className="font-medium text-slate-100 mb-2">
+                      Base URL
+                    </h6>
+                    <div className="bg-slate-900/50 border border-slate-600/50 rounded p-3 mb-4">
+                      <code className="text-cyan-400 text-sm">
+                        {window.location.origin}/api/public/
+                      </code>
+                    </div>
+
+                    <h6 className="font-medium text-slate-100 mb-2">
+                      Authentication
+                    </h6>
+                    <div className="bg-slate-900/50 border border-slate-600/50 rounded p-3 mb-4">
+                      <code className="text-slate-300 text-sm">
+                        Authorization: ApiKey your_api_key_here
+                      </code>
+                    </div>
+
+                    <h6 className="font-medium text-slate-100 mb-2">
+                      Example: Get All Products
+                    </h6>
+                    <div className="bg-slate-900/50 border border-slate-600/50 rounded p-3 mb-4">
+                      <pre className="text-slate-300 text-sm overflow-x-auto">
+                        {`curl -X GET "${window.location.origin}/api/public/products/" \\
+  -H "Authorization: ApiKey your_api_key_here" \\
+  -H "Content-Type: application/json"`}
+                      </pre>
+                    </div>
+
+                    <h6 className="font-medium text-slate-100 mb-2">
+                      Example: Get Product by ID
+                    </h6>
+                    <div className="bg-slate-900/50 border border-slate-600/50 rounded p-3 mb-4">
+                      <pre className="text-slate-300 text-sm overflow-x-auto">
+                        {`curl -X GET "${window.location.origin}/api/public/products/1/" \\
+  -H "Authorization: ApiKey your_api_key_here" \\
+  -H "Content-Type: application/json"`}
+                      </pre>
+                    </div>
+
+                    <h6 className="font-medium text-slate-100 mb-2">
+                      Available Endpoints
+                    </h6>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs font-mono rounded border border-green-400/30">
+                          GET
+                        </span>
+                        <code className="text-slate-300">/products/</code>
+                        <span className="text-slate-400 text-sm">
+                          List all your products
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs font-mono rounded border border-green-400/30">
+                          GET
+                        </span>
+                        <code className="text-slate-300">
+                          /products/{"{id}"}/{" "}
+                        </code>
+                        <span className="text-slate-400 text-sm">
+                          Get specific product details
+                        </span>
+                      </div>
+                    </div>
+
+                    <h6 className="font-medium text-slate-100 mb-2 mt-4">
+                      Query Parameters
+                    </h6>
+                    <div className="space-y-1 text-sm">
+                      <div>
+                        <code className="text-cyan-400">category__name</code> -{" "}
+                        <span className="text-slate-400">
+                          Filter by category name
+                        </span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">has_variants</code> -{" "}
+                        <span className="text-slate-400">
+                          Filter by products with variants (true/false)
+                        </span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">is_active</code> -{" "}
+                        <span className="text-slate-400">
+                          Filter by active status (true/false)
+                        </span>
+                      </div>
+                    </div>
+
+                    <h6 className="font-medium text-slate-100 mb-2 mt-4">
+                      Rate Limits
+                    </h6>
+                    <p className="text-slate-400 text-sm">
+                      API requests are limited to prevent abuse. Your current
+                      limits are shown above with your API key. If you exceed
+                      these limits, you&apos;ll receive a 429 Too Many Requests
+                      response.
+                    </p>
+
+                    <h6 className="font-medium text-slate-100 mb-2 mt-4">
+                      Response Format
+                    </h6>
+                    <p className="text-slate-400 text-sm mb-2">
+                      All responses are in JSON format:
+                    </p>
+                    <div className="bg-slate-900/50 border border-slate-600/50 rounded p-3">
+                      <pre className="text-slate-300 text-sm overflow-x-auto">
+                        {`{
+  "count": 25,
+  "next": "http://example.com/api/public/products/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "name": "Sample Product",
+      "category": "Electronics",
+      "supplier": "Sample Supplier",
+      "buy_price": "100.00",
+      "sell_price": "150.00",
+      "stock": 10,
+      "has_variants": false,
+      "is_active": true,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    }
+  ]
+}`}
+                      </pre>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1370,6 +2065,82 @@ export default function SettingsPage() {
                   </button>
                   <button
                     onClick={handlePaymentMethodDeleteCancel}
+                    disabled={loading}
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* API Key Delete Confirmation Modal */}
+        {apiKeyDeleteModal.isOpen && (
+          <div className="fixed inset-0 z-50 overflow-y-auto scrollbar-hide">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div
+                className="fixed inset-0 transition-opacity"
+                aria-hidden="true"
+              >
+                <div className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+              </div>
+
+              <span
+                className="hidden sm:inline-block sm:align-middle sm:h-screen"
+                aria-hidden="true"
+              >
+                &#8203;
+              </span>
+
+              <div className="inline-block align-bottom bg-white/10 backdrop-blur-xl rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
+                <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-500/20 sm:mx-0 sm:h-10 sm:w-10">
+                      <svg
+                        className="h-6 w-6 text-red-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                      <h3
+                        className="text-lg leading-6 font-medium text-white"
+                        id="modal-title"
+                      >
+                        Delete API Key
+                      </h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-300">
+                          Are you sure you want to delete the API key{" "}
+                          <span className="font-semibold text-white">
+                            &quot;{apiKeyDeleteModal.apiKey?.name}&quot;
+                          </span>
+                          ? This action cannot be undone and will immediately
+                          revoke access for any applications using this key.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse bg-white/5">
+                  <button
+                    onClick={handleApiKeyDeleteConfirm}
+                    disabled={loading}
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {loading ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    onClick={handleApiKeyDeleteCancel}
                     disabled={loading}
                     className="mt-3 w-full inline-flex justify-center rounded-md border border-white/20 shadow-sm px-4 py-2 bg-white/10 text-base font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
