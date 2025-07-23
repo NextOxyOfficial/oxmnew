@@ -1608,31 +1608,118 @@ export default function SettingsPage() {
                       Response Format
                     </h6>
                     <p className="text-slate-400 text-sm mb-2">
-                      All responses are in JSON format:
+                      All responses are in JSON format (returns a simple array
+                      of products):
                     </p>
                     <div className="bg-slate-900/50 border border-slate-600/50 rounded p-3">
                       <pre className="text-slate-300 text-sm overflow-x-auto">
-                        {`{
-  "count": 25,
-  "next": "http://example.com/api/public/products/?page=2",
-  "previous": null,
-  "results": [
-    {
-      "id": 1,
-      "name": "Sample Product",
-      "category": "Electronics",
-      "supplier": "Sample Supplier",
-      "buy_price": "100.00",
-      "sell_price": "150.00",
-      "stock": 10,
-      "has_variants": false,
-      "is_active": true,
-      "created_at": "2024-01-15T10:30:00Z",
-      "updated_at": "2024-01-15T10:30:00Z"
-    }
-  ]
-}`}
+                        {`[
+  {
+    "id": 1,
+    "name": "Sample Product",
+    "details": "Product description here",
+    "location": "Store Location",
+    "category_name": "Electronics",
+    "supplier_name": "Sample Supplier",
+    "has_variants": false,
+    "buy_price": "100.00",
+    "sell_price": "150.00",
+    "stock": 10,
+    "profit_margin": 50.0,
+    "total_stock": 10,
+    "main_photo": null,
+    "photos": [],
+    "variants": [],
+    "is_active": true,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+]`}
                       </pre>
+                    </div>
+
+                    <h6 className="font-medium text-slate-100 mb-2 mt-4">
+                      Response Fields
+                    </h6>
+                    <div className="space-y-1 text-sm">
+                      <div>
+                        <code className="text-cyan-400">id</code> -{" "}
+                        <span className="text-slate-400">Product ID</span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">name</code> -{" "}
+                        <span className="text-slate-400">Product name</span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">details</code> -{" "}
+                        <span className="text-slate-400">
+                          Product description
+                        </span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">location</code> -{" "}
+                        <span className="text-slate-400">Store location</span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">category_name</code> -{" "}
+                        <span className="text-slate-400">Product category</span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">supplier_name</code> -{" "}
+                        <span className="text-slate-400">Supplier name</span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">buy_price</code> -{" "}
+                        <span className="text-slate-400">Purchase price</span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">sell_price</code> -{" "}
+                        <span className="text-slate-400">Selling price</span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">stock</code> -{" "}
+                        <span className="text-slate-400">Available stock</span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">profit_margin</code> -{" "}
+                        <span className="text-slate-400">
+                          Profit percentage
+                        </span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">total_stock</code> -{" "}
+                        <span className="text-slate-400">
+                          Total stock (including variants)
+                        </span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">main_photo</code> -{" "}
+                        <span className="text-slate-400">
+                          Primary product image URL
+                        </span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">photos</code> -{" "}
+                        <span className="text-slate-400">
+                          Array of product photos
+                        </span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">variants</code> -{" "}
+                        <span className="text-slate-400">
+                          Array of product variants (color, size, etc.)
+                        </span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">has_variants</code> -{" "}
+                        <span className="text-slate-400">
+                          Whether product has variants
+                        </span>
+                      </div>
+                      <div>
+                        <code className="text-cyan-400">is_active</code> -{" "}
+                        <span className="text-slate-400">Product status</span>
+                      </div>
                     </div>
                   </div>
                 </div>
