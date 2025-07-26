@@ -1,9 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { ApiService } from "@/lib/api";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { ApiService } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+
+// Add interface for suggestion products
+interface SuggestionProduct {
+  id: number;
+  name: string;
+  product_code?: string;
+  stock?: number;
+  total_stock?: number;
+  sell_price?: number;
+  average_sell_price?: number;
+}
 
 interface Category {
   id: number;
@@ -92,6 +103,19 @@ export default function AddProductPage() {
   const [customSize, setCustomSize] = useState("");
   const [customWeight, setCustomWeight] = useState("");
 
+  // Product search suggestions state
+  const [nameSuggestions, setNameSuggestions] = useState<SuggestionProduct[]>(
+    []
+  );
+  const [codeSuggestions, setCodeSuggestions] = useState<SuggestionProduct[]>(
+    []
+  );
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+  const [showCodeSuggestions, setShowCodeSuggestions] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
+
   // Calculate profit (for single pricing or average if variants exist)
   const profit = formData.hasVariants
     ? formData.colorSizeVariants.length > 0
@@ -132,6 +156,44 @@ export default function AddProductPage() {
   ];
   const commonSizes = ["XS", "S", "M", "L", "XL", "XXL", "One Size"];
 
+  // Search for products based on name or product code
+  const searchProducts = async (query: string, searchType: "name" | "code") => {
+    if (!query || query.trim().length < 2) {
+      if (searchType === "name") {
+        setNameSuggestions([]);
+        setShowNameSuggestions(false);
+      } else {
+        setCodeSuggestions([]);
+        setShowCodeSuggestions(false);
+      }
+      return;
+    }
+
+    try {
+      const results = await ApiService.searchProducts(query);
+
+      if (searchType === "name") {
+        // Filter results that match the name
+        const nameMatches = results.filter((product: SuggestionProduct) =>
+          product.name.toLowerCase().includes(query.toLowerCase())
+        );
+        setNameSuggestions(nameMatches.slice(0, 5)); // Limit to 5 suggestions
+        setShowNameSuggestions(nameMatches.length > 0);
+      } else {
+        // Filter results that match the product code
+        const codeMatches = results.filter(
+          (product: SuggestionProduct) =>
+            product.product_code &&
+            product.product_code.toLowerCase().includes(query.toLowerCase())
+        );
+        setCodeSuggestions(codeMatches.slice(0, 5)); // Limit to 5 suggestions
+        setShowCodeSuggestions(codeMatches.length > 0);
+      }
+    } catch (error) {
+      console.error("Error searching products:", error);
+    }
+  };
+
   // Fetch categories and suppliers on component mount
   useEffect(() => {
     const fetchData = async () => {
@@ -170,6 +232,15 @@ export default function AddProductPage() {
     fetchData();
   }, []);
 
+  // Cleanup search timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -206,7 +277,55 @@ export default function AddProductPage() {
         ...prev,
         [name]: value,
       }));
+
+      // Trigger search for product name or product code
+      if (name === "name" || name === "productCode") {
+        // Clear existing timeout
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+
+        // Set new timeout for delayed search
+        const newTimeout = setTimeout(() => {
+          if (name === "name") {
+            searchProducts(value, "name");
+          } else if (name === "productCode") {
+            searchProducts(value, "code");
+          }
+        }, 300); // 300ms delay
+
+        setSearchTimeout(newTimeout);
+      }
     }
+  };
+
+  // Handle selecting a suggestion
+  const handleSuggestionSelect = (
+    product: SuggestionProduct,
+    type: "name" | "code"
+  ) => {
+    if (type === "name") {
+      setFormData((prev) => ({ ...prev, name: product.name }));
+      setShowNameSuggestions(false);
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        productCode: product.product_code || "",
+      }));
+      setShowCodeSuggestions(false);
+    }
+  };
+
+  // Handle clicking outside to close suggestions
+  const handleInputBlur = (type: "name" | "code") => {
+    // Use setTimeout to allow click on suggestion to work
+    setTimeout(() => {
+      if (type === "name") {
+        setShowNameSuggestions(false);
+      } else {
+        setShowCodeSuggestions(false);
+      }
+    }, 200);
   };
 
   const handleVariantChange = (
@@ -652,7 +771,7 @@ export default function AddProductPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Product Name */}
-              <div>
+              <div className="relative">
                 <label
                   htmlFor="name"
                   className="block text-sm font-medium text-slate-300 mb-1.5"
@@ -665,11 +784,58 @@ export default function AddProductPage() {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
+                  onBlur={() => handleInputBlur("name")}
+                  onFocus={() =>
+                    formData.name.trim().length >= 2 &&
+                    setShowNameSuggestions(nameSuggestions.length > 0)
+                  }
                   className={`w-full bg-slate-800/50 border ${
                     errors.name ? "border-red-500" : "border-slate-700/50"
                   } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
                   placeholder="Enter product name"
                 />
+
+                {/* Name Suggestions Dropdown */}
+                {showNameSuggestions && nameSuggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div className="p-2 border-b border-slate-600">
+                      <p className="text-xs text-yellow-400 font-medium">
+                        ⚠️ Similar products found - Check to avoid duplicates
+                      </p>
+                    </div>
+                    {nameSuggestions.map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => handleSuggestionSelect(product, "name")}
+                        className="flex items-center justify-between p-3 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-b-0"
+                      >
+                        <div className="flex-1">
+                          <p className="text-white font-medium">
+                            {product.name}
+                          </p>
+                          <div className="flex gap-4 text-xs text-slate-400 mt-1">
+                            {product.product_code && (
+                              <span>Code: {product.product_code}</span>
+                            )}
+                            <span>
+                              Stock: {product.total_stock || product.stock || 0}
+                            </span>
+                            <span className="text-green-400">
+                              $
+                              {product.sell_price ||
+                                product.average_sell_price ||
+                                0}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="ml-2 text-xs text-slate-500">
+                          Click to use
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {errors.name && (
                   <p className="text-red-400 text-sm mt-1">{errors.name}</p>
                 )}
@@ -720,7 +886,7 @@ export default function AddProductPage() {
                 </div>
 
                 {/* Product/Parts Code */}
-                <div>
+                <div className="relative">
                   <label
                     htmlFor="productCode"
                     className="block text-sm font-medium text-slate-300 mb-1.5"
@@ -733,6 +899,11 @@ export default function AddProductPage() {
                     name="productCode"
                     value={formData.productCode}
                     onChange={handleInputChange}
+                    onBlur={() => handleInputBlur("code")}
+                    onFocus={() =>
+                      formData.productCode.trim().length >= 2 &&
+                      setShowCodeSuggestions(codeSuggestions.length > 0)
+                    }
                     className={`w-full bg-slate-800/50 border ${
                       errors.productCode
                         ? "border-red-500"
@@ -740,6 +911,52 @@ export default function AddProductPage() {
                     } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
                     placeholder="Enter product or parts code (e.g., SKU, part number)"
                   />
+
+                  {/* Code Suggestions Dropdown */}
+                  {showCodeSuggestions && codeSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      <div className="p-2 border-b border-slate-600">
+                        <p className="text-xs text-yellow-400 font-medium">
+                          ⚠️ Similar product codes found - Check to avoid
+                          duplicates
+                        </p>
+                      </div>
+                      {codeSuggestions.map((product) => (
+                        <div
+                          key={product.id}
+                          onClick={() =>
+                            handleSuggestionSelect(product, "code")
+                          }
+                          className="flex items-center justify-between p-3 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-b-0"
+                        >
+                          <div className="flex-1">
+                            <p className="text-white font-medium">
+                              {product.name}
+                            </p>
+                            <div className="flex gap-4 text-xs text-slate-400 mt-1">
+                              <span className="text-cyan-400">
+                                Code: {product.product_code}
+                              </span>
+                              <span>
+                                Stock:{" "}
+                                {product.total_stock || product.stock || 0}
+                              </span>
+                              <span className="text-green-400">
+                                $
+                                {product.sell_price ||
+                                  product.average_sell_price ||
+                                  0}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="ml-2 text-xs text-slate-500">
+                            Click to use
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {errors.productCode && (
                     <p className="text-red-400 text-sm mt-1">
                       {errors.productCode}

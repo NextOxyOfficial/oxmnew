@@ -848,6 +848,13 @@ export class ApiService {
     return this.get("/products/");
   }
 
+  static async searchProducts(query: string) {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+    return this.get(`/products/?search=${encodeURIComponent(query.trim())}`);
+  }
+
   static async getProduct(id: number) {
     return this.get(`/products/${id}/`);
   }
