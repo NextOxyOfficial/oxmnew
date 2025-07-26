@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Product, ProductVariant, ProductPhoto, ProductStockMovement
+
+from .models import Product, ProductPhoto, ProductStockMovement, ProductVariant
 
 
 class ProductPhotoInline(admin.TabularInline):
@@ -48,7 +49,16 @@ class ProductAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             "Basic Information",
-            {"fields": ("name", "category", "supplier", "location", "details")},
+            {
+                "fields": (
+                    "name",
+                    "product_code",
+                    "category",
+                    "supplier",
+                    "location",
+                    "details",
+                )
+            },
         ),
         ("Pricing", {"fields": ("has_variants", "buy_price", "sell_price", "stock")}),
         (

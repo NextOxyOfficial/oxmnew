@@ -1,25 +1,22 @@
-from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q, Sum, Avg, Count
-from django.db import transaction
 import json
-from .models import (
-    Product,
-    ProductVariant,
-    ProductPhoto,
-    ProductStockMovement,
-)
+
+from django.db import transaction
+from django.db.models import Count, Q, Sum
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import Product, ProductPhoto, ProductStockMovement, ProductVariant
 from .serializers import (
-    ProductListSerializer,
-    ProductDetailSerializer,
     ProductCreateSerializer,
-    ProductVariantSerializer,
+    ProductDetailSerializer,
+    ProductListSerializer,
     ProductPhotoSerializer,
     ProductStockMovementSerializer,
+    ProductVariantSerializer,
 )
 
 
@@ -150,11 +147,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Remove any photos from data to avoid validation issues
         if "photos" in data:
             del data["photos"]
-
-        # Remove productCode if present (not in backend model)
-        if "productCode" in data:
-            print("Removing productCode field - not supported in backend")
-            del data["productCode"]
 
         # Prepare clean data for serializer to avoid QueryDict nesting issues
         # Only include fields that are supported by the serializer

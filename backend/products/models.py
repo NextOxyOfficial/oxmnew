@@ -1,11 +1,12 @@
-from django.db import models
+import os
+import uuid
+
+from core.models import Category
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
-from django.db.models import Sum, Avg, Count
-from core.models import Category
+from django.db import models
+from django.db.models import Avg, Sum
 from suppliers.models import Supplier
-import uuid
-import os
 
 
 def product_photo_upload_path(instance, filename):
@@ -19,6 +20,12 @@ class Product(models.Model):
     """Main product model"""
 
     name = models.CharField(max_length=200)
+    product_code = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Product/Parts code (SKU, part number, etc.)",
+    )
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL, null=True, related_name="products"
     )

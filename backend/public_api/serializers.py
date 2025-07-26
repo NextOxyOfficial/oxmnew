@@ -46,6 +46,7 @@ class PublicProductSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "product_code",
             "details",
             "location",
             "category_name",

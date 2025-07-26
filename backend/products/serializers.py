@@ -1,12 +1,6 @@
 from rest_framework import serializers
-from .models import (
-    Product,
-    ProductVariant,
-    ProductPhoto,
-    ProductStockMovement,
-)
-from core.models import Category
-from suppliers.models import Supplier
+
+from .models import Product, ProductPhoto, ProductStockMovement, ProductVariant
 
 
 class ProductPhotoSerializer(serializers.ModelSerializer):
@@ -76,6 +70,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "product_code",
             "category_name",
             "supplier_name",
             "location",
@@ -126,6 +121,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "product_code",
             "category",
             "category_name",
             "supplier",
@@ -203,6 +199,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             "name",
+            "productCode",
             "category",
             "supplier",
             "location",
@@ -218,6 +215,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "hasVariants": {"source": "has_variants"},
             "buyPrice": {"source": "buy_price"},
             "sellPrice": {"source": "sell_price"},
+            "productCode": {"source": "product_code"},
         }
 
     def validate(self, data):
@@ -367,7 +365,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                     k: v for k, v in variant_create_data.items() if v is not None
                 }
 
-                print(f"Creating variant with data:", variant_create_data)
+                print("Creating variant with data:", variant_create_data)
                 ProductVariant.objects.create(**variant_create_data)
 
         # Create photos if provided
