@@ -1,20 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { customersAPI, DueCustomer } from "@/lib/api/customers";
 import {
-  Search,
-  User,
   DollarSign,
+  Download,
   Eye,
+  FileText,
+  Mail,
   MessageSquare,
   Phone,
-  Mail,
-  Download,
-  FileText,
-  Calendar,
+  Search,
+  User,
 } from "lucide-react";
 import Link from "next/link";
-import { customersAPI, DueCustomer } from "@/lib/api/customers";
+import { useCallback, useEffect, useState } from "react";
 
 // Import dev auth helper in development
 if (process.env.NODE_ENV === "development") {
@@ -26,10 +25,19 @@ export default function DueBookPage() {
   const [filteredCustomers, setFilteredCustomers] = useState<DueCustomer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState("");
   const [dateFilterType, setDateFilterType] = useState<
-    "all" | "due_today" | "due_this_week" | "custom"
+    | "all"
+    | "today"
+    | "yesterday"
+    | "this_week"
+    | "last_week"
+    | "this_month"
+    | "last_month"
+    | "this_year"
+    | "custom"
   >("all");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [totalDueAmount, setTotalDueAmount] = useState(0);
 
@@ -38,35 +46,111 @@ export default function DueBookPage() {
     setIsMounted(true);
   }, []);
 
-  // Fetch due customers from API
+  // Date filter helper functions
+  const getDateRange = useCallback(
+    (filter: string) => {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      switch (filter) {
+        case "today":
+          return { start: today, end: new Date(today.getTime() + 86400000) };
+        case "yesterday":
+          const yesterday = new Date(today.getTime() - 86400000);
+          return { start: yesterday, end: today };
+        case "this_week":
+          const startOfWeek = new Date(today);
+          startOfWeek.setDate(today.getDate() - today.getDay());
+          return {
+            start: startOfWeek,
+            end: new Date(now.getTime() + 86400000),
+          };
+        case "last_week":
+          const lastWeekStart = new Date(today);
+          lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
+          const lastWeekEnd = new Date(today);
+          lastWeekEnd.setDate(today.getDate() - today.getDay());
+          return { start: lastWeekStart, end: lastWeekEnd };
+        case "this_month":
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          return {
+            start: startOfMonth,
+            end: new Date(now.getTime() + 86400000),
+          };
+        case "last_month":
+          const lastMonthStart = new Date(
+            now.getFullYear(),
+            now.getMonth() - 1,
+            1
+          );
+          const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
+          return { start: lastMonthStart, end: lastMonthEnd };
+        case "this_year":
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
+          return {
+            start: startOfYear,
+            end: new Date(now.getTime() + 86400000),
+          };
+        case "custom":
+          if (customDateFrom && customDateTo) {
+            return {
+              start: new Date(customDateFrom),
+              end: new Date(new Date(customDateTo).getTime() + 86400000),
+            };
+          }
+          return null;
+        default:
+          return null;
+      }
+    },
+    [customDateFrom, customDateTo]
+  );
+
+  // Client-side filtering function
+  const applyFilters = useCallback(
+    (customers: DueCustomer[]) => {
+      let filtered = customers;
+
+      // Apply date filtering
+      if (dateFilterType !== "all") {
+        const dateRange = getDateRange(dateFilterType);
+        if (dateRange) {
+          filtered = filtered.filter((customer) => {
+            return customer.due_payments.some((payment) => {
+              const paymentDate = new Date(payment.due_date);
+              return (
+                paymentDate >= dateRange.start && paymentDate < dateRange.end
+              );
+            });
+          });
+        }
+      }
+
+      return filtered;
+    },
+    [dateFilterType, getDateRange]
+  );
+
+  // Fetch due customers from API (only handles API calls)
   const fetchDueCustomers = useCallback(async () => {
     try {
       setIsLoading(true);
       const params: {
         search?: string;
-        date_filter_type?: "all" | "due_today" | "due_this_week" | "custom";
-        custom_date?: string;
       } = {};
 
       if (searchTerm) params.search = searchTerm;
-      if (dateFilterType !== "all") params.date_filter_type = dateFilterType;
-      if (dateFilterType === "custom" && dateFilter)
-        params.custom_date = dateFilter;
 
       const response = await customersAPI.getDuebookCustomers(params);
       setDueCustomers(response.customers);
-      setFilteredCustomers(response.customers);
-      setTotalDueAmount(response.summary.total_due_amount);
     } catch (error) {
       console.error("Failed to fetch due customers:", error);
       // Fallback to empty state
       setDueCustomers([]);
-      setFilteredCustomers([]);
-      setTotalDueAmount(0);
     } finally {
       setIsLoading(false);
     }
-  }, [searchTerm, dateFilterType, dateFilter]);
+  }, [searchTerm]);
 
   // Initial load
   useEffect(() => {
@@ -75,7 +159,29 @@ export default function DueBookPage() {
     }
   }, [isMounted, fetchDueCustomers]);
 
-  // Refetch when filters change
+  // Apply filters whenever data or filter criteria change (with small debounce for smoother UX)
+  useEffect(() => {
+    const filterTimer = setTimeout(() => {
+      if (dueCustomers.length > 0) {
+        const filtered = applyFilters(dueCustomers);
+        setFilteredCustomers(filtered);
+
+        // Calculate total due amount for filtered customers
+        const totalDue = filtered.reduce(
+          (sum, customer) => sum + customer.total_due,
+          0
+        );
+        setTotalDueAmount(totalDue);
+      } else {
+        setFilteredCustomers([]);
+        setTotalDueAmount(0);
+      }
+    }, 50); // Small delay to prevent rapid re-filtering
+
+    return () => clearTimeout(filterTimer);
+  }, [dueCustomers, applyFilters]);
+
+  // Refetch when search term changes (with debounce)
   useEffect(() => {
     if (isMounted) {
       const debounceTimer = setTimeout(() => {
@@ -84,7 +190,7 @@ export default function DueBookPage() {
 
       return () => clearTimeout(debounceTimer);
     }
-  }, [searchTerm, dateFilterType, dateFilter, isMounted, fetchDueCustomers]);
+  }, [searchTerm, isMounted, fetchDueCustomers]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -293,7 +399,7 @@ export default function DueBookPage() {
       </div>
 
       {/* Due Customers List */}
-      <div className="max-w-4xl">
+      <div className="max-w-7xl">
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
           <div className="p-4 border-b border-slate-700/50">
             <div className="flex items-center justify-between mb-4">
@@ -303,7 +409,7 @@ export default function DueBookPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
+              <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-3">
                 {/* Search Input */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
@@ -317,35 +423,87 @@ export default function DueBookPage() {
                 </div>
 
                 {/* Date Filter Dropdown */}
-                <select
-                  value={dateFilterType}
-                  onChange={(e) =>
-                    setDateFilterType(
-                      e.target.value as
-                        | "all"
-                        | "due_today"
-                        | "due_this_week"
-                        | "custom"
-                    )
-                  }
-                  className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Dates</option>
-                  <option value="due_today">Due Today</option>
-                  <option value="due_this_week">Due This Week</option>
-                  <option value="custom">Custom Date</option>
-                </select>
+                <div className="space-y-2">
+                  <label className="text-xs text-slate-400 font-medium">
+                    Date Filter
+                  </label>
+                  <select
+                    value={dateFilterType}
+                    onChange={(e) =>
+                      setDateFilterType(
+                        e.target.value as
+                          | "all"
+                          | "today"
+                          | "yesterday"
+                          | "this_week"
+                          | "last_week"
+                          | "this_month"
+                          | "last_month"
+                          | "this_year"
+                          | "custom"
+                      )
+                    }
+                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
+                  >
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="this_week">This Week</option>
+                    <option value="last_week">Last Week</option>
+                    <option value="this_month">This Month</option>
+                    <option value="last_month">Last Month</option>
+                    <option value="this_year">This Year</option>
+                    <option value="custom">Custom Range</option>
+                  </select>
+                </div>
 
-                {/* Custom Date Input */}
+                {/* Custom Date Range */}
                 {dateFilterType === "custom" && (
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                    <input
-                      type="date"
-                      value={dateFilter}
-                      onChange={(e) => setDateFilter(e.target.value)}
-                      className="pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                  <div className="flex space-x-2">
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400 font-medium">
+                        From
+                      </label>
+                      <input
+                        type="date"
+                        value={customDateFrom}
+                        onChange={(e) => setCustomDateFrom(e.target.value)}
+                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-slate-400 font-medium">
+                        To
+                      </label>
+                      <input
+                        type="date"
+                        value={customDateTo}
+                        onChange={(e) => setCustomDateTo(e.target.value)}
+                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Filters Summary */}
+                {dateFilterType !== "all" && (
+                  <div className="flex items-center gap-2 p-2 bg-slate-800/20 rounded-lg border border-slate-700/30">
+                    <span className="text-xs text-slate-400 font-medium">
+                      Active Filter:
+                    </span>
+                    <span className="px-2 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded-full">
+                      Date: {dateFilterType.replace("_", " ")}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setDateFilterType("all");
+                        setCustomDateFrom("");
+                        setCustomDateTo("");
+                      }}
+                      className="px-2 py-1 bg-red-500/20 text-red-300 text-xs rounded-full hover:bg-red-500/30 transition-colors"
+                    >
+                      Clear
+                    </button>
                   </div>
                 )}
               </div>
