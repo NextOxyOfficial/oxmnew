@@ -513,9 +513,9 @@ export default function BankingPage() {
               <div className="flex flex-wrap">
                 {[...accounts]
                   .sort((a, b) => {
-                    // Always put Primary account first
-                    if (a.name === "Primary") return -1;
-                    if (b.name === "Primary") return 1;
+                    // Always put Main account first
+                    if (a.name === "Main") return -1;
+                    if (b.name === "Main") return 1;
                     // Then sort by creation date (newest first)
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                   })
@@ -547,8 +547,8 @@ export default function BankingPage() {
                     }
                   ];
                   
-                  // Use different color scheme for Primary account (always blue)
-                  const scheme = account.name === "Primary" ? colorSchemes[0] : colorSchemes[index % 4];
+                  // Use different color scheme for Main account (always blue)
+                  const scheme = account.name === "Main" ? colorSchemes[0] : colorSchemes[index % 4];
                   
                   return (
                     <button
@@ -560,7 +560,7 @@ export default function BankingPage() {
                       <div className="text-left">
                         <div className="font-semibold text-sm flex items-center gap-1.5">
                           {account.name}
-                          {account.name === "Primary" && (
+                          {account.name === "Main" && (
                             <span className="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30">
                               Main
                             </span>
