@@ -514,18 +514,11 @@ export default function OrdersPage() {
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1 min-w-0 pr-2">
                         <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 transition-colors">
-                          {order?.product_name || "Unknown Product"}
+                          Order #{order.id}
                         </h4>
                         <p className="text-xs text-slate-400 mt-1">
                           {formatDate(order.sale_date)}
                         </p>
-                        {order.variant && (
-                          <p className="text-slate-400 text-sm mt-1">
-                            {order.variant.color} - {order.variant.size}
-                            {order.variant.custom_variant &&
-                              ` - ${order.variant.custom_variant}`}
-                          </p>
-                        )}
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-cyan-400">
@@ -615,7 +608,7 @@ export default function OrdersPage() {
                     <thead>
                       <tr className="border-b border-slate-700/50">
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Product
+                          Order ID
                         </th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
                           Customer
@@ -641,37 +634,32 @@ export default function OrdersPage() {
                           <td className="py-4 px-4">
                             <div>
                               <p className="text-sm font-medium text-slate-100">
-                                {order?.product_name || "Unknown Product"}
+                                #{order.id}
                               </p>
                               <p className="text-xs text-slate-400 mt-1">
                                 {formatDate(order.sale_date)}
                               </p>
-                              {order.variant && (
-                                <p className="text-xs text-slate-400">
-                                  {order.variant.color} - {order.variant.size}
-                                  {order.variant.custom_variant &&
-                                    ` - ${order.variant.custom_variant}`}
-                                </p>
-                              )}
                             </div>
                           </td>
                           <td className="py-4 px-4">
-                            {order.customer_name ? (
-                              <div>
-                                <p className="text-sm text-slate-100">
-                                  {order.customer_name}
-                                </p>
-                                {order.customer_phone && (
-                                  <p className="text-xs text-slate-400">
-                                    {order.customer_phone}
+                            <div>
+                              {order.customer_name ? (
+                                <div>
+                                  <p className="text-sm text-slate-100">
+                                    {order.customer_name}
                                   </p>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-xs text-slate-500">
-                                No customer info
-                              </span>
-                            )}
+                                  {order.customer_phone && (
+                                    <p className="text-xs text-slate-400">
+                                      {order.customer_phone}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-500">
+                                  No customer info
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-4 px-4 text-sm text-slate-100">
                             {order.quantity}
