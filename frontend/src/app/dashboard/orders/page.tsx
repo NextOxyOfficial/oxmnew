@@ -522,8 +522,12 @@ export default function OrdersPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-cyan-400">
-                          {formatCurrency(order.total_amount || 0)}
+                          {formatCurrency(
+                            ((order.unit_price || 0) - (order.buy_price || 0)) * 
+                            (order.quantity || 0)
+                          )}
                         </p>
+                        <p className="text-xs text-slate-400">Profit</p>
                       </div>
                     </div>
 
@@ -549,11 +553,10 @@ export default function OrdersPage() {
                       </div>
                       <div>
                         <p className="text-xs text-slate-400">
-                          Quantity & Price
+                          Buy & Sell Price
                         </p>
                         <p className="text-sm font-medium text-slate-100">
-                          {order.quantity} ×{" "}
-                          {formatCurrency(order.unit_price || 0)}
+                          {formatCurrency(order.buy_price || 0)} → {formatCurrency(order.unit_price || 0)}
                         </p>
                       </div>
                     </div>
@@ -614,13 +617,13 @@ export default function OrdersPage() {
                           Customer
                         </th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Quantity
+                          Buy Price
                         </th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Unit Price
+                          Sell Price
                         </th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Total
+                          Profit
                         </th>
                       </tr>
                     </thead>
@@ -662,13 +665,16 @@ export default function OrdersPage() {
                             </div>
                           </td>
                           <td className="py-4 px-4 text-sm text-slate-100">
-                            {order.quantity}
+                            {formatCurrency(order.buy_price || 0)}
                           </td>
                           <td className="py-4 px-4 text-sm text-slate-100">
                             {formatCurrency(order.unit_price || 0)}
                           </td>
                           <td className="py-4 px-4 text-sm font-medium text-cyan-400">
-                            {formatCurrency(order.total_amount || 0)}
+                            {formatCurrency(
+                              ((order.unit_price || 0) - (order.buy_price || 0)) * 
+                              (order.quantity || 0)
+                            )}
                           </td>
                         </tr>
                       ))}
