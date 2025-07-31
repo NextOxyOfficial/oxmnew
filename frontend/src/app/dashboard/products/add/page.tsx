@@ -589,10 +589,6 @@ export default function AddProductPage() {
       newErrors.name = "Product name is required";
     }
 
-    if (!formData.supplier) {
-      newErrors.supplier = "Please select a supplier";
-    }
-
     // Validate pricing based on variant mode
     if (!formData.hasVariants) {
       if (formData.buyPrice <= 0) {
@@ -627,14 +623,6 @@ export default function AddProductPage() {
       }
     }
 
-    if (!formData.category) {
-      newErrors.category = "Please select a category";
-    }
-
-    if (!formData.location.trim()) {
-      newErrors.location = "Location is required";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -656,15 +644,24 @@ export default function AddProductPage() {
           typeof formData.category === "number" ? formData.category : undefined,
         supplier:
           typeof formData.supplier === "number" ? formData.supplier : undefined,
-        productCode: formData.productCode || undefined,
+        product_code: formData.productCode || undefined,
         location: formData.location,
         details: formData.details,
-        hasVariants: formData.hasVariants,
-        buyPrice: formData.hasVariants ? undefined : formData.buyPrice,
-        sellPrice: formData.hasVariants ? undefined : formData.sellPrice,
-        stock: formData.hasVariants ? undefined : formData.stock,
-        colorSizeVariants: formData.hasVariants
-          ? formData.colorSizeVariants
+        has_variants: formData.hasVariants,
+        buy_price: formData.hasVariants ? 0 : formData.buyPrice,
+        sell_price: formData.hasVariants ? 0 : formData.sellPrice,
+        stock: formData.hasVariants ? 0 : formData.stock,
+        variants: formData.hasVariants
+          ? formData.colorSizeVariants.map(variant => ({
+              color: variant.color,
+              size: variant.size,
+              weight: variant.weight,
+              weight_unit: variant.weight_unit,
+              custom_variant: variant.custom_variant,
+              buy_price: variant.buyPrice,
+              sell_price: variant.sellPrice,
+              stock: variant.stock,
+            }))
           : undefined,
         photos: formData.photos.length > 0 ? formData.photos : undefined,
       };
@@ -849,7 +846,7 @@ export default function AddProductPage() {
                     htmlFor="supplier"
                     className="block text-sm font-medium text-slate-300 mb-1.5"
                   >
-                    Supplier *
+                    Supplier
                   </label>
                   <select
                     id="supplier"
@@ -866,7 +863,7 @@ export default function AddProductPage() {
                     <option value="" className="bg-slate-800">
                       {isLoadingData
                         ? "Loading suppliers..."
-                        : "Select a supplier"}
+                        : "Select a supplier (optional)"}
                     </option>
                     {suppliers.map((supplier) => (
                       <option
@@ -1091,7 +1088,7 @@ export default function AddProductPage() {
                     htmlFor="category"
                     className="block text-sm font-medium text-slate-300 mb-1.5"
                   >
-                    Category *
+                    Category
                   </label>
                   <select
                     id="category"
@@ -1108,7 +1105,7 @@ export default function AddProductPage() {
                     <option value="" className="bg-slate-800">
                       {isLoadingData
                         ? "Loading categories..."
-                        : "Select a category"}
+                        : "Select a category (optional)"}
                     </option>
                     {categories.map((category) => (
                       <option
@@ -1133,7 +1130,7 @@ export default function AddProductPage() {
                     htmlFor="location"
                     className="block text-sm font-medium text-slate-300 mb-1.5"
                   >
-                    Location *
+                    Location
                   </label>
                   <input
                     type="text"
@@ -1144,7 +1141,7 @@ export default function AddProductPage() {
                     className={`w-full bg-slate-800/50 border ${
                       errors.location ? "border-red-500" : "border-slate-700/50"
                     } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
-                    placeholder="Enter storage location"
+                    placeholder="Enter storage location (optional)"
                   />
                   {errors.location && (
                     <p className="text-red-400 text-sm mt-1">
