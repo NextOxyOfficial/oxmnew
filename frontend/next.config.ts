@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
 	images: {
-		domains: ["localhost", "168.231.119.200"],
+		domains: ["localhost", "168.231.119.200", "127.0.0.1", "oxymanager.com"],
 		remotePatterns: [
 			{
 				protocol: "http",
@@ -16,7 +16,19 @@ const nextConfig: NextConfig = {
 				port: "8000",
 				pathname: "/media/**",
 			},
+			{
+				protocol: "https",
+				hostname: "oxymanager.com",
+				pathname: "/media/**",
+			},
+			{
+				protocol: "http",
+				hostname: "127.0.0.1",
+				port: "8000",
+				pathname: "/media/**",
+			},
 		],
+		unoptimized: true, // This helps with development and some hosting issues
 	},
 	// Updated configuration for Next.js 15
 	serverExternalPackages: [],

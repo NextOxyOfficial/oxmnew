@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ApiService } from "../../../lib/api";
+import OptimizedImage from "../../../components/OptimizedImage";
 
 interface ProfileData {
   user: {
@@ -776,10 +777,11 @@ export default function ProfilePage() {
                   <div className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group">
                     {profileData.profile.store_logo ? (
                       <div className="relative w-full h-full">
-                        <img
-                          src={ApiService.getImageUrl(profileData.profile.store_logo)}
+                        <OptimizedImage
+                          src={profileData.profile.store_logo}
                           alt="Store Logo"
                           className="w-full h-full object-contain rounded-lg"
+                          fallbackText="Logo failed to load"
                         />
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg">
                           <div className="flex space-x-2">
@@ -873,10 +875,11 @@ export default function ProfilePage() {
                   <div className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group">
                     {profileData.profile.banner_image ? (
                       <div className="relative w-full h-full">
-                        <img
-                          src={ApiService.getImageUrl(profileData.profile.banner_image)}
+                        <OptimizedImage
+                          src={profileData.profile.banner_image}
                           alt="Banner Image"
                           className="w-full h-full object-cover rounded-lg"
+                          fallbackText="Banner failed to load"
                         />
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg">
                           <div className="flex space-x-2">

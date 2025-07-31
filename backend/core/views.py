@@ -35,7 +35,15 @@ def build_absolute_url(request, relative_url):
         return ""
     if relative_url.startswith("http"):
         return relative_url
-    return request.build_absolute_uri(relative_url)
+    
+    # For production, use a more reliable base URL construction
+    if hasattr(settings, 'SITE_URL') and settings.SITE_URL:
+        # Use explicit SITE_URL if configured
+        base_url = settings.SITE_URL.rstrip('/')
+        return f"{base_url}{relative_url}"
+    else:
+        # Fallback to request.build_absolute_uri
+        return request.build_absolute_uri(relative_url)
 
 
 @api_view(["GET"])

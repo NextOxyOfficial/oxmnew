@@ -1112,7 +1112,23 @@ export class ApiService {
   static getImageUrl(relativePath: string): string {
     if (!relativePath) return "";
     if (relativePath.startsWith("http")) return relativePath;
-    return `${BACKEND_BASE_URL}${relativePath}`;
+    
+    // Ensure the path starts with a slash
+    const cleanPath = relativePath.startsWith("/") ? relativePath : `/${relativePath}`;
+    
+    const fullUrl = `${BACKEND_BASE_URL}${cleanPath}`;
+    
+    // Debug logging for development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Image URL constructed:', {
+        relativePath,
+        cleanPath,
+        BACKEND_BASE_URL,
+        fullUrl
+      });
+    }
+    
+    return fullUrl;
   }
 
   static async sendSmsNotification(phone: string, message: string) {
