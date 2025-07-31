@@ -37,6 +37,7 @@ export default function BankingPage() {
     error,
     setSelectedAccountId,
     setError,
+    loadEmployees,
     createAccount,
     updateAccount,
     createTransaction,
@@ -150,6 +151,11 @@ export default function BankingPage() {
     loadFilteredTransactions();
   }, [loadFilteredTransactions]);
 
+  // Load employees when component mounts
+  useEffect(() => {
+    loadEmployees();
+  }, [loadEmployees]);
+
   const formatCurrency = (amount: number) => {
     const safeAmount = Number(amount) || 0;
     return new Intl.NumberFormat("en-US", {
@@ -260,7 +266,7 @@ export default function BankingPage() {
   const getEmployeeName = (employeeId: string | null, employeeDetails?: any) => {
     // If verified_by_details is provided in the transaction, use it directly
     if (employeeDetails) {
-      return employeeDetails.full_name || `${employeeDetails.first_name || ''} ${employeeDetails.last_name || ''}`.trim() || employeeDetails.username || "Unknown";
+      return employeeDetails.name || employeeDetails.full_name || `${employeeDetails.first_name || ''} ${employeeDetails.last_name || ''}`.trim() || employeeDetails.username || "Unknown";
     }
     
     // If no employeeId provided, transaction is not verified by anyone
@@ -269,8 +275,8 @@ export default function BankingPage() {
     }
     
     // Otherwise, fallback to finding employee by ID from employees list
-    const employee = employees.find(emp => emp.id === employeeId);
-    return employee ? employee.full_name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || employee.username : "Unknown";
+    const employee = employees.find(emp => emp.id === parseInt(employeeId));
+    return employee ? employee.name || employee.full_name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || employee.username : "Unknown";
   };
 
   // Filter transactions (now using local state since transactions are already filtered by backend)
@@ -700,7 +706,7 @@ export default function BankingPage() {
                         <option value="all" className="bg-slate-800">All Employees</option>
                         {employees.map((employee) => (
                           <option key={employee.id} value={employee.id} className="bg-slate-800">
-                            {employee.full_name || `${employee.first_name} ${employee.last_name}`.trim() || employee.username}
+                            {employee.name}
                           </option>
                         ))}
                       </select>
@@ -1050,7 +1056,7 @@ export default function BankingPage() {
                     <option value="" className="bg-slate-800">Select employee...</option>
                     {employees.map((employee) => (
                       <option key={employee.id} value={employee.id} className="bg-slate-800">
-                        {employee.full_name || `${employee.first_name} ${employee.last_name}`.trim() || employee.username}
+                        {employee.name}
                       </option>
                     ))}
                   </select>

@@ -40,15 +40,19 @@ export interface TransactionWithBalance extends Transaction {
 }
 
 export interface Employee {
-  id: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  full_name: string;
-  email?: string;
-  employee_id?: string;
-  role?: string;
-  department?: string;
+  id: number;
+  employee_id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: string;
+  department: string;
+  status: "active" | "suspended" | "resigned" | "corrupted";
+  // Keep compatibility with old format
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
 }
 
 export interface AccountSummary {

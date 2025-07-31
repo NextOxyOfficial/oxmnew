@@ -46,9 +46,22 @@ export const useBanking = () => {
 
   const loadEmployees = useCallback(async (search?: string) => {
     try {
-      const params = search ? `?search=${encodeURIComponent(search)}` : '';
-      const employeesData = await ApiService.getBankingEmployees(params);
-      setEmployees(employeesData);
+      // Load all employees first, then filter on frontend if search is provided
+      const employeesData = await ApiService.getBankingEmployees();
+      
+      if (search && search.trim()) {
+        // Filter employees on frontend based on search
+        const filteredEmployees = employeesData.filter((emp: any) => 
+          emp.name?.toLowerCase().includes(search.toLowerCase()) ||
+          emp.employee_id?.toLowerCase().includes(search.toLowerCase()) ||
+          emp.role?.toLowerCase().includes(search.toLowerCase()) ||
+          emp.department?.toLowerCase().includes(search.toLowerCase()) ||
+          emp.email?.toLowerCase().includes(search.toLowerCase())
+        );
+        setEmployees(filteredEmployees);
+      } else {
+        setEmployees(employeesData);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load employees");
     }

@@ -1192,9 +1192,9 @@ export class ApiService {
     return this.get("/notifications/");
   }
 
-  // Banking employees method (separate from regular employees)
+  // Banking employees method (uses the main employees endpoint)
   static async getBankingEmployees(params?: string) {
-    return this.get(`/banking/transactions/employees/${params || ''}`);
+    return this.get(`/employees/${params || ''}`);
   }
 
   // Update getDashboardStats to be more specific for transactions
