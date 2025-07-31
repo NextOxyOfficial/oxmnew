@@ -50,6 +50,7 @@ export default function OrdersPage() {
     try {
       const profile = await ApiService.getProfile();
       console.log("User profile data:", profile); // Debug log
+      console.log("Store logo URL:", profile?.profile?.store_logo); // Debug log for logo
       setUserProfile(profile);
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -878,12 +879,13 @@ export default function OrdersPage() {
                 {/* Invoice Header */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="w-12 h-12 flex items-center justify-center print:w-12 print:h-12">
-                    {userProfile?.profile?.store_logo ? (
+                    {userProfile?.profile?.store_logo && userProfile.profile.store_logo.trim() !== '' ? (
                       <img
                         src={userProfile.profile.store_logo}
                         alt="Store Logo"
                         className="w-12 h-12 object-contain rounded-lg print:w-12 print:h-12"
                         onError={(e) => {
+                          console.log("Image failed to load:", userProfile.profile.store_logo);
                           // Fallback to default logo if image fails to load
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
@@ -892,7 +894,7 @@ export default function OrdersPage() {
                         }}
                       />
                     ) : null}
-                    <div className={`w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center print:bg-gray-800 ${userProfile?.profile?.store_logo ? 'hidden' : 'flex'}`}>
+                    <div className={`w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center print:bg-gray-800 ${userProfile?.profile?.store_logo && userProfile.profile.store_logo.trim() !== '' ? 'hidden' : 'flex'}`}>
                       <span className="text-white font-bold text-xs print:text-white">Logo</span>
                     </div>
                   </div>
