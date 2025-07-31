@@ -874,13 +874,23 @@ export default function AddOrderPage() {
                         <div className="relative">
                           <input
                             type="text"
-                            placeholder="Search and select customer..."
+                            placeholder="Search and select customer (minimum 2 characters)..."
                             value={customerSearch}
                             onChange={(e) => {
                               setCustomerSearch(e.target.value);
-                              setIsCustomerDropdownOpen(true);
+                              // Only open dropdown if user has typed at least 2 characters
+                              if (e.target.value.trim().length >= 2) {
+                                setIsCustomerDropdownOpen(true);
+                              } else {
+                                setIsCustomerDropdownOpen(false);
+                              }
                             }}
-                            onFocus={() => setIsCustomerDropdownOpen(true)}
+                            onFocus={() => {
+                              // Only open dropdown on focus if user has already typed at least 2 characters
+                              if (customerSearch.trim().length >= 2) {
+                                setIsCustomerDropdownOpen(true);
+                              }
+                            }}
                             disabled={customerType === "guest"}
                             className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
                               customerType === "guest"
@@ -931,14 +941,14 @@ export default function AddOrderPage() {
                         </div>
 
                         {/* Dropdown Options */}
-                        {isCustomerDropdownOpen && (
+                        {isCustomerDropdownOpen && customerSearch.trim().length >= 2 && (
                           <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
                             {isLoadingCustomers ? (
                               <div className="p-3 text-slate-400">
                                 Loading customers...
                               </div>
                             ) : filteredCustomers.length > 0 ? (
-                              filteredCustomers.map((customer) => (
+                              filteredCustomers.slice(0, 10).map((customer) => (
                                 <div
                                   key={customer.id}
                                   onClick={() => {
@@ -968,6 +978,12 @@ export default function AddOrderPage() {
                             ) : (
                               <div className="p-3 text-slate-400">
                                 No customers found
+                              </div>
+                            )}
+                            {/* Show indicator when there are more than 10 results */}
+                            {filteredCustomers.length > 10 && (
+                              <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
+                                Showing 10 of {filteredCustomers.length} results. Type more to refine search.
                               </div>
                             )}
                           </div>
