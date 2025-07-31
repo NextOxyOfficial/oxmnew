@@ -479,7 +479,6 @@ export default function AddOrderPage() {
     }
 
     if (availableStock <= 0) {
-      setError("This product is out of stock");
       return;
     }
 
@@ -558,14 +557,10 @@ export default function AddOrderPage() {
       availableStock = product.stock || 0;
     }
 
-    // Check if requested quantity exceeds available stock
+    // Don't allow quantity to exceed available stock
     if (quantity > availableStock) {
-      setError(`Cannot add more items. Only ${availableStock} units available in stock.`);
       return;
     }
-
-    // Clear any previous error
-    setError(null);
 
     setOrderForm((prev) => ({
       ...prev,
@@ -575,6 +570,25 @@ export default function AddOrderPage() {
           : item
       ),
     }));
+  };
+
+  // Check if quantity can be increased based on available stock
+  const canIncreaseQuantity = (item: OrderItem) => {
+    const product = products.find(p => p.id === item.product);
+    if (!product) return false;
+
+    let availableStock = 0;
+    
+    if (product.has_variants && item.variant) {
+      // For products with variants, check variant stock
+      const variant = product.variants?.find(v => v.id === item.variant);
+      availableStock = variant?.stock || 0;
+    } else {
+      // For products without variants, check product stock
+      availableStock = product.stock || 0;
+    }
+
+    return item.quantity < availableStock;
   };
 
   // Update item unit price
@@ -1286,7 +1300,17 @@ export default function AddOrderPage() {
                                       item.quantity + 1
                                     )
                                   }
-                                  className="w-6 h-6 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-xs"
+                                  disabled={!canIncreaseQuantity(item)}
+                                  className={`w-6 h-6 rounded flex items-center justify-center transition-colors text-xs ${
+                                    canIncreaseQuantity(item)
+                                      ? "bg-slate-700/50 text-slate-300 hover:bg-slate-600 cursor-pointer"
+                                      : "bg-slate-800/30 text-slate-500 cursor-not-allowed"
+                                  }`}
+                                  title={
+                                    canIncreaseQuantity(item)
+                                      ? "Increase quantity"
+                                      : "Maximum stock reached"
+                                  }
                                 >
                                   +
                                 </button>
