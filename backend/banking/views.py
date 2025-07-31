@@ -6,6 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.contrib.auth.models import User
 from .models import BankAccount, Transaction
+from employees.models import Employee
 from .serializers import (
     BankAccountSerializer, 
     TransactionSerializer, 
@@ -190,9 +191,39 @@ class TransactionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def employees(self, request):
         """Get list of employees who can verify transactions"""
-        employees = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
-        serializer = UserSerializer(employees, many=True)
-        return Response(serializer.data)
+        # Filter employees by current user (store owner)
+        employees = Employee.objects.filter(
+            user=request.user,
+            status='active'
+        ).select_related('user').order_by('name')
+        
+        # Add search functionality
+        search = request.query_params.get('search', '')
+        if search:
+            employees = employees.filter(
+                Q(name__icontains=search) |
+                Q(employee_id__icontains=search) |
+                Q(role__icontains=search) |
+                Q(department__icontains=search)
+            )
+        
+        # Convert to the expected format for the frontend
+        employee_data = [
+            {
+                'id': emp.id,
+                'first_name': emp.name.split()[0] if emp.name else '',
+                'last_name': ' '.join(emp.name.split()[1:]) if len(emp.name.split()) > 1 else '',
+                'username': emp.employee_id,
+                'email': emp.email,
+                'full_name': emp.name,
+                'employee_id': emp.employee_id,
+                'role': emp.role,
+                'department': emp.department
+            }
+            for emp in employees
+        ]
+        
+        return Response(employee_data)
 
     @action(detail=True, methods=['post'])
     def verify(self, request, pk=None):

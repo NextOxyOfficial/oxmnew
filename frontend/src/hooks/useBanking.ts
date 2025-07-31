@@ -44,9 +44,10 @@ export const useBanking = () => {
     }
   }, [selectedAccountId]);
 
-  const loadEmployees = useCallback(async () => {
+  const loadEmployees = useCallback(async (search?: string) => {
     try {
-      const employeesData = await ApiService.getBankingEmployees();
+      const params = search ? `?search=${encodeURIComponent(search)}` : '';
+      const employeesData = await ApiService.getBankingEmployees(params);
       setEmployees(employeesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load employees");
@@ -198,6 +199,7 @@ export const useBanking = () => {
     setSelectedAccountId,
     setError,
     loadAccounts,
+    loadEmployees,
     loadTransactions,
     createAccount,
     updateAccount,

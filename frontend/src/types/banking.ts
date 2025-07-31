@@ -45,6 +45,10 @@ export interface Employee {
   first_name: string;
   last_name: string;
   full_name: string;
+  email?: string;
+  employee_id?: string;
+  role?: string;
+  department?: string;
 }
 
 export interface AccountSummary {
