@@ -28,11 +28,11 @@ export const useBanking = () => {
       const accountsData = await ApiService.getBankAccounts();
       setAccounts(accountsData);
       
-      // Auto-select Primary account first, then any account if none selected
+      // Auto-select Main account first, then any account if none selected
       if (accountsData.length > 0 && !selectedAccountId) {
-        const primaryAccount = accountsData.find((acc: BankAccount) => acc.name === "Primary");
-        if (primaryAccount) {
-          setSelectedAccountId(primaryAccount.id);
+        const mainAccount = accountsData.find((acc: BankAccount) => acc.name === "Main");
+        if (mainAccount) {
+          setSelectedAccountId(mainAccount.id);
         } else {
           setSelectedAccountId(accountsData[0].id);
         }
@@ -87,8 +87,8 @@ export const useBanking = () => {
       const newAccount = await ApiService.createBankAccount(data);
       setAccounts(prev => [...prev, newAccount]);
       
-      // Auto-select the new account if it's the Primary account or if no account is currently selected
-      if (newAccount.name === "Primary" || !selectedAccountId) {
+      // Auto-select the new account if it's the Main account or if no account is currently selected
+      if (newAccount.name === "Main" || !selectedAccountId) {
         setSelectedAccountId(newAccount.id);
       }
       

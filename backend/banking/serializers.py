@@ -17,7 +17,7 @@ class BankAccountSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'is_active', 'transaction_count', 
             'total_credits', 'total_debits'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'balance', 'owner']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'owner']
 
     def get_transaction_count(self, obj):
         return obj.transactions.count()

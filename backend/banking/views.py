@@ -32,10 +32,15 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         
         # If user is staff/admin, they can see all accounts
         if user.is_staff or user.is_superuser:
-            return BankAccount.objects.filter(is_active=True)
+            queryset = BankAccount.objects.filter(is_active=True)
+        else:
+            # Regular users can only see their own accounts
+            queryset = BankAccount.objects.filter(owner=user, is_active=True)
         
-        # Regular users can only see their own accounts
-        return BankAccount.objects.filter(owner=user, is_active=True)
+        # Order by: Main account first, then by creation date (newest first)
+        return queryset.extra(
+            select={'is_main': "CASE WHEN name = 'Main' THEN 0 ELSE 1 END"}
+        ).order_by('is_main', '-created_at')
 
     def ensure_main_account(self, user):
         """Ensure user has a Main account"""
@@ -54,7 +59,9 @@ class BankAccountViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def my_accounts(self, request):
         """Get current user's accounts only"""
-        accounts = BankAccount.objects.filter(owner=request.user, is_active=True)
+        accounts = BankAccount.objects.filter(owner=request.user, is_active=True).extra(
+            select={'is_main': "CASE WHEN name = 'Main' THEN 0 ELSE 1 END"}
+        ).order_by('is_main', '-created_at')
         serializer = self.get_serializer(accounts, many=True)
         return Response(serializer.data)
 
