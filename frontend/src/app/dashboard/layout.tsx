@@ -243,7 +243,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Content area with sidebar and main content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1">
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -257,7 +257,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Main content */}
         <div className="flex flex-col flex-1 lg:pl-64 relative">
           {/* Main Content */}
-          <main className="flex-1 overflow-auto bg-slate-900">{children}</main>
+          <main className="flex-1 bg-slate-900">{children}</main>
 
           <Footer />
         </div>

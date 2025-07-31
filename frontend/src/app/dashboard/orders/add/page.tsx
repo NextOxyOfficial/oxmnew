@@ -873,7 +873,7 @@ export default function AddOrderPage() {
 
                         {/* Dropdown Options */}
                         {isCustomerDropdownOpen && (
-                          <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto scrollbar-hide">
+                          <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
                             {isLoadingCustomers ? (
                               <div className="p-3 text-slate-400">
                                 Loading customers...
@@ -1355,9 +1355,8 @@ export default function AddOrderPage() {
 
                         {/* Product Dropdown Options */}
                         {isProductDropdownOpen && (
-                          <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-64 overflow-y-auto dropdown-scroll"
+                          <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl"
                                style={{
-                                 maxHeight: 'min(16rem, 50vh)',
                                  bottom: 'auto',
                                  top: '100%'
                                }}>
@@ -1841,7 +1840,7 @@ export default function AddOrderPage() {
 
                               {/* Dropdown Options */}
                               {isEmployeeDropdownOpen && (
-                                <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto scrollbar-hide">
+                                <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
                                   {isLoadingEmployees ? (
                                     <div className="p-3 text-slate-400">
                                       Loading employees...
