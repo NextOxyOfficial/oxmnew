@@ -21,10 +21,12 @@ export default function OrdersPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
-  // Fetch orders
+  // Fetch orders and user profile
   useEffect(() => {
     fetchOrders();
+    fetchUserProfile();
   }, []);
 
   const fetchOrders = async () => {
@@ -41,6 +43,16 @@ export default function OrdersPage() {
       setError("Failed to load orders");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      const profile = await ApiService.getProfile();
+      console.log("User profile data:", profile); // Debug log
+      setUserProfile(profile);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
     }
   };
 
@@ -865,8 +877,24 @@ export default function OrdersPage() {
               <div className="p-6 print:px-0 print:bg-white print:w-full">
                 {/* Invoice Header */}
                 <div className="flex items-center justify-between mb-6">
-                  <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center print:bg-gray-800">
-                    <span className="text-white font-bold text-sm print:text-white">Store Logo</span>
+                  <div className="w-12 h-12 flex items-center justify-center print:w-12 print:h-12">
+                    {userProfile?.profile?.store_logo ? (
+                      <img
+                        src={userProfile.profile.store_logo}
+                        alt="Store Logo"
+                        className="w-12 h-12 object-contain rounded-lg print:w-12 print:h-12"
+                        onError={(e) => {
+                          // Fallback to default logo if image fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const fallback = target.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center print:bg-gray-800 ${userProfile?.profile?.store_logo ? 'hidden' : 'flex'}`}>
+                      <span className="text-white font-bold text-xs print:text-white">Logo</span>
+                    </div>
                   </div>
                   <h2 className="text-lg font-bold text-slate-100 print:text-gray-900">Invoice #{selectedOrder.id}</h2>
                   <p className="text-sm text-slate-300 print:text-gray-600">{new Date(selectedOrder.sale_date).toLocaleDateString()}</p>
@@ -876,11 +904,13 @@ export default function OrdersPage() {
                 <div className="grid grid-cols-1 print:grid-cols-2 md:grid-cols-2 gap-6 mb-6">
                   <div className="bg-slate-800/50 rounded-lg p-3 print:bg-transparent">
                     <div className="text-slate-300 print:text-gray-600 space-y-0.5 text-xs">
-                      <p className="font-medium text-slate-100 print:text-gray-900">Your Store Name</p>
-                      <p>123 Business Street</p>
-                      <p>City, State 12345</p>
-                      <p>Phone: (555) 123-4567</p>
-                      <p>Email: store@yourstore.com</p>
+                      <p className="font-medium text-slate-100 print:text-gray-900">
+                        {userProfile?.profile?.company || "Your Store Name"}
+                      </p>
+                      <p>{userProfile?.profile?.company_address || "123 Business Street"}</p>
+                      {!userProfile?.profile?.company_address && <p>City, State 12345</p>}
+                      <p>Phone: {userProfile?.profile?.phone || userProfile?.profile?.contact_number || "(555) 123-4567"}</p>
+                      <p>Email: {userProfile?.user?.email || "store@yourstore.com"}</p>
                     </div>
                   </div>
 
