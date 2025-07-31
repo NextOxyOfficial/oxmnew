@@ -878,12 +878,12 @@ export default function OrdersPage() {
               <div className="p-6 print:px-0 print:bg-white print:w-full">
                 {/* Invoice Header */}
                 <div className="flex items-center justify-between mb-6">
-                  <div className="w-48 h-12 flex items-start justify-center print:w-48 print:h-12">
+                  <div className="flex items-center justify-start">
                     {userProfile?.profile?.store_logo && userProfile.profile.store_logo.trim() !== '' ? (
                       <img
                         src={ApiService.getImageUrl(userProfile.profile.store_logo)}
                         alt="Store Logo"
-                        className="w-48 h-12 object-contain rounded-lg print:w-48 print:h-12"
+                        className="h-12 max-w-48 object-contain object-left"
                         onError={(e) => {
                           console.log("Image failed to load:", userProfile.profile.store_logo);
                           // Fallback to default logo if image fails to load
