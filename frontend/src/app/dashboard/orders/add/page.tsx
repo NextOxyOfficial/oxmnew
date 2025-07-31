@@ -469,6 +469,20 @@ export default function AddOrderPage() {
       (v) => v.id === parseInt(newItem.variant)
     );
 
+    // Check stock availability before adding
+    let availableStock = 0;
+    
+    if (selectedProduct.has_variants && selectedVariant) {
+      availableStock = selectedVariant.stock || 0;
+    } else {
+      availableStock = selectedProduct.stock || 0;
+    }
+
+    if (availableStock <= 0) {
+      setError("This product is out of stock");
+      return;
+    }
+
     // Use default quantity of 1 and unit price from product/variant
     const quantity = 1;
     const unitPrice = selectedVariant
@@ -524,6 +538,34 @@ export default function AddOrderPage() {
   // Update item quantity
   const updateItemQuantity = (itemId: string, quantity: number) => {
     if (quantity <= 0) return;
+
+    // Find the item to check stock availability
+    const currentItem = orderForm.items.find(item => item.id === itemId);
+    if (!currentItem) return;
+
+    // Find the product to check stock
+    const product = products.find(p => p.id === currentItem.product);
+    if (!product) return;
+
+    let availableStock = 0;
+    
+    if (product.has_variants && currentItem.variant) {
+      // For products with variants, check variant stock
+      const variant = product.variants?.find(v => v.id === currentItem.variant);
+      availableStock = variant?.stock || 0;
+    } else {
+      // For products without variants, check product stock
+      availableStock = product.stock || 0;
+    }
+
+    // Check if requested quantity exceeds available stock
+    if (quantity > availableStock) {
+      setError(`Cannot add more items. Only ${availableStock} units available in stock.`);
+      return;
+    }
+
+    // Clear any previous error
+    setError(null);
 
     setOrderForm((prev) => ({
       ...prev,
@@ -1397,6 +1439,18 @@ export default function AddOrderPage() {
                                     {product.sku && (
                                       <span>SKU: {product.sku}</span>
                                     )}
+                                    {product.product_code && (
+                                      <span>Code: {product.product_code}</span>
+                                    )}
+                                    <span className={`font-medium ${
+                                      (product.stock || 0) <= 0 
+                                        ? 'text-red-400' 
+                                        : (product.stock || 0) <= 10 
+                                        ? 'text-yellow-400' 
+                                        : 'text-cyan-400'
+                                    }`}>
+                                      Stock: {product.stock || 0}
+                                    </span>
                                     <span className="text-green-400">
                                       ${product.sell_price || 0}
                                     </span>
@@ -1404,6 +1458,11 @@ export default function AddOrderPage() {
                                   {product.has_variants && (
                                     <div className="text-xs text-blue-400 mt-1">
                                       Has variants available
+                                    </div>
+                                  )}
+                                  {(!product.has_variants && (product.stock || 0) <= 0) && (
+                                    <div className="text-xs text-red-400 mt-1 font-medium">
+                                      Out of Stock
                                     </div>
                                   )}
                                 </div>
