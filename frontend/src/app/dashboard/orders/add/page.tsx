@@ -501,13 +501,15 @@ export default function AddOrderPage() {
       items: [...prev.items, item],
     }));
 
-    // Reset new item form
+    // Reset new item form and clear search
     setNewItem({
       product: "",
       variant: "",
       quantity: 1,
       unit_price: 0,
     });
+    setProductSearch(""); // Clear the search input
+    setIsProductDropdownOpen(false); // Close the dropdown
     setError(null);
   };
 
