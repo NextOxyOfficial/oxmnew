@@ -732,7 +732,8 @@ export default function AddOrderPage() {
     const search = productSearch.toLowerCase();
     return (
       product.name.toLowerCase().includes(search) ||
-      (product.sku && product.sku.toLowerCase().includes(search))
+      (product.sku && product.sku.toLowerCase().includes(search)) ||
+      (product.product_code && product.product_code.toLowerCase().includes(search))
     );
   });
 

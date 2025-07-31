@@ -27,6 +27,7 @@ interface Supplier {
 interface Product {
   id: number;
   name: string;
+  product_code?: string;
   category?: number;
   category_name?: string;
   supplier?: number;
@@ -46,6 +47,7 @@ interface Product {
 
 interface ProductFormData {
   name: string;
+  productCode: string;
   category: number | "";
   supplier: number | "";
   location: string;
@@ -63,6 +65,7 @@ export default function EditProductPage() {
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
+    productCode: "",
     category: "",
     supplier: "",
     location: "",
@@ -124,6 +127,7 @@ export default function EditProductPage() {
         // Populate form with product data
         setFormData({
           name: productData.name || "",
+          productCode: productData.product_code || "",
           category: productData.category || "",
           supplier: productData.supplier || "",
           location: productData.location || "",
@@ -235,6 +239,7 @@ export default function EditProductPage() {
       // Prepare data for API
       const updateData = {
         name: formData.name,
+        product_code: formData.productCode || undefined,
         category:
           typeof formData.category === "number" ? formData.category : undefined,
         supplier:
@@ -437,6 +442,30 @@ export default function EditProductPage() {
               />
               {errors.name && (
                 <p className="text-red-400 text-xs mt-1">{errors.name}</p>
+              )}
+            </div>
+
+            {/* Product Code */}
+            <div>
+              <label
+                htmlFor="productCode"
+                className="block text-sm font-medium text-slate-300 mb-2"
+              >
+                Product Code
+              </label>
+              <input
+                type="text"
+                id="productCode"
+                name="productCode"
+                value={formData.productCode}
+                onChange={handleInputChange}
+                className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                  errors.productCode ? "border-red-500" : "border-slate-700/50"
+                }`}
+                placeholder="Enter product code, SKU, or part number"
+              />
+              {errors.productCode && (
+                <p className="text-red-400 text-xs mt-1">{errors.productCode}</p>
               )}
             </div>
 
