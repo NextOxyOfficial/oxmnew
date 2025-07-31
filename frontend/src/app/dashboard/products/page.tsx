@@ -209,9 +209,12 @@ export default function ProductsPage() {
   // Filter and sort products
   const filteredProducts = products
     .filter((product) => {
+      const searchLower = searchTerm.toLowerCase();
       const matchesSearch = product.name
         .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+        .includes(searchLower) ||
+        (product.product_code && 
+         product.product_code.toLowerCase().includes(searchLower));
       const matchesCategory =
         filterCategory === "all" || product.category_name === filterCategory;
       return matchesSearch && matchesCategory;
@@ -549,7 +552,7 @@ export default function ProductsPage() {
                 <div className="relative flex-1 min-w-0">
                   <input
                     type="text"
-                    placeholder="Search products..."
+                    placeholder="Search products by name or code..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-10 pr-4 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
@@ -630,6 +633,11 @@ export default function ProductsPage() {
                         <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 cursor-pointer transition-colors">
                           {product.name}
                         </h4>
+                        {product.product_code && (
+                          <p className="text-cyan-400 text-xs mt-1 font-mono">
+                            {product.product_code}
+                          </p>
+                        )}
                       </button>
                       <p className="text-slate-400 text-sm mt-1">
                         {product.category_name}
@@ -986,7 +994,7 @@ export default function ProductsPage() {
                   {filteredProducts.map((product) => (
                     <tr
                       key={product.id}
-                      className="border-b border-slate-700/30 hover:bg-slate-800/30 transition-colors cursor-pointer"
+                      className="border-b border-slate-700/30 hover:bg-slate-800/30 transition-colors"
                     >
                       <td className="py-3 px-4 max-w-xs">
                         <button
@@ -996,6 +1004,11 @@ export default function ProductsPage() {
                           <div className="text-sm font-medium text-slate-100 line-clamp-2 leading-tight group-hover:text-cyan-400 cursor-pointer transition-colors">
                             {product.name}
                           </div>
+                          {product.product_code && (
+                            <div className="text-xs text-cyan-400 mt-1 font-mono">
+                              {product.product_code}
+                            </div>
+                          )}
                           <div className="text-xs text-slate-400 mt-1">
                             {product.category_name}
                           </div>
@@ -1215,7 +1228,10 @@ export default function ProductsPage() {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleProductClick(product)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleProductClick(product);
+                            }}
                             disabled={isNavigating}
                             className={`bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/30 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium flex items-center gap-1.5 ${
                               isNavigating
@@ -1281,12 +1297,7 @@ export default function ProductsPage() {
                 <p className="text-slate-400 mb-4">
                   Try adjusting your search criteria or add a new product.
                 </p>
-                <button
-                  onClick={handleAddProduct}
-                  className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-                >
-                  Add First Product
-                </button>
+                
               </div>
             )}
           </div>
