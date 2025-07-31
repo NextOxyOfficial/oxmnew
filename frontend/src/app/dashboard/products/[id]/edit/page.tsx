@@ -445,28 +445,53 @@ export default function EditProductPage() {
               )}
             </div>
 
-            {/* Product Code */}
-            <div>
-              <label
-                htmlFor="productCode"
-                className="block text-sm font-medium text-slate-300 mb-2"
-              >
-                Product Code
-              </label>
-              <input
-                type="text"
-                id="productCode"
-                name="productCode"
-                value={formData.productCode}
-                onChange={handleInputChange}
-                className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                  errors.productCode ? "border-red-500" : "border-slate-700/50"
-                }`}
-                placeholder="Enter product code, SKU, or part number"
-              />
-              {errors.productCode && (
-                <p className="text-red-400 text-xs mt-1">{errors.productCode}</p>
-              )}
+            {/* Product Code and Location - Desktop Single Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label
+                  htmlFor="productCode"
+                  className="block text-sm font-medium text-slate-300 mb-2"
+                >
+                  Product Code
+                </label>
+                <input
+                  type="text"
+                  id="productCode"
+                  name="productCode"
+                  value={formData.productCode}
+                  onChange={handleInputChange}
+                  className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                    errors.productCode ? "border-red-500" : "border-slate-700/50"
+                  }`}
+                  placeholder="Enter product code, SKU, or part number"
+                />
+                {errors.productCode && (
+                  <p className="text-red-400 text-xs mt-1">{errors.productCode}</p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="location"
+                  className="block text-sm font-medium text-slate-300 mb-2"
+                >
+                  Location *
+                </label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                    errors.location ? "border-red-500" : "border-slate-700/50"
+                  }`}
+                  placeholder="Enter storage location"
+                />
+                {errors.location && (
+                  <p className="text-red-400 text-xs mt-1">{errors.location}</p>
+                )}
+              </div>
             </div>
 
             {/* Category and Supplier */}
@@ -528,30 +553,6 @@ export default function EditProductPage() {
                   ))}
                 </select>
               </div>
-            </div>
-
-            {/* Location */}
-            <div>
-              <label
-                htmlFor="location"
-                className="block text-sm font-medium text-slate-300 mb-2"
-              >
-                Location *
-              </label>
-              <input
-                type="text"
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                  errors.location ? "border-red-500" : "border-slate-700/50"
-                }`}
-                placeholder="Enter storage location"
-              />
-              {errors.location && (
-                <p className="text-red-400 text-xs mt-1">{errors.location}</p>
-              )}
             </div>
 
             {/* Pricing and Stock (only for non-variant products) */}
