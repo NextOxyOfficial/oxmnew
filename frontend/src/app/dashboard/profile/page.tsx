@@ -777,7 +777,7 @@ export default function ProfilePage() {
                     {profileData.profile.store_logo ? (
                       <div className="relative w-full h-full">
                         <img
-                          src={profileData.profile.store_logo}
+                          src={ApiService.getImageUrl(profileData.profile.store_logo)}
                           alt="Store Logo"
                           className="w-full h-full object-contain rounded-lg"
                         />
@@ -874,7 +874,7 @@ export default function ProfilePage() {
                     {profileData.profile.banner_image ? (
                       <div className="relative w-full h-full">
                         <img
-                          src={profileData.profile.banner_image}
+                          src={ApiService.getImageUrl(profileData.profile.banner_image)}
                           alt="Banner Image"
                           className="w-full h-full object-cover rounded-lg"
                         />

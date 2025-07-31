@@ -27,6 +27,17 @@ from django.conf import settings
 import requests
 
 
+def build_absolute_url(request, relative_url):
+    """
+    Build absolute URL from relative URL
+    """
+    if not relative_url:
+        return ""
+    if relative_url.startswith("http"):
+        return relative_url
+    return request.build_absolute_uri(relative_url)
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def api_root(request):
@@ -163,8 +174,8 @@ def register(request):
                     "address": profile.address or "",
                     "city": profile.city or "",
                     "post_code": profile.post_code or "",
-                    "store_logo": profile.store_logo.url if profile.store_logo else "",
-                    "banner_image": profile.banner_image.url
+                    "store_logo": build_absolute_url(request, profile.store_logo.url) if profile.store_logo else "",
+                    "banner_image": build_absolute_url(request, profile.banner_image.url)
                     if profile.banner_image
                     else "",
                     "created_at": profile.created_at,
@@ -249,8 +260,8 @@ def login(request):
                     "phone": profile.phone or "",
                     "contact_number": profile.contact_number or "",
                     "address": profile.address or "",
-                    "store_logo": profile.store_logo.url if profile.store_logo else "",
-                    "banner_image": profile.banner_image.url
+                    "store_logo": build_absolute_url(request, profile.store_logo.url) if profile.store_logo else "",
+                    "banner_image": build_absolute_url(request, profile.banner_image.url)
                     if profile.banner_image
                     else "",
                     "created_at": profile.created_at,
@@ -334,8 +345,8 @@ def profile(request):
                     "phone": profile.phone or "",
                     "contact_number": profile.contact_number or "",
                     "address": profile.address or "",
-                    "store_logo": profile.store_logo.url if profile.store_logo else "",
-                    "banner_image": profile.banner_image.url
+                    "store_logo": build_absolute_url(request, profile.store_logo.url) if profile.store_logo else "",
+                    "banner_image": build_absolute_url(request, profile.banner_image.url)
                     if profile.banner_image
                     else "",
                     "created_at": profile.created_at,
@@ -401,10 +412,10 @@ def profile(request):
                         "phone": profile.phone or "",
                         "contact_number": profile.contact_number or "",
                         "address": profile.address or "",
-                        "store_logo": profile.store_logo.url
+                        "store_logo": build_absolute_url(request, profile.store_logo.url)
                         if profile.store_logo
                         else "",
-                        "banner_image": profile.banner_image.url
+                        "banner_image": build_absolute_url(request, profile.banner_image.url)
                         if profile.banner_image
                         else "",
                     },
@@ -437,7 +448,7 @@ def upload_store_logo(request):
         return Response(
             {
                 "message": "Store logo uploaded successfully",
-                "store_logo_url": profile.store_logo.url,
+                "store_logo_url": build_absolute_url(request, profile.store_logo.url),
             },
             status=status.HTTP_200_OK,
         )
@@ -465,7 +476,7 @@ def upload_banner_image(request):
         return Response(
             {
                 "message": "Banner image uploaded successfully",
-                "banner_image_url": profile.banner_image.url,
+                "banner_image_url": build_absolute_url(request, profile.banner_image.url),
             },
             status=status.HTTP_200_OK,
         )
@@ -2463,10 +2474,10 @@ def get_store_by_domain(request, domain):
                     "description": store_settings.store_description
                     if store_settings
                     else "Welcome to our online store",
-                    "logo": user_profile.store_logo.url
+                    "logo": build_absolute_url(request, user_profile.store_logo.url)
                     if user_profile.store_logo
                     else None,
-                    "banner": user_profile.banner_image.url
+                    "banner": build_absolute_url(request, user_profile.banner_image.url)
                     if user_profile.banner_image
                     else None,
                     "contact_email": store_settings.contact_email
