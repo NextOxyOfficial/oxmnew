@@ -504,6 +504,9 @@ export default function OrdersPage() {
                         <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 transition-colors">
                           {order?.product_name || "Unknown Product"}
                         </h4>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {formatDate(order.sale_date)}
+                        </p>
                         {order.variant && (
                           <p className="text-slate-400 text-sm mt-1">
                             {order.variant.color} - {order.variant.size}
@@ -515,9 +518,6 @@ export default function OrdersPage() {
                       <div className="text-right">
                         <p className="text-lg font-bold text-cyan-400">
                           {formatCurrency(order.total_amount || 0)}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {formatDate(order.sale_date)}
                         </p>
                       </div>
                     </div>
@@ -617,9 +617,6 @@ export default function OrdersPage() {
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
                           Total
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Date
-                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -633,6 +630,9 @@ export default function OrdersPage() {
                             <div>
                               <p className="text-sm font-medium text-slate-100">
                                 {order?.product_name || "Unknown Product"}
+                              </p>
+                              <p className="text-xs text-slate-400 mt-1">
+                                {formatDate(order.sale_date)}
                               </p>
                               {order.variant && (
                                 <p className="text-xs text-slate-400">
@@ -669,9 +669,6 @@ export default function OrdersPage() {
                           </td>
                           <td className="py-4 px-4 text-sm font-medium text-cyan-400">
                             {formatCurrency(order.total_amount || 0)}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-slate-400">
-                            {formatDate(order.sale_date)}
                           </td>
                         </tr>
                       ))}
