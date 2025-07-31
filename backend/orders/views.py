@@ -91,3 +91,19 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         serializer = OrderSerializer(order, context={"request": request})
         return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete an order and restore stock"""
+        order = self.get_object()
+        
+        # Restore stock for all items before deleting
+        for item in order.items.all():
+            if item.variant:
+                item.variant.stock += item.quantity
+                item.variant.save()
+            else:
+                item.product.stock += item.quantity
+                item.product.save()
+        
+        # Delete the order
+        return super().destroy(request, *args, **kwargs)

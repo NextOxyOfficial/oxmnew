@@ -18,6 +18,9 @@ export default function OrdersPage() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [showInvoicePopup, setShowInvoicePopup] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch orders
   useEffect(() => {
@@ -69,6 +72,38 @@ export default function OrdersPage() {
     event.stopPropagation(); // Prevent order click event
     // Open invoice popup first, then user can print from there
     handleViewInvoice(order, event);
+  };
+
+  const handleDeleteOrder = (order: Order, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent order click event
+    setOrderToDelete(order);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!orderToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await ApiService.deleteProductSale(orderToDelete.id);
+      
+      // Refresh the orders list
+      await fetchOrders();
+      
+      // Close the confirmation dialog
+      setShowDeleteConfirm(false);
+      setOrderToDelete(null);
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      // You might want to show an error notification here
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setOrderToDelete(null);
   };
 
   const closeInvoicePopup = () => {
@@ -777,6 +812,15 @@ export default function OrdersPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                   </svg>
                                 </button>
+                                <button 
+                                  className="p-1 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
+                                  onClick={(e) => handleDeleteOrder(order, e)}
+                                  title="Delete Order"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
                               </div>
                             </div>
                           </td>
@@ -903,6 +947,82 @@ export default function OrdersPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && orderToDelete && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-xl shadow-2xl max-w-md w-full">
+              {/* Modal Header */}
+              <div className="p-6 border-b border-slate-700/50">
+                <h3 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
+                  <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  Confirm Delete
+                </h3>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6">
+                <p className="text-slate-300 mb-4">
+                  Are you sure you want to delete this order? This action will:
+                </p>
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 mb-4">
+                  <ul className="space-y-2 text-sm text-slate-300">
+                    <li className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Restore <strong>{orderToDelete.quantity}</strong> units of <strong>{orderToDelete.product_name}</strong> back to stock
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Permanently remove this order from your records
+                    </li>
+                  </ul>
+                </div>
+                <p className="text-sm text-slate-400">
+                  <strong>Note:</strong> This action cannot be undone.
+                </p>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex justify-end gap-3 p-6 border-t border-slate-700/50">
+                <button
+                  onClick={cancelDelete}
+                  disabled={isDeleting}
+                  className="px-4 py-2 text-slate-300 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete Order
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
