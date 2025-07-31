@@ -59,8 +59,20 @@ export default function OrdersPage() {
     const validAmount = isNaN(amount) ? 0 : amount;
     return sum + validAmount;
   }, 0);
-  const averageOrderValue =
-    totalOrders > 0 && totalRevenue > 0 ? totalRevenue / totalOrders : 0;
+
+  // Calculate total profit from all orders
+  const totalProfit = orders.reduce((sum, order) => {
+    // Calculate profit as (unit_price - buy_price) * quantity
+    const unitPrice = parseFloat(String(order.unit_price || 0));
+    const buyPrice = parseFloat(String(order.buy_price || 0));
+    const quantity = order.quantity || 0;
+    
+    if (!isNaN(unitPrice) && !isNaN(buyPrice) && quantity > 0) {
+      const orderProfit = (unitPrice - buyPrice) * quantity;
+      return sum + (isNaN(orderProfit) ? 0 : orderProfit);
+    }
+    return sum;
+  }, 0);
 
   // Today's orders
   const today = new Date();
@@ -263,7 +275,7 @@ export default function OrdersPage() {
             </div>
           </div>
 
-          {/* Average Order Value */}
+          {/* Total Profit */}
           <div className="bg-gradient-to-br from-blue-500/15 to-blue-600/8 border border-blue-500/25 rounded-lg p-2.5 backdrop-blur-sm">
             <div className="flex items-center space-x-2">
               <div className="rounded-md bg-blue-500/20 p-1.5">
@@ -277,17 +289,17 @@ export default function OrdersPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
                   />
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-blue-300 font-medium">Avg. Order</p>
+                <p className="text-sm text-blue-300 font-medium">Total Profit</p>
                 <p className="text-base font-bold text-blue-400">
-                  {formatCurrency(averageOrderValue || 0)}
+                  {formatCurrency(totalProfit || 0)}
                 </p>
                 <p className="text-xs text-blue-500 opacity-80">
-                  Per order value
+                  Revenue minus cost
                 </p>
               </div>
             </div>
