@@ -16,6 +16,8 @@ export default function OrdersPage() {
   const [filterCustomer, setFilterCustomer] = useState("all");
   const [sortBy, setSortBy] = useState("date");
   const [isNavigating, setIsNavigating] = useState(false);
+  const [showInvoicePopup, setShowInvoicePopup] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   // Fetch orders
   useEffect(() => {
@@ -57,10 +59,25 @@ export default function OrdersPage() {
     console.log("Edit invoice clicked for order:", order.id);
   };
 
+  const handleViewInvoice = (order: Order, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent order click event
+    setSelectedOrder(order);
+    setShowInvoicePopup(true);
+  };
+
   const handlePrintInvoice = (order: Order, event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent order click event
-    // TODO: Generate and print invoice
-    console.log("Print invoice clicked for order:", order.id);
+    // Open invoice popup first, then user can print from there
+    handleViewInvoice(order, event);
+  };
+
+  const closeInvoicePopup = () => {
+    setShowInvoicePopup(false);
+    setSelectedOrder(null);
+  };
+
+  const printInvoice = () => {
+    window.print();
   };
 
   // Calculate statistics
@@ -583,7 +600,11 @@ export default function OrdersPage() {
 
                     {/* Invoice line with print and edit icons */}
                     <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
-                      <div className="flex items-center gap-2">
+                      <div 
+                        className="flex items-center gap-2 cursor-pointer hover:text-cyan-400 transition-colors"
+                        onClick={(e) => handleViewInvoice(order, e)}
+                        title="View Invoice"
+                      >
                         <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
@@ -726,7 +747,11 @@ export default function OrdersPage() {
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
+                              <div 
+                                className="flex items-center gap-2 cursor-pointer hover:text-cyan-400 transition-colors"
+                                onClick={(e) => handleViewInvoice(order, e)}
+                                title="View Invoice"
+                              >
                                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
@@ -762,6 +787,124 @@ export default function OrdersPage() {
             </div>
           </div>
         </div>
+
+        {/* Invoice Popup Modal */}
+        {showInvoicePopup && selectedOrder && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto pt-20">
+            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-xl shadow-2xl max-w-4xl w-full mb-8 print:bg-white print:border-none print:shadow-none print:max-w-none print:my-0">
+              {/* Modal Header */}
+              <div className="flex justify-end items-center p-6 border-b border-slate-700/50 print:hidden">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={printInvoice}
+                    className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 flex items-center gap-2 shadow-lg cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print
+                  </button>
+                  <button
+                    onClick={closeInvoicePopup}
+                    className="p-2 text-slate-400 hover:text-slate-200 transition-colors rounded-lg hover:bg-slate-800/50"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Invoice Content */}
+              <div className="p-6 print:px-0 print:bg-white print:w-full">
+                {/* Invoice Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center print:bg-gray-800">
+                    <span className="text-white font-bold text-sm print:text-white">Store Logo</span>
+                  </div>
+                  <h2 className="text-lg font-bold text-slate-100 print:text-gray-900">Invoice #{selectedOrder.id}</h2>
+                  <p className="text-sm text-slate-300 print:text-gray-600">{new Date(selectedOrder.sale_date).toLocaleDateString()}</p>
+                </div>
+
+                {/* Invoice Details */}
+                <div className="grid grid-cols-1 print:grid-cols-2 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-slate-800/50 rounded-lg p-3 print:bg-transparent">
+                    <div className="text-slate-300 print:text-gray-600 space-y-0.5 text-xs">
+                      <p className="font-medium text-slate-100 print:text-gray-900">Your Store Name</p>
+                      <p>123 Business Street</p>
+                      <p>City, State 12345</p>
+                      <p>Phone: (555) 123-4567</p>
+                      <p>Email: store@yourstore.com</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800/50 rounded-lg p-3 print:bg-transparent">
+                    {selectedOrder.customer_name ? (
+                      <div className="text-slate-300 print:text-gray-600 space-y-0.5 text-xs">
+                        <p className="font-medium text-slate-100 print:text-gray-900">{selectedOrder.customer_name}</p>
+                        {selectedOrder.customer_phone && <p>{selectedOrder.customer_phone}</p>}
+                        {selectedOrder.customer_email && <p>{selectedOrder.customer_email}</p>}
+                      </div>
+                    ) : (
+                      <p className="text-slate-400 italic print:text-gray-500 text-xs">Walk-in Customer</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Items Table */}
+                <div className="mb-6 bg-slate-800/30 border border-slate-700/50 rounded-lg overflow-hidden print:bg-transparent print:border-gray-300">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-slate-700/50 print:bg-gray-50">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">Item</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">Qty</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">Unit Price</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-slate-700/30 print:border-gray-200">
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="text-sm font-medium text-slate-100 print:text-gray-900">{selectedOrder.product_name}</p>
+                            {selectedOrder.variant && (
+                              <p className="text-xs text-slate-400 print:text-gray-600 mt-0.5">
+                                {selectedOrder.variant.color && `Color: ${selectedOrder.variant.color}`}
+                                {selectedOrder.variant.size && ` | Size: ${selectedOrder.variant.size}`}
+                                {selectedOrder.variant.custom_variant && ` | ${selectedOrder.variant.custom_variant}`}
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-slate-200 print:text-gray-800">{selectedOrder.quantity}</td>
+                        <td className="px-4 py-3 text-right text-sm text-slate-200 print:text-gray-800">{formatCurrency(selectedOrder.unit_price || 0)}</td>
+                        <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400 print:text-gray-900">{formatCurrency(selectedOrder.total_amount || 0)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Totals */}
+                <div className="flex justify-end mb-6">
+                  <div className="w-64 bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 print:bg-transparent print:border-gray-300">
+                    <div className="space-y-2">
+                      <div className="flex justify-between py-1 text-slate-300 print:text-gray-600 text-sm">
+                        <span>Subtotal:</span>
+                        <span className="font-semibold">{formatCurrency(selectedOrder.total_amount || 0)}</span>
+                      </div>
+                      <div className="border-t border-slate-600/50 print:border-gray-300 pt-2">
+                        <div className="flex justify-between text-base font-bold text-slate-100 print:text-gray-900">
+                          <span>Total:</span>
+                          <span className="text-cyan-400 print:text-gray-900">{formatCurrency(selectedOrder.total_amount || 0)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
