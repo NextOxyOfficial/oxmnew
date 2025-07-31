@@ -414,36 +414,6 @@ export default function ProfilePage() {
                     {profileData.settings.currency_symbol})
                   </span>
                 </div>
-                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-                  <span className="text-slate-400">Email Notifications:</span>
-                  <span
-                    className={`ml-2 ${
-                      profileData.settings.email_notifications
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {profileData.settings.email_notifications
-                      ? "Enabled"
-                      : "Disabled"}
-                  </span>
-                </div>
-                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-                  <span className="text-slate-400">
-                    Marketing Notifications:
-                  </span>
-                  <span
-                    className={`ml-2 ${
-                      profileData.settings.marketing_notifications
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {profileData.settings.marketing_notifications
-                      ? "Enabled"
-                      : "Disabled"}
-                  </span>
-                </div>
               </div>
             </div>
 
