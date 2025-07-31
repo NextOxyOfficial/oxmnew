@@ -1305,17 +1305,27 @@ export default function AddOrderPage() {
                         <div className="relative">
                           <input
                             type="text"
-                            placeholder="Search products by name or code..."
+                            placeholder="Search products by name or code (minimum 2 characters)..."
                             value={productSearch}
                             onChange={(e) => {
                               setProductSearch(e.target.value);
-                              setIsProductDropdownOpen(true);
+                              // Only open dropdown if user has typed at least 2 characters
+                              if (e.target.value.trim().length >= 2) {
+                                setIsProductDropdownOpen(true);
+                              } else {
+                                setIsProductDropdownOpen(false);
+                              }
                               // Clear selected product when searching
                               if (newItem.product) {
                                 handleNewItemChange("product", "");
                               }
                             }}
-                            onFocus={() => setIsProductDropdownOpen(true)}
+                            onFocus={() => {
+                              // Only open dropdown on focus if user has already typed at least 2 characters
+                              if (productSearch.trim().length >= 2) {
+                                setIsProductDropdownOpen(true);
+                              }
+                            }}
                             disabled={isLoadingProducts}
                             className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
                               isLoadingProducts
@@ -1355,7 +1365,7 @@ export default function AddOrderPage() {
                         </div>
 
                         {/* Product Dropdown Options */}
-                        {isProductDropdownOpen && (
+                        {isProductDropdownOpen && productSearch.trim().length >= 2 && (
                           <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl"
                                style={{
                                  bottom: 'auto',
@@ -1366,7 +1376,7 @@ export default function AddOrderPage() {
                                 Loading products...
                               </div>
                             ) : filteredProducts.length > 0 ? (
-                              filteredProducts.map((product) => (
+                              filteredProducts.slice(0, 10).map((product) => (
                                 <div
                                   key={product.id}
                                   onClick={() => {
@@ -1399,6 +1409,12 @@ export default function AddOrderPage() {
                             ) : (
                               <div className="p-3 text-slate-400">
                                 No products found
+                              </div>
+                            )}
+                            {/* Show indicator when there are more than 10 results */}
+                            {filteredProducts.length > 10 && (
+                              <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
+                                Showing 10 of {filteredProducts.length} results. Type more to refine search.
                               </div>
                             )}
                           </div>
