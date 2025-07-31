@@ -75,11 +75,20 @@ class Transaction(models.Model):
             import uuid
             self.reference_number = f"TXN-{str(uuid.uuid4())[:8].upper()}"
         
-        # Check if this is a new transaction
+        # Check if this is a new transaction or status is changing to verified
         is_new = self.pk is None
+        old_status = None
+        
+        if not is_new:
+            # Get the old status before saving
+            try:
+                old_instance = Transaction.objects.get(pk=self.pk)
+                old_status = old_instance.status
+            except Transaction.DoesNotExist:
+                old_status = None
         
         super().save(*args, **kwargs)
         
-        # Update account balance for new transactions
-        if is_new and self.status == 'verified':
+        # Update account balance for new verified transactions or when status changes to verified
+        if self.status == 'verified' and (is_new or (old_status and old_status != 'verified')):
             self.account.update_balance(self.amount, self.type)

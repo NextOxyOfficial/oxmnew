@@ -137,7 +137,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
         return TransactionSerializer
 
     def perform_create(self, serializer):
-        """Override to handle balance updates and validate account ownership"""
+        """Override to validate account ownership"""
         account = serializer.validated_data['account']
         
         # Check if user owns the account (unless they're staff/admin)
@@ -145,11 +145,8 @@ class TransactionViewSet(viewsets.ModelViewSet):
             if account.owner != self.request.user:
                 raise PermissionError("You can only create transactions for your own accounts")
         
+        # Save the transaction - balance will be updated in the model's save method
         transaction = serializer.save()
-        
-        # Update account balance if transaction is verified
-        if transaction.status == 'verified':
-            transaction.account.update_balance(transaction.amount, transaction.type)
 
     @action(detail=False, methods=['get'])
     def my_transactions(self, request):
@@ -203,10 +200,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
         
         transaction.status = 'verified'
         transaction.verified_by = request.user
-        transaction.save()
-        
-        # Update account balance
-        transaction.account.update_balance(transaction.amount, transaction.type)
+        transaction.save()  # Balance will be updated in the model's save method
         
         serializer = self.get_serializer(transaction)
         return Response(serializer.data)
