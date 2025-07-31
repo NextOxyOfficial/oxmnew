@@ -1,6 +1,7 @@
 "use client";
 
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ApiService } from "@/lib/api";
 import { Product } from "@/types/product";
 import { useRouter } from "next/navigation";
@@ -106,12 +107,14 @@ export default function AddOrderPage() {
   );
   const [customerSearch, setCustomerSearch] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
   const [isSalesIncentiveOpen, setIsSalesIncentiveOpen] = useState(false);
   const [customerValidationError, setCustomerValidationError] = useState<
     string | null
   >(null);
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
 
   // Order form state
   const [orderForm, setOrderForm] = useState<OrderForm>({
@@ -723,6 +726,16 @@ export default function AddOrderPage() {
     );
   });
 
+  // Filter products based on search
+  const filteredProducts = products.filter((product) => {
+    if (!productSearch.trim()) return true;
+    const search = productSearch.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(search) ||
+      (product.sku && product.sku.toLowerCase().includes(search))
+    );
+  });
+
   return (
     <>
       <style jsx>{`
@@ -732,6 +745,23 @@ export default function AddOrderPage() {
         }
         .scrollbar-hide::-webkit-scrollbar {
           display: none; /* Safari and Chrome */
+        }
+        .dropdown-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+        }
+        .dropdown-scroll::-webkit-scrollbar {
+          width: 6px;
+        }
+        .dropdown-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .dropdown-scroll::-webkit-scrollbar-thumb {
+          background-color: rgba(148, 163, 184, 0.3);
+          border-radius: 3px;
+        }
+        .dropdown-scroll::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(148, 163, 184, 0.5);
         }
       `}</style>
       <div className="sm:p-6 p-1 space-y-6">
@@ -1270,34 +1300,117 @@ export default function AddOrderPage() {
                       Add New Item
                     </h4>
                     <div className="flex flex-col md:flex-row gap-4 items-end">
-                      <div className="flex-1 md:flex-[2]">
-                        <select
-                          value={newItem.product}
-                          onChange={(e) =>
-                            handleNewItemChange("product", e.target.value)
-                          }
-                          disabled={isLoadingProducts}
-                          className={`w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                            isLoadingProducts
-                              ? "opacity-50 cursor-not-allowed"
-                              : ""
-                          }`}
-                        >
-                          <option value="" className="bg-slate-800">
-                            {isLoadingProducts
-                              ? "Loading products..."
-                              : "Select product"}
-                          </option>
-                          {products.map((product) => (
-                            <option
-                              key={product.id}
-                              value={product.id}
-                              className="bg-slate-800"
+                      <div className="flex-1 md:flex-[2] relative">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Search products by name or code..."
+                            value={productSearch}
+                            onChange={(e) => {
+                              setProductSearch(e.target.value);
+                              setIsProductDropdownOpen(true);
+                              // Clear selected product when searching
+                              if (newItem.product) {
+                                handleNewItemChange("product", "");
+                              }
+                            }}
+                            onFocus={() => setIsProductDropdownOpen(true)}
+                            disabled={isLoadingProducts}
+                            className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                              isLoadingProducts
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }`}
+                          />
+                          {/* Clear button */}
+                          {productSearch && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setProductSearch("");
+                                handleNewItemChange("product", "");
+                                handleNewItemChange("variant", "");
+                                setIsProductDropdownOpen(false);
+                              }}
+                              className="absolute right-12 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
+                              title="Clear search"
                             >
-                              {product.name}
-                            </option>
-                          ))}
-                        </select>
+                              Clear
+                            </button>
+                          )}
+                          <svg
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                          </svg>
+                        </div>
+
+                        {/* Product Dropdown Options */}
+                        {isProductDropdownOpen && (
+                          <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-64 overflow-y-auto dropdown-scroll"
+                               style={{
+                                 maxHeight: 'min(16rem, 50vh)',
+                                 bottom: 'auto',
+                                 top: '100%'
+                               }}>
+                            {isLoadingProducts ? (
+                              <div className="p-3 text-slate-400">
+                                Loading products...
+                              </div>
+                            ) : filteredProducts.length > 0 ? (
+                              filteredProducts.map((product) => (
+                                <div
+                                  key={product.id}
+                                  onClick={() => {
+                                    handleNewItemChange("product", product.id.toString());
+                                    setProductSearch(
+                                      `${product.name}${product.sku ? ` (${product.sku})` : ''}`
+                                    );
+                                    setIsProductDropdownOpen(false);
+                                  }}
+                                  className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
+                                >
+                                  <div className="text-white font-medium">
+                                    {product.name}
+                                  </div>
+                                  <div className="text-slate-400 text-sm flex items-center gap-2">
+                                    {product.sku && (
+                                      <span>SKU: {product.sku}</span>
+                                    )}
+                                    <span className="text-green-400">
+                                      ${product.sell_price || 0}
+                                    </span>
+                                  </div>
+                                  {product.has_variants && (
+                                    <div className="text-xs text-blue-400 mt-1">
+                                      Has variants available
+                                    </div>
+                                  )}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="p-3 text-slate-400">
+                                No products found
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Click outside to close dropdown */}
+                        {isProductDropdownOpen && (
+                          <div
+                            className="fixed inset-0 z-5"
+                            onClick={() => setIsProductDropdownOpen(false)}
+                          />
+                        )}
                       </div>
 
                       {selectedProduct?.has_variants && (
@@ -1597,11 +1710,7 @@ export default function AddOrderPage() {
                               Total Paid:
                             </span>
                             <span className="text-slate-100 font-medium">
-                              {orderForm.total_payment_received === 0
-                                ? "Paid"
-                                : formatCurrency(
-                                    orderForm.total_payment_received
-                                  )}
+                              {formatCurrency(orderForm.total_payment_received)}
                             </span>
                           </div>
 
