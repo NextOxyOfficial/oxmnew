@@ -107,9 +107,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         if "hasVariants" in data:
             data["hasVariants"] = data["hasVariants"] in ["true", "True", True]
             print("Converted hasVariants:", data["hasVariants"])
+        elif "has_variants" in data:
+            data["has_variants"] = data["has_variants"] in ["true", "True", True]
+            print("Converted has_variants:", data["has_variants"])
 
-        # Convert numeric fields
-        numeric_fields = ["buyPrice", "sellPrice", "stock"]
+        # Convert numeric fields - handle both snake_case and camelCase
+        numeric_fields = ["buyPrice", "sellPrice", "stock", "buy_price", "sell_price"]
         for field in numeric_fields:
             if field in data and data[field]:
                 try:
@@ -153,10 +156,21 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer_class = self.get_serializer_class()
         valid_fields = set(serializer_class.Meta.fields)
 
+        # Map snake_case field names to camelCase for the serializer
+        field_mapping = {
+            "buy_price": "buyPrice",
+            "sell_price": "sellPrice",
+            "product_code": "productCode",
+            "has_variants": "hasVariants",
+        }
+
         serializer_data = {}
         for key, value in data.items():
+            # Check if it's a direct valid field or needs mapping
+            mapped_key = field_mapping.get(key, key)
+
             if (
-                key in valid_fields or key == "colorSizeVariants"
+                mapped_key in valid_fields or key == "colorSizeVariants"
             ):  # colorSizeVariants is write_only
                 if key == "colorSizeVariants" and isinstance(value, list):
                     # Ensure we pass the list directly, not nested
@@ -168,7 +182,8 @@ class ProductViewSet(viewsets.ModelViewSet):
                     else:
                         serializer_data[key] = value
                 else:
-                    serializer_data[key] = value
+                    # Use the mapped key for the serializer
+                    serializer_data[mapped_key] = value
             else:
                 print(f"Skipping unknown field: {key}")
 
