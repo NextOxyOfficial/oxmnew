@@ -5,7 +5,7 @@ import { AuthToken } from "./api";
 
 export const setDevToken = () => {
   // Set the test token from backend
-  const testToken = "00b71b0799b3a0e832f11139d975dd53f7497506";
+  const testToken = "afe6a72967546a2088098b20f9cff3ed83c9942d";
   AuthToken.set(testToken);
   console.log("Development auth token set");
 };

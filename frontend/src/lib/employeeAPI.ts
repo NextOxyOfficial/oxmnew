@@ -1,17 +1,20 @@
 import {
+  CreateEmployeeData,
+  CreateIncentiveData,
+  CreateSalaryRecordData,
+  CreateTaskData,
+  Document,
   Employee,
-  PaymentInformation,
   Incentive,
+  PaymentInformation,
   SalaryRecord,
   Task,
-  Document,
-  CreateEmployeeData,
   UpdateEmployeeData,
-  CreateIncentiveData,
-  CreateTaskData,
-  CreateSalaryRecordData,
   UpdatePaymentInformationData,
 } from "@/types/employee";
+
+// Import the AuthToken from the main API service
+import { AuthToken } from "./api";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
@@ -19,26 +22,27 @@ const API_BASE_URL =
 class EmployeeAPI {
   private async fetchAPI(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
+    const token = AuthToken.get();
 
-    const defaultHeaders: HeadersInit = {
-      "Content-Type": "application/json",
-    };
+    const defaultHeaders: HeadersInit = {};
 
-    // Add authorization header if needed
-    // const token = localStorage.getItem('authToken');
-    // if (token) {
-    //   defaultHeaders.Authorization = `Bearer ${token}`;
-    // }
+    // Only set Content-Type for non-FormData requests
+    if (!(options.body instanceof FormData)) {
+      (defaultHeaders as Record<string, string>)["Content-Type"] =
+        "application/json";
+    }
+
+    // Add authorization header if token exists
+    if (token) {
+      (defaultHeaders as Record<string, string>)[
+        "Authorization"
+      ] = `Token ${token}`;
+    }
 
     const config: RequestInit = {
       headers: defaultHeaders,
       ...options,
     };
-
-    if (config.body && config.body instanceof FormData) {
-      // Remove Content-Type for FormData to let browser set it with boundary
-      delete (config.headers as Record<string, string>)["Content-Type"];
-    }
 
     try {
       const response = await fetch(url, config);
