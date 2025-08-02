@@ -2,6 +2,7 @@
 
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -115,6 +116,17 @@ export default function AddProductPage() {
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
     null
   );
+
+  // CSV Upload state
+  const [activeTab, setActiveTab] = useState<"manual" | "csv">("manual");
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvResults, setCsvResults] = useState<{
+    success: boolean;
+    products_created: number;
+    errors: string[];
+    message: string;
+  } | null>(null);
+  const [isUploadingCSV, setIsUploadingCSV] = useState(false);
 
   // Calculate profit (for single pricing or average if variants exist)
   const profit = formData.hasVariants
@@ -436,7 +448,7 @@ export default function AddProductPage() {
     return new Promise((resolve) => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      const img = new Image();
+      const img = new window.Image();
 
       img.onload = () => {
         // Calculate new dimensions
@@ -652,7 +664,7 @@ export default function AddProductPage() {
         sell_price: formData.hasVariants ? 0 : formData.sellPrice,
         stock: formData.hasVariants ? 0 : formData.stock,
         variants: formData.hasVariants
-          ? formData.colorSizeVariants.map(variant => ({
+          ? formData.colorSizeVariants.map((variant) => ({
               color: variant.color,
               size: variant.size,
               weight: variant.weight,
@@ -698,6 +710,67 @@ export default function AddProductPage() {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // CSV Upload handlers
+  const handleCSVFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === "text/csv") {
+      setCsvFile(file);
+      setCsvResults(null);
+    } else if (file) {
+      alert("Please select a valid CSV file");
+      e.target.value = "";
+    }
+  };
+
+  const handleCSVUpload = async () => {
+    if (!csvFile) {
+      alert("Please select a CSV file first");
+      return;
+    }
+
+    setIsUploadingCSV(true);
+    setCsvResults(null);
+
+    try {
+      const result = await ApiService.uploadProductsCSV(csvFile);
+      setCsvResults(result);
+
+      if (result.success && result.products_created > 0) {
+        // Optionally redirect to products page after successful upload
+        setTimeout(() => {
+          router.push("/dashboard/products");
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Error uploading CSV:", error);
+      setCsvResults({
+        success: false,
+        products_created: 0,
+        errors: [error instanceof Error ? error.message : "Unknown error"],
+        message: "Failed to upload CSV file",
+      });
+    } finally {
+      setIsUploadingCSV(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await ApiService.downloadProductsCSVTemplate();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "products_template.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      alert("Failed to download CSV template");
     }
   };
 
@@ -759,6 +832,34 @@ export default function AddProductPage() {
 
         {/* Form Container - matching settings page style */}
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
+          {/* Tabs */}
+          <div className="border-b border-slate-700/50">
+            <nav className="flex space-x-8 px-4 pt-4">
+              <button
+                type="button"
+                onClick={() => setActiveTab("manual")}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "manual"
+                    ? "border-cyan-500 text-cyan-400"
+                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
+                }`}
+              >
+                Manual Entry
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("csv")}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "csv"
+                    ? "border-cyan-500 text-cyan-400"
+                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
+                }`}
+              >
+                CSV Upload
+              </button>
+            </nav>
+          </div>
+
           <div className="sm:p-4 p-2">
             {errors.data && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
@@ -766,163 +867,47 @@ export default function AddProductPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Product Name */}
-              <div className="relative">
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-slate-300 mb-1.5"
-                >
-                  Product Name *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  onBlur={() => handleInputBlur("name")}
-                  onFocus={() =>
-                    formData.name.trim().length >= 2 &&
-                    setShowNameSuggestions(nameSuggestions.length > 0)
-                  }
-                  className={`w-full bg-slate-800/50 border ${
-                    errors.name ? "border-red-500" : "border-slate-700/50"
-                  } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
-                  placeholder="Enter product name"
-                />
-
-                {/* Name Suggestions Dropdown */}
-                {showNameSuggestions && nameSuggestions.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    <div className="p-2 border-b border-slate-600">
-                      <p className="text-xs text-yellow-400 font-medium">
-                        ⚠️ Similar products found - Check to avoid duplicates
-                      </p>
-                    </div>
-                    {nameSuggestions.map((product) => (
-                      <div
-                        key={product.id}
-                        onClick={() => handleSuggestionSelect(product, "name")}
-                        className="flex items-center justify-between p-3 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-b-0"
-                      >
-                        <div className="flex-1">
-                          <p className="text-white font-medium">
-                            {product.name}
-                          </p>
-                          <div className="flex gap-4 text-xs text-slate-400 mt-1">
-                            {product.product_code && (
-                              <span>Code: {product.product_code}</span>
-                            )}
-                            <span>
-                              Stock: {product.total_stock || product.stock || 0}
-                            </span>
-                            <span className="text-green-400">
-                              $
-                              {product.sell_price ||
-                                product.average_sell_price ||
-                                0}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="ml-2 text-xs text-slate-500">
-                          Click to use
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {errors.name && (
-                  <p className="text-red-400 text-sm mt-1">{errors.name}</p>
-                )}
-              </div>
-
-              {/* Supplier and Product Code Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Supplier */}
-                <div>
-                  <label
-                    htmlFor="supplier"
-                    className="block text-sm font-medium text-slate-300 mb-1.5"
-                  >
-                    Supplier
-                  </label>
-                  <select
-                    id="supplier"
-                    name="supplier"
-                    value={formData.supplier}
-                    onChange={handleInputChange}
-                    disabled={isLoadingData}
-                    className={`w-full bg-slate-800/50 border ${
-                      errors.supplier ? "border-red-500" : "border-slate-700/50"
-                    } text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                      isLoadingData ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    <option value="" className="bg-slate-800">
-                      {isLoadingData
-                        ? "Loading suppliers..."
-                        : "Select a supplier (optional)"}
-                    </option>
-                    {suppliers.map((supplier) => (
-                      <option
-                        key={supplier.id}
-                        value={supplier.id}
-                        className="bg-slate-800"
-                      >
-                        {supplier.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.supplier && (
-                    <p className="text-red-400 text-sm mt-1">
-                      {errors.supplier}
-                    </p>
-                  )}
-                </div>
-
-                {/* Product/Parts Code */}
+            {/* Manual Entry Tab */}
+            {activeTab === "manual" && (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Product Name */}
                 <div className="relative">
                   <label
-                    htmlFor="productCode"
+                    htmlFor="name"
                     className="block text-sm font-medium text-slate-300 mb-1.5"
                   >
-                    Product/Parts Code
+                    Product Name *
                   </label>
                   <input
                     type="text"
-                    id="productCode"
-                    name="productCode"
-                    value={formData.productCode}
+                    id="name"
+                    name="name"
+                    value={formData.name}
                     onChange={handleInputChange}
-                    onBlur={() => handleInputBlur("code")}
+                    onBlur={() => handleInputBlur("name")}
                     onFocus={() =>
-                      formData.productCode.trim().length >= 2 &&
-                      setShowCodeSuggestions(codeSuggestions.length > 0)
+                      formData.name.trim().length >= 2 &&
+                      setShowNameSuggestions(nameSuggestions.length > 0)
                     }
                     className={`w-full bg-slate-800/50 border ${
-                      errors.productCode
-                        ? "border-red-500"
-                        : "border-slate-700/50"
+                      errors.name ? "border-red-500" : "border-slate-700/50"
                     } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
-                    placeholder="Enter product or parts code (e.g., SKU, part number)"
+                    placeholder="Enter product name"
                   />
 
-                  {/* Code Suggestions Dropdown */}
-                  {showCodeSuggestions && codeSuggestions.length > 0 && (
+                  {/* Name Suggestions Dropdown */}
+                  {showNameSuggestions && nameSuggestions.length > 0 && (
                     <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       <div className="p-2 border-b border-slate-600">
                         <p className="text-xs text-yellow-400 font-medium">
-                          ⚠️ Similar product codes found - Check to avoid
-                          duplicates
+                          ⚠️ Similar products found - Check to avoid duplicates
                         </p>
                       </div>
-                      {codeSuggestions.map((product) => (
+                      {nameSuggestions.map((product) => (
                         <div
                           key={product.id}
                           onClick={() =>
-                            handleSuggestionSelect(product, "code")
+                            handleSuggestionSelect(product, "name")
                           }
                           className="flex items-center justify-between p-3 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-b-0"
                         >
@@ -931,9 +916,9 @@ export default function AddProductPage() {
                               {product.name}
                             </p>
                             <div className="flex gap-4 text-xs text-slate-400 mt-1">
-                              <span className="text-cyan-400">
-                                Code: {product.product_code}
-                              </span>
+                              {product.product_code && (
+                                <span>Code: {product.product_code}</span>
+                              )}
                               <span>
                                 Stock:{" "}
                                 {product.total_stock || product.stock || 0}
@@ -954,676 +939,241 @@ export default function AddProductPage() {
                     </div>
                   )}
 
-                  {errors.productCode && (
-                    <p className="text-red-400 text-sm mt-1">
-                      {errors.productCode}
-                    </p>
+                  {errors.name && (
+                    <p className="text-red-400 text-sm mt-1">{errors.name}</p>
                   )}
                 </div>
-              </div>
 
-              {/* Photo Upload */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Product Photos ({formData.photos.length}/8)
-                </label>
-                <div className="flex gap-3">
-                  {/* Upload Area - Left Side */}
-                  <div className="flex-shrink-0 w-32">
-                    <div
-                      className={`border-2 border-dashed ${
-                        errors.photo ? "border-red-500" : "border-slate-700/50"
-                      } rounded-lg p-3 text-center hover:border-slate-600 transition-all duration-200 cursor-pointer bg-slate-800/50 h-32 flex flex-col items-center justify-center ${
-                        formData.photos.length >= 8 || isCompressing
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        !isCompressing &&
-                        formData.photos.length < 8 &&
-                        fileInputRef.current?.click()
-                      }
+                {/* Supplier and Product Code Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Supplier */}
+                  <div>
+                    <label
+                      htmlFor="supplier"
+                      className="block text-sm font-medium text-slate-300 mb-1.5"
                     >
-                      {isCompressing ? (
-                        <>
-                          <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-1"></div>
-                          <p className="text-cyan-400 text-xs mb-1">
-                            Compressing...
-                          </p>
-                          <p className="text-gray-500 text-xs">Please wait</p>
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            className="w-6 h-6 text-gray-400 mb-1"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                            />
-                          </svg>
-                          <p className="text-gray-400 text-xs mb-1">
-                            {formData.photos.length >= 8
-                              ? "Max Reached"
-                              : "Add Photos"}
-                          </p>
-                          <p className="text-gray-500 text-xs">Max 10MB each</p>
-                        </>
-                      )}
-                    </div>
-
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handlePhotoUpload}
-                      className="hidden"
-                    />
-
-                    {errors.photo && (
-                      <p className="text-red-400 text-xs mt-1">
-                        {errors.photo}
-                      </p>
-                    )}
-
-                    {!errors.photo && (
-                      <p className="text-slate-500 text-xs mt-1 text-center">
-                        Auto-compression enabled
+                      Supplier
+                    </label>
+                    <select
+                      id="supplier"
+                      name="supplier"
+                      value={formData.supplier}
+                      onChange={handleInputChange}
+                      disabled={isLoadingData}
+                      className={`w-full bg-slate-800/50 border ${
+                        errors.supplier
+                          ? "border-red-500"
+                          : "border-slate-700/50"
+                      } text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                        isLoadingData ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      <option value="" className="bg-slate-800">
+                        {isLoadingData
+                          ? "Loading suppliers..."
+                          : "Select a supplier (optional)"}
+                      </option>
+                      {suppliers.map((supplier) => (
+                        <option
+                          key={supplier.id}
+                          value={supplier.id}
+                          className="bg-slate-800"
+                        >
+                          {supplier.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.supplier && (
+                      <p className="text-red-400 text-sm mt-1">
+                        {errors.supplier}
                       </p>
                     )}
                   </div>
 
-                  {/* Photos Gallery - Right Side with Horizontal Scroll */}
-                  {photoPreviews.length > 0 && (
-                    <div className="flex-1 min-w-0">
-                      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 relative z-10">
-                        {photoPreviews.map((preview, index) => (
+                  {/* Product/Parts Code */}
+                  <div className="relative">
+                    <label
+                      htmlFor="productCode"
+                      className="block text-sm font-medium text-slate-300 mb-1.5"
+                    >
+                      Product/Parts Code
+                    </label>
+                    <input
+                      type="text"
+                      id="productCode"
+                      name="productCode"
+                      value={formData.productCode}
+                      onChange={handleInputChange}
+                      onBlur={() => handleInputBlur("code")}
+                      onFocus={() =>
+                        formData.productCode.trim().length >= 2 &&
+                        setShowCodeSuggestions(codeSuggestions.length > 0)
+                      }
+                      className={`w-full bg-slate-800/50 border ${
+                        errors.productCode
+                          ? "border-red-500"
+                          : "border-slate-700/50"
+                      } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                      placeholder="Enter product or parts code (e.g., SKU, part number)"
+                    />
+
+                    {/* Code Suggestions Dropdown */}
+                    {showCodeSuggestions && codeSuggestions.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <div className="p-2 border-b border-slate-600">
+                          <p className="text-xs text-yellow-400 font-medium">
+                            ⚠️ Similar product codes found - Check to avoid
+                            duplicates
+                          </p>
+                        </div>
+                        {codeSuggestions.map((product) => (
                           <div
-                            key={index}
-                            className="relative flex-shrink-0 group"
+                            key={product.id}
+                            onClick={() =>
+                              handleSuggestionSelect(product, "code")
+                            }
+                            className="flex items-center justify-between p-3 hover:bg-slate-700 cursor-pointer border-b border-slate-700/50 last:border-b-0"
                           >
-                            <img
-                              src={preview}
-                              alt={`Product preview ${index + 1}`}
-                              className="w-32 h-32 object-cover rounded-lg border border-slate-700/50"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removePhoto(index)}
-                              className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors opacity-0 group-hover:opacity-100 z-20 shadow-lg cursor-pointer"
-                            >
-                              <svg
-                                className="w-3 h-3"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
+                            <div className="flex-1">
+                              <p className="text-white font-medium">
+                                {product.name}
+                              </p>
+                              <div className="flex gap-4 text-xs text-slate-400 mt-1">
+                                <span className="text-cyan-400">
+                                  Code: {product.product_code}
+                                </span>
+                                <span>
+                                  Stock:{" "}
+                                  {product.total_stock || product.stock || 0}
+                                </span>
+                                <span className="text-green-400">
+                                  $
+                                  {product.sell_price ||
+                                    product.average_sell_price ||
+                                    0}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="ml-2 text-xs text-slate-500">
+                              Click to use
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                    )}
 
-              {/* Category and Location Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Category */}
-                <div>
-                  <label
-                    htmlFor="category"
-                    className="block text-sm font-medium text-slate-300 mb-1.5"
-                  >
-                    Category
-                  </label>
-                  <select
-                    id="category"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    disabled={isLoadingData}
-                    className={`w-full bg-slate-800/50 border ${
-                      errors.category ? "border-red-500" : "border-slate-700/50"
-                    } text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                      isLoadingData ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    <option value="" className="bg-slate-800">
-                      {isLoadingData
-                        ? "Loading categories..."
-                        : "Select a category (optional)"}
-                    </option>
-                    {categories.map((category) => (
-                      <option
-                        key={category.id}
-                        value={category.id}
-                        className="bg-slate-800"
-                      >
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.category && (
-                    <p className="text-red-400 text-sm mt-1">
-                      {errors.category}
-                    </p>
-                  )}
-                </div>
-
-                {/* Location */}
-                <div>
-                  <label
-                    htmlFor="location"
-                    className="block text-sm font-medium text-slate-300 mb-1.5"
-                  >
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    id="location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    className={`w-full bg-slate-800/50 border ${
-                      errors.location ? "border-red-500" : "border-slate-700/50"
-                    } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
-                    placeholder="Enter storage location (optional)"
-                  />
-                  {errors.location && (
-                    <p className="text-red-400 text-sm mt-1">
-                      {errors.location}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Variants Toggle */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Pricing Type
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label
-                    className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                      !formData.hasVariants
-                        ? "border-cyan-500 bg-cyan-500/10"
-                        : "border-slate-700/50 bg-slate-800/50 hover:border-slate-600"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="hasVariants"
-                      value="false"
-                      checked={!formData.hasVariants}
-                      onChange={handleInputChange}
-                      className="sr-only"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-white">
-                        Single Price
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        One buy/sell price for all items
-                      </div>
-                    </div>
-                  </label>
-
-                  <label
-                    className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                      formData.hasVariants
-                        ? "border-cyan-500 bg-cyan-500/10"
-                        : "border-slate-700/50 bg-slate-800/50 hover:border-slate-600"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="hasVariants"
-                      value="true"
-                      checked={formData.hasVariants}
-                      onChange={handleInputChange}
-                      className="sr-only"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-white">
-                        By Variants
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        Different prices for colors/sizes
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* Pricing Section */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-slate-100">
-                  Pricing Information
-                </h3>
-
-                {!formData.hasVariants ? (
-                  /* Single Pricing */
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                      {/* Buy Price */}
-                      <div>
-                        <label
-                          htmlFor="buyPrice"
-                          className="block text-sm font-medium text-slate-300 mb-1.5"
-                        >
-                          Buy Price *
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            {formatCurrency(0)
-                              .replace(/\d|[.,]/g, "")
-                              .trim()}
-                          </span>
-                          <input
-                            type="number"
-                            id="buyPrice"
-                            name="buyPrice"
-                            value={formData.buyPrice || ""}
-                            onChange={handleInputChange}
-                            min="0"
-                            step="0.01"
-                            className={`w-full bg-slate-800/50 border ${
-                              errors.buyPrice
-                                ? "border-red-500"
-                                : "border-slate-700/50"
-                            } text-white placeholder:text-gray-400 rounded-lg py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        {errors.buyPrice && (
-                          <p className="text-red-400 text-sm mt-1">
-                            {errors.buyPrice}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Sell Price */}
-                      <div>
-                        <label
-                          htmlFor="sellPrice"
-                          className="block text-sm font-medium text-slate-300 mb-1.5"
-                        >
-                          Sell Price *
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            {formatCurrency(0)
-                              .replace(/\d|[.,]/g, "")
-                              .trim()}
-                          </span>
-                          <input
-                            type="number"
-                            id="sellPrice"
-                            name="sellPrice"
-                            value={formData.sellPrice || ""}
-                            onChange={handleInputChange}
-                            min="0"
-                            step="0.01"
-                            className={`w-full bg-slate-800/50 border ${
-                              errors.sellPrice
-                                ? "border-red-500"
-                                : "border-slate-700/50"
-                            } text-white placeholder:text-gray-400 rounded-lg py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        {errors.sellPrice && (
-                          <p className="text-red-400 text-sm mt-1">
-                            {errors.sellPrice}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Stock */}
-                      <div>
-                        <label
-                          htmlFor="stock"
-                          className="block text-sm font-medium text-slate-300 mb-1.5"
-                        >
-                          Stock Quantity *
-                        </label>
-                        <input
-                          type="number"
-                          id="stock"
-                          name="stock"
-                          value={formData.stock || ""}
-                          onChange={handleInputChange}
-                          min="0"
-                          step="1"
-                          className={`w-full bg-slate-800/50 border ${
-                            errors.stock
-                              ? "border-red-500"
-                              : "border-slate-700/50"
-                          } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
-                          placeholder="0"
-                        />
-                        {errors.stock && (
-                          <p className="text-red-400 text-sm mt-1">
-                            {errors.stock}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Profit per Unit */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Profit per Unit
-                        </label>
-                        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 h-[42px] flex items-center justify-between">
-                          <p
-                            className={`text-sm font-bold ${
-                              profit > 0
-                                ? "text-green-400"
-                                : profit < 0
-                                ? "text-red-400"
-                                : "text-yellow-400"
-                            }`}
-                          >
-                            {profit > 0 ? "+" : profit < 0 ? "-" : ""}
-                            {formatCurrency(Math.abs(profit))}
-                          </p>
-                          <p
-                            className={`text-xs ${
-                              profit > 0
-                                ? "text-green-400/70"
-                                : profit < 0
-                                ? "text-red-400/70"
-                                : "text-yellow-400/70"
-                            }`}
-                          >
-                            {profit > 0 ? "+" : profit < 0 ? "-" : ""}
-                            {Math.abs(parseFloat(profitMargin)).toFixed(1)}%
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  /* Variant Pricing */
-                  <>
-                    {/* Add New Variant */}
-                    <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
-                      <h4 className="text-sm font-medium text-slate-300 mb-1">
-                        Add Product Variant
-                      </h4>
-                      <p className="text-xs text-slate-400 mb-3">
-                        Fill at least one field (color, size, weight, or custom
-                        variant) to identify the variant. All fields are
-                        optional except pricing.
+                    {errors.productCode && (
+                      <p className="text-red-400 text-sm mt-1">
+                        {errors.productCode}
                       </p>
+                    )}
+                  </div>
+                </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
-                        {/* Color */}
-                        <div>
-                          <select
-                            name="color"
-                            value={newVariant.color}
-                            onChange={handleVariantChange}
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          >
-                            <option value="" className="bg-slate-800">
-                              Color
-                            </option>
-                            {commonColors.map((color) => (
-                              <option
-                                key={color}
-                                value={color}
-                                className="bg-slate-800"
-                              >
-                                {color}
-                              </option>
-                            ))}
-                            <option value="Custom" className="bg-slate-800">
-                              Custom
-                            </option>
-                          </select>
-                        </div>
-
-                        {/* Size */}
-                        <div>
-                          <select
-                            name="size"
-                            value={newVariant.size}
-                            onChange={handleVariantChange}
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          >
-                            <option value="" className="bg-slate-800">
-                              Size
-                            </option>
-                            {commonSizes.map((size) => (
-                              <option
-                                key={size}
-                                value={size}
-                                className="bg-slate-800"
-                              >
-                                {size}
-                              </option>
-                            ))}
-                            <option value="Custom" className="bg-slate-800">
-                              Custom
-                            </option>
-                          </select>
-                        </div>
-
-                        {/* Weight */}
-                        <div>
-                          <input
-                            type="number"
-                            name="weight"
-                            value={newVariant.weight || ""}
-                            onChange={handleVariantChange}
-                            placeholder="Weight"
-                            min="0"
-                            step="0.01"
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
-                        </div>
-
-                        {/* Weight Unit */}
-                        <div>
-                          <select
-                            name="weight_unit"
-                            value={newVariant.weight_unit}
-                            onChange={handleVariantChange}
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          >
-                            <option value="g" className="bg-slate-800">
-                              g
-                            </option>
-                            <option value="kg" className="bg-slate-800">
-                              kg
-                            </option>
-                            <option value="lb" className="bg-slate-800">
-                              lb
-                            </option>
-                            <option value="oz" className="bg-slate-800">
-                              oz
-                            </option>
-                          </select>
-                        </div>
-
-                        {/* Custom Variant */}
-                        <div className="md:col-span-2">
-                          <input
-                            type="text"
-                            name="custom_variant"
-                            value={newVariant.custom_variant}
-                            onChange={handleVariantChange}
-                            placeholder="Custom variant (optional)"
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
-                        </div>
+                {/* Photo Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    Product Photos ({formData.photos.length}/8)
+                  </label>
+                  <div className="flex gap-3">
+                    {/* Upload Area - Left Side */}
+                    <div className="flex-shrink-0 w-32">
+                      <div
+                        className={`border-2 border-dashed ${
+                          errors.photo
+                            ? "border-red-500"
+                            : "border-slate-700/50"
+                        } rounded-lg p-3 text-center hover:border-slate-600 transition-all duration-200 cursor-pointer bg-slate-800/50 h-32 flex flex-col items-center justify-center ${
+                          formData.photos.length >= 8 || isCompressing
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          !isCompressing &&
+                          formData.photos.length < 8 &&
+                          fileInputRef.current?.click()
+                        }
+                      >
+                        {isCompressing ? (
+                          <>
+                            <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-1"></div>
+                            <p className="text-cyan-400 text-xs mb-1">
+                              Compressing...
+                            </p>
+                            <p className="text-gray-500 text-xs">Please wait</p>
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="w-6 h-6 text-gray-400 mb-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                              />
+                            </svg>
+                            <p className="text-gray-400 text-xs mb-1">
+                              {formData.photos.length >= 8
+                                ? "Max Reached"
+                                : "Add Photos"}
+                            </p>
+                            <p className="text-gray-500 text-xs">
+                              Max 10MB each
+                            </p>
+                          </>
+                        )}
                       </div>
 
-                      {/* Custom Color, Size, and Weight Inputs */}
-                      {(newVariant.color === "Custom" ||
-                        newVariant.size === "Custom" ||
-                        customWeight) && (
-                        <div className="grid grid-cols-3 gap-2 mb-3">
-                          {/* Custom Color Input */}
-                          {newVariant.color === "Custom" && (
-                            <input
-                              type="text"
-                              value={customColor}
-                              onChange={(e) => setCustomColor(e.target.value)}
-                              placeholder="Enter custom color"
-                              className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                            />
-                          )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
 
-                          {/* Custom Size Input */}
-                          {newVariant.size === "Custom" && (
-                            <input
-                              type="text"
-                              value={customSize}
-                              onChange={(e) => setCustomSize(e.target.value)}
-                              placeholder="Enter custom size"
-                              className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                            />
-                          )}
-
-                          {/* Custom Weight Input */}
-                          <input
-                            type="number"
-                            value={customWeight}
-                            onChange={(e) => setCustomWeight(e.target.value)}
-                            placeholder="Custom weight"
-                            min="0"
-                            step="0.01"
-                            className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
-                        </div>
+                      {errors.photo && (
+                        <p className="text-red-400 text-xs mt-1">
+                          {errors.photo}
+                        </p>
                       )}
 
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
-                        {/* Buy Price */}
-                        <div>
-                          <input
-                            type="number"
-                            name="buyPrice"
-                            value={newVariant.buyPrice || ""}
-                            onChange={handleVariantChange}
-                            placeholder="Buy Price"
-                            min="0"
-                            step="0.01"
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
-                        </div>
-
-                        {/* Sell Price */}
-                        <div>
-                          <input
-                            type="number"
-                            name="sellPrice"
-                            value={newVariant.sellPrice || ""}
-                            onChange={handleVariantChange}
-                            placeholder="Sell Price"
-                            min="0"
-                            step="0.01"
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
-                        </div>
-
-                        {/* Stock */}
-                        <div>
-                          <input
-                            type="number"
-                            name="stock"
-                            value={newVariant.stock || ""}
-                            onChange={handleVariantChange}
-                            placeholder="Stock"
-                            min="0"
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={addVariant}
-                          className="px-4 py-1.5 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-medium rounded-lg hover:bg-cyan-500/30 transition-colors cursor-pointer"
-                        >
-                          Add Variant
-                        </button>
-                      </div>
+                      {!errors.photo && (
+                        <p className="text-slate-500 text-xs mt-1 text-center">
+                          Auto-compression enabled
+                        </p>
+                      )}
                     </div>
 
-                    {/* Variants List */}
-                    {formData.colorSizeVariants.length > 0 && (
-                      <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
-                        <h4 className="text-sm font-medium text-slate-300 mb-3">
-                          Product Variants ({formData.colorSizeVariants.length})
-                        </h4>
-
-                        {/* Headers */}
-                        <div className="grid grid-cols-7 gap-2 text-xs text-slate-400 mb-2 px-2">
-                          <span>Color</span>
-                          <span>Size</span>
-                          <span>Weight</span>
-                          <span>Custom</span>
-                          <span>Buy Price</span>
-                          <span>Sell Price</span>
-                          <span>Stock</span>
-                        </div>
-
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {formData.colorSizeVariants.map((variant) => (
+                    {/* Photos Gallery - Right Side with Horizontal Scroll */}
+                    {photoPreviews.length > 0 && (
+                      <div className="flex-1 min-w-0">
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 relative z-10">
+                          {photoPreviews.map((preview, index) => (
                             <div
-                              key={variant.id}
-                              className="flex items-center gap-2 bg-slate-700/30 rounded-lg p-2"
+                              key={index}
+                              className="relative flex-shrink-0 group"
                             >
-                              <div className="flex-1 grid grid-cols-7 gap-2 text-xs">
-                                <span className="text-white font-medium">
-                                  {variant.color}
-                                </span>
-                                <span className="text-gray-300">
-                                  {variant.size}
-                                </span>
-                                <span className="text-purple-400">
-                                  {variant.weight && variant.weight_unit
-                                    ? `${variant.weight}${variant.weight_unit}`
-                                    : "-"}
-                                </span>
-                                <span className="text-orange-400 truncate">
-                                  {variant.custom_variant || "-"}
-                                </span>
-                                <span className="text-red-400">
-                                  {formatCurrency(variant.buyPrice)}
-                                </span>
-                                <span className="text-green-400">
-                                  {formatCurrency(variant.sellPrice)}
-                                </span>
-                                <span className="text-cyan-400">
-                                  {variant.stock} pcs
-                                </span>
-                              </div>
+                              <Image
+                                src={preview}
+                                alt={`Product preview ${index + 1}`}
+                                width={128}
+                                height={128}
+                                className="w-32 h-32 object-cover rounded-lg border border-slate-700/50"
+                              />
                               <button
                                 type="button"
-                                onClick={() => removeVariant(variant.id)}
-                                className="text-red-400 hover:text-red-300 p-1 cursor-pointer"
+                                onClick={() => removePhoto(index)}
+                                className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors opacity-0 group-hover:opacity-100 z-20 shadow-lg cursor-pointer"
                               >
                                 <svg
-                                  className="w-4 h-4"
+                                  className="w-3 h-3"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -1632,179 +1182,988 @@ export default function AddProductPage() {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    d="M6 18L18 6M6 6l12 12"
                                   />
                                 </svg>
                               </button>
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-                        {/* Average Profit Display for Variants */}
-                        <div className="mt-3 pt-3 border-t border-slate-700/50">
-                          <div className="grid grid-cols-3 gap-3 text-center">
-                            <div>
-                              <p className="text-xs text-slate-400 mb-1">
-                                Avg Profit/Unit
-                              </p>
-                              <div className="flex items-center justify-between">
-                                <p
-                                  className={`text-sm font-bold ${
-                                    profit > 0
-                                      ? "text-green-400"
-                                      : profit < 0
-                                      ? "text-red-400"
-                                      : "text-yellow-400"
-                                  }`}
-                                >
-                                  {profit > 0 ? "+" : profit < 0 ? "-" : ""}
-                                  {formatCurrency(Math.abs(profit))}
-                                </p>
-                                <p
-                                  className={`text-xs ${
-                                    profit > 0
-                                      ? "text-green-400/70"
-                                      : profit < 0
-                                      ? "text-red-400/70"
-                                      : "text-yellow-400/70"
-                                  }`}
-                                >
-                                  {profit > 0 ? "+" : profit < 0 ? "-" : ""}
-                                  {Math.abs(parseFloat(profitMargin)).toFixed(
-                                    1
-                                  )}
-                                  %
-                                </p>
-                              </div>
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-400 mb-1">
-                                Avg Buy Price
-                              </p>
-                              <p className="text-sm font-bold text-slate-300">
-                                {formatCurrency(
-                                  formData.colorSizeVariants.length > 0
-                                    ? formData.colorSizeVariants.reduce(
-                                        (sum, v) => sum + v.buyPrice,
-                                        0
-                                      ) / formData.colorSizeVariants.length
-                                    : 0
-                                )}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-400 mb-1">
-                                Total Stock
-                              </p>
-                              <p className="text-sm font-bold text-cyan-400">
-                                {formData.colorSizeVariants.reduce(
-                                  (sum, v) => sum + v.stock,
-                                  0
-                                )}{" "}
-                                pcs
-                              </p>
-                            </div>
+                {/* Category and Location Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Category */}
+                  <div>
+                    <label
+                      htmlFor="category"
+                      className="block text-sm font-medium text-slate-300 mb-1.5"
+                    >
+                      Category
+                    </label>
+                    <select
+                      id="category"
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      disabled={isLoadingData}
+                      className={`w-full bg-slate-800/50 border ${
+                        errors.category
+                          ? "border-red-500"
+                          : "border-slate-700/50"
+                      } text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                        isLoadingData ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      <option value="" className="bg-slate-800">
+                        {isLoadingData
+                          ? "Loading categories..."
+                          : "Select a category (optional)"}
+                      </option>
+                      {categories.map((category) => (
+                        <option
+                          key={category.id}
+                          value={category.id}
+                          className="bg-slate-800"
+                        >
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.category && (
+                      <p className="text-red-400 text-sm mt-1">
+                        {errors.category}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Location */}
+                  <div>
+                    <label
+                      htmlFor="location"
+                      className="block text-sm font-medium text-slate-300 mb-1.5"
+                    >
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      id="location"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      className={`w-full bg-slate-800/50 border ${
+                        errors.location
+                          ? "border-red-500"
+                          : "border-slate-700/50"
+                      } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                      placeholder="Enter storage location (optional)"
+                    />
+                    {errors.location && (
+                      <p className="text-red-400 text-sm mt-1">
+                        {errors.location}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Variants Toggle */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    Pricing Type
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label
+                      className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
+                        !formData.hasVariants
+                          ? "border-cyan-500 bg-cyan-500/10"
+                          : "border-slate-700/50 bg-slate-800/50 hover:border-slate-600"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="hasVariants"
+                        value="false"
+                        checked={!formData.hasVariants}
+                        onChange={handleInputChange}
+                        className="sr-only"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-white">
+                          Single Price
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          One buy/sell price for all items
+                        </div>
+                      </div>
+                    </label>
+
+                    <label
+                      className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
+                        formData.hasVariants
+                          ? "border-cyan-500 bg-cyan-500/10"
+                          : "border-slate-700/50 bg-slate-800/50 hover:border-slate-600"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="hasVariants"
+                        value="true"
+                        checked={formData.hasVariants}
+                        onChange={handleInputChange}
+                        className="sr-only"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-white">
+                          By Variants
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Different prices for colors/sizes
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Pricing Section */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-slate-100">
+                    Pricing Information
+                  </h3>
+
+                  {!formData.hasVariants ? (
+                    /* Single Pricing */
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        {/* Buy Price */}
+                        <div>
+                          <label
+                            htmlFor="buyPrice"
+                            className="block text-sm font-medium text-slate-300 mb-1.5"
+                          >
+                            Buy Price *
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                              {formatCurrency(0)
+                                .replace(/\d|[.,]/g, "")
+                                .trim()}
+                            </span>
+                            <input
+                              type="number"
+                              id="buyPrice"
+                              name="buyPrice"
+                              value={formData.buyPrice || ""}
+                              onChange={handleInputChange}
+                              min="0"
+                              step="0.01"
+                              className={`w-full bg-slate-800/50 border ${
+                                errors.buyPrice
+                                  ? "border-red-500"
+                                  : "border-slate-700/50"
+                              } text-white placeholder:text-gray-400 rounded-lg py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          {errors.buyPrice && (
+                            <p className="text-red-400 text-sm mt-1">
+                              {errors.buyPrice}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Sell Price */}
+                        <div>
+                          <label
+                            htmlFor="sellPrice"
+                            className="block text-sm font-medium text-slate-300 mb-1.5"
+                          >
+                            Sell Price *
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                              {formatCurrency(0)
+                                .replace(/\d|[.,]/g, "")
+                                .trim()}
+                            </span>
+                            <input
+                              type="number"
+                              id="sellPrice"
+                              name="sellPrice"
+                              value={formData.sellPrice || ""}
+                              onChange={handleInputChange}
+                              min="0"
+                              step="0.01"
+                              className={`w-full bg-slate-800/50 border ${
+                                errors.sellPrice
+                                  ? "border-red-500"
+                                  : "border-slate-700/50"
+                              } text-white placeholder:text-gray-400 rounded-lg py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          {errors.sellPrice && (
+                            <p className="text-red-400 text-sm mt-1">
+                              {errors.sellPrice}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Stock */}
+                        <div>
+                          <label
+                            htmlFor="stock"
+                            className="block text-sm font-medium text-slate-300 mb-1.5"
+                          >
+                            Stock Quantity *
+                          </label>
+                          <input
+                            type="number"
+                            id="stock"
+                            name="stock"
+                            value={formData.stock || ""}
+                            onChange={handleInputChange}
+                            min="0"
+                            step="1"
+                            className={`w-full bg-slate-800/50 border ${
+                              errors.stock
+                                ? "border-red-500"
+                                : "border-slate-700/50"
+                            } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
+                            placeholder="0"
+                          />
+                          {errors.stock && (
+                            <p className="text-red-400 text-sm mt-1">
+                              {errors.stock}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Profit per Unit */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                            Profit per Unit
+                          </label>
+                          <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 h-[42px] flex items-center justify-between">
+                            <p
+                              className={`text-sm font-bold ${
+                                profit > 0
+                                  ? "text-green-400"
+                                  : profit < 0
+                                  ? "text-red-400"
+                                  : "text-yellow-400"
+                              }`}
+                            >
+                              {profit > 0 ? "+" : profit < 0 ? "-" : ""}
+                              {formatCurrency(Math.abs(profit))}
+                            </p>
+                            <p
+                              className={`text-xs ${
+                                profit > 0
+                                  ? "text-green-400/70"
+                                  : profit < 0
+                                  ? "text-red-400/70"
+                                  : "text-yellow-400/70"
+                              }`}
+                            >
+                              {profit > 0 ? "+" : profit < 0 ? "-" : ""}
+                              {Math.abs(parseFloat(profitMargin)).toFixed(1)}%
+                            </p>
                           </div>
                         </div>
                       </div>
-                    )}
-
-                    {errors.variants && (
-                      <p className="text-red-400 text-sm">{errors.variants}</p>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Details */}
-              <div>
-                <label
-                  htmlFor="details"
-                  className="block text-sm font-medium text-slate-300 mb-1.5"
-                >
-                  Product Details
-                </label>
-                <textarea
-                  id="details"
-                  name="details"
-                  value={formData.details}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 resize-vertical"
-                  placeholder="Enter detailed description, specifications, or any additional information about the product..."
-                />
-              </div>
-
-              {/* Submit Error */}
-              {errors.submit && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                  <p className="text-red-400 text-sm">{errors.submit}</p>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/50">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="px-6 py-2 border border-slate-600 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 cursor-pointer"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
-                    isSubmitting
-                      ? "opacity-50 cursor-not-allowed"
-                      : "cursor-pointer"
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg
-                        className="animate-spin h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Adding Product...
                     </>
                   ) : (
+                    /* Variant Pricing */
                     <>
+                      {/* Add New Variant */}
+                      <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
+                        <h4 className="text-sm font-medium text-slate-300 mb-1">
+                          Add Product Variant
+                        </h4>
+                        <p className="text-xs text-slate-400 mb-3">
+                          Fill at least one field (color, size, weight, or
+                          custom variant) to identify the variant. All fields
+                          are optional except pricing.
+                        </p>
+
+                        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
+                          {/* Color */}
+                          <div>
+                            <select
+                              name="color"
+                              value={newVariant.color}
+                              onChange={handleVariantChange}
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            >
+                              <option value="" className="bg-slate-800">
+                                Color
+                              </option>
+                              {commonColors.map((color) => (
+                                <option
+                                  key={color}
+                                  value={color}
+                                  className="bg-slate-800"
+                                >
+                                  {color}
+                                </option>
+                              ))}
+                              <option value="Custom" className="bg-slate-800">
+                                Custom
+                              </option>
+                            </select>
+                          </div>
+
+                          {/* Size */}
+                          <div>
+                            <select
+                              name="size"
+                              value={newVariant.size}
+                              onChange={handleVariantChange}
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            >
+                              <option value="" className="bg-slate-800">
+                                Size
+                              </option>
+                              {commonSizes.map((size) => (
+                                <option
+                                  key={size}
+                                  value={size}
+                                  className="bg-slate-800"
+                                >
+                                  {size}
+                                </option>
+                              ))}
+                              <option value="Custom" className="bg-slate-800">
+                                Custom
+                              </option>
+                            </select>
+                          </div>
+
+                          {/* Weight */}
+                          <div>
+                            <input
+                              type="number"
+                              name="weight"
+                              value={newVariant.weight || ""}
+                              onChange={handleVariantChange}
+                              placeholder="Weight"
+                              min="0"
+                              step="0.01"
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            />
+                          </div>
+
+                          {/* Weight Unit */}
+                          <div>
+                            <select
+                              name="weight_unit"
+                              value={newVariant.weight_unit}
+                              onChange={handleVariantChange}
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            >
+                              <option value="g" className="bg-slate-800">
+                                g
+                              </option>
+                              <option value="kg" className="bg-slate-800">
+                                kg
+                              </option>
+                              <option value="lb" className="bg-slate-800">
+                                lb
+                              </option>
+                              <option value="oz" className="bg-slate-800">
+                                oz
+                              </option>
+                            </select>
+                          </div>
+
+                          {/* Custom Variant */}
+                          <div className="md:col-span-2">
+                            <input
+                              type="text"
+                              name="custom_variant"
+                              value={newVariant.custom_variant}
+                              onChange={handleVariantChange}
+                              placeholder="Custom variant (optional)"
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Custom Color, Size, and Weight Inputs */}
+                        {(newVariant.color === "Custom" ||
+                          newVariant.size === "Custom" ||
+                          customWeight) && (
+                          <div className="grid grid-cols-3 gap-2 mb-3">
+                            {/* Custom Color Input */}
+                            {newVariant.color === "Custom" && (
+                              <input
+                                type="text"
+                                value={customColor}
+                                onChange={(e) => setCustomColor(e.target.value)}
+                                placeholder="Enter custom color"
+                                className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                              />
+                            )}
+
+                            {/* Custom Size Input */}
+                            {newVariant.size === "Custom" && (
+                              <input
+                                type="text"
+                                value={customSize}
+                                onChange={(e) => setCustomSize(e.target.value)}
+                                placeholder="Enter custom size"
+                                className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                              />
+                            )}
+
+                            {/* Custom Weight Input */}
+                            <input
+                              type="number"
+                              value={customWeight}
+                              onChange={(e) => setCustomWeight(e.target.value)}
+                              placeholder="Custom weight"
+                              min="0"
+                              step="0.01"
+                              className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            />
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+                          {/* Buy Price */}
+                          <div>
+                            <input
+                              type="number"
+                              name="buyPrice"
+                              value={newVariant.buyPrice || ""}
+                              onChange={handleVariantChange}
+                              placeholder="Buy Price"
+                              min="0"
+                              step="0.01"
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            />
+                          </div>
+
+                          {/* Sell Price */}
+                          <div>
+                            <input
+                              type="number"
+                              name="sellPrice"
+                              value={newVariant.sellPrice || ""}
+                              onChange={handleVariantChange}
+                              placeholder="Sell Price"
+                              min="0"
+                              step="0.01"
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            />
+                          </div>
+
+                          {/* Stock */}
+                          <div>
+                            <input
+                              type="number"
+                              name="stock"
+                              value={newVariant.stock || ""}
+                              onChange={handleVariantChange}
+                              placeholder="Stock"
+                              min="0"
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={addVariant}
+                            className="px-4 py-1.5 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-medium rounded-lg hover:bg-cyan-500/30 transition-colors cursor-pointer"
+                          >
+                            Add Variant
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Variants List */}
+                      {formData.colorSizeVariants.length > 0 && (
+                        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
+                          <h4 className="text-sm font-medium text-slate-300 mb-3">
+                            Product Variants (
+                            {formData.colorSizeVariants.length})
+                          </h4>
+
+                          {/* Headers */}
+                          <div className="grid grid-cols-7 gap-2 text-xs text-slate-400 mb-2 px-2">
+                            <span>Color</span>
+                            <span>Size</span>
+                            <span>Weight</span>
+                            <span>Custom</span>
+                            <span>Buy Price</span>
+                            <span>Sell Price</span>
+                            <span>Stock</span>
+                          </div>
+
+                          <div className="space-y-2 max-h-40 overflow-y-auto">
+                            {formData.colorSizeVariants.map((variant) => (
+                              <div
+                                key={variant.id}
+                                className="flex items-center gap-2 bg-slate-700/30 rounded-lg p-2"
+                              >
+                                <div className="flex-1 grid grid-cols-7 gap-2 text-xs">
+                                  <span className="text-white font-medium">
+                                    {variant.color}
+                                  </span>
+                                  <span className="text-gray-300">
+                                    {variant.size}
+                                  </span>
+                                  <span className="text-purple-400">
+                                    {variant.weight && variant.weight_unit
+                                      ? `${variant.weight}${variant.weight_unit}`
+                                      : "-"}
+                                  </span>
+                                  <span className="text-orange-400 truncate">
+                                    {variant.custom_variant || "-"}
+                                  </span>
+                                  <span className="text-red-400">
+                                    {formatCurrency(variant.buyPrice)}
+                                  </span>
+                                  <span className="text-green-400">
+                                    {formatCurrency(variant.sellPrice)}
+                                  </span>
+                                  <span className="text-cyan-400">
+                                    {variant.stock} pcs
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeVariant(variant.id)}
+                                  className="text-red-400 hover:text-red-300 p-1 cursor-pointer"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Average Profit Display for Variants */}
+                          <div className="mt-3 pt-3 border-t border-slate-700/50">
+                            <div className="grid grid-cols-3 gap-3 text-center">
+                              <div>
+                                <p className="text-xs text-slate-400 mb-1">
+                                  Avg Profit/Unit
+                                </p>
+                                <div className="flex items-center justify-between">
+                                  <p
+                                    className={`text-sm font-bold ${
+                                      profit > 0
+                                        ? "text-green-400"
+                                        : profit < 0
+                                        ? "text-red-400"
+                                        : "text-yellow-400"
+                                    }`}
+                                  >
+                                    {profit > 0 ? "+" : profit < 0 ? "-" : ""}
+                                    {formatCurrency(Math.abs(profit))}
+                                  </p>
+                                  <p
+                                    className={`text-xs ${
+                                      profit > 0
+                                        ? "text-green-400/70"
+                                        : profit < 0
+                                        ? "text-red-400/70"
+                                        : "text-yellow-400/70"
+                                    }`}
+                                  >
+                                    {profit > 0 ? "+" : profit < 0 ? "-" : ""}
+                                    {Math.abs(parseFloat(profitMargin)).toFixed(
+                                      1
+                                    )}
+                                    %
+                                  </p>
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-400 mb-1">
+                                  Avg Buy Price
+                                </p>
+                                <p className="text-sm font-bold text-slate-300">
+                                  {formatCurrency(
+                                    formData.colorSizeVariants.length > 0
+                                      ? formData.colorSizeVariants.reduce(
+                                          (sum, v) => sum + v.buyPrice,
+                                          0
+                                        ) / formData.colorSizeVariants.length
+                                      : 0
+                                  )}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-400 mb-1">
+                                  Total Stock
+                                </p>
+                                <p className="text-sm font-bold text-cyan-400">
+                                  {formData.colorSizeVariants.reduce(
+                                    (sum, v) => sum + v.stock,
+                                    0
+                                  )}{" "}
+                                  pcs
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {errors.variants && (
+                        <p className="text-red-400 text-sm">
+                          {errors.variants}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Details */}
+                <div>
+                  <label
+                    htmlFor="details"
+                    className="block text-sm font-medium text-slate-300 mb-1.5"
+                  >
+                    Product Details
+                  </label>
+                  <textarea
+                    id="details"
+                    name="details"
+                    value={formData.details}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 resize-vertical"
+                    placeholder="Enter detailed description, specifications, or any additional information about the product..."
+                  />
+                </div>
+
+                {/* Submit Error */}
+                {errors.submit && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                    <p className="text-red-400 text-sm">{errors.submit}</p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/50">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="px-6 py-2 border border-slate-600 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={`px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
+                      isSubmitting
+                        ? "opacity-50 cursor-not-allowed"
+                        : "cursor-pointer"
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <svg
+                          className="animate-spin h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Adding Product...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                          />
+                        </svg>
+                        Add Product
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* CSV Upload Tab */}
+            {activeTab === "csv" && (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-medium text-white mb-2">
+                    Upload Products via CSV
+                  </h3>
+                  <p className="text-gray-400 text-sm">
+                    Upload multiple products at once using a CSV file
+                  </p>
+                </div>
+
+                {/* Download Template */}
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-white font-medium mb-1">
+                        Download CSV Template
+                      </h4>
+                      <p className="text-gray-400 text-sm">
+                        Get the template with the required format and sample
+                        data
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDownloadTemplate}
+                      className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Download Template
+                    </button>
+                  </div>
+                </div>
+
+                {/* File Upload */}
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Select CSV File
+                  </label>
+                  <div className="space-y-4">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleCSVFileChange}
+                      className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-cyan-600 file:text-white hover:file:bg-cyan-700 file:cursor-pointer cursor-pointer"
+                    />
+                    {csvFile && (
+                      <p className="text-green-400 text-sm">
+                        Selected: {csvFile.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Upload Button */}
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleCSVUpload}
+                    disabled={!csvFile || isUploadingCSV}
+                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    {isUploadingCSV ? (
+                      <>
+                        <svg
+                          className="w-4 h-4 animate-spin"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        Upload CSV
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Upload Results */}
+                {csvResults && (
+                  <div
+                    className={`border rounded-lg p-4 ${
+                      csvResults.success
+                        ? "border-green-500/20 bg-green-500/10"
+                        : "border-red-500/20 bg-red-500/10"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
                       <svg
-                        className="w-4 h-4"
+                        className={`w-5 h-5 ${
+                          csvResults.success ? "text-green-400" : "text-red-400"
+                        }`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
+                        {csvResults.success ? (
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        ) : (
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        )}
                       </svg>
-                      Add Product
-                    </>
-                  )}
-                </button>
+                      <h4
+                        className={`font-medium ${
+                          csvResults.success ? "text-green-400" : "text-red-400"
+                        }`}
+                      >
+                        {csvResults.success
+                          ? "Upload Successful"
+                          : "Upload Failed"}
+                      </h4>
+                    </div>
+
+                    <p
+                      className={`text-sm mb-3 ${
+                        csvResults.success ? "text-green-300" : "text-red-300"
+                      }`}
+                    >
+                      {csvResults.message}
+                    </p>
+
+                    {csvResults.success && csvResults.products_created > 0 && (
+                      <div className="bg-slate-700/50 rounded p-3 mb-3">
+                        <p className="text-white text-sm">
+                          Successfully created{" "}
+                          <strong>{csvResults.products_created}</strong>{" "}
+                          products
+                        </p>
+                        <p className="text-gray-400 text-xs mt-1">
+                          You will be redirected to the products page in a few
+                          seconds...
+                        </p>
+                      </div>
+                    )}
+
+                    {csvResults.errors && csvResults.errors.length > 0 && (
+                      <div className="space-y-2">
+                        <h5 className="text-red-400 font-medium text-sm">
+                          Errors:
+                        </h5>
+                        <div className="bg-slate-700/50 rounded p-3 max-h-48 overflow-y-auto">
+                          {csvResults.errors.map((error, index) => (
+                            <p
+                              key={index}
+                              className="text-red-300 text-xs mb-1"
+                            >
+                              {error}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* CSV Format Info */}
+                <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-4">
+                  <h4 className="text-white font-medium mb-2">
+                    CSV Format Requirements:
+                  </h4>
+                  <ul className="text-gray-400 text-sm space-y-1">
+                    <li>
+                      • <strong>name</strong>: Product name (required)
+                    </li>
+                    <li>
+                      • <strong>product_code</strong>: SKU/Product code
+                      (optional)
+                    </li>
+                    <li>
+                      • <strong>category</strong>: Category name (optional, will
+                      be created if doesn&apos;t exist)
+                    </li>
+                    <li>
+                      • <strong>supplier</strong>: Supplier name (optional, will
+                      be created if doesn&apos;t exist)
+                    </li>
+                    <li>
+                      • <strong>location</strong>: Storage location (optional)
+                    </li>
+                    <li>
+                      • <strong>details</strong>: Product description (optional)
+                    </li>
+                    <li>
+                      • <strong>buy_price</strong>: Purchase price (required,
+                      must be {">"}0)
+                    </li>
+                    <li>
+                      • <strong>sell_price</strong>: Selling price (required,
+                      must be {">"}= buy_price)
+                    </li>
+                    <li>
+                      • <strong>stock</strong>: Initial stock quantity
+                      (required, must be {">"}= 0)
+                    </li>
+                  </ul>
+                </div>
               </div>
-            </form>
+            )}
           </div>
         </div>
       </div>

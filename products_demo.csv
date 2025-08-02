@@ -1,0 +1,16 @@
+name,product_code,category,supplier,location,details,buy_price,sell_price,stock
+Smartphone Galaxy S24,PHONE-GS24,Electronics,Samsung Corp,Warehouse A,Latest flagship smartphone with advanced camera,800.00,1200.00,25
+Wireless Bluetooth Headphones,AUDIO-WBH01,Electronics,Audio Tech,Warehouse A,Premium noise-cancelling wireless headphones,150.00,299.99,50
+Cotton T-Shirt Blue Medium,CLOTH-TSHIRT-BLU-M,Clothing,Fashion Plus,Store Room B,100% cotton comfortable t-shirt in blue,15.00,29.99,100
+Laptop Stand Aluminum,ACC-LPSTAND-AL,Accessories,Office Solutions,Warehouse C,Adjustable aluminum laptop stand for ergonomic use,25.00,49.99,30
+Coffee Maker 12-Cup,APPL-CM12,Appliances,Kitchen Pro,Warehouse D,Programmable 12-cup coffee maker with auto shut-off,80.00,149.99,15
+Gaming Mouse RGB,TECH-MOUSE-RGB,Electronics,Gaming Gear,Warehouse A,High-precision gaming mouse with RGB lighting,35.00,79.99,75
+Yoga Mat Premium,FITNESS-YMAT-PREM,Sports & Fitness,Fitness World,Storage E,Premium non-slip yoga mat with carrying strap,20.00,39.99,40
+Notebook Set 3-Pack,OFFICE-NB3PK,Office Supplies,Paper Co,Office Storage,Set of 3 lined notebooks for office use,8.00,19.99,200
+Wireless Charger 15W,TECH-WC15W,Electronics,Charge Tech,Warehouse A,Fast 15W wireless charging pad for smartphones,30.00,59.99,60
+Kitchen Knife Set,KITCHEN-KNSET,Kitchen,Blade Masters,Warehouse F,Professional 5-piece kitchen knife set with block,120.00,249.99,12
+Running Shoes Size 10,SHOES-RUN-10,Footwear,Sport Brands,Shoe Storage,Lightweight running shoes with cushioned sole,60.00,129.99,35
+Desk Lamp LED,OFFICE-LAMP-LED,Office Furniture,Light Solutions,Warehouse G,Adjustable LED desk lamp with USB charging port,45.00,89.99,25
+Water Bottle Stainless,BOTTLE-SS-750,Drinkware,Hydro Gear,Storage H,750ml stainless steel insulated water bottle,18.00,34.99,80
+Power Bank 20000mAh,,Electronics,Power Solutions,Warehouse A,High-capacity portable power bank with fast charging,40.00,79.99,45
+Wooden Cutting Board,KITCHEN-CB-WOOD,Kitchen,Wood Craft,Warehouse F,Large bamboo cutting board for food preparation,25.00,49.99,30

@@ -1,3 +1,4 @@
+import csv
 import json
 
 from django.db import transaction
@@ -384,6 +385,220 @@ class ProductViewSet(viewsets.ModelViewSet):
                         "new_stock": new_stock,
                     }
                 )
+
+    @action(detail=False, methods=["post"])
+    def upload_csv(self, request):
+        """Upload products from CSV file"""
+        if "csv_file" not in request.FILES:
+            return Response(
+                {"error": "No CSV file provided"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        csv_file = request.FILES["csv_file"]
+
+        if not csv_file.name.endswith(".csv"):
+            return Response(
+                {"error": "File must be a CSV file"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Reset file pointer and read CSV
+            csv_file.seek(0)
+            decoded_file = csv_file.read().decode("utf-8")
+            lines = decoded_file.splitlines()
+            csv_reader = csv.DictReader(lines)
+
+            products_created = 0
+            products_errors = []
+
+            with transaction.atomic():
+                for row_num, row in enumerate(
+                    csv_reader, start=2
+                ):  # Start at 2 to account for header
+                    try:
+                        # Clean and validate data
+                        name = row.get("name", "").strip()
+                        if not name:
+                            products_errors.append(
+                                f"Row {row_num}: Product name is required"
+                            )
+                            continue
+
+                        # Check for existing product with same name for this user
+                        if Product.objects.filter(
+                            name=name, user=request.user
+                        ).exists():
+                            products_errors.append(
+                                f"Row {row_num}: Product '{name}' already exists"
+                            )
+                            continue
+
+                        # Parse basic fields
+                        product_data = {
+                            "name": name,
+                            "product_code": row.get("product_code", "").strip() or None,
+                            "location": row.get("location", "").strip() or "",
+                            "details": row.get("details", "").strip() or "",
+                            "user": request.user,
+                            "has_variants": False,  # Default for CSV upload
+                        }
+
+                        # Parse prices with validation
+                        try:
+                            buy_price = float(row.get("buy_price", 0))
+                            sell_price = float(row.get("sell_price", 0))
+
+                            if buy_price <= 0:
+                                products_errors.append(
+                                    f"Row {row_num}: Buy price must be greater than 0"
+                                )
+                                continue
+                            if sell_price <= 0:
+                                products_errors.append(
+                                    f"Row {row_num}: Sell price must be greater than 0"
+                                )
+                                continue
+                            if sell_price < buy_price:
+                                products_errors.append(
+                                    f"Row {row_num}: Sell price must be >= buy price"
+                                )
+                                continue
+
+                            product_data["buy_price"] = buy_price
+                            product_data["sell_price"] = sell_price
+                        except (ValueError, TypeError):
+                            products_errors.append(
+                                f"Row {row_num}: Invalid price values"
+                            )
+                            continue
+
+                        # Parse stock
+                        try:
+                            stock = int(row.get("stock", 0))
+                            if stock < 0:
+                                products_errors.append(
+                                    f"Row {row_num}: Stock cannot be negative"
+                                )
+                                continue
+                            product_data["stock"] = stock
+                        except (ValueError, TypeError):
+                            products_errors.append(
+                                f"Row {row_num}: Invalid stock value"
+                            )
+                            continue
+
+                        # Handle category
+                        category_name = row.get("category", "").strip()
+                        if category_name:
+                            try:
+                                from core.models import Category
+
+                                category, created = Category.objects.get_or_create(
+                                    name=category_name,
+                                    user=request.user,
+                                    defaults={"is_active": True},
+                                )
+                                product_data["category"] = category
+                            except Exception as e:
+                                products_errors.append(
+                                    f"Row {row_num}: Error with category: {str(e)}"
+                                )
+                                continue
+
+                        # Handle supplier
+                        supplier_name = row.get("supplier", "").strip()
+                        if supplier_name:
+                            try:
+                                from suppliers.models import Supplier
+
+                                supplier, created = Supplier.objects.get_or_create(
+                                    name=supplier_name,
+                                    user=request.user,
+                                    defaults={"is_active": True},
+                                )
+                                product_data["supplier"] = supplier
+                            except Exception as e:
+                                products_errors.append(
+                                    f"Row {row_num}: Error with supplier: {str(e)}"
+                                )
+                                continue
+
+                        # Create the product
+                        Product.objects.create(**product_data)
+                        products_created += 1
+
+                    except Exception as e:
+                        products_errors.append(f"Row {row_num}: {str(e)}")
+                        continue
+
+            return Response(
+                {
+                    "success": True,
+                    "products_created": products_created,
+                    "errors": products_errors,
+                    "message": f"Successfully created {products_created} products",
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error processing CSV file: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(detail=False, methods=["get"])
+    def download_csv_template(self, request):
+        """Download CSV template for product upload"""
+        from django.http import HttpResponse
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="products_template.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "name",
+                "product_code",
+                "category",
+                "supplier",
+                "location",
+                "details",
+                "buy_price",
+                "sell_price",
+                "stock",
+            ]
+        )
+
+        # Add sample data
+        writer.writerow(
+            [
+                "Sample Product 1",
+                "SP001",
+                "Electronics",
+                "Sample Supplier",
+                "Warehouse A",
+                "Sample product description",
+                "50.00",
+                "75.00",
+                "100",
+            ]
+        )
+        writer.writerow(
+            [
+                "Sample Product 2",
+                "",  # Empty product_code to show it's optional
+                "Clothing",
+                "Another Supplier",
+                "Store Room B",
+                "Another sample product",
+                "25.00",
+                "40.00",
+                "50",
+            ]
+        )
+
+        return response
 
     @action(detail=False, methods=["get"])
     def statistics(self, request):

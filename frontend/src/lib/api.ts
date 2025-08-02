@@ -34,7 +34,7 @@ interface Product {
 }
 
 // Additional interfaces for other entities
-interface Customer {
+export interface Customer {
   id: number;
   name: string;
   email?: string;
@@ -45,7 +45,7 @@ interface Customer {
   updated_at: string;
 }
 
-interface Purchase {
+export interface Purchase {
   id: number;
   supplier: number;
   supplier_name?: string;
@@ -61,7 +61,7 @@ interface Purchase {
   updated_at: string;
 }
 
-interface Payment {
+export interface Payment {
   id: number;
   type: string;
   amount: number;
@@ -241,7 +241,7 @@ export class ApiService {
               errorMessage = fieldErrors.join("; ");
             }
           }
-        } catch (parseError) {
+        } catch {
           // Response is not JSON, probably HTML error page
           console.error("Response is not JSON, likely HTML error page");
           if (
@@ -271,7 +271,7 @@ export class ApiService {
       try {
         const result = JSON.parse(responseText);
         return result;
-      } catch (parseError) {
+      } catch {
         console.error("Failed to parse JSON response:", responseText);
         throw new Error(
           `Server returned invalid JSON. Response: ${responseText.substring(
@@ -470,6 +470,7 @@ export class ApiService {
       });
     } else {
       // Remove photo from data if it's undefined
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { photo, ...dataWithoutPhoto } = employeeData;
       return this.post("/employees/", dataWithoutPhoto);
     }
@@ -508,6 +509,7 @@ export class ApiService {
       });
     } else {
       // Remove photo from data if it's undefined
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { photo, ...dataWithoutPhoto } = employeeData;
       return this.patch(`/employees/${id}/`, dataWithoutPhoto);
     }
@@ -907,17 +909,46 @@ export class ApiService {
     return this.get(url);
   }
 
+  // CSV upload methods
+  static async uploadProductsCSV(csvFile: File) {
+    const formData = new FormData();
+    formData.append("csv_file", csvFile);
+
+    return this.request("/products/upload_csv/", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  static async downloadProductsCSVTemplate() {
+    const response = await fetch(
+      `${API_BASE_URL}/products/download_csv_template/`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Token ${AuthToken.get()}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to download CSV template");
+    }
+
+    return response.blob();
+  }
+
   // Low stock and inventory methods
   static async getLowStockProducts(threshold: number = 10) {
     // Get all products and filter for low stock
     const products = await this.get("/products/");
     const allProducts = products.results || products;
 
-    const lowStockProducts = allProducts.filter((product: any) => {
+    const lowStockProducts = allProducts.filter((product: Product) => {
       if (product.has_variants) {
         // Check if any variant has low stock
         return product.variants?.some(
-          (variant: any) => variant.stock <= threshold
+          (variant: ProductVariant) => variant.stock <= threshold
         );
       } else {
         return product.stock <= threshold && product.stock > 0;
@@ -934,10 +965,12 @@ export class ApiService {
     const products = await this.get("/products/");
     const allProducts = products.results || products;
 
-    const outOfStockProducts = allProducts.filter((product: any) => {
+    const outOfStockProducts = allProducts.filter((product: Product) => {
       if (product.has_variants) {
         // Check if all variants are out of stock
-        return product.variants?.every((variant: any) => variant.stock === 0);
+        return product.variants?.every(
+          (variant: ProductVariant) => variant.stock === 0
+        );
       } else {
         return product.stock === 0;
       }
@@ -1037,7 +1070,19 @@ export class ApiService {
     return this.post("/sales/", saleData);
   }
 
-  static async updateProductSale(id: number, saleData: any) {
+  static async updateProductSale(
+    id: number,
+    saleData: Partial<{
+      product: number;
+      variant?: number;
+      quantity: number;
+      unit_price: number;
+      customer_name?: string;
+      customer_phone?: string;
+      customer_email?: string;
+      notes?: string;
+    }>
+  ) {
     return this.put(`/sales/${id}/`, saleData);
   }
 
@@ -1067,7 +1112,23 @@ export class ApiService {
     return this.post("/purchases/", purchaseData);
   }
 
-  static async updatePurchase(id: number, purchaseData: any) {
+  static async updatePurchase(
+    id: number,
+    purchaseData: Partial<{
+      supplier: number;
+      date?: string;
+      amount?: number;
+      status?: string;
+      products?: string;
+      notes?: string;
+      proof_document?: string;
+      items?: Array<{
+        product: number;
+        quantity: number;
+        price: number;
+      }>;
+    }>
+  ) {
     return this.put(`/purchases/${id}/`, purchaseData);
   }
 
@@ -1095,7 +1156,21 @@ export class ApiService {
     return this.post("/payments/", paymentData);
   }
 
-  static async updatePayment(id: number, paymentData: any) {
+  static async updatePayment(
+    id: number,
+    paymentData: Partial<{
+      supplier?: number;
+      type?: string;
+      amount: number;
+      description?: string;
+      date?: string;
+      method?: string;
+      status?: string;
+      reference?: string;
+      notes?: string;
+      proof_document?: string;
+    }>
+  ) {
     return this.put(`/payments/${id}/`, paymentData);
   }
 
@@ -1112,22 +1187,24 @@ export class ApiService {
   static getImageUrl(relativePath: string): string {
     if (!relativePath) return "";
     if (relativePath.startsWith("http")) return relativePath;
-    
+
     // Ensure the path starts with a slash
-    const cleanPath = relativePath.startsWith("/") ? relativePath : `/${relativePath}`;
-    
+    const cleanPath = relativePath.startsWith("/")
+      ? relativePath
+      : `/${relativePath}`;
+
     const fullUrl = `${BACKEND_BASE_URL}${cleanPath}`;
-    
+
     // Debug logging for development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Image URL constructed:', {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Image URL constructed:", {
         relativePath,
         cleanPath,
         BACKEND_BASE_URL,
-        fullUrl
+        fullUrl,
       });
     }
-    
+
     return fullUrl;
   }
 
@@ -1210,7 +1287,7 @@ export class ApiService {
 
   // Banking employees method (uses the main employees endpoint)
   static async getBankingEmployees(params?: string) {
-    return this.get(`/employees/${params || ''}`);
+    return this.get(`/employees/${params || ""}`);
   }
 
   // Update getDashboardStats to be more specific for transactions
