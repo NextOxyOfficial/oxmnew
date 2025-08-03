@@ -1,6 +1,9 @@
 import csv
+import io
 import json
 
+import openpyxl
+import xlrd
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django_filters.rest_framework import DjangoFilterBackend
@@ -386,34 +389,115 @@ class ProductViewSet(viewsets.ModelViewSet):
                     }
                 )
 
-    @action(detail=False, methods=["post"])
-    def upload_csv(self, request):
-        """Upload products from CSV file"""
-        if "csv_file" not in request.FILES:
-            return Response(
-                {"error": "No CSV file provided"}, status=status.HTTP_400_BAD_REQUEST
+    def _extract_data_from_file(self, file):
+        """Extract data from CSV, XLSX, or XLS file"""
+        file.seek(0)  # Reset file pointer
+
+        if file.name.endswith(".csv"):
+            # Handle CSV file
+            decoded_file = file.read().decode("utf-8")
+            lines = decoded_file.splitlines()
+            csv_reader = csv.DictReader(lines)
+            return list(csv_reader)
+
+        elif file.name.endswith(".xlsx"):
+            # Handle Excel XLSX file
+            workbook = openpyxl.load_workbook(file, read_only=True)
+            worksheet = workbook.active
+
+            # Get headers from first row
+            headers = []
+            for cell in worksheet[1]:
+                if cell.value is not None:
+                    headers.append(str(cell.value).lower().strip())
+                else:
+                    break
+
+            # Extract data rows
+            data = []
+            for row in worksheet.iter_rows(min_row=2, values_only=True):
+                if any(cell is not None for cell in row):  # Skip empty rows
+                    row_data = {}
+                    for i, value in enumerate(row):
+                        if i < len(headers) and headers[i]:
+                            row_data[headers[i]] = (
+                                str(value) if value is not None else ""
+                            )
+                    if row_data:  # Only add non-empty rows
+                        data.append(row_data)
+
+            workbook.close()
+            return data
+
+        elif file.name.endswith(".xls"):
+            # Handle Excel XLS file
+            file_contents = file.read()
+            workbook = xlrd.open_workbook(file_contents=file_contents)
+            worksheet = workbook.sheet_by_index(0)
+
+            # Get headers from first row
+            headers = []
+            for col in range(worksheet.ncols):
+                cell_value = worksheet.cell_value(0, col)
+                if cell_value:
+                    headers.append(str(cell_value).lower().strip())
+                else:
+                    break
+
+            # Extract data rows
+            data = []
+            for row in range(1, worksheet.nrows):
+                row_data = {}
+                for col in range(min(len(headers), worksheet.ncols)):
+                    if headers[col]:
+                        cell_value = worksheet.cell_value(row, col)
+                        row_data[headers[col]] = str(cell_value) if cell_value else ""
+                if any(value for value in row_data.values()):  # Only add non-empty rows
+                    data.append(row_data)
+
+            return data
+
+        else:
+            raise ValueError(
+                "Unsupported file format. Please use CSV, XLSX, or XLS files."
             )
 
-        csv_file = request.FILES["csv_file"]
-
-        if not csv_file.name.endswith(".csv"):
+    @action(detail=False, methods=["post"])
+    def upload_csv(self, request):
+        """Upload products from CSV, XLSX, or XLS file"""
+        if "csv_file" not in request.FILES:
             return Response(
-                {"error": "File must be a CSV file"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        upload_file = request.FILES["csv_file"]
+
+        # Check file extension
+        allowed_extensions = [".csv", ".xlsx", ".xls"]
+        file_extension = None
+        for ext in allowed_extensions:
+            if upload_file.name.lower().endswith(ext):
+                file_extension = ext
+                break
+
+        if not file_extension:
+            return Response(
+                {
+                    "error": "File must be a CSV (.csv), Excel (.xlsx), or Excel (.xls) file"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            # Reset file pointer and read CSV
-            csv_file.seek(0)
-            decoded_file = csv_file.read().decode("utf-8")
-            lines = decoded_file.splitlines()
-            csv_reader = csv.DictReader(lines)
+            # Extract data from file
+            rows_data = self._extract_data_from_file(upload_file)
 
             products_created = 0
             products_errors = []
 
             with transaction.atomic():
                 for row_num, row in enumerate(
-                    csv_reader, start=2
+                    rows_data, start=2
                 ):  # Start at 2 to account for header
                     try:
                         # Clean and validate data
@@ -493,11 +577,16 @@ class ProductViewSet(viewsets.ModelViewSet):
                             try:
                                 from core.models import Category
 
-                                category, created = Category.objects.get_or_create(
-                                    name=category_name,
-                                    user=request.user,
-                                    defaults={"is_active": True},
-                                )
+                                # First try to get existing category by name (global)
+                                try:
+                                    category = Category.objects.get(name=category_name)
+                                except Category.DoesNotExist:
+                                    # If category doesn't exist, create a new one
+                                    category = Category.objects.create(
+                                        name=category_name,
+                                        user=request.user,
+                                        is_active=True,
+                                    )
                                 product_data["category"] = category
                             except Exception as e:
                                 products_errors.append(
@@ -511,11 +600,18 @@ class ProductViewSet(viewsets.ModelViewSet):
                             try:
                                 from suppliers.models import Supplier
 
-                                supplier, created = Supplier.objects.get_or_create(
-                                    name=supplier_name,
-                                    user=request.user,
-                                    defaults={"is_active": True},
-                                )
+                                # First try to get existing supplier by name and user
+                                try:
+                                    supplier = Supplier.objects.get(
+                                        name=supplier_name, user=request.user
+                                    )
+                                except Supplier.DoesNotExist:
+                                    # If supplier doesn't exist for this user, create a new one
+                                    supplier = Supplier.objects.create(
+                                        name=supplier_name,
+                                        user=request.user,
+                                        is_active=True,
+                                    )
                                 product_data["supplier"] = supplier
                             except Exception as e:
                                 products_errors.append(
@@ -543,7 +639,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             return Response(
-                {"error": f"Error processing CSV file: {str(e)}"},
+                {"error": f"Error processing file: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -596,6 +692,104 @@ class ProductViewSet(viewsets.ModelViewSet):
                 "40.00",
                 "50",
             ]
+        )
+
+        return response
+
+    @action(detail=False, methods=["get"])
+    def download_excel_template(self, request):
+        """Download Excel template for product upload"""
+        from django.http import HttpResponse
+
+        # Create a new workbook and add a worksheet
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Products"
+
+        # Define headers
+        headers = [
+            "name",
+            "product_code",
+            "category",
+            "supplier",
+            "location",
+            "details",
+            "buy_price",
+            "sell_price",
+            "stock",
+        ]
+
+        # Add headers to first row
+        for col, header in enumerate(headers, 1):
+            worksheet.cell(row=1, column=col, value=header)
+
+        # Add sample data
+        sample_data = [
+            [
+                "Sample Product 1",
+                "SP001",
+                "Electronics",
+                "Sample Supplier",
+                "Warehouse A",
+                "Sample product description",
+                50.00,
+                75.00,
+                100,
+            ],
+            [
+                "Sample Product 2",
+                "SP002",
+                "Clothing",
+                "Another Supplier",
+                "Store Room B",
+                "Another sample product",
+                25.00,
+                40.00,
+                50,
+            ],
+            [
+                "Sample Product 3",
+                "",  # Empty product_code to show it's optional
+                "Home & Garden",
+                "Third Supplier",
+                "Storage C",
+                "Third sample product with longer description",
+                15.50,
+                25.99,
+                75,
+            ],
+        ]
+
+        # Add sample data rows
+        for row_idx, row_data in enumerate(sample_data, 2):
+            for col_idx, value in enumerate(row_data, 1):
+                worksheet.cell(row=row_idx, column=col_idx, value=value)
+
+        # Auto-adjust column widths
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except (TypeError, AttributeError):
+                    pass
+            adjusted_width = min(max_length + 2, 50)  # Cap at 50 characters
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+
+        # Save workbook to memory
+        output = io.BytesIO()
+        workbook.save(output)
+        output.seek(0)
+
+        # Create response
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = (
+            'attachment; filename="products_template.xlsx"'
         )
 
         return response

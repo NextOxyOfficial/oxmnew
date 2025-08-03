@@ -938,6 +938,24 @@ export class ApiService {
     return response.blob();
   }
 
+  static async downloadProductsExcelTemplate() {
+    const response = await fetch(
+      `${API_BASE_URL}/products/download_excel_template/`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Token ${AuthToken.get()}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to download Excel template");
+    }
+
+    return response.blob();
+  }
+
   // Low stock and inventory methods
   static async getLowStockProducts(threshold: number = 10) {
     // Get all products and filter for low stock

@@ -5,6 +5,7 @@ import { ApiService } from "@/lib/api";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 
 // Add interface for suggestion products
 interface SuggestionProduct {
@@ -118,15 +119,15 @@ export default function AddProductPage() {
   );
 
   // CSV Upload state
-  const [activeTab, setActiveTab] = useState<"manual" | "csv">("manual");
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [csvResults, setCsvResults] = useState<{
+  const [activeTab, setActiveTab] = useState<"manual" | "file">("manual");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadResults, setUploadResults] = useState<{
     success: boolean;
     products_created: number;
     errors: string[];
     message: string;
   } | null>(null);
-  const [isUploadingCSV, setIsUploadingCSV] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
 
   // Calculate profit (for single pricing or average if variants exist)
   const profit = formData.hasVariants
@@ -716,30 +717,61 @@ export default function AddProductPage() {
     }
   };
 
-  // CSV Upload handlers
-  const handleCSVFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // File Upload handlers (CSV, XLSX, XLS)
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type === "text/csv") {
-      setCsvFile(file);
-      setCsvResults(null);
-    } else if (file) {
-      alert("Please select a valid CSV file");
-      e.target.value = "";
+    if (file) {
+      const validTypes = [
+        "text/csv",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+        "application/vnd.ms-excel", // .xls
+      ];
+      const validExtensions = [".csv", ".xlsx", ".xls"];
+
+      const hasValidType = validTypes.includes(file.type);
+      const hasValidExtension = validExtensions.some((ext) =>
+        file.name.toLowerCase().endsWith(ext)
+      );
+
+      if (hasValidType || hasValidExtension) {
+        setUploadFile(file);
+        setUploadResults(null);
+      } else {
+        alert("Please select a valid file (CSV, XLSX, or XLS)");
+        e.target.value = "";
+      }
     }
   };
 
-  const handleCSVUpload = async () => {
-    if (!csvFile) {
-      alert("Please select a CSV file first");
+  const handleFileUpload = async () => {
+    if (!uploadFile) {
+      alert("Please select a file first");
       return;
     }
 
-    setIsUploadingCSV(true);
-    setCsvResults(null);
+    setIsUploadingFile(true);
+    setUploadResults(null);
 
     try {
-      const result = await ApiService.uploadProductsCSV(csvFile);
-      setCsvResults(result);
+      let result;
+      const fileName = uploadFile.name.toLowerCase();
+
+      if (fileName.endsWith(".csv")) {
+        // Handle CSV upload
+        result = await ApiService.uploadProductsCSV(uploadFile);
+      } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+        // Handle Excel upload by converting to CSV first
+        const csvData = await convertExcelToCSV(uploadFile);
+        const csvBlob = new Blob([csvData], { type: "text/csv" });
+        const csvFile = new File([csvBlob], "converted.csv", {
+          type: "text/csv",
+        });
+        result = await ApiService.uploadProductsCSV(csvFile);
+      } else {
+        throw new Error("Unsupported file format");
+      }
+
+      setUploadResults(result);
 
       if (result.success && result.products_created > 0) {
         // Optionally redirect to products page after successful upload
@@ -748,16 +780,43 @@ export default function AddProductPage() {
         }, 3000);
       }
     } catch (error) {
-      console.error("Error uploading CSV:", error);
-      setCsvResults({
+      console.error("Error uploading file:", error);
+      setUploadResults({
         success: false,
         products_created: 0,
         errors: [error instanceof Error ? error.message : "Unknown error"],
-        message: "Failed to upload CSV file",
+        message: "Failed to upload file",
       });
     } finally {
-      setIsUploadingCSV(false);
+      setIsUploadingFile(false);
     }
+  };
+
+  // Convert Excel file to CSV format
+  const convertExcelToCSV = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+
+          // Get the first worksheet
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+
+          // Convert to CSV
+          const csv = XLSX.utils.sheet_to_csv(worksheet);
+          resolve(csv);
+        } catch (error) {
+          reject(
+            new Error("Failed to parse Excel file: " + (error as Error).message)
+          );
+        }
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsArrayBuffer(file);
+    });
   };
 
   const handleDownloadTemplate = async () => {
@@ -774,6 +833,23 @@ export default function AddProductPage() {
     } catch (error) {
       console.error("Error downloading template:", error);
       alert("Failed to download CSV template");
+    }
+  };
+
+  const handleDownloadExcelTemplate = async () => {
+    try {
+      const blob = await ApiService.downloadProductsExcelTemplate();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "products_template.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading Excel template:", error);
+      alert("Failed to download Excel template");
     }
   };
 
@@ -800,7 +876,7 @@ export default function AddProductPage() {
         }
       `}</style>
 
-      <div className="max-w-4xl">
+      <div className="max-w-6xl">
         {/* Page Header */}
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-4">
@@ -851,14 +927,14 @@ export default function AddProductPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("csv")}
+                onClick={() => setActiveTab("file")}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "csv"
+                  activeTab === "file"
                     ? "border-cyan-500 text-cyan-400"
                     : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
                 }`}
               >
-                CSV Upload
+                File Upload
               </button>
             </nav>
           </div>
@@ -1931,56 +2007,634 @@ export default function AddProductPage() {
               </form>
             )}
 
-            {/* CSV Upload Tab */}
-            {activeTab === "csv" && (
+            {/* File Upload Tab */}
+            {activeTab === "file" && (
               <div className="space-y-6">
                 <div className="text-center">
                   <h3 className="text-lg font-medium text-white mb-2">
-                    Upload Products via CSV
+                    Upload Products via File
                   </h3>
                   <p className="text-gray-400 text-sm">
-                    Upload multiple products at once using a CSV file
+                    Upload multiple products at once using CSV, Excel (.xlsx),
+                    or Excel (.xls) files
                   </p>
                 </div>
 
-                {/* Download Template */}
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-white font-medium mb-1">
-                        Download CSV Template
-                      </h4>
-                      <p className="text-gray-400 text-sm">
-                        Get the template with the required format and sample
-                        data
+                {/* Instructions Panel */}
+                <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg
+                      className="w-5 h-5 text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <h4 className="text-white font-medium">
+                      Quick Start Guide
+                    </h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="bg-slate-700/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="bg-cyan-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                          1
+                        </span>
+                        <span className="text-cyan-400 font-medium">
+                          Download Template
+                        </span>
+                      </div>
+                      <p className="text-gray-400 text-xs">
+                        Download CSV or Excel template with sample data and
+                        correct column headers.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleDownloadTemplate}
-                      className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    <div className="bg-slate-700/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="bg-green-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                          2
+                        </span>
+                        <span className="text-green-400 font-medium">
+                          Fill Your Data
+                        </span>
+                      </div>
+                      <p className="text-gray-400 text-xs">
+                        Replace sample data with your products. Keep the headers
+                        unchanged.
+                      </p>
+                    </div>
+                    <div className="bg-slate-700/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="bg-purple-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                          3
+                        </span>
+                        <span className="text-purple-400 font-medium">
+                          Upload & Review
+                        </span>
+                      </div>
+                      <p className="text-gray-400 text-xs">
+                        Upload your file and review results. Fix any errors if
+                        needed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Download Templates */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* CSV Template */}
+                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <svg
+                            className="w-4 h-4 text-cyan-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                          <h4 className="text-white font-medium">
+                            CSV Template
+                          </h4>
+                        </div>
+                        <p className="text-gray-400 text-sm">
+                          Comma-separated format, works with Excel/Sheets
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          • UTF-8 encoding • Small file size • Universal
+                          compatibility
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleDownloadTemplate}
+                        className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                          />
+                        </svg>
+                        Download CSV
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Excel Template */}
+                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <svg
+                            className="w-4 h-4 text-green-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                          <h4 className="text-white font-medium">
+                            Excel Template
+                          </h4>
+                        </div>
+                        <p className="text-gray-400 text-sm">
+                          Native Excel format with formatted columns
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          • Better formatting • Auto-sized columns • Excel
+                          optimized
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleDownloadExcelTemplate}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                          />
+                        </svg>
+                        Download XLSX
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* File Requirements & Structure Documentation */}
+                <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <svg
+                      className="w-5 h-5 text-amber-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      Download Template
-                    </button>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                      />
+                    </svg>
+                    <h4 className="text-white font-medium">
+                      File Structure & Requirements
+                    </h4>
+                  </div>
+
+                  {/* Column Requirements */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <h5 className="text-red-400 font-medium mb-3 flex items-center gap-2">
+                        <span className="text-red-500">*</span>
+                        Required Columns
+                      </h5>
+                      <div className="space-y-3">
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-1">
+                            <code className="text-red-400 font-mono text-sm">
+                              name
+                            </code>
+                            <span className="text-xs text-red-300 bg-red-500/20 px-2 py-1 rounded">
+                              Required
+                            </span>
+                          </div>
+                          <p className="text-gray-400 text-xs">
+                            Product name (max 200 chars). Must be unique for
+                            your account.
+                          </p>
+                          <p className="text-red-300 text-xs mt-1">
+                            Example: &ldquo;iPhone 15 Pro&rdquo;, &ldquo;Samsung
+                            Galaxy S24&rdquo;
+                          </p>
+                        </div>
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-1">
+                            <code className="text-red-400 font-mono text-sm">
+                              buy_price
+                            </code>
+                            <span className="text-xs text-red-300 bg-red-500/20 px-2 py-1 rounded">
+                              Required
+                            </span>
+                          </div>
+                          <p className="text-gray-400 text-xs">
+                            Purchase price. Must be a positive number &gt; 0.
+                          </p>
+                          <p className="text-red-300 text-xs mt-1">
+                            Example: 50.00, 125.99, 1500
+                          </p>
+                        </div>
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-1">
+                            <code className="text-red-400 font-mono text-sm">
+                              sell_price
+                            </code>
+                            <span className="text-xs text-red-300 bg-red-500/20 px-2 py-1 rounded">
+                              Required
+                            </span>
+                          </div>
+                          <p className="text-gray-400 text-xs">
+                            Selling price. Must be ≥ buy_price and &gt; 0.
+                          </p>
+                          <p className="text-red-300 text-xs mt-1">
+                            Example: 75.00, 199.99, 2000
+                          </p>
+                        </div>
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-1">
+                            <code className="text-red-400 font-mono text-sm">
+                              stock
+                            </code>
+                            <span className="text-xs text-red-300 bg-red-500/20 px-2 py-1 rounded">
+                              Required
+                            </span>
+                          </div>
+                          <p className="text-gray-400 text-xs">
+                            Initial stock quantity. Must be a positive integer ≥
+                            1.
+                          </p>
+                          <p className="text-red-300 text-xs mt-1">
+                            Example: 50, 100, 25
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h5 className="text-green-400 font-medium mb-3 flex items-center gap-2">
+                        <span className="text-green-500">○</span>
+                        Optional Columns
+                      </h5>
+                      <div className="space-y-3">
+                        <div className="bg-slate-700/30 border border-slate-600/30 rounded-lg p-3">
+                          <code className="text-green-400 font-mono text-sm">
+                            product_code
+                          </code>
+                          <p className="text-gray-400 text-xs mt-1">
+                            SKU, part number, or barcode (max 100 chars)
+                          </p>
+                          <p className="text-green-300 text-xs">
+                            Example: &ldquo;SKU001&rdquo;,
+                            &ldquo;PART-12345&rdquo;
+                          </p>
+                        </div>
+                        <div className="bg-slate-700/30 border border-slate-600/30 rounded-lg p-3">
+                          <code className="text-green-400 font-mono text-sm">
+                            category
+                          </code>
+                          <p className="text-gray-400 text-xs mt-1">
+                            Product category (auto-created if new)
+                          </p>
+                          <p className="text-green-300 text-xs">
+                            Example: &ldquo;Electronics&rdquo;,
+                            &ldquo;Clothing&rdquo;
+                          </p>
+                        </div>
+                        <div className="bg-slate-700/30 border border-slate-600/30 rounded-lg p-3">
+                          <code className="text-green-400 font-mono text-sm">
+                            supplier
+                          </code>
+                          <p className="text-gray-400 text-xs mt-1">
+                            Supplier name (auto-created if new)
+                          </p>
+                          <p className="text-green-300 text-xs">
+                            Example: &ldquo;Apple Inc&rdquo;,
+                            &ldquo;Samsung&rdquo;
+                          </p>
+                        </div>
+                        <div className="bg-slate-700/30 border border-slate-600/30 rounded-lg p-3">
+                          <code className="text-green-400 font-mono text-sm">
+                            location
+                          </code>
+                          <p className="text-gray-400 text-xs mt-1">
+                            Storage location (max 200 chars)
+                          </p>
+                          <p className="text-green-300 text-xs">
+                            Example: &ldquo;Warehouse A&rdquo;, &ldquo;Store
+                            Room B&rdquo;
+                          </p>
+                        </div>
+                        <div className="bg-slate-700/30 border border-slate-600/30 rounded-lg p-3">
+                          <code className="text-green-400 font-mono text-sm">
+                            details
+                          </code>
+                          <p className="text-gray-400 text-xs mt-1">
+                            Product description and specifications
+                          </p>
+                          <p className="text-green-300 text-xs">
+                            Example: &ldquo;Latest model with titanium
+                            build&rdquo;
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sample File Structure */}
+                  <div className="mb-6">
+                    <h5 className="text-purple-400 font-medium mb-3 flex items-center gap-2">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                        />
+                      </svg>
+                      Sample File Structure
+                    </h5>
+                    <div className="bg-slate-900/50 border border-slate-600/30 rounded-lg p-4 overflow-x-auto">
+                      <table className="w-full text-xs text-left">
+                        <thead>
+                          <tr className="border-b border-slate-600/50">
+                            <th className="text-red-400 py-2 px-3 font-mono">
+                              name
+                            </th>
+                            <th className="text-green-400 py-2 px-3 font-mono">
+                              product_code
+                            </th>
+                            <th className="text-green-400 py-2 px-3 font-mono">
+                              category
+                            </th>
+                            <th className="text-green-400 py-2 px-3 font-mono">
+                              supplier
+                            </th>
+                            <th className="text-red-400 py-2 px-3 font-mono">
+                              buy_price
+                            </th>
+                            <th className="text-red-400 py-2 px-3 font-mono">
+                              sell_price
+                            </th>
+                            <th className="text-red-400 py-2 px-3 font-mono">
+                              stock
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-gray-300">
+                          <tr className="border-b border-slate-700/30">
+                            <td className="py-2 px-3">iPhone 15 Pro</td>
+                            <td className="py-2 px-3">IP15PRO</td>
+                            <td className="py-2 px-3">Electronics</td>
+                            <td className="py-2 px-3">Apple Inc</td>
+                            <td className="py-2 px-3">800.00</td>
+                            <td className="py-2 px-3">1200.00</td>
+                            <td className="py-2 px-3">50</td>
+                          </tr>
+                          <tr className="border-b border-slate-700/30">
+                            <td className="py-2 px-3">Samsung Galaxy S24</td>
+                            <td className="py-2 px-3 text-gray-500 italic">
+                              empty
+                            </td>
+                            <td className="py-2 px-3">Electronics</td>
+                            <td className="py-2 px-3">Samsung</td>
+                            <td className="py-2 px-3">700.00</td>
+                            <td className="py-2 px-3">1100.00</td>
+                            <td className="py-2 px-3">30</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3">Wireless Earbuds</td>
+                            <td className="py-2 px-3">WE001</td>
+                            <td className="py-2 px-3">Audio</td>
+                            <td className="py-2 px-3 text-gray-500 italic">
+                              empty
+                            </td>
+                            <td className="py-2 px-3">25.00</td>
+                            <td className="py-2 px-3">49.99</td>
+                            <td className="py-2 px-3">100</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">
+                      <span className="text-red-400">Red columns</span> are
+                      required,
+                      <span className="text-green-400 ml-2">
+                        green columns
+                      </span>{" "}
+                      are optional. Empty cells are allowed for optional
+                      columns.
+                    </p>
+                  </div>
+
+                  {/* Validation Rules */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 className="text-yellow-400 font-medium mb-3 flex items-center gap-2">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.846-.833-2.616 0L4.198 15.5c-.77.833.192 2.5 1.732 2.5z"
+                          />
+                        </svg>
+                        Validation Rules
+                      </h5>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-start gap-2">
+                          <span className="text-yellow-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Product names must be unique within your account
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-yellow-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Sell price must be greater than or equal to buy
+                            price
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-yellow-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Stock must be a whole number (no decimals)
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-yellow-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            All prices must be positive numbers
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-yellow-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Empty rows will be skipped automatically
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="text-blue-400 font-medium mb-3 flex items-center gap-2">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        Important Notes
+                      </h5>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Existing categories will be reused, new ones created
+                            if needed
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Suppliers are created per user - existing ones will
+                            be reused for your account
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            File upload only supports single-pricing products
+                            (no variants)
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Maximum file size: 25MB for Excel, 10MB for CSV
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Recommended batch size: 100-500 products per file
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Photos must be added manually after product creation
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* File Upload */}
                 <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Select CSV File
-                  </label>
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg
+                      className="w-5 h-5 text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    <label className="text-white font-medium">
+                      Select Your File
+                    </label>
+                  </div>
                   <div className="space-y-4">
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={handleCSVFileChange}
-                      className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-cyan-600 file:text-white hover:file:bg-cyan-700 file:cursor-pointer cursor-pointer"
-                    />
-                    {csvFile && (
-                      <p className="text-green-400 text-sm">
-                        Selected: {csvFile.name}
+                    <div className="border-2 border-dashed border-slate-600 rounded-lg p-6 text-center hover:border-slate-500 transition-colors">
+                      <input
+                        type="file"
+                        accept=".csv,.xlsx,.xls"
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-cyan-600 file:text-white hover:file:bg-cyan-700 file:cursor-pointer cursor-pointer"
+                      />
+                      <p className="text-gray-400 text-xs mt-2">
+                        Supported formats: CSV (.csv), Excel (.xlsx, .xls)
                       </p>
+                    </div>
+                    {uploadFile && (
+                      <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                        <div className="flex items-center gap-2 text-green-400 text-sm">
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                          <span className="font-medium">File Selected:</span>
+                          <span>{uploadFile.name}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-400 mt-1">
+                          <span>
+                            Format:{" "}
+                            {uploadFile.name.toLowerCase().endsWith(".csv")
+                              ? "CSV"
+                              : uploadFile.name.toLowerCase().endsWith(".xlsx")
+                              ? "Excel (XLSX)"
+                              : "Excel (XLS)"}
+                          </span>
+                          <span>
+                            Size: {(uploadFile.size / 1024).toFixed(1)} KB
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1989,14 +2643,14 @@ export default function AddProductPage() {
                 <div className="flex justify-center">
                   <button
                     type="button"
-                    onClick={handleCSVUpload}
-                    disabled={!csvFile || isUploadingCSV}
-                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    onClick={handleFileUpload}
+                    disabled={!uploadFile || isUploadingFile}
+                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg"
                   >
-                    {isUploadingCSV ? (
+                    {isUploadingFile ? (
                       <>
                         <svg
-                          className="w-4 h-4 animate-spin"
+                          className="w-5 h-5 animate-spin"
                           fill="none"
                           viewBox="0 0 24 24"
                         >
@@ -2014,12 +2668,12 @@ export default function AddProductPage() {
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                           ></path>
                         </svg>
-                        Uploading...
+                        Processing File...
                       </>
                     ) : (
                       <>
                         <svg
-                          className="w-4 h-4"
+                          className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -2031,17 +2685,17 @@ export default function AddProductPage() {
                             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                           />
                         </svg>
-                        Upload CSV
+                        Upload Products
                       </>
                     )}
                   </button>
                 </div>
 
                 {/* Upload Results */}
-                {csvResults && (
+                {uploadResults && (
                   <div
                     className={`border rounded-lg p-4 ${
-                      csvResults.success
+                      uploadResults.success
                         ? "border-green-500/20 bg-green-500/10"
                         : "border-red-500/20 bg-red-500/10"
                     }`}
@@ -2049,13 +2703,15 @@ export default function AddProductPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <svg
                         className={`w-5 h-5 ${
-                          csvResults.success ? "text-green-400" : "text-red-400"
+                          uploadResults.success
+                            ? "text-green-400"
+                            : "text-red-400"
                         }`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        {csvResults.success ? (
+                        {uploadResults.success ? (
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -2073,10 +2729,12 @@ export default function AddProductPage() {
                       </svg>
                       <h4
                         className={`font-medium ${
-                          csvResults.success ? "text-green-400" : "text-red-400"
+                          uploadResults.success
+                            ? "text-green-400"
+                            : "text-red-400"
                         }`}
                       >
-                        {csvResults.success
+                        {uploadResults.success
                           ? "Upload Successful"
                           : "Upload Failed"}
                       </h4>
@@ -2084,87 +2742,56 @@ export default function AddProductPage() {
 
                     <p
                       className={`text-sm mb-3 ${
-                        csvResults.success ? "text-green-300" : "text-red-300"
+                        uploadResults.success
+                          ? "text-green-300"
+                          : "text-red-300"
                       }`}
                     >
-                      {csvResults.message}
+                      {uploadResults.message}
                     </p>
 
-                    {csvResults.success && csvResults.products_created > 0 && (
-                      <div className="bg-slate-700/50 rounded p-3 mb-3">
-                        <p className="text-white text-sm">
-                          Successfully created{" "}
-                          <strong>{csvResults.products_created}</strong>{" "}
-                          products
-                        </p>
-                        <p className="text-gray-400 text-xs mt-1">
-                          You will be redirected to the products page in a few
-                          seconds...
-                        </p>
-                      </div>
-                    )}
-
-                    {csvResults.errors && csvResults.errors.length > 0 && (
-                      <div className="space-y-2">
-                        <h5 className="text-red-400 font-medium text-sm">
-                          Errors:
-                        </h5>
-                        <div className="bg-slate-700/50 rounded p-3 max-h-48 overflow-y-auto">
-                          {csvResults.errors.map((error, index) => (
-                            <p
-                              key={index}
-                              className="text-red-300 text-xs mb-1"
-                            >
-                              {error}
-                            </p>
-                          ))}
+                    {uploadResults.success &&
+                      uploadResults.products_created > 0 && (
+                        <div className="bg-slate-700/50 rounded p-3 mb-3">
+                          <p className="text-white text-sm">
+                            Successfully created{" "}
+                            <strong>{uploadResults.products_created}</strong>{" "}
+                            products
+                          </p>
+                          <p className="text-gray-400 text-xs mt-1">
+                            You will be redirected to the products page in a few
+                            seconds...
+                          </p>
                         </div>
-                      </div>
-                    )}
+                      )}
+
+                    {uploadResults.errors &&
+                      uploadResults.errors.length > 0 && (
+                        <div className="space-y-2">
+                          <h5 className="text-red-400 font-medium text-sm">
+                            Errors Found:
+                          </h5>
+                          <div className="bg-slate-700/50 rounded p-3 max-h-48 overflow-y-auto">
+                            {uploadResults.errors.map((error, index) => (
+                              <p
+                                key={index}
+                                className="text-red-300 text-xs mb-1 border-l-2 border-red-400/30 pl-2"
+                              >
+                                {error}
+                              </p>
+                            ))}
+                          </div>
+                          <div className="bg-amber-500/10 border border-amber-500/20 rounded p-2">
+                            <p className="text-amber-400 text-xs">
+                              💡 <strong>Tip:</strong> Fix the errors above and
+                              try uploading again. Refer to the documentation
+                              above for proper formatting.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                   </div>
                 )}
-
-                {/* CSV Format Info */}
-                <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-4">
-                  <h4 className="text-white font-medium mb-2">
-                    CSV Format Requirements:
-                  </h4>
-                  <ul className="text-gray-400 text-sm space-y-1">
-                    <li>
-                      • <strong>name</strong>: Product name (required)
-                    </li>
-                    <li>
-                      • <strong>product_code</strong>: SKU/Product code
-                      (optional)
-                    </li>
-                    <li>
-                      • <strong>category</strong>: Category name (optional, will
-                      be created if doesn&apos;t exist)
-                    </li>
-                    <li>
-                      • <strong>supplier</strong>: Supplier name (optional, will
-                      be created if doesn&apos;t exist)
-                    </li>
-                    <li>
-                      • <strong>location</strong>: Storage location (optional)
-                    </li>
-                    <li>
-                      • <strong>details</strong>: Product description (optional)
-                    </li>
-                    <li>
-                      • <strong>buy_price</strong>: Purchase price (required,
-                      must be {">"}0)
-                    </li>
-                    <li>
-                      • <strong>sell_price</strong>: Selling price (required,
-                      must be {">"}= buy_price)
-                    </li>
-                    <li>
-                      • <strong>stock</strong>: Initial stock quantity
-                      (required, must be {">"}0)
-                    </li>
-                  </ul>
-                </div>
               </div>
             )}
           </div>
