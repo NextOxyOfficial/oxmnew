@@ -657,7 +657,7 @@ export default function AddProductPage() {
         supplier:
           typeof formData.supplier === "number" ? formData.supplier : undefined,
         product_code: formData.productCode || undefined,
-        location: formData.location,
+        location: formData.location.trim() || undefined,
         details: formData.details,
         has_variants: formData.hasVariants,
         buy_price: formData.hasVariants ? 0 : formData.buyPrice,

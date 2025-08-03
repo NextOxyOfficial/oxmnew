@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { ApiService } from "@/lib/api";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { ApiService } from "@/lib/api";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface Category {
   id: number;
@@ -199,9 +199,7 @@ export default function EditProductPage() {
       newErrors.name = "Product name is required";
     }
 
-    if (!formData.location.trim()) {
-      newErrors.location = "Location is required";
-    }
+    // Location is now optional, so no validation needed
 
     if (!product?.has_variants) {
       if (formData.buyPrice <= 0) {
@@ -244,7 +242,7 @@ export default function EditProductPage() {
           typeof formData.category === "number" ? formData.category : undefined,
         supplier:
           typeof formData.supplier === "number" ? formData.supplier : undefined,
-        location: formData.location,
+        location: formData.location.trim() || undefined,
         details: formData.details,
         is_active: formData.is_active,
       };
@@ -461,12 +459,16 @@ export default function EditProductPage() {
                   value={formData.productCode}
                   onChange={handleInputChange}
                   className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                    errors.productCode ? "border-red-500" : "border-slate-700/50"
+                    errors.productCode
+                      ? "border-red-500"
+                      : "border-slate-700/50"
                   }`}
                   placeholder="Enter product code, SKU, or part number"
                 />
                 {errors.productCode && (
-                  <p className="text-red-400 text-xs mt-1">{errors.productCode}</p>
+                  <p className="text-red-400 text-xs mt-1">
+                    {errors.productCode}
+                  </p>
                 )}
               </div>
 
@@ -475,7 +477,7 @@ export default function EditProductPage() {
                   htmlFor="location"
                   className="block text-sm font-medium text-slate-300 mb-2"
                 >
-                  Location *
+                  Location
                 </label>
                 <input
                   type="text"
@@ -486,7 +488,7 @@ export default function EditProductPage() {
                   className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
                     errors.location ? "border-red-500" : "border-slate-700/50"
                   }`}
-                  placeholder="Enter storage location"
+                  placeholder="Enter storage location (optional)"
                 />
                 {errors.location && (
                   <p className="text-red-400 text-xs mt-1">{errors.location}</p>

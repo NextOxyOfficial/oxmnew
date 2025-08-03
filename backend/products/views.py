@@ -437,7 +437,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                         product_data = {
                             "name": name,
                             "product_code": row.get("product_code", "").strip() or None,
-                            "location": row.get("location", "").strip() or "",
+                            "location": row.get("location", "").strip() or None,
                             "details": row.get("details", "").strip() or "",
                             "user": request.user,
                             "has_variants": False,  # Default for CSV upload

@@ -32,7 +32,9 @@ class Product(models.Model):
     supplier = models.ForeignKey(
         Supplier, on_delete=models.SET_NULL, null=True, related_name="products"
     )
-    location = models.CharField(max_length=200, help_text="Storage location")
+    location = models.CharField(
+        max_length=200, blank=True, null=True, help_text="Storage location"
+    )
     details = models.TextField(
         blank=True, null=True, help_text="Product description and details"
     )
