@@ -475,9 +475,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                         # Parse stock
                         try:
                             stock = int(row.get("stock", 0))
-                            if stock < 0:
+                            if stock <= 0:
                                 products_errors.append(
-                                    f"Row {row_num}: Stock cannot be negative"
+                                    f"Row {row_num}: Stock quantity must be greater than 0"
                                 )
                                 continue
                             product_data["stock"] = stock

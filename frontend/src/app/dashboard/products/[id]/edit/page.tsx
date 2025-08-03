@@ -215,8 +215,8 @@ export default function EditProductPage() {
           "Sell price must be greater than or equal to buy price";
       }
 
-      if (formData.stock < 0) {
-        newErrors.stock = "Stock quantity cannot be negative";
+      if (formData.stock <= 0) {
+        newErrors.stock = "Stock quantity must be greater than 0";
       }
     }
 

@@ -45,6 +45,8 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Sell price must be greater than or equal to buy price"
             )
+        if data.get("stock", 0) <= 0:
+            raise serializers.ValidationError("Stock quantity must be greater than 0")
         return data
 
 
@@ -154,9 +156,10 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     def validate(self, data):
         """Validate product data"""
         if not data.get("has_variants", False):
-            # For single pricing, validate buy and sell prices
+            # For single pricing, validate buy and sell prices and stock
             buy_price = data.get("buy_price", 0)
             sell_price = data.get("sell_price", 0)
+            stock = data.get("stock")
 
             if buy_price <= 0:
                 raise serializers.ValidationError("Buy price must be greater than 0")
@@ -165,6 +168,10 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             if sell_price < buy_price:
                 raise serializers.ValidationError(
                     "Sell price must be greater than or equal to buy price"
+                )
+            if stock is not None and stock <= 0:
+                raise serializers.ValidationError(
+                    "Stock quantity must be greater than 0"
                 )
 
         return data
@@ -240,9 +247,10 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
                 buy_price = variant_data.get("buyPrice", 0)
                 sell_price = variant_data.get("sellPrice", 0)
+                stock = variant_data.get("stock", 0)
 
                 print(
-                    f"Variant {i + 1} - buyPrice: {buy_price}, sellPrice: {sell_price}"
+                    f"Variant {i + 1} - buyPrice: {buy_price}, sellPrice: {sell_price}, stock: {stock}"
                 )
 
                 # Check if variant has at least one identifying field
@@ -269,6 +277,10 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         "All variant sell prices must be > 0"
                     )
+                if stock <= 0:
+                    raise serializers.ValidationError(
+                        "All variant stock quantities must be > 0"
+                    )
         else:
             # Validate single pricing
             buy_price = data.get("buy_price", 0)
@@ -281,8 +293,10 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Sell price must be greater than 0")
             if sell_price < buy_price:
                 raise serializers.ValidationError("Sell price must be >= buy price")
-            if stock < 0:
-                raise serializers.ValidationError("Stock cannot be negative")
+            if stock <= 0:
+                raise serializers.ValidationError(
+                    "Stock quantity must be greater than 0"
+                )
 
         return data
 

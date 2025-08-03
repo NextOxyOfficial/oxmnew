@@ -385,14 +385,15 @@ export default function AddProductPage() {
     const actualCustomVariant = newVariant.custom_variant || "";
 
     // Validation: require at least one identifying field (color, size, weight, or custom_variant)
-    // and valid pricing
+    // and valid pricing and stock
     const hasIdentifyingField =
       actualColor || actualSize || actualWeight || actualCustomVariant;
 
     if (
       !hasIdentifyingField ||
       newVariant.buyPrice <= 0 ||
-      newVariant.sellPrice <= 0
+      newVariant.sellPrice <= 0 ||
+      newVariant.stock <= 0
     ) {
       return;
     }
@@ -615,8 +616,8 @@ export default function AddProductPage() {
         newErrors.sellPrice = "Sell price should be higher than buy price";
       }
 
-      if (formData.stock < 0) {
-        newErrors.stock = "Stock quantity cannot be negative";
+      if (formData.stock <= 0) {
+        newErrors.stock = "Stock quantity must be greater than 0";
       }
     } else {
       if (formData.colorSizeVariants.length === 0) {
@@ -627,10 +628,12 @@ export default function AddProductPage() {
           (variant) =>
             variant.buyPrice <= 0 ||
             variant.sellPrice <= 0 ||
-            variant.sellPrice < variant.buyPrice
+            variant.sellPrice < variant.buyPrice ||
+            variant.stock <= 0
         );
         if (invalidVariant) {
-          newErrors.variants = "All variants must have valid prices";
+          newErrors.variants =
+            "All variants must have valid prices and stock quantity greater than 0";
         }
       }
     }
@@ -1425,14 +1428,14 @@ export default function AddProductPage() {
                             name="stock"
                             value={formData.stock || ""}
                             onChange={handleInputChange}
-                            min="0"
+                            min="1"
                             step="1"
                             className={`w-full bg-slate-800/50 border ${
                               errors.stock
                                 ? "border-red-500"
                                 : "border-slate-700/50"
                             } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
-                            placeholder="0"
+                            placeholder="1"
                           />
                           {errors.stock && (
                             <p className="text-red-400 text-sm mt-1">
@@ -1668,8 +1671,8 @@ export default function AddProductPage() {
                               name="stock"
                               value={newVariant.stock || ""}
                               onChange={handleVariantChange}
-                              placeholder="Stock"
-                              min="0"
+                              placeholder="Stock (min 1)"
+                              min="1"
                               className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1.5 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
                             />
                           </div>
@@ -2158,7 +2161,7 @@ export default function AddProductPage() {
                     </li>
                     <li>
                       • <strong>stock</strong>: Initial stock quantity
-                      (required, must be {">"}= 0)
+                      (required, must be {">"}0)
                     </li>
                   </ul>
                 </div>
