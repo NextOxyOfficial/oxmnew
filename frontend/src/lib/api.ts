@@ -533,7 +533,13 @@ export class ApiService {
 
   // Banking methods
   static async getBankAccounts() {
-    return this.get("/banking/accounts/");
+    // Try the my_accounts endpoint first, fallback to regular accounts
+    try {
+      return this.get("/banking/accounts/my_accounts/");
+    } catch (error) {
+      console.log("my_accounts endpoint failed, trying regular accounts endpoint");
+      return this.get("/banking/accounts/");
+    }
   }
 
   static async createBankAccount(accountData: {

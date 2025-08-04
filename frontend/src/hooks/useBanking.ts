@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { ApiService } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import type {
   BankAccount,
   Transaction,
@@ -13,6 +14,7 @@ import type {
 } from "@/types/banking";
 
 export const useBanking = () => {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -22,36 +24,60 @@ export const useBanking = () => {
 
   // Load initial data
   const loadAccounts = useCallback(async () => {
+    if (!isAuthenticated) {
+      console.log("❌ Not authenticated, skipping loadAccounts");
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
+      console.log("🔄 Loading bank accounts...");
       const accountsData = await ApiService.getBankAccounts();
-      setAccounts(accountsData);
+      console.log("📦 Raw accounts data received:", accountsData);
+      
+      // Ensure accountsData is an array
+      const validAccountsData = Array.isArray(accountsData) ? accountsData : [];
+      console.log("✅ Valid accounts data:", validAccountsData, "Count:", validAccountsData.length);
+      setAccounts(validAccountsData);
       
       // Auto-select Main account first, then any account if none selected
-      if (accountsData.length > 0 && !selectedAccountId) {
-        const mainAccount = accountsData.find((acc: BankAccount) => acc.name === "Main");
+      if (validAccountsData.length > 0) {
+        const mainAccount = validAccountsData.find((acc: BankAccount) => acc.name === "Main");
         if (mainAccount) {
+          console.log("🎯 Found Main account, selecting:", mainAccount);
           setSelectedAccountId(mainAccount.id);
         } else {
-          setSelectedAccountId(accountsData[0].id);
+          console.log("🎯 No Main account found, selecting first account:", validAccountsData[0]);
+          setSelectedAccountId(validAccountsData[0].id);
         }
+      } else {
+        console.log("⚠️ No accounts found");
       }
     } catch (err) {
+      console.error("❌ Error loading accounts:", err);
       setError(err instanceof Error ? err.message : "Failed to load accounts");
+      setAccounts([]); // Ensure accounts is always an array even on error
     } finally {
       setLoading(false);
     }
-  }, [selectedAccountId]);
+  }, [isAuthenticated]);
 
   const loadEmployees = useCallback(async (search?: string) => {
+    if (!isAuthenticated) {
+      return;
+    }
+    
     try {
       // Load all employees first, then filter on frontend if search is provided
       const employeesData = await ApiService.getBankingEmployees();
       
+      // Ensure employeesData is an array
+      const validEmployeesData = Array.isArray(employeesData) ? employeesData : [];
+      
       if (search && search.trim()) {
         // Filter employees on frontend based on search
-        const filteredEmployees = employeesData.filter((emp: any) => 
+        const filteredEmployees = validEmployeesData.filter((emp: any) => 
           emp.name?.toLowerCase().includes(search.toLowerCase()) ||
           emp.employee_id?.toLowerCase().includes(search.toLowerCase()) ||
           emp.role?.toLowerCase().includes(search.toLowerCase()) ||
@@ -60,12 +86,13 @@ export const useBanking = () => {
         );
         setEmployees(filteredEmployees);
       } else {
-        setEmployees(employeesData);
+        setEmployees(validEmployeesData);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load employees");
+      setEmployees([]); // Ensure employees is always an array even on error
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const loadTransactions = useCallback(async (accountId: string, filters?: TransactionFilters) => {
     try {
@@ -84,9 +111,13 @@ export const useBanking = () => {
       }
 
       const transactionsData = await ApiService.getAccountTransactions(accountId, backendFilters);
-      setTransactions(transactionsData);
+      
+      // Ensure transactionsData is an array
+      const validTransactionsData = Array.isArray(transactionsData) ? transactionsData : [];
+      setTransactions(validTransactionsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load transactions");
+      setTransactions([]); // Ensure transactions is always an array even on error
     } finally {
       setLoading(false);
     }
@@ -99,7 +130,7 @@ export const useBanking = () => {
       setError(null);
       
       const newAccount = await ApiService.createBankAccount(data);
-      setAccounts(prev => [...prev, newAccount]);
+      setAccounts(prev => Array.isArray(prev) ? [...prev, newAccount] : [newAccount]);
       
       // Auto-select the new account if it's the Main account or if no account is currently selected
       if (newAccount.name === "Main" || !selectedAccountId) {
@@ -123,7 +154,7 @@ export const useBanking = () => {
       setError(null);
       
       const updatedAccount = await ApiService.updateBankAccount(accountId, data);
-      setAccounts(prev => prev.map(acc => acc.id === accountId ? updatedAccount : acc));
+      setAccounts(prev => Array.isArray(prev) ? prev.map(acc => acc.id === accountId ? updatedAccount : acc) : [updatedAccount]);
       
       return updatedAccount;
     } catch (err) {
@@ -183,11 +214,22 @@ export const useBanking = () => {
     }
   }, []);
 
-  // Initialize data on mount
+  // Initialize data on mount - only when authenticated
   useEffect(() => {
-    loadAccounts();
-    loadEmployees();
-  }, [loadAccounts, loadEmployees]);
+    console.log("🔄 useEffect triggered - isAuthenticated:", isAuthenticated, "authLoading:", authLoading);
+    if (isAuthenticated && !authLoading) {
+      console.log("✅ User is authenticated, loading banking data...");
+      loadAccounts();
+      loadEmployees();
+    } else if (!authLoading && !isAuthenticated) {
+      console.log("❌ User not authenticated, clearing banking data...");
+      setAccounts([]);
+      setTransactions([]);
+      setEmployees([]);
+      setSelectedAccountId(null);
+      setError(null);
+    }
+  }, [isAuthenticated, authLoading, loadAccounts, loadEmployees]);
 
   // Load transactions when account changes
   useEffect(() => {
@@ -196,7 +238,7 @@ export const useBanking = () => {
     }
   }, [selectedAccountId, loadTransactions]);
 
-  const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
+  const selectedAccount = Array.isArray(accounts) ? accounts.find(acc => acc.id === selectedAccountId) : undefined;
 
   return {
     // State
@@ -207,6 +249,8 @@ export const useBanking = () => {
     selectedAccount,
     loading,
     error,
+    isAuthenticated,
+    authLoading,
 
     // Actions
     setSelectedAccountId,
@@ -222,10 +266,20 @@ export const useBanking = () => {
 
     // Utilities
     refreshData: () => {
-      loadAccounts();
-      if (selectedAccountId) {
-        loadTransactions(selectedAccountId);
+      if (isAuthenticated) {
+        loadAccounts();
+        if (selectedAccountId) {
+          loadTransactions(selectedAccountId);
+        }
       }
     },
+    
+    // Debug info
+    debugInfo: {
+      accountsCount: accounts.length,
+      hasSelectedAccount: !!selectedAccount,
+      authStatus: isAuthenticated ? 'authenticated' : 'not authenticated',
+      loading: loading || authLoading
+    }
   };
 };

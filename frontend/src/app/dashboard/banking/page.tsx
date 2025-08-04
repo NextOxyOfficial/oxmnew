@@ -35,6 +35,8 @@ export default function BankingPage() {
     selectedAccount,
     loading,
     error,
+    isAuthenticated: bankingAuth,
+    authLoading: bankingAuthLoading,
     setSelectedAccountId,
     setError,
     loadEmployees,
@@ -42,7 +44,11 @@ export default function BankingPage() {
     updateAccount,
     createTransaction,
     loadTransactions,
+    debugInfo,
   } = useBanking();
+
+  // Debug info - temporary
+  console.log("Banking Debug Info:", debugInfo, { accounts, error });
 
   // Show loading while auth is being checked
   if (authLoading) {
