@@ -225,7 +225,9 @@ export default function AddProductPage() {
         // Handle categories response format {categories: [...]}
         const processedCategories =
           categoriesResponse?.categories || categoriesResponse || [];
-        const processedSuppliers = suppliersResponse || [];
+        const processedSuppliers = Array.isArray(suppliersResponse) 
+          ? suppliersResponse 
+          : suppliersResponse?.suppliers || suppliersResponse?.results || [];
 
         console.log("Processed categories:", processedCategories);
         console.log("Processed suppliers:", processedSuppliers);
@@ -980,7 +982,7 @@ export default function AddProductPage() {
                           ⚠️ Similar products found - Check to avoid duplicates
                         </p>
                       </div>
-                      {nameSuggestions.map((product) => (
+                      {Array.isArray(nameSuggestions) && nameSuggestions.map((product) => (
                         <div
                           key={product.id}
                           onClick={() =>
@@ -1050,7 +1052,7 @@ export default function AddProductPage() {
                           ? "Loading suppliers..."
                           : "Select a supplier (optional)"}
                       </option>
-                      {suppliers.map((supplier) => (
+                      {Array.isArray(suppliers) && suppliers.map((supplier) => (
                         <option
                           key={supplier.id}
                           value={supplier.id}
@@ -1103,7 +1105,7 @@ export default function AddProductPage() {
                             duplicates
                           </p>
                         </div>
-                        {codeSuggestions.map((product) => (
+                        {Array.isArray(codeSuggestions) && codeSuggestions.map((product) => (
                           <div
                             key={product.id}
                             onClick={() =>
@@ -1300,7 +1302,7 @@ export default function AddProductPage() {
                           ? "Loading categories..."
                           : "Select a category (optional)"}
                       </option>
-                      {categories.map((category) => (
+                      {Array.isArray(categories) && categories.map((category) => (
                         <option
                           key={category.id}
                           value={category.id}
