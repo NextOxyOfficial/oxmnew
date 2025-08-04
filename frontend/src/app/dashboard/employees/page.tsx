@@ -61,10 +61,13 @@ export default function EmployeesPage() {
         setError(null);
 
         const data = await employeeAPI.getEmployees();
-        setEmployees(data);
+        // Ensure data is always an array
+        setEmployees(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Error fetching employees:", err);
         setError("Failed to load employees. Please try again.");
+        // Set empty array on error to prevent filter issues
+        setEmployees([]);
       } finally {
         setIsLoading(false);
       }
@@ -73,15 +76,16 @@ export default function EmployeesPage() {
     fetchEmployees();
   }, []);
 
-  // Calculate stats
-  const totalEmployees = employees.length;
-  const activeEmployees = employees.filter((e) => e.status === "active").length;
+  // Calculate stats - ensure employees is always an array
+  const safeEmployees = Array.isArray(employees) ? employees : [];
+  const totalEmployees = safeEmployees.length;
+  const activeEmployees = safeEmployees.filter((e) => e.status === "active").length;
   const averageSalary =
-    employees.reduce((sum, emp) => sum + emp.salary, 0) / employees.length || 0;
+    safeEmployees.reduce((sum, emp) => sum + emp.salary, 0) / safeEmployees.length || 0;
 
   // Get unique departments for filter
   const departments = Array.from(
-    new Set(employees.map((emp) => emp.department))
+    new Set(safeEmployees.map((emp) => emp.department))
   ).filter(Boolean);
 
   // Handle view employee details
@@ -143,6 +147,13 @@ export default function EmployeesPage() {
       return;
     }
 
+    // Validate salary is a positive number
+    const salaryValue = parseFloat(newEmployee.salary);
+    if (isNaN(salaryValue) || salaryValue <= 0) {
+      alert("Please enter a valid salary amount greater than 0");
+      return;
+    }
+
     try {
       setIsCreating(true);
 
@@ -151,16 +162,18 @@ export default function EmployeesPage() {
 
       const createData: CreateEmployeeData = {
         employee_id,
-        name: newEmployee.name,
-        email: newEmployee.email,
-        phone: newEmployee.phone,
-        address: newEmployee.address || "",
-        role: newEmployee.role,
-        department: newEmployee.department,
-        salary: parseFloat(newEmployee.salary),
+        name: newEmployee.name.trim(),
+        email: newEmployee.email.trim(),
+        phone: newEmployee.phone.trim(),
+        address: newEmployee.address?.trim() || "",
+        role: newEmployee.role.trim(),
+        department: newEmployee.department.trim(),
+        salary: salaryValue,
         hiring_date: new Date().toISOString().split("T")[0], // Format as YYYY-MM-DD
         status: "active",
       };
+
+      console.log("Creating employee with data:", createData);
 
       const createdEmployee = await employeeAPI.createEmployee(createData);
 
@@ -189,7 +202,24 @@ export default function EmployeesPage() {
       }
     } catch (error) {
       console.error("Error creating employee:", error);
-      alert("Failed to create employee. Please try again.");
+      
+      // Show more specific error message
+      let errorMessage = "Failed to create employee. Please try again.";
+      
+      if (error instanceof Error) {
+        // Try to extract meaningful error from the response
+        if (error.message.includes('employee_id')) {
+          errorMessage = "An employee with this ID already exists. Please use a different ID.";
+        } else if (error.message.includes('email')) {
+          errorMessage = "An employee with this email already exists. Please use a different email.";
+        } else if (error.message.includes('required')) {
+          errorMessage = "Please fill in all required fields correctly.";
+        } else if (error.message) {
+          errorMessage = `Error: ${error.message}`;
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsCreating(false);
     }
@@ -208,8 +238,9 @@ export default function EmployeesPage() {
     setShowCreateModal(false);
   };
 
-  // Filter and sort employees
-  const filteredEmployees = employees
+  // Filter and sort employees - ensure employees is always an array
+  const safeEmployeesForFilter = Array.isArray(employees) ? employees : [];
+  const filteredEmployees = safeEmployeesForFilter
     .filter((employee) => {
       const matchesSearch =
         employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

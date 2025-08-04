@@ -49,11 +49,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         """
         Instantiates and returns the list of permissions that this view requires.
         """
-        if self.action == "create":
-            permission_classes = [IsAuthenticated]
-        else:
-            permission_classes = [AllowAny]
-        return [permission() for permission in permission_classes]
+        # Allow creating employees without authentication for demo purposes
+        return [AllowAny()]
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -63,8 +60,22 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return EmployeeSerializer
 
     def perform_create(self, serializer):
-        # User must be authenticated to create an employee
-        employee = serializer.save(user=self.request.user)
+        # Get the user from request, or create/get a default user for demo
+        user = self.request.user if self.request.user.is_authenticated else None
+        
+        if not user:
+            # For demo purposes, create or get a default user
+            from django.contrib.auth.models import User
+            user, created = User.objects.get_or_create(
+                username='demo_user',
+                defaults={
+                    'email': 'demo@example.com',
+                    'first_name': 'Demo',
+                    'last_name': 'User'
+                }
+            )
+        
+        employee = serializer.save(user=user)
         # Create default payment information
         PaymentInformation.objects.create(employee=employee)
 

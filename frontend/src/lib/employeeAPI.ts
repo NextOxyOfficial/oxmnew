@@ -48,12 +48,51 @@ class EmployeeAPI {
       const response = await fetch(url, config);
 
       if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "Network error" }));
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        );
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { message: "Network error" };
+        }
+        
+        console.error(`API Error Response:`, {
+          status: response.status,
+          statusText: response.statusText,
+          url,
+          errorData
+        });
+        
+        // Try to extract a meaningful error message
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        if (errorData) {
+          if (typeof errorData === 'string') {
+            errorMessage = errorData;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (errorData.non_field_errors) {
+            errorMessage = Array.isArray(errorData.non_field_errors) 
+              ? errorData.non_field_errors.join(', ')
+              : errorData.non_field_errors;
+          } else {
+            // Try to extract field-specific errors
+            const fieldErrors = [];
+            for (const [field, errors] of Object.entries(errorData)) {
+              if (Array.isArray(errors)) {
+                fieldErrors.push(`${field}: ${errors.join(', ')}`);
+              } else if (typeof errors === 'string') {
+                fieldErrors.push(`${field}: ${errors}`);
+              }
+            }
+            if (fieldErrors.length > 0) {
+              errorMessage = fieldErrors.join('; ');
+            }
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       return await response.json();

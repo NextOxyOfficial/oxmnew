@@ -157,8 +157,12 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
             "hiring_date",
             "photo",
             "status",
+            "user",  # Include user field
         ]
-        extra_kwargs = {"id": {"read_only": True}}
+        extra_kwargs = {
+            "id": {"read_only": True},
+            "user": {"read_only": True}  # User is set automatically in perform_create
+        }
 
     def validate_employee_id(self, value):
         """Ensure employee_id is unique"""
