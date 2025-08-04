@@ -123,7 +123,7 @@ export default function CustomersPage() {
     try {
       setIsLoading(true);
       const newCustomer = await ApiService.createCustomer(customerData);
-      setCustomers((prev) => [newCustomer, ...prev]);
+      setCustomers((prev) => Array.isArray(prev) ? [newCustomer, ...prev] : [newCustomer]);
       setShowCreateModal(false);
       setNewCustomer({
         name: "",
@@ -183,16 +183,9 @@ export default function CustomersPage() {
       setIsDeleting(true);
 
       await ApiService.deleteCustomer(customerToDelete.id);
-      setCustomers((prev) => prev.filter((c) => c.id !== customerToDelete.id));
+      setCustomers((prev) => Array.isArray(prev) ? prev.filter((c) => c.id !== customerToDelete.id) : []);
       setCustomerToDelete(null);
       setShowDeleteModal(false);
-
-      // Remove customer from list
-      setCustomers((prev) => prev.filter((c) => c.id !== customerToDelete.id));
-
-      // Close modal
-      setShowDeleteModal(false);
-      setCustomerToDelete(null);
     } catch (err) {
       console.error("Error deleting customer:", err);
       alert("Failed to delete customer. Please try again.");
