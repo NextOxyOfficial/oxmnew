@@ -17,8 +17,15 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [sortBy, setSortBy] = useState("name");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
+  const [loadingStates, setLoadingStates] = useState<{
+    deleting: { [key: string]: boolean };
+    navigating: { [key: string]: boolean };
+    addProduct: boolean;
+  }>({
+    deleting: {},
+    navigating: {},
+    addProduct: false,
+  });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [notification, setNotification] = useState<{
@@ -195,13 +202,20 @@ export default function ProductsPage() {
   }, [currentPage, pageSize, searchTerm, filterCategory, sortBy]);
 
   const handleProductClick = (product: Product) => {
-    setIsNavigating(true);
+    setLoadingStates(prev => ({
+      ...prev,
+      navigating: { ...prev.navigating, [product.id]: true }
+    }));
     setTimeout(() => {
       router.push(`/dashboard/products/${product.id}`);
     }, 300);
   };
 
   const handleEditProduct = (product: Product) => {
+    setLoadingStates(prev => ({
+      ...prev,
+      navigating: { ...prev.navigating, [`edit-${product.id}`]: true }
+    }));
     // Navigate to edit page
     router.push(`/dashboard/products/${product.id}/edit`);
   };
@@ -209,7 +223,10 @@ export default function ProductsPage() {
   const handleDeleteProduct = async () => {
     if (!productToDelete) return;
 
-    setIsDeleting(true);
+    setLoadingStates(prev => ({
+      ...prev,
+      deleting: { ...prev.deleting, [productToDelete.id]: true }
+    }));
     try {
       await ApiService.deleteProduct(productToDelete.id);
 
@@ -229,7 +246,10 @@ export default function ProductsPage() {
       // Show error notification
       showNotification("error", "Failed to delete product. Please try again.");
     } finally {
-      setIsDeleting(false);
+      setLoadingStates(prev => ({
+        ...prev,
+        deleting: { ...prev.deleting, [productToDelete.id]: false }
+      }));
     }
   };
 
@@ -244,7 +264,10 @@ export default function ProductsPage() {
   };
 
   const handleAddProduct = () => {
-    setIsNavigating(true);
+    setLoadingStates(prev => ({
+      ...prev,
+      addProduct: true
+    }));
     setTimeout(() => {
       router.push("/dashboard/products/add");
     }, 300);
@@ -577,14 +600,14 @@ export default function ProductsPage() {
                   {/* Add Product Button */}
                   <button
                     onClick={handleAddProduct}
-                    disabled={isNavigating}
+                    disabled={loadingStates.addProduct}
                     className={`px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 flex-shrink-0 ${
-                      isNavigating
+                      loadingStates.addProduct
                         ? "opacity-50 cursor-not-allowed"
                         : "cursor-pointer"
                     }`}
                   >
-                    {isNavigating ? (
+                    {loadingStates.addProduct ? (
                       <>
                         <svg
                           className="animate-spin h-4 w-4"
@@ -1012,14 +1035,14 @@ export default function ProductsPage() {
                               <div className="text-center">
                                 <button
                                   onClick={() => handleProductClick(product)}
-                                  disabled={isNavigating}
+                                  disabled={loadingStates.navigating[product.id]}
                                   className={`text-xs transition-colors ${
-                                    isNavigating
+                                    loadingStates.navigating[product.id]
                                       ? "text-slate-500 cursor-not-allowed"
                                       : "text-cyan-400 hover:text-cyan-300"
                                   }`}
                                 >
-                                  {isNavigating ? (
+                                  {loadingStates.navigating[product.id] ? (
                                     <span className="flex items-center gap-1">
                                       <svg
                                         className="animate-spin h-3 w-3"
@@ -1279,22 +1302,49 @@ export default function ProductsPage() {
                                 e.stopPropagation();
                                 handleEditProduct(product);
                               }}
-                              className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
+                              disabled={loadingStates.navigating[`edit-${product.id}`]}
+                              className={`text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors ${
+                                loadingStates.navigating[`edit-${product.id}`]
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "cursor-pointer"
+                              }`}
                               title="Edit"
                             >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
+                              {loadingStates.navigating[`edit-${product.id}`] ? (
+                                <svg
+                                  className="animate-spin w-4 h-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  ></circle>
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  ></path>
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
+                              )}
                             </button>
                             <button
                               onClick={(e) => {
@@ -1323,15 +1373,15 @@ export default function ProductsPage() {
                                 e.stopPropagation();
                                 handleProductClick(product);
                               }}
-                              disabled={isNavigating}
+                              disabled={loadingStates.navigating[product.id]}
                               className={`bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/30 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium flex items-center gap-1.5 ${
-                                isNavigating
+                                loadingStates.navigating[product.id]
                                   ? "opacity-50 cursor-not-allowed"
                                   : "cursor-pointer"
                               }`}
                               title="Add Stock"
                             >
-                              {isNavigating ? (
+                              {loadingStates.navigating[product.id] ? (
                                 <>
                                   <svg
                                     className="animate-spin h-3 w-3"
@@ -1427,10 +1477,10 @@ export default function ProductsPage() {
                   </button>
                   <button
                     onClick={handleDeleteProduct}
-                    disabled={isDeleting}
+                    disabled={productToDelete && loadingStates.deleting[productToDelete.id]}
                     className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isDeleting ? "Deleting..." : "Delete"}
+                    {productToDelete && loadingStates.deleting[productToDelete.id] ? "Deleting..." : "Delete"}
                   </button>
                 </div>
               </div>
