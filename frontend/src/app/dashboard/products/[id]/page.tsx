@@ -99,12 +99,17 @@ export default function ProductDetailsPage() {
     setIsLoadingHistory(true);
     try {
       console.log(`Loading stock history for product ${product.id}...`);
-      const movements = await ApiService.getProductStockMovements(product.id);
-      console.log("Raw movements data:", movements);
+      const response = await ApiService.getProductStockMovements(product.id);
+      console.log("Raw movements data:", response);
 
-      // Check if we got valid data
-      if (!Array.isArray(movements)) {
-        console.error("Expected array but got:", typeof movements, movements);
+      // Handle both paginated and direct array responses
+      let movements;
+      if (Array.isArray(response)) {
+        movements = response;
+      } else if (response && Array.isArray(response.results)) {
+        movements = response.results;
+      } else {
+        console.error("Expected array but got:", typeof response, response);
         setStockHistory([]);
         return;
       }
