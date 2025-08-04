@@ -917,7 +917,7 @@ export default function AddProductPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("manual")}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                   activeTab === "manual"
                     ? "border-cyan-500 text-cyan-400"
                     : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"
@@ -928,7 +928,7 @@ export default function AddProductPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("file")}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                   activeTab === "file"
                     ? "border-cyan-500 text-cyan-400"
                     : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300"

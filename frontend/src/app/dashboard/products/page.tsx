@@ -343,7 +343,7 @@ export default function ProductsPage() {
             <p className="text-red-400/70 mb-4">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+              className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors cursor-pointer"
             >
               Try Again
             </button>
@@ -678,7 +678,7 @@ export default function ProductsPage() {
                   <select
                     value={filterCategory}
                     onChange={(e) => setFilterCategory(e.target.value)}
-                    className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[160px]"
+                    className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[160px] cursor-pointer"
                   >
                     <option value="all" className="bg-slate-800">
                       All Categories
@@ -698,7 +698,7 @@ export default function ProductsPage() {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[180px]"
+                    className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[180px] cursor-pointer"
                   >
                     <option value="name" className="bg-slate-800">
                       Sort by Name
@@ -733,7 +733,7 @@ export default function ProductsPage() {
                       <div className="flex-1 min-w-0 pr-2">
                         <button
                           onClick={() => handleProductClick(product)}
-                          className="text-left w-full group"
+                          className="text-left w-full group cursor-pointer"
                         >
                           <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 cursor-pointer transition-colors">
                             {product.name}
@@ -1036,7 +1036,7 @@ export default function ProductsPage() {
                                 <button
                                   onClick={() => handleProductClick(product)}
                                   disabled={loadingStates.navigating[product.id]}
-                                  className={`text-xs transition-colors ${
+                                  className={`text-xs transition-colors cursor-pointer ${
                                     loadingStates.navigating[product.id]
                                       ? "text-slate-500 cursor-not-allowed"
                                       : "text-cyan-400 hover:text-cyan-300"
@@ -1111,7 +1111,7 @@ export default function ProductsPage() {
                         <td className="py-3 px-4 max-w-xs">
                           <button
                             onClick={() => handleProductClick(product)}
-                            className="text-left group w-full"
+                            className="text-left group w-full cursor-pointer"
                           >
                             <div className="text-sm font-medium text-slate-100 line-clamp-2 leading-tight group-hover:text-cyan-400 cursor-pointer transition-colors">
                               {product.name}
@@ -1471,14 +1471,14 @@ export default function ProductsPage() {
                 <div className="flex space-x-3">
                   <button
                     onClick={cancelDelete}
-                    className="flex-1 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+                    className="flex-1 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDeleteProduct}
                     disabled={productToDelete && loadingStates.deleting[productToDelete.id]}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {productToDelete && loadingStates.deleting[productToDelete.id] ? "Deleting..." : "Delete"}
                   </button>
