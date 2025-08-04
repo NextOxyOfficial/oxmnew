@@ -78,12 +78,26 @@ export default function CustomersPage() {
         setError(null);
 
         const fetchedCustomers = await ApiService.getCustomers();
-        setCustomers(fetchedCustomers);
+        
+        // Ensure fetchedCustomers is an array
+        if (Array.isArray(fetchedCustomers)) {
+          setCustomers(fetchedCustomers);
+        } else if (fetchedCustomers && Array.isArray(fetchedCustomers.data)) {
+          // Handle case where data is wrapped in a data property
+          setCustomers(fetchedCustomers.data);
+        } else if (fetchedCustomers && Array.isArray(fetchedCustomers.results)) {
+          // Handle paginated response format
+          setCustomers(fetchedCustomers.results);
+        } else {
+          console.warn("Unexpected customers response format:", fetchedCustomers);
+          setCustomers([]);
+        }
       } catch (err) {
         console.error("Error fetching customers:", err);
         setError(
           err instanceof Error ? err.message : "Failed to fetch customers"
         );
+        setCustomers([]); // Set empty array on error
       } finally {
         setIsLoading(false);
       }
@@ -129,13 +143,14 @@ export default function CustomersPage() {
     }
   };
 
-  // Calculate stats
-  const totalCustomers = customers.length;
-  const activeCustomers = customers.filter((c) => c.status === "active").length;
-  const totalRevenue = customers.reduce(
-    (sum, customer) => sum + (customer.total_spent || 0),
-    0
-  );
+  // Calculate stats with safety checks
+  const totalCustomers = Array.isArray(customers) ? customers.length : 0;
+  const activeCustomers = Array.isArray(customers) 
+    ? customers.filter((c) => c.status === "active").length 
+    : 0;
+  const totalRevenue = Array.isArray(customers)
+    ? customers.reduce((sum, customer) => sum + (customer.total_spent || 0), 0)
+    : 0;
 
   // Handle view customer details
   const handleViewCustomer = (customer: Customer) => {
@@ -223,38 +238,40 @@ export default function CustomersPage() {
     }
   };
 
-  // Filter and sort customers
-  const filteredCustomers = customers
-    .filter((customer) => {
-      const matchesSearch =
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (customer.phone && customer.phone.includes(searchTerm));
-      const matchesStatus =
-        filterStatus === "all" || customer.status === filterStatus;
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "orders-high":
-          return (b.total_orders || 0) - (a.total_orders || 0);
-        case "orders-low":
-          return (a.total_orders || 0) - (b.total_orders || 0);
-        case "spent-high":
-          return (b.total_spent || 0) - (a.total_spent || 0);
-        case "spent-low":
-          return (a.total_spent || 0) - (b.total_spent || 0);
-        case "recent":
-          return (
-            new Date(b.last_order_date || 0).getTime() -
-            new Date(a.last_order_date || 0).getTime()
-          );
-        default:
-          return 0;
-      }
-    });
+  // Filter and sort customers with safety checks
+  const filteredCustomers = Array.isArray(customers) 
+    ? customers
+        .filter((customer) => {
+          const matchesSearch =
+            customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (customer.phone && customer.phone.includes(searchTerm));
+          const matchesStatus =
+            filterStatus === "all" || customer.status === filterStatus;
+          return matchesSearch && matchesStatus;
+        })
+        .sort((a, b) => {
+          switch (sortBy) {
+            case "name":
+              return a.name.localeCompare(b.name);
+            case "orders-high":
+              return (b.total_orders || 0) - (a.total_orders || 0);
+            case "orders-low":
+              return (a.total_orders || 0) - (b.total_orders || 0);
+            case "spent-high":
+              return (b.total_spent || 0) - (a.total_spent || 0);
+            case "spent-low":
+              return (a.total_spent || 0) - (b.total_spent || 0);
+            case "recent":
+              return (
+                new Date(b.last_order_date || 0).getTime() -
+                new Date(a.last_order_date || 0).getTime()
+              );
+            default:
+              return 0;
+          }
+        })
+    : [];
 
   // Loading state
   if (isLoading) {

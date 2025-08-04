@@ -1025,7 +1025,24 @@ export class ApiService {
 
   // Customer methods
   static async getCustomers() {
-    return this.get("/customers/");
+    try {
+      const result = await this.get("/customers/");
+      
+      // Ensure we return an array
+      if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else if (result && Array.isArray(result.results)) {
+        return result.results;
+      } else {
+        console.warn("Unexpected customers response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async getCustomer(id: number) {
