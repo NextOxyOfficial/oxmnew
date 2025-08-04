@@ -846,8 +846,26 @@ export class ApiService {
   }
 
   // Products methods
-  static async getProducts() {
-    return this.get("/products/");
+  static async getProducts(params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    category?: string;
+    ordering?: string;
+  }) {
+    let endpoint = "/products/";
+
+    if (params && Object.keys(params).length > 0) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, value.toString());
+        }
+      });
+      endpoint += `?${searchParams.toString()}`;
+    }
+
+    return this.get(endpoint);
   }
 
   static async searchProducts(query: string) {

@@ -5,6 +5,7 @@ import { ApiService } from "@/lib/api";
 import { Product, ProductVariant } from "@/types/product";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Pagination from "@/components/ui/Pagination";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -25,6 +26,12 @@ export default function ProductsPage() {
     type: "success" | "error";
     message: string;
   }>({ isVisible: false, type: "success", message: "" });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const showNotification = (type: "success" | "error", message: string) => {
     setNotification({ isVisible: true, type, message });
@@ -99,30 +106,81 @@ export default function ProductsPage() {
     }
   };
 
-  // Fetch products and categories on component mount
+  // Fetch products and categories on component mount and when pagination changes
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        const productsData = await ApiService.getProducts();
+        // Build search parameters
+        const params: any = {
+          page: currentPage,
+          page_size: pageSize,
+        };
 
-        // Handle different response formats
-        const productsList = Array.isArray(productsData)
-          ? productsData
-          : productsData?.results || [];
-        setProducts(productsList);
+        // Add search if exists
+        if (searchTerm.trim()) {
+          params.search = searchTerm.trim();
+        }
 
-        // Extract unique categories from products
-        const uniqueCategories = [
-          ...new Set(
-            productsList
-              .map((product: Product) => product.category_name)
-              .filter(Boolean)
-          ),
-        ] as string[];
-        setCategories(uniqueCategories);
+        // Add category filter if not "all"
+        if (filterCategory !== "all") {
+          params.category__name = filterCategory;
+        }
+
+        // Add ordering
+        if (sortBy) {
+          switch (sortBy) {
+            case "name":
+              params.ordering = "name";
+              break;
+            case "stock-high":
+              params.ordering = "-stock";
+              break;
+            case "stock-low":
+              params.ordering = "stock";
+              break;
+            case "price-high":
+              params.ordering = "-sell_price";
+              break;
+            case "price-low":
+              params.ordering = "sell_price";
+              break;
+            default:
+              params.ordering = "name";
+          }
+        }
+
+        const productsData = await ApiService.getProducts(params);
+
+        // Handle paginated response
+        if (productsData.results) {
+          setProducts(productsData.results);
+          setTotalItems(productsData.count);
+          setTotalPages(Math.ceil(productsData.count / pageSize));
+        } else {
+          // Handle non-paginated response (fallback)
+          const productsList = Array.isArray(productsData) ? productsData : [];
+          setProducts(productsList);
+          setTotalItems(productsList.length);
+          setTotalPages(1);
+        }
+
+        // Extract unique categories from all products (need to fetch all for categories)
+        if (currentPage === 1 && categories.length === 0) {
+          // Fetch all products to get categories
+          const allProductsData = await ApiService.getProducts({ page_size: 1000 });
+          const allProducts = allProductsData.results || allProductsData || [];
+          const uniqueCategories = [
+            ...new Set(
+              allProducts
+                .map((product: Product) => product.category_name)
+                .filter(Boolean)
+            ),
+          ] as string[];
+          setCategories(uniqueCategories);
+        }
       } catch (error) {
         console.error("Error fetching products:", error);
         setError(
@@ -134,7 +192,7 @@ export default function ProductsPage() {
     };
 
     fetchData();
-  }, []);
+  }, [currentPage, pageSize, searchTerm, filterCategory, sortBy]);
 
   const handleProductClick = (product: Product) => {
     setIsNavigating(true);
@@ -192,8 +250,23 @@ export default function ProductsPage() {
     }, 300);
   };
 
-  // Calculate totals from dynamic data using backend structure
-  const totalProducts = products.length;
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
+  // Reset to first page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCategory, sortBy]);
+
+  // Calculate totals from current page data using backend structure
+  const totalProducts = totalItems; // Use total from pagination
   const totalBuyPrice = products.reduce((sum, product) => {
     const { totalBuyPrice } = getProductTotals(product);
     return sum + totalBuyPrice;
@@ -206,42 +279,8 @@ export default function ProductsPage() {
 
   const estimatedProfit = totalSalePrice - totalBuyPrice;
 
-  // Filter and sort products
-  const filteredProducts = products
-    .filter((product) => {
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch =
-        product.name.toLowerCase().includes(searchLower) ||
-        (product.product_code &&
-          product.product_code.toLowerCase().includes(searchLower));
-      const matchesCategory =
-        filterCategory === "all" || product.category_name === filterCategory;
-      return matchesSearch && matchesCategory;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "stock-high":
-          const aStock = getDisplayStock(a);
-          const bStock = getDisplayStock(b);
-          return bStock - aStock;
-        case "stock-low":
-          const aStockLow = getDisplayStock(a);
-          const bStockLow = getDisplayStock(b);
-          return aStockLow - bStockLow;
-        case "price-high":
-          const aSellPrice = getDisplayPrices(a).sellPrice;
-          const bSellPrice = getDisplayPrices(b).sellPrice;
-          return bSellPrice - aSellPrice;
-        case "price-low":
-          const aSellPriceLow = getDisplayPrices(a).sellPrice;
-          const bSellPriceLow = getDisplayPrices(b).sellPrice;
-          return aSellPriceLow - bSellPriceLow;
-        default:
-          return 0;
-      }
-    });
+  // Products are already filtered and sorted by the backend, so we use them directly
+  const filteredProducts = products;
 
   // Loading state
   if (isLoading) {
@@ -525,7 +564,7 @@ export default function ProductsPage() {
           </div>
 
           {/* Products Table/List */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg flex flex-col h-[calc(100vh-19rem)]">
+          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg flex flex-col">
             {/* Header and filters - Fixed at top */}
             <div className="sm:p-4 p-2 flex-shrink-0 border-b border-slate-700/50">
               <div className="flex flex-col gap-4">
