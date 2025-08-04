@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { ApiService } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CurrencyContextType {
   currency: string;
@@ -42,8 +43,18 @@ export function CurrencyProvider({ children }: CurrencyProviderProps) {
   const [currency, setCurrencyState] = useState<string>("USD");
   const [currencySymbol, setCurrencySymbolState] = useState<string>("$");
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   const fetchCurrencySettings = async () => {
+    // Only fetch settings if user is authenticated
+    if (!isAuthenticated) {
+      // Use default values when not authenticated
+      setCurrencyState("USD");
+      setCurrencySymbolState("$");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const response = await ApiService.getSettings();
@@ -75,8 +86,11 @@ export function CurrencyProvider({ children }: CurrencyProviderProps) {
   };
 
   useEffect(() => {
-    fetchCurrencySettings();
-  }, []);
+    // Only fetch currency settings after auth is loaded
+    if (!authLoading) {
+      fetchCurrencySettings();
+    }
+  }, [isAuthenticated, authLoading]);
 
   const value: CurrencyContextType = {
     currency,
