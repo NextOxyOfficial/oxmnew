@@ -83,29 +83,18 @@ const Pagination: React.FC<PaginationProps> = ({
 
   if (totalPages <= 1) {
     return (
-      <div className={`flex items-center justify-between ${className}`}>
+      <div className={`flex items-center justify-center ${className}`}>
         <div className="text-sm text-slate-400">
-          Showing {totalItems} item{totalItems === 1 ? '' : 's'}
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-slate-400">Items per page:</span>
-          <select
-            value={itemsPerPage}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="bg-slate-800 border border-slate-700 text-white rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
+          Showing {totalItems} item{totalItems === 1 ? "" : "s"}
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 ${className}`}>
+    <div
+      className={`flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 ${className}`}
+    >
       {/* Items info */}
       <div className="text-sm text-slate-400">
         Showing {startItem}-{endItem} of {totalItems} items
@@ -117,7 +106,7 @@ const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => handlePageClick(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="px-3 py-2 text-sm border border-slate-700 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-2 text-sm border border-slate-700 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
           Previous
         </button>
@@ -128,13 +117,13 @@ const Pagination: React.FC<PaginationProps> = ({
             <button
               key={index}
               onClick={() => handlePageClick(page)}
-              disabled={page === '...'}
+              disabled={page === "..."}
               className={`px-3 py-2 text-sm rounded-lg transition-colors ${
                 page === currentPage
-                  ? 'bg-cyan-600 text-white'
-                  : page === '...'
-                  ? 'cursor-default text-slate-500'
-                  : 'border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white'
+                  ? "bg-cyan-600 text-white"
+                  : page === "..."
+                  ? "cursor-default text-slate-500"
+                  : "border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
               }`}
             >
               {page}
@@ -146,25 +135,10 @@ const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => handlePageClick(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="px-3 py-2 text-sm border border-slate-700 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-2 text-sm border border-slate-700 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
           Next
         </button>
-      </div>
-
-      {/* Items per page selector */}
-      <div className="flex items-center space-x-2">
-        <span className="text-sm text-slate-400">Items per page:</span>
-        <select
-          value={itemsPerPage}
-          onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="bg-slate-800 border border-slate-700 text-white rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-        >
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-          <option value={50}>50</option>
-          <option value={100}>100</option>
-        </select>
       </div>
     </div>
   );

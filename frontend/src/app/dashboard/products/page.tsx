@@ -698,9 +698,9 @@ export default function ProductsPage() {
             </div>
 
             {/* Scrollable content area */}
-            <div className="flex-1 overflow-hidden sm:p-4 p-2">
+            <div className="flex-1 overflow-x-auto">
               {/* Mobile Card Layout */}
-              <div className="block lg:hidden h-full overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+              <div className="block lg:hidden space-y-4 p-2 sm:p-4">
                 {filteredProducts.map((product) => (
                   <div
                     key={product.id}
@@ -1058,9 +1058,9 @@ export default function ProductsPage() {
               </div>
 
               {/* Desktop Table Layout */}
-              <div className="hidden lg:block h-full overflow-y-auto pr-2 custom-scrollbar">
+              <div className="hidden lg:block">
                 <table className="min-w-full">
-                  <thead className="sticky top-0 bg-slate-900/95 backdrop-blur-sm z-10">
+                  <thead className="bg-slate-900/95 backdrop-blur-sm z-10">
                     <tr className="border-b border-slate-700/50 text-left">
                       <th className="py-3 px-4 text-sm font-medium text-slate-300">
                         Product Name
@@ -1367,7 +1367,7 @@ export default function ProductsPage() {
               </div>
 
               {/* No products found */}
-              {filteredProducts.length === 0 && (
+              {filteredProducts.length === 0 && !isLoading && (
                 <div className="h-full flex flex-col items-center justify-center text-center py-12">
                   <svg
                     className="w-12 h-12 text-gray-400 mx-auto mb-4"
@@ -1391,6 +1391,20 @@ export default function ProductsPage() {
                 </div>
               )}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="p-4 border-t border-slate-700/50">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={pageSize}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                />
+              </div>
+            )}
           </div>
 
           {/* Delete Confirmation Modal */}
