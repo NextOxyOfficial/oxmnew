@@ -22,32 +22,61 @@ export const bankingAPI = {
 
   // Get all bank accounts
   getAccounts: async (): Promise<BankAccount[]> => {
-    const response = await fetch(`${API_BASE_URL}/banking/accounts/`, {
-      headers: bankingAPI.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/banking/accounts/`, {
+        headers: bankingAPI.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch bank accounts");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch bank accounts: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Ensure we return an array
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Error fetching bank accounts:', error);
+      return []; // Return empty array on error
     }
-
-    return response.json();
   },
 
   // Get banking overview statistics
   getBankingOverview: async (): Promise<BankingOverviewStats> => {
-    // Since there's no overview endpoint, we'll calculate from accounts
-    const accounts = await bankingAPI.getAccounts();
-    const totalBalance = accounts.reduce(
-      (sum, account) => sum + account.balance,
-      0
-    );
+    try {
+      // Since there's no overview endpoint, we'll calculate from accounts
+      const accounts = await bankingAPI.getAccounts();
+      
+      // Ensure accounts is an array
+      const accountsArray = Array.isArray(accounts) ? accounts : [];
+      
+      const totalBalance = accountsArray.reduce(
+        (sum, account) => {
+          // Handle balance as string or number
+          const balance = typeof account.balance === 'string' 
+            ? parseFloat(account.balance) 
+            : (account.balance || 0);
+          return sum + balance;
+        },
+        0
+      );
 
-    return {
-      total_accounts: accounts.length,
-      total_balance: totalBalance,
-      accounts: accounts.slice(0, 4), // Show first 4 accounts
-      monthly_change_percentage: 2.3, // Mock value for now
-    };
+      return {
+        total_accounts: accountsArray.length,
+        total_balance: totalBalance,
+        accounts: accountsArray.slice(0, 4), // Show first 4 accounts
+        monthly_change_percentage: 2.3, // Mock value for now
+      };
+    } catch (error) {
+      console.error('Error fetching banking overview:', error);
+      // Return default values if API call fails
+      return {
+        total_accounts: 0,
+        total_balance: 0,
+        accounts: [],
+        monthly_change_percentage: 0,
+      };
+    }
   },
 
   // Get a specific bank account
