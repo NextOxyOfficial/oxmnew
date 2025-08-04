@@ -1261,10 +1261,19 @@ export class ApiService {
       console.log("Fetching subscription plans...");
       const result = await this.get("/plans/");
       console.log("Subscription plans result:", result);
-      return result;
+      
+      // Ensure we return an array
+      if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected subscription plans response format:", result);
+        return [];
+      }
     } catch (error) {
       console.error("Error fetching subscription plans:", error);
-      throw error;
+      return []; // Return empty array instead of throwing
     }
   }
 
@@ -1273,10 +1282,19 @@ export class ApiService {
       console.log("Fetching SMS packages...");
       const result = await this.get("/sms-packages/");
       console.log("SMS packages result:", result);
-      return result;
+      
+      // Ensure we return an array
+      if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected SMS packages response format:", result);
+        return [];
+      }
     } catch (error) {
       console.error("Error fetching SMS packages:", error);
-      throw error;
+      return []; // Return empty array instead of throwing
     }
   }
 

@@ -370,14 +370,36 @@ export default function SubscriptionsPage() {
 
         try {
           plansData = await ApiService.getSubscriptionPlans();
+          // Ensure plansData is an array
+          if (!Array.isArray(plansData)) {
+            console.warn("Plans data is not an array:", plansData);
+            // Check if it's wrapped in a data property
+            if (plansData && Array.isArray(plansData.data)) {
+              plansData = plansData.data;
+            } else {
+              plansData = [];
+            }
+          }
         } catch (planError) {
           console.error("Failed to fetch subscription plans:", planError);
+          plansData = [];
         }
 
         try {
           packagesData = await ApiService.getSmsPackages();
+          // Ensure packagesData is an array
+          if (!Array.isArray(packagesData)) {
+            console.warn("Packages data is not an array:", packagesData);
+            // Check if it's wrapped in a data property
+            if (packagesData && Array.isArray(packagesData.data)) {
+              packagesData = packagesData.data;
+            } else {
+              packagesData = [];
+            }
+          }
         } catch (packageError) {
           console.error("Failed to fetch SMS packages:", packageError);
+          packagesData = [];
         }
 
         try {
@@ -389,25 +411,25 @@ export default function SubscriptionsPage() {
           );
         }
 
-        // Process plans data
-        const processedPlans = (plansData || []).map(
-          (plan: SubscriptionPlan) => ({
-            ...plan,
-            cta:
-              plan.name === "free" ? "Start Free" : `Upgrade to ${plan.name}`,
-            popular: plan.is_popular || false,
-          })
-        );
+        // Process plans data with additional safety checks
+        const processedPlans = Array.isArray(plansData) 
+          ? plansData.map((plan: SubscriptionPlan) => ({
+              ...plan,
+              cta:
+                plan.name === "free" ? "Start Free" : `Upgrade to ${plan.name}`,
+              popular: plan.is_popular || false,
+            }))
+          : [];
         setPlans(processedPlans);
 
-        // Process SMS packages data
-        const processedPackages = (packagesData || []).map(
-          (pkg: SmsPackage) => ({
-            ...pkg,
-            sms: pkg.sms_count,
-            popular: pkg.is_popular || false,
-          })
-        );
+        // Process SMS packages data with additional safety checks
+        const processedPackages = Array.isArray(packagesData)
+          ? packagesData.map((pkg: SmsPackage) => ({
+              ...pkg,
+              sms: pkg.sms_count,
+              popular: pkg.is_popular || false,
+            }))
+          : [];
         setSmsPackages(processedPackages);
 
         // Set current subscription - default to free if no subscription found
