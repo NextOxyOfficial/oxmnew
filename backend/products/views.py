@@ -505,7 +505,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                         name = row.get("name", "").strip()
                         if not name:
                             products_errors.append(
-                                f"Row {row_num}: Product name is required"
+                                f"Row {row_num}: Product name is required (cannot be empty)"
                             )
                             continue
 
@@ -529,23 +529,51 @@ class ProductViewSet(viewsets.ModelViewSet):
                         }
 
                         # Parse prices with validation
+                        buy_price_str = str(row.get("buy_price", "")).strip()
+                        sell_price_str = str(row.get("sell_price", "")).strip()
+                        stock_str = str(row.get("stock", "")).strip()
+
+                        # Check for empty required fields
+                        missing_fields = []
+                        if not buy_price_str or buy_price_str.lower() in [
+                            "",
+                            "none",
+                            "null",
+                        ]:
+                            missing_fields.append("buy_price")
+                        if not sell_price_str or sell_price_str.lower() in [
+                            "",
+                            "none",
+                            "null",
+                        ]:
+                            missing_fields.append("sell_price")
+                        if not stock_str or stock_str.lower() in ["", "none", "null"]:
+                            missing_fields.append("stock")
+
+                        if missing_fields:
+                            missing_fields_text = ", ".join(missing_fields)
+                            products_errors.append(
+                                f"Row {row_num}: Product '{name}' is missing required field(s): {missing_fields_text}"
+                            )
+                            continue
+
                         try:
-                            buy_price = float(row.get("buy_price", 0))
-                            sell_price = float(row.get("sell_price", 0))
+                            buy_price = float(buy_price_str)
+                            sell_price = float(sell_price_str)
 
                             if buy_price <= 0:
                                 products_errors.append(
-                                    f"Row {row_num}: Buy price must be greater than 0"
+                                    f"Row {row_num}: Product '{name}' - Buy price must be greater than 0"
                                 )
                                 continue
                             if sell_price <= 0:
                                 products_errors.append(
-                                    f"Row {row_num}: Sell price must be greater than 0"
+                                    f"Row {row_num}: Product '{name}' - Sell price must be greater than 0"
                                 )
                                 continue
                             if sell_price < buy_price:
                                 products_errors.append(
-                                    f"Row {row_num}: Sell price must be >= buy price"
+                                    f"Row {row_num}: Product '{name}' - Sell price must be >= buy price"
                                 )
                                 continue
 
@@ -553,22 +581,24 @@ class ProductViewSet(viewsets.ModelViewSet):
                             product_data["sell_price"] = sell_price
                         except (ValueError, TypeError):
                             products_errors.append(
-                                f"Row {row_num}: Invalid price values"
+                                f"Row {row_num}: Product '{name}' - Invalid price values (buy_price: '{buy_price_str}', sell_price: '{sell_price_str}')"
                             )
                             continue
 
                         # Parse stock
                         try:
-                            stock = int(row.get("stock", 0))
+                            stock = int(
+                                float(stock_str)
+                            )  # Convert via float first to handle decimal inputs
                             if stock <= 0:
                                 products_errors.append(
-                                    f"Row {row_num}: Stock quantity must be greater than 0"
+                                    f"Row {row_num}: Product '{name}' - Stock quantity must be greater than 0"
                                 )
                                 continue
                             product_data["stock"] = stock
                         except (ValueError, TypeError):
                             products_errors.append(
-                                f"Row {row_num}: Invalid stock value"
+                                f"Row {row_num}: Product '{name}' - Invalid stock value ('{stock_str}')"
                             )
                             continue
 
@@ -591,7 +621,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                                 product_data["category"] = category
                             except Exception as e:
                                 products_errors.append(
-                                    f"Row {row_num}: Error with category: {str(e)}"
+                                    f"Row {row_num}: Product '{name}' - Error with category '{category_name}': {str(e)}"
                                 )
                                 continue
 
@@ -616,7 +646,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                                 product_data["supplier"] = supplier
                             except Exception as e:
                                 products_errors.append(
-                                    f"Row {row_num}: Error with supplier: {str(e)}"
+                                    f"Row {row_num}: Product '{name}' - Error with supplier '{supplier_name}': {str(e)}"
                                 )
                                 continue
 
@@ -626,7 +656,12 @@ class ProductViewSet(viewsets.ModelViewSet):
                         successful_rows.append({"row": row_num, "name": product.name})
 
                     except Exception as e:
-                        products_errors.append(f"Row {row_num}: {str(e)}")
+                        # Try to include product name in error if available
+                        error_msg = f"Row {row_num}: "
+                        if "name" in locals() and name:
+                            error_msg += f"Product '{name}' - "
+                        error_msg += str(e)
+                        products_errors.append(error_msg)
                         continue
 
             return Response(
