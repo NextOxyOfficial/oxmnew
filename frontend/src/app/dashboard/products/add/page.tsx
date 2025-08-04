@@ -124,6 +124,7 @@ export default function AddProductPage() {
   const [uploadResults, setUploadResults] = useState<{
     success: boolean;
     products_created: number;
+    successful_rows?: Array<{ row: number; name: string }>;
     errors: string[];
     message: string;
   } | null>(null);
@@ -773,17 +774,14 @@ export default function AddProductPage() {
 
       setUploadResults(result);
 
-      if (result.success && result.products_created > 0) {
-        // Optionally redirect to products page after successful upload
-        setTimeout(() => {
-          router.push("/dashboard/products");
-        }, 3000);
-      }
+      // Note: No automatic redirect after file upload
+      // Users can manually navigate to products page if desired
     } catch (error) {
       console.error("Error uploading file:", error);
       setUploadResults({
         success: false,
         products_created: 0,
+        successful_rows: [],
         errors: [error instanceof Error ? error.message : "Unknown error"],
         message: "Failed to upload file",
       });
@@ -2506,6 +2504,13 @@ export default function AddProductPage() {
                             Empty rows will be skipped automatically
                           </span>
                         </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-yellow-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Upload errors will specify exact row numbers for
+                            easy identification and fixing
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <div>
@@ -2563,6 +2568,13 @@ export default function AddProductPage() {
                           <span className="text-blue-400 mt-0.5">•</span>
                           <span className="text-gray-400">
                             Photos must be added manually after product creation
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-400 mt-0.5">•</span>
+                          <span className="text-gray-400">
+                            Any upload errors will show the exact row number
+                            from your file for easy fixing
                           </span>
                         </div>
                       </div>
@@ -2735,9 +2747,38 @@ export default function AddProductPage() {
                         }`}
                       >
                         {uploadResults.success
-                          ? "Upload Successful"
-                          : "Upload Failed"}
+                          ? "Upload Completed"
+                          : "Upload Completed with Issues"}
                       </h4>
+                    </div>
+
+                    {/* Upload Summary */}
+                    <div className="bg-slate-800/50 border border-slate-600/30 rounded-lg p-3 mb-4">
+                      <h5 className="text-white font-medium text-sm mb-2">
+                        Upload Summary
+                      </h5>
+                      <div className="grid grid-cols-2 gap-4 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                          <span className="text-gray-300">
+                            Products Created:
+                            <span className="text-green-400 font-semibold ml-1">
+                              {uploadResults.products_created}
+                            </span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                          <span className="text-gray-300">
+                            Rows with Issues:
+                            <span className="text-red-400 font-semibold ml-1">
+                              {uploadResults.errors
+                                ? uploadResults.errors.length
+                                : 0}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     <p
@@ -2758,34 +2799,144 @@ export default function AddProductPage() {
                             <strong>{uploadResults.products_created}</strong>{" "}
                             products
                           </p>
+
+                          {/* Show successful rows details */}
+                          {uploadResults.successful_rows &&
+                            uploadResults.successful_rows.length > 0 && (
+                              <div className="mt-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <svg
+                                    className="w-4 h-4 text-green-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                  <span className="text-green-400 text-sm font-medium">
+                                    Successfully Added Products:
+                                  </span>
+                                </div>
+                                <div className="bg-slate-800/50 rounded p-2 max-h-32 overflow-y-auto">
+                                  {uploadResults.successful_rows.map(
+                                    (item, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center gap-2 text-xs text-green-300 mb-1"
+                                      >
+                                        <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-mono text-xs">
+                                          Row {item.row}
+                                        </span>
+                                        <span className="text-gray-300">
+                                          {item.name}
+                                        </span>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
                           <p className="text-gray-400 text-xs mt-1">
-                            You will be redirected to the products page in a few
-                            seconds...
+                            Products have been added to your inventory. You can
+                            view them in the Products page or continue adding
+                            more products.
                           </p>
+
+                          {/* Navigation Button */}
+                          <div className="flex gap-3 mt-3 pt-3 border-t border-slate-600/30">
+                            <button
+                              type="button"
+                              onClick={() => router.push("/dashboard/products")}
+                              className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                                />
+                              </svg>
+                              View Products
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUploadResults(null);
+                                setUploadFile(null);
+                              }}
+                              className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              Upload More Products
+                            </button>
+                          </div>
                         </div>
                       )}
 
                     {uploadResults.errors &&
                       uploadResults.errors.length > 0 && (
                         <div className="space-y-2">
-                          <h5 className="text-red-400 font-medium text-sm">
-                            Errors Found:
-                          </h5>
+                          <div className="flex items-center gap-2">
+                            <svg
+                              className="w-4 h-4 text-red-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                            <h5 className="text-red-400 font-medium text-sm">
+                              Issues Found ({uploadResults.errors.length} rows):
+                            </h5>
+                          </div>
                           <div className="bg-slate-700/50 rounded p-3 max-h-48 overflow-y-auto">
-                            {uploadResults.errors.map((error, index) => (
-                              <p
-                                key={index}
-                                className="text-red-300 text-xs mb-1 border-l-2 border-red-400/30 pl-2"
-                              >
-                                {error}
-                              </p>
-                            ))}
+                            {uploadResults.errors.map((error, index) => {
+                              // Extract row number from error message for highlighting
+                              const rowMatch = error.match(/^Row (\d+):/);
+                              const rowNumber = rowMatch ? rowMatch[1] : null;
+                              const errorMessage = rowMatch
+                                ? error.replace(/^Row \d+:\s*/, "")
+                                : error;
+
+                              return (
+                                <div
+                                  key={index}
+                                  className="flex items-start gap-2 mb-2 last:mb-0"
+                                >
+                                  {rowNumber && (
+                                    <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded font-mono text-xs flex-shrink-0">
+                                      Row {rowNumber}
+                                    </span>
+                                  )}
+                                  <span className="text-red-300 text-xs leading-relaxed">
+                                    {errorMessage}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                           <div className="bg-amber-500/10 border border-amber-500/20 rounded p-2">
                             <p className="text-amber-400 text-xs">
-                              💡 <strong>Tip:</strong> Fix the errors above and
-                              try uploading again. Refer to the documentation
-                              above for proper formatting.
+                              💡 <strong>Tip:</strong> Fix the errors above by
+                              editing your file at the specified row numbers,
+                              then try uploading again. Row numbers correspond
+                              to your Excel/CSV file (including the header).
                             </p>
                           </div>
                         </div>

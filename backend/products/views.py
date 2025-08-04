@@ -494,6 +494,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
             products_created = 0
             products_errors = []
+            successful_rows = []
 
             with transaction.atomic():
                 for row_num, row in enumerate(
@@ -620,8 +621,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                                 continue
 
                         # Create the product
-                        Product.objects.create(**product_data)
+                        product = Product.objects.create(**product_data)
                         products_created += 1
+                        successful_rows.append({"row": row_num, "name": product.name})
 
                     except Exception as e:
                         products_errors.append(f"Row {row_num}: {str(e)}")
@@ -631,6 +633,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 {
                     "success": True,
                     "products_created": products_created,
+                    "successful_rows": successful_rows,
                     "errors": products_errors,
                     "message": f"Successfully created {products_created} products",
                 },
