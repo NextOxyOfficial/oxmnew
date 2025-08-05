@@ -16,6 +16,14 @@ import {
 // Import the AuthToken from the main API service
 import { AuthToken } from "./api";
 
+// Interface for paginated employee response
+interface PaginatedEmployeeResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Employee[];
+}
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
 
@@ -54,44 +62,44 @@ class EmployeeAPI {
         } catch {
           errorData = { message: "Network error" };
         }
-        
+
         console.error(`API Error Response:`, {
           status: response.status,
           statusText: response.statusText,
           url,
-          errorData
+          errorData,
         });
-        
+
         // Try to extract a meaningful error message
         let errorMessage = `HTTP error! status: ${response.status}`;
-        
+
         if (errorData) {
-          if (typeof errorData === 'string') {
+          if (typeof errorData === "string") {
             errorMessage = errorData;
           } else if (errorData.message) {
             errorMessage = errorData.message;
           } else if (errorData.detail) {
             errorMessage = errorData.detail;
           } else if (errorData.non_field_errors) {
-            errorMessage = Array.isArray(errorData.non_field_errors) 
-              ? errorData.non_field_errors.join(', ')
+            errorMessage = Array.isArray(errorData.non_field_errors)
+              ? errorData.non_field_errors.join(", ")
               : errorData.non_field_errors;
           } else {
             // Try to extract field-specific errors
             const fieldErrors = [];
             for (const [field, errors] of Object.entries(errorData)) {
               if (Array.isArray(errors)) {
-                fieldErrors.push(`${field}: ${errors.join(', ')}`);
-              } else if (typeof errors === 'string') {
+                fieldErrors.push(`${field}: ${errors.join(", ")}`);
+              } else if (typeof errors === "string") {
                 fieldErrors.push(`${field}: ${errors}`);
               }
             }
             if (fieldErrors.length > 0) {
-              errorMessage = fieldErrors.join('; ');
+              errorMessage = fieldErrors.join("; ");
             }
           }
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -103,8 +111,11 @@ class EmployeeAPI {
   }
 
   // Employee endpoints
-  async getEmployees(): Promise<Employee[]> {
-    return this.fetchAPI("/employees/");
+  async getEmployees(
+    page?: number
+  ): Promise<PaginatedEmployeeResponse | Employee[]> {
+    const url = page ? `/employees/?page=${page}` : "/employees/";
+    return this.fetchAPI(url);
   }
 
   async getEmployee(id: number): Promise<Employee> {
@@ -318,16 +329,25 @@ class EmployeeAPI {
 
   // Utility methods for statistics
   async getEmployeeStats() {
-    const employees = await this.getEmployees();
+    const response = await this.getEmployees();
+
+    // Handle both direct array and paginated response
+    let employees: Employee[] = [];
+    if (Array.isArray(response)) {
+      employees = response;
+    } else if (response && "results" in response) {
+      employees = response.results;
+    }
+
     const totalEmployees = employees.length;
     const activeEmployees = employees.filter(
-      (e) => e.status === "active"
+      (e: Employee) => e.status === "active"
     ).length;
     const averageSalary =
-      employees.reduce((sum, emp) => sum + emp.salary, 0) / employees.length ||
-      0;
+      employees.reduce((sum: number, emp: Employee) => sum + emp.salary, 0) /
+        employees.length || 0;
     const departments = Array.from(
-      new Set(employees.map((emp) => emp.department))
+      new Set(employees.map((emp: Employee) => emp.department))
     ).filter(Boolean);
 
     return {

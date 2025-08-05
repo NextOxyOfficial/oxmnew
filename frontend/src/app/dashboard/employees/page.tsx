@@ -38,6 +38,21 @@ export default function EmployeesPage() {
     salary: "",
   });
 
+  // Pagination state for employees
+  const [employeesPagination, setEmployeesPagination] = useState<{
+    count: number;
+    next: string | null;
+    previous: string | null;
+    hasNextPage: boolean;
+    isLoadingMore: boolean;
+  }>({
+    count: 0,
+    next: null,
+    previous: null,
+    hasNextPage: false,
+    isLoadingMore: false,
+  });
+
   // Ensure component is mounted before rendering dates
   useEffect(() => {
     setMounted(true);
@@ -60,14 +75,73 @@ export default function EmployeesPage() {
         setIsLoading(true);
         setError(null);
 
+        console.log("Fetching employees data...");
         const data = await employeeAPI.getEmployees();
-        // Ensure data is always an array
-        setEmployees(Array.isArray(data) ? data : []);
+        console.log("Employees fetched successfully:", data);
+
+        // Handle different response formats (array vs paginated response)
+        let employeesData: Employee[] = [];
+        if (data && typeof data === "object" && !Array.isArray(data)) {
+          // Check if it's a paginated response with results field
+          if ("results" in data && Array.isArray(data.results)) {
+            employeesData = data.results;
+
+            // Update pagination state
+            setEmployeesPagination({
+              count: data.count || 0,
+              next: data.next || null,
+              previous: data.previous || null,
+              hasNextPage: !!data.next,
+              isLoadingMore: false,
+            });
+          } else {
+            // Invalid response format
+            console.error("Unexpected response format:", data);
+            employeesData = [];
+            setEmployeesPagination({
+              count: 0,
+              next: null,
+              previous: null,
+              hasNextPage: false,
+              isLoadingMore: false,
+            });
+          }
+        } else if (Array.isArray(data)) {
+          // Direct array response
+          employeesData = data;
+          setEmployeesPagination({
+            count: employeesData.length,
+            next: null,
+            previous: null,
+            hasNextPage: false,
+            isLoadingMore: false,
+          });
+        } else {
+          // Invalid response format
+          console.error("Unexpected response format:", data);
+          employeesData = [];
+          setEmployeesPagination({
+            count: 0,
+            next: null,
+            previous: null,
+            hasNextPage: false,
+            isLoadingMore: false,
+          });
+        }
+
+        setEmployees(employeesData);
       } catch (err) {
         console.error("Error fetching employees:", err);
         setError("Failed to load employees. Please try again.");
         // Set empty array on error to prevent filter issues
         setEmployees([]);
+        setEmployeesPagination({
+          count: 0,
+          next: null,
+          previous: null,
+          hasNextPage: false,
+          isLoadingMore: false,
+        });
       } finally {
         setIsLoading(false);
       }
@@ -76,12 +150,56 @@ export default function EmployeesPage() {
     fetchEmployees();
   }, []);
 
+  const loadMoreEmployees = async () => {
+    if (!employeesPagination.next || employeesPagination.isLoadingMore) {
+      return;
+    }
+
+    try {
+      setEmployeesPagination((prev) => ({ ...prev, isLoadingMore: true }));
+
+      // Extract the page number from the next URL
+      const url = new URL(employeesPagination.next);
+      const page = url.searchParams.get("page");
+
+      const response = await employeeAPI.getEmployees(
+        page ? parseInt(page) : 2
+      );
+      console.log("More employees fetched:", response);
+
+      if (
+        response &&
+        "results" in response &&
+        Array.isArray(response.results)
+      ) {
+        // Append new employees to existing ones
+        setEmployees((prev) => [...prev, ...response.results]);
+
+        // Update pagination state
+        setEmployeesPagination({
+          count: response.count || 0,
+          next: response.next || null,
+          previous: response.previous || null,
+          hasNextPage: !!response.next,
+          isLoadingMore: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading more employees:", error);
+      setEmployeesPagination((prev) => ({ ...prev, isLoadingMore: false }));
+      // Could add error notification here
+    }
+  };
+
   // Calculate stats - ensure employees is always an array
   const safeEmployees = Array.isArray(employees) ? employees : [];
   const totalEmployees = safeEmployees.length;
-  const activeEmployees = safeEmployees.filter((e) => e.status === "active").length;
+  const activeEmployees = safeEmployees.filter(
+    (e) => e.status === "active"
+  ).length;
   const averageSalary =
-    safeEmployees.reduce((sum, emp) => sum + emp.salary, 0) / safeEmployees.length || 0;
+    safeEmployees.reduce((sum, emp) => sum + emp.salary, 0) /
+      safeEmployees.length || 0;
 
   // Get unique departments for filter
   const departments = Array.from(
@@ -202,23 +320,25 @@ export default function EmployeesPage() {
       }
     } catch (error) {
       console.error("Error creating employee:", error);
-      
+
       // Show more specific error message
       let errorMessage = "Failed to create employee. Please try again.";
-      
+
       if (error instanceof Error) {
         // Try to extract meaningful error from the response
-        if (error.message.includes('employee_id')) {
-          errorMessage = "An employee with this ID already exists. Please use a different ID.";
-        } else if (error.message.includes('email')) {
-          errorMessage = "An employee with this email already exists. Please use a different email.";
-        } else if (error.message.includes('required')) {
+        if (error.message.includes("employee_id")) {
+          errorMessage =
+            "An employee with this ID already exists. Please use a different ID.";
+        } else if (error.message.includes("email")) {
+          errorMessage =
+            "An employee with this email already exists. Please use a different email.";
+        } else if (error.message.includes("required")) {
           errorMessage = "Please fill in all required fields correctly.";
         } else if (error.message) {
           errorMessage = `Error: ${error.message}`;
         }
       }
-      
+
       alert(errorMessage);
     } finally {
       setIsCreating(false);
@@ -1011,6 +1131,47 @@ export default function EmployeesPage() {
                   Try adjusting your search criteria or check back later for new
                   employees.
                 </p>
+              </div>
+            )}
+
+            {/* Load More Button */}
+            {employeesPagination.hasNextPage && (
+              <div className="text-center mt-6 pt-6 border-t border-slate-700/50">
+                <div className="mb-3">
+                  <p className="text-sm text-slate-400">
+                    Showing {employees.length} of {employeesPagination.count}{" "}
+                    employees
+                  </p>
+                </div>
+                <button
+                  onClick={loadMoreEmployees}
+                  disabled={employeesPagination.isLoadingMore}
+                  className="px-6 py-3 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-slate-300 hover:text-slate-100 font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 mx-auto"
+                >
+                  {employeesPagination.isLoadingMore ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Loading More Employees...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                        />
+                      </svg>
+                      <span>Load More Employees</span>
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>

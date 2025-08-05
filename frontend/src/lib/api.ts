@@ -433,8 +433,9 @@ export class ApiService {
   }
 
   // Employee methods
-  static async getEmployees() {
-    return this.get("/employees/");
+  static async getEmployees(page?: number) {
+    const url = page ? `/employees/?page=${page}` : "/employees/";
+    return this.get(url);
   }
 
   static async getEmployee(id: number) {

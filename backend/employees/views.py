@@ -5,7 +5,7 @@ from rest_framework import filters, status, viewsets
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from .models import (
@@ -29,7 +29,9 @@ from .serializers import (
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
-    queryset = Employee.objects.all()
+    queryset = (
+        Employee.objects.all()
+    )  # Default queryset (will be filtered by get_queryset)
     permission_classes = [AllowAny]  # Allow unauthenticated access for testing
     authentication_classes = [
         SessionAuthentication,
@@ -44,6 +46,22 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "email", "employee_id", "role", "department"]
     ordering_fields = ["name", "salary", "hiring_date", "created_at"]
     ordering = ["name"]
+
+    def get_queryset(self):
+        """
+        Filter employees to show only those belonging to the current user.
+        """
+        if self.request.user.is_authenticated:
+            return Employee.objects.filter(user=self.request.user)
+        else:
+            # For demo purposes, if no authenticated user, try to get testuser
+            from django.contrib.auth.models import User
+
+            try:
+                demo_user = User.objects.get(username="testuser")
+                return Employee.objects.filter(user=demo_user)
+            except User.DoesNotExist:
+                return Employee.objects.none()
 
     def get_permissions(self):
         """
@@ -60,34 +78,37 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return EmployeeSerializer
 
     def perform_create(self, serializer):
-        # Get the user from request, or create/get a default user for demo
+        # Get the user from request, or use testuser for demo
         user = self.request.user if self.request.user.is_authenticated else None
-        
+
         if not user:
-            # For demo purposes, create or get a default user
+            # For demo purposes, use testuser as default
             from django.contrib.auth.models import User
-            user, created = User.objects.get_or_create(
-                username='demo_user',
-                defaults={
-                    'email': 'demo@example.com',
-                    'first_name': 'Demo',
-                    'last_name': 'User'
-                }
-            )
-        
+
+            try:
+                user = User.objects.get(username="testuser")
+            except User.DoesNotExist:
+                # Create testuser if it doesn't exist
+                user = User.objects.create_user(
+                    username="testuser",
+                    email="test@example.com",
+                    password="testpass123",
+                )
+
         employee = serializer.save(user=user)
         # Create default payment information
         PaymentInformation.objects.create(employee=employee)
 
     @action(detail=False, methods=["get"])
     def stats(self, request):
-        """Get employee statistics"""
-        total_employees = Employee.objects.count()
-        active_employees = Employee.objects.filter(status="active").count()
-        avg_salary = (
-            Employee.objects.aggregate(avg_salary=Avg("salary"))["avg_salary"] or 0
-        )
-        departments = Employee.objects.values_list("department", flat=True).distinct()
+        """Get employee statistics for the current user"""
+        # Get the queryset filtered by current user
+        queryset = self.get_queryset()
+
+        total_employees = queryset.count()
+        active_employees = queryset.filter(status="active").count()
+        avg_salary = queryset.aggregate(avg_salary=Avg("salary"))["avg_salary"] or 0
+        departments = queryset.values_list("department", flat=True).distinct()
 
         return Response(
             {
