@@ -89,7 +89,17 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         if date_from:
             transactions = transactions.filter(date__gte=date_from)
         if date_to:
-            transactions = transactions.filter(date__lte=date_to)
+            # Include the entire end date by adding time 23:59:59
+            from datetime import datetime, time
+
+            try:
+                # Parse the date string and combine with end of day time
+                end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
+                end_datetime = datetime.combine(end_date, time(23, 59, 59))
+                transactions = transactions.filter(date__lte=end_datetime)
+            except ValueError:
+                # Fallback to original behavior if date parsing fails
+                transactions = transactions.filter(date__lte=date_to)
         if search:
             transactions = transactions.filter(
                 Q(purpose__icontains=search) | Q(reference_number__icontains=search)
@@ -187,7 +197,17 @@ class TransactionViewSet(viewsets.ModelViewSet):
         if date_from:
             transactions = transactions.filter(date__gte=date_from)
         if date_to:
-            transactions = transactions.filter(date__lte=date_to)
+            # Include the entire end date by adding time 23:59:59
+            from datetime import datetime, time
+
+            try:
+                # Parse the date string and combine with end of day time
+                end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
+                end_datetime = datetime.combine(end_date, time(23, 59, 59))
+                transactions = transactions.filter(date__lte=end_datetime)
+            except ValueError:
+                # Fallback to original behavior if date parsing fails
+                transactions = transactions.filter(date__lte=date_to)
         if search:
             transactions = transactions.filter(
                 Q(purpose__icontains=search) | Q(reference_number__icontains=search)
