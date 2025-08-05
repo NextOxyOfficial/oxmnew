@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 interface Supplier {
   id: number;
@@ -41,6 +41,11 @@ interface SuppliersTabProps {
   onCreatePayment: (supplier: Supplier) => void;
   onEditSupplier: (supplier: Supplier) => void;
   onDeleteSupplier: (supplier: Supplier) => void;
+  // Pagination props
+  hasNextPage?: boolean;
+  isLoadingMore?: boolean;
+  totalCount?: number;
+  onLoadMore?: () => void;
 }
 
 export default function SuppliersTab({
@@ -58,6 +63,10 @@ export default function SuppliersTab({
   onCreatePayment,
   onEditSupplier,
   onDeleteSupplier,
+  hasNextPage = false,
+  isLoadingMore = false,
+  totalCount = 0,
+  onLoadMore,
 }: SuppliersTabProps) {
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
 
@@ -473,6 +482,48 @@ export default function SuppliersTab({
           </div>
         ))}
       </div>
+
+      {/* Load More Button */}
+      {hasNextPage && (
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 disabled:from-slate-600 disabled:to-slate-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isLoadingMore ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Loading more...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+                Load More Suppliers
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Total Count */}
+      {totalCount > 0 && (
+        <div className="mt-4 text-center text-sm text-slate-400">
+          Showing {suppliers.length} of {totalCount} suppliers
+        </div>
+      )}
     </div>
   );
 }

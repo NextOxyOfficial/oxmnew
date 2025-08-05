@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { ClientOnly } from "@/components";
+import {
+  CreatePaymentModal,
+  CreatePurchaseModal,
+  PaymentsTab,
+  ProductsTab,
+  PurchaseHistoryTab,
+  SuppliersTab,
+} from "@/components/suppliers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
-import {
-  SuppliersTab,
-  PurchaseHistoryTab,
-  PaymentsTab,
-  ProductsTab,
-  CreatePurchaseModal,
-  CreatePaymentModal,
-} from "@/components/suppliers";
-import { ClientOnly } from "@/components";
+import React, { useEffect, useState } from "react";
 
 interface Purchase {
   id: number;
@@ -145,6 +145,21 @@ export default function SuppliersPage() {
   // Real suppliers state - will be populated from API
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
+  // Pagination state for suppliers
+  const [suppliersPagination, setSuppliersPagination] = useState<{
+    count: number;
+    next: string | null;
+    previous: string | null;
+    hasNextPage: boolean;
+    isLoadingMore: boolean;
+  }>({
+    count: 0,
+    next: null,
+    previous: null,
+    hasNextPage: false,
+    isLoadingMore: false,
+  });
+
   // Fetch suppliers, purchases, and payments from API
   useEffect(() => {
     const fetchData = async () => {
@@ -162,8 +177,61 @@ export default function SuppliersPage() {
           const suppliersResponse = await ApiService.getSuppliers();
           console.log("Suppliers fetched successfully:", suppliersResponse);
 
+          // Handle different response formats (array vs paginated response)
+          let suppliersData = suppliersResponse;
+          if (
+            suppliersResponse &&
+            typeof suppliersResponse === "object" &&
+            !Array.isArray(suppliersResponse)
+          ) {
+            // Check if it's a paginated response with results field
+            if (
+              suppliersResponse.results &&
+              Array.isArray(suppliersResponse.results)
+            ) {
+              suppliersData = suppliersResponse.results;
+
+              // Update pagination state
+              setSuppliersPagination({
+                count: suppliersResponse.count || 0,
+                next: suppliersResponse.next || null,
+                previous: suppliersResponse.previous || null,
+                hasNextPage: !!suppliersResponse.next,
+                isLoadingMore: false,
+              });
+            } else {
+              // If it's not an array and doesn't have results, wrap it in an array
+              suppliersData = [suppliersResponse];
+              setSuppliersPagination({
+                count: 1,
+                next: null,
+                previous: null,
+                hasNextPage: false,
+                isLoadingMore: false,
+              });
+            }
+          } else {
+            // Direct array response
+            setSuppliersPagination({
+              count: Array.isArray(suppliersData) ? suppliersData.length : 0,
+              next: null,
+              previous: null,
+              hasNextPage: false,
+              isLoadingMore: false,
+            });
+          }
+
+          // Ensure suppliersData is an array
+          if (!Array.isArray(suppliersData)) {
+            console.error(
+              "Unexpected suppliers response format:",
+              suppliersResponse
+            );
+            suppliersData = [];
+          }
+
           // Ensure all suppliers have default values for orders and amount
-          const suppliersWithDefaults = suppliersResponse.map(
+          const suppliersWithDefaults = suppliersData.map(
             (supplier: Supplier) => ({
               ...supplier,
               total_orders: supplier.total_orders ?? 0,
@@ -174,6 +242,14 @@ export default function SuppliersPage() {
           setSuppliers(suppliersWithDefaults);
         } catch (suppliersError) {
           console.error("Error fetching suppliers:", suppliersError);
+          setSuppliers([]); // Set empty array as fallback
+          setSuppliersPagination({
+            count: 0,
+            next: null,
+            previous: null,
+            hasNextPage: false,
+            isLoadingMore: false,
+          });
           showNotification("error", "Failed to load suppliers");
         }
 
@@ -181,7 +257,9 @@ export default function SuppliersPage() {
         try {
           const purchasesResponse = await ApiService.getPurchases();
           console.log("Purchases fetched successfully:", purchasesResponse);
-          setPurchases(Array.isArray(purchasesResponse) ? purchasesResponse : []);
+          setPurchases(
+            Array.isArray(purchasesResponse) ? purchasesResponse : []
+          );
         } catch (purchasesError) {
           console.error("Error fetching purchases:", purchasesError);
           setPurchases([]); // Set empty array as fallback
@@ -208,6 +286,50 @@ export default function SuppliersPage() {
 
     fetchData();
   }, [user]);
+
+  const loadMoreSuppliers = async () => {
+    if (!suppliersPagination.next || suppliersPagination.isLoadingMore) {
+      return;
+    }
+
+    try {
+      setSuppliersPagination((prev) => ({ ...prev, isLoadingMore: true }));
+
+      // Extract the page number from the next URL
+      const url = new URL(suppliersPagination.next);
+      const page = url.searchParams.get("page");
+
+      const response = await ApiService.getSuppliers(page ? parseInt(page) : 2);
+      console.log("More suppliers fetched:", response);
+
+      if (response && response.results && Array.isArray(response.results)) {
+        // Ensure all suppliers have default values for orders and amount
+        const newSuppliersWithDefaults = response.results.map(
+          (supplier: Supplier) => ({
+            ...supplier,
+            total_orders: supplier.total_orders ?? 0,
+            total_amount: supplier.total_amount ?? 0,
+          })
+        );
+
+        // Append new suppliers to existing ones
+        setSuppliers((prev) => [...prev, ...newSuppliersWithDefaults]);
+
+        // Update pagination state
+        setSuppliersPagination({
+          count: response.count || 0,
+          next: response.next || null,
+          previous: response.previous || null,
+          hasNextPage: !!response.next,
+          isLoadingMore: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading more suppliers:", error);
+      setSuppliersPagination((prev) => ({ ...prev, isLoadingMore: false }));
+      showNotification("error", "Failed to load more suppliers");
+    }
+  };
 
   const showNotification = (type: "success" | "error", message: string) => {
     setNotification({ isVisible: true, type, message });
@@ -879,6 +1001,11 @@ export default function SuppliersPage() {
                   onCreatePayment={handleCreatePaymentFromSupplier}
                   onEditSupplier={handleEditSupplier}
                   onDeleteSupplier={handleDeleteSupplier}
+                  // Pagination props
+                  hasNextPage={suppliersPagination.hasNextPage}
+                  isLoadingMore={suppliersPagination.isLoadingMore}
+                  totalCount={suppliersPagination.count}
+                  onLoadMore={loadMoreSuppliers}
                 />
               )}
 

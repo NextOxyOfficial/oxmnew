@@ -537,7 +537,9 @@ export class ApiService {
     try {
       return this.get("/banking/accounts/my_accounts/");
     } catch (error) {
-      console.log("my_accounts endpoint failed, trying regular accounts endpoint");
+      console.log(
+        "my_accounts endpoint failed, trying regular accounts endpoint"
+      );
       return this.get("/banking/accounts/");
     }
   }
@@ -808,8 +810,9 @@ export class ApiService {
   }
 
   // Suppliers methods
-  static async getSuppliers() {
-    return this.get("/suppliers/");
+  static async getSuppliers(page?: number) {
+    const url = page ? `/suppliers/?page=${page}` : "/suppliers/";
+    return this.get(url);
   }
 
   static async createSupplier(supplierData: {
@@ -1027,7 +1030,7 @@ export class ApiService {
   static async getCustomers() {
     try {
       const result = await this.get("/customers/");
-      
+
       // Ensure we return an array
       if (Array.isArray(result)) {
         return result;
@@ -1278,7 +1281,7 @@ export class ApiService {
       console.log("Fetching subscription plans...");
       const result = await this.get("/plans/");
       console.log("Subscription plans result:", result);
-      
+
       // Ensure we return an array
       if (Array.isArray(result)) {
         return result;
@@ -1299,7 +1302,7 @@ export class ApiService {
       console.log("Fetching SMS packages...");
       const result = await this.get("/sms-packages/");
       console.log("SMS packages result:", result);
-      
+
       // Ensure we return an array
       if (Array.isArray(result)) {
         return result;
