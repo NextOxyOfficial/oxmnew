@@ -25,9 +25,13 @@ export default function SmsPage() {
 		async function fetchData() {
 			try {
 				const [cust, emp, supp] = await Promise.all([
-					customersAPI.getCustomers().then(list => list.map(c => ({ id: c.id, name: c.name, phone: c.phone }))) ,
-					employeeAPI.getEmployees().then(list => list.map(e => ({ id: e.id, name: e.name, phone: e.phone }))) ,
-					ApiService.getSuppliers().then(list => list.map(s => ({ id: s.id, name: s.name, phone: s.phone }))) ,
+					customersAPI.getCustomers().then((list: any) => list.map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }))) ,
+					employeeAPI.getEmployees().then((list: any) => {
+						// Handle both array and paginated response
+						const employees = Array.isArray(list) ? list : list.results || [];
+						return employees.map((e: any) => ({ id: e.id, name: e.name, phone: e.phone }));
+					}),
+					ApiService.getSuppliers().then((list: any) => list.map((s: any) => ({ id: s.id, name: s.name, phone: s.phone }))) ,
 				]);
 				setCustomers(cust || []);
 				setEmployees(emp || []);
@@ -178,11 +182,11 @@ export default function SmsPage() {
 			</div>
 
 			{/* SMS Credits Display */}
-			<div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 mb-6">
+			<div className="bg-gradient-to-br from-emerald-500/15 to-emerald-600/8 border border-emerald-500/25 rounded-lg p-3 mb-6 backdrop-blur-sm">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-3">
-						<div className="rounded-lg bg-emerald-500/20 p-2">
-							<svg className="h-5 w-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<div className="rounded-md bg-emerald-500/20 p-1.5">
+							<svg className="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
 							</svg>
 						</div>
@@ -195,7 +199,7 @@ export default function SmsPage() {
 					</div>
 					<a 
 						href="/dashboard/subscriptions" 
-						className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:from-emerald-600 hover:to-green-700 transition-all duration-200"
+						className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200"
 					>
 						Buy Credits
 					</a>
@@ -211,61 +215,114 @@ export default function SmsPage() {
 			</div>
 
 			{/* Tabs */}
-			<div className="flex justify-center gap-2 mb-6">
-				<button
-					className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${
-						tab === "custom"
-							? "bg-cyan-600 text-white"
-							: "bg-slate-800 text-slate-300"
-					}`}
-					onClick={() => setTab("custom")}
-				>
-					Custom
-				</button>
-				<button
-					className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${
-						tab === "customers"
-							? "bg-cyan-600 text-white"
-							: "bg-slate-800 text-slate-300"
-					}`}
-					onClick={() => setTab("customers")}
-				>
-					All Customers
-				</button>
-				<button
-					className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${
-						tab === "employees"
-							? "bg-cyan-600 text-white"
-							: "bg-slate-800 text-slate-300"
-					}`}
-					onClick={() => setTab("employees")}
-				>
-					All Employees
-				</button>
-				<button
-					className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${
-						tab === "suppliers"
-							? "bg-cyan-600 text-white"
-							: "bg-slate-800 text-slate-300"
-					}`}
-					onClick={() => setTab("suppliers")}
-				>
-					All Suppliers
-				</button>
-				<button
-					className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${
-						tab === "history"
-							? "bg-cyan-600 text-white"
-							: "bg-slate-800 text-slate-300"
-					}`}
-					onClick={() => setTab("history")}
-				>
-					History
-				</button>
+			<div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg mb-6">
+				<div className="border-b border-slate-700/50">
+					<div className="flex flex-wrap">
+						{/* Custom Tab */}
+						<button
+							className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[120px] ${
+								tab === "custom"
+									? "bg-gradient-to-r from-blue-500/20 to-blue-600/10 text-blue-300"
+									: "text-slate-400 hover:text-blue-300 hover:bg-blue-500/10"
+							}`}
+							onClick={() => setTab("custom")}
+						>
+							<div className="text-left">
+								<div className="font-semibold text-sm">Custom</div>
+								<div className={`text-xs ${tab === "custom" ? "text-blue-400" : "text-slate-500"}`}>
+									Manual input
+								</div>
+							</div>
+							{tab === "custom" && (
+								<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+							)}
+						</button>
+
+						{/* Customers Tab */}
+						<button
+							className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[140px] ${
+								tab === "customers"
+									? "bg-gradient-to-r from-purple-500/20 to-purple-600/10 text-purple-300"
+									: "text-slate-400 hover:text-purple-300 hover:bg-purple-500/10"
+							}`}
+							onClick={() => setTab("customers")}
+						>
+							<div className="text-left">
+								<div className="font-semibold text-sm">All Customers</div>
+								<div className={`text-xs ${tab === "customers" ? "text-purple-400" : "text-slate-500"}`}>
+									{customers.length} contacts
+								</div>
+							</div>
+							{tab === "customers" && (
+								<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-purple-600"></div>
+							)}
+						</button>
+
+						{/* Employees Tab */}
+						<button
+							className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[140px] ${
+								tab === "employees"
+									? "bg-gradient-to-r from-green-500/20 to-green-600/10 text-green-300"
+									: "text-slate-400 hover:text-green-300 hover:bg-green-500/10"
+							}`}
+							onClick={() => setTab("employees")}
+						>
+							<div className="text-left">
+								<div className="font-semibold text-sm">All Employees</div>
+								<div className={`text-xs ${tab === "employees" ? "text-green-400" : "text-slate-500"}`}>
+									{employees.length} contacts
+								</div>
+							</div>
+							{tab === "employees" && (
+								<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
+							)}
+						</button>
+
+						{/* Suppliers Tab */}
+						<button
+							className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[130px] ${
+								tab === "suppliers"
+									? "bg-gradient-to-r from-orange-500/20 to-orange-600/10 text-orange-300"
+									: "text-slate-400 hover:text-orange-300 hover:bg-orange-500/10"
+							}`}
+							onClick={() => setTab("suppliers")}
+						>
+							<div className="text-left">
+								<div className="font-semibold text-sm">All Suppliers</div>
+								<div className={`text-xs ${tab === "suppliers" ? "text-orange-400" : "text-slate-500"}`}>
+									{suppliers.length} contacts
+								</div>
+							</div>
+							{tab === "suppliers" && (
+								<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-orange-600"></div>
+							)}
+						</button>
+
+						{/* History Tab */}
+						<button
+							className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[100px] border-l border-slate-700/50 ${
+								tab === "history"
+									? "bg-gradient-to-r from-cyan-500/20 to-cyan-600/10 text-cyan-300"
+									: "text-slate-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+							}`}
+							onClick={() => setTab("history")}
+						>
+							<div className="text-left">
+								<div className="font-semibold text-sm">History</div>
+								<div className={`text-xs ${tab === "history" ? "text-cyan-400" : "text-slate-500"}`}>
+									View logs
+								</div>
+							</div>
+							{tab === "history" && (
+								<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-cyan-600"></div>
+							)}
+						</button>
+					</div>
+				</div>
 			</div>
 
 			{/* Main Form */}
-			<div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4 space-y-6">
+			<div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4 space-y-6">
 				{tab !== "history" && (
 					<>
 						<label className="block text-slate-300 mb-2 font-medium">
