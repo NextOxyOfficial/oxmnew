@@ -125,6 +125,7 @@ SESSION_COOKIE_SAMESITE = "Lax"
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Add this for static files in production
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -194,11 +195,31 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
+# Additional locations of static files
+# Only add directories that exist to avoid warnings
+STATICFILES_DIRS = []
+static_dir = os.path.join(BASE_DIR, "static")
+if os.path.exists(static_dir):
+    STATICFILES_DIRS.append(static_dir)
+
+# Static files finders
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
+
 # Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
+# WhiteNoise configuration for static files in production
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 # Site URL for absolute URL construction in production
+SITE_URL = config("SITE_URL", default="http://localhost:8000")
+
+# Default primary key field type
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SITE_URL = config("SITE_URL", default="")
 
 # Default primary key field type

@@ -1,0 +1,3 @@
+# This file ensures the static directory is tracked by git
+# You can place custom static files here (CSS, JS, images)
+# that are specific to your project
