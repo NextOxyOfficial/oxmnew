@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   ChevronRight, 
   Home, 
-  Search, 
   Bell, 
   Settings, 
   HelpCircle, 
@@ -17,15 +16,10 @@ import {
   Activity,
   TrendingUp,
   Calendar,
-  Clock,
-  Package,
-  Users,
-  ShoppingCart,
-  Building2
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { searchData, getRecentSearches, addToRecentSearches, type SearchResult } from '@/lib/searchData';
 import { ApiService } from '@/lib/api';
 
 interface User {
@@ -72,13 +66,8 @@ export default function Header({
   onToggleDarkMode
 }: HeaderProps) {
   const pathname = usePathname();
-  const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
 
@@ -109,59 +98,6 @@ export default function Header({
     const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
-
-  // Handle search with debouncing
-  useEffect(() => {
-    const performSearch = async () => {
-      if (searchQuery.trim().length >= 2) {
-        setIsSearching(true);
-        try {
-          const results = await searchData(searchQuery);
-          setSearchResults(results);
-          setShowSearchResults(true);
-        } catch (error) {
-          console.error('Search failed:', error);
-          setSearchResults([]);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSearchResults([]);
-        setShowSearchResults(false);
-        setIsSearching(false);
-      }
-    };
-
-    const timeoutId = setTimeout(performSearch, 300); // Debounce by 300ms
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
-  // Handle search input focus
-  const handleSearchFocus = () => {
-    setIsSearchFocused(true);
-    if (searchQuery.trim().length === 0) {
-      // Show recent searches when focused with no query
-      const recentSearches = getRecentSearches();
-      setSearchResults(recentSearches);
-      setShowSearchResults(true);
-    }
-  };
-
-  // Handle search input blur
-  const handleSearchBlur = () => {
-    // Delay hiding results to allow clicking on them
-    setTimeout(() => {
-      setIsSearchFocused(false);
-      setShowSearchResults(false);
-    }, 200);
-  };
-
-  // Handle search result selection
-  const handleSearchResultSelect = (result: SearchResult) => {
-    addToRecentSearches(result);
-    setShowSearchResults(false);
-    setSearchQuery('');
-  };
   
   // Add click outside handlers for dropdowns
   const notificationRef = React.useRef<HTMLDivElement>(null);
@@ -263,86 +199,6 @@ export default function Header({
             </nav>
           </div>
           
-          {/* Center Section - Search */}
-          <div className="hidden md:flex flex-1 justify-center max-w-lg mx-8">
-            <div className="relative w-full">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className={`h-4 w-4 transition-colors ${
-                  isSearching ? 'text-cyan-400 animate-pulse' : 
-                  isSearchFocused ? 'text-cyan-400' : 'text-slate-500'
-                }`} />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={handleSearchFocus}
-                onBlur={handleSearchBlur}
-                placeholder="Search products, customers, orders..."
-                className="block w-full pl-10 pr-4 py-2 border border-slate-700/50 rounded-lg bg-slate-800/60 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 text-sm"
-              />
-              
-              {/* Search Results Dropdown */}
-              {showSearchResults && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl max-h-80 overflow-hidden z-50">
-                  {isSearching ? (
-                    // Loading state
-                    <div className="px-4 py-6 text-center text-slate-500 text-sm">
-                      <Search className="h-8 w-8 mx-auto mb-2 text-slate-600 animate-pulse" />
-                      <p>Searching...</p>
-                    </div>
-                  ) : searchQuery.trim().length === 0 ? (
-                    // Show recent searches when no query
-                    <div>
-                      <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-700/50 bg-slate-900/50">
-                        Recent Searches
-                      </div>
-                      <div className="max-h-64 overflow-y-auto">
-                        {searchResults.length > 0 ? (
-                          searchResults.map((item) => (
-                            <SearchResultItem 
-                              key={`${item.type}-${item.id}`} 
-                              item={item} 
-                              onSelect={() => handleSearchResultSelect(item)} 
-                            />
-                          ))
-                        ) : (
-                          <div className="px-4 py-4 text-center text-slate-500 text-sm">
-                            <p>No recent searches</p>
-                            <p className="text-xs mt-1">Start typing to search for products, customers, or suppliers</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : searchResults.length > 0 ? (
-                    // Show search results
-                    <div>
-                      <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-700/50 bg-slate-900/50">
-                        {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
-                      </div>
-                      <div className="max-h-64 overflow-y-auto">
-                        {searchResults.map((item) => (
-                          <SearchResultItem 
-                            key={`${item.type}-${item.id}`} 
-                            item={item} 
-                            onSelect={() => handleSearchResultSelect(item)} 
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    // No results found
-                    <div className="px-4 py-6 text-center text-slate-500 text-sm">
-                      <Search className="h-8 w-8 mx-auto mb-2 text-slate-600" />
-                      <p>No results found for "{searchQuery}"</p>
-                      <p className="text-xs mt-1">Try searching for products, customers, or suppliers</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Right Section */}
           <div className="flex items-center space-x-3">
             {/* Time & Date Display */}
@@ -364,11 +220,6 @@ export default function Header({
                 <span className="font-medium">Online</span>
               </div>
             </div>
-
-            {/* Mobile Search Button */}
-            <button className="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors">
-              <Search className="h-5 w-5" />
-            </button>
 
             {/* Help Button */}
             <Link
@@ -470,177 +321,7 @@ export default function Header({
           </div>
         </div>
       </div>
-
-      {/* Mobile Search Bar */}
-      <div className="md:hidden border-t border-slate-700/50 px-4 py-3">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-slate-500" />
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={handleSearchFocus}
-            onBlur={handleSearchBlur}
-            placeholder="Search..."
-            className="block w-full pl-10 pr-4 py-2 border border-slate-700/50 rounded-lg bg-slate-800/60 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 text-sm"
-          />
-          
-          {/* Mobile Search Results */}
-          {showSearchResults && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl max-h-64 overflow-hidden z-50">
-              {isSearching ? (
-                // Loading state
-                <div className="px-4 py-4 text-center text-slate-500 text-sm">
-                  <Search className="h-6 w-6 mx-auto mb-2 text-slate-600 animate-pulse" />
-                  <p>Searching...</p>
-                </div>
-              ) : searchQuery.trim().length === 0 ? (
-                <div>
-                  <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-700/50 bg-slate-900/50">
-                    Recent Searches
-                  </div>
-                  <div className="max-h-48 overflow-y-auto">
-                    {searchResults.length > 0 ? (
-                      searchResults.map((item) => (
-                        <SearchResultItem 
-                          key={`mobile-${item.type}-${item.id}`} 
-                          item={item} 
-                          onSelect={() => handleSearchResultSelect(item)} 
-                        />
-                      ))
-                    ) : (
-                      <div className="px-4 py-4 text-center text-slate-500 text-sm">
-                        <p>No recent searches</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : searchResults.length > 0 ? (
-                <div>
-                  <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-700/50 bg-slate-900/50">
-                    {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
-                  </div>
-                  <div className="max-h-48 overflow-y-auto">
-                    {searchResults.map((item) => (
-                      <SearchResultItem 
-                        key={`mobile-${item.type}-${item.id}`} 
-                        item={item} 
-                        onSelect={() => handleSearchResultSelect(item)} 
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="px-4 py-4 text-center text-slate-500 text-sm">
-                  <Search className="h-6 w-6 mx-auto mb-2 text-slate-600" />
-                  <p>No results found</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
     </header>
-  );
-}
-
-// Component for search result items
-function SearchResultItem({ 
-  item, 
-  onSelect 
-}: { 
-  item: SearchResult; 
-  onSelect: () => void;
-}) {
-  const getIcon = (type: SearchResult['type']) => {
-    switch (type) {
-      case 'product':
-        return Package;
-      case 'customer':
-        return Users;
-      case 'order':
-        return ShoppingCart;
-      case 'supplier':
-        return Building2;
-      default:
-        return Search;
-    }
-  };
-
-  const getTypeColor = (type: SearchResult['type']) => {
-    switch (type) {
-      case 'product':
-        return 'text-blue-400 bg-blue-500/10';
-      case 'customer':
-        return 'text-green-400 bg-green-500/10';
-      case 'order':
-        return 'text-purple-400 bg-purple-500/10';
-      case 'supplier':
-        return 'text-orange-400 bg-orange-500/10';
-      default:
-        return 'text-slate-400 bg-slate-500/10';
-    }
-  };
-
-  const getBadgeColor = (badge?: string) => {
-    switch (badge) {
-      case 'HIGH_STOCK':
-        return 'bg-green-500/20 text-green-300 border-green-500/30';
-      case 'MEDIUM_STOCK':
-        return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
-      case 'LOW_STOCK':
-        return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-      case 'OUT_OF_STOCK':
-        return 'bg-red-500/20 text-red-300 border-red-500/30';
-      case 'COMPLETED':
-        return 'bg-green-500/20 text-green-300 border-green-500/30';
-      case 'PROCESSING':
-        return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-      case 'PENDING':
-        return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
-      case 'SHIPPED':
-        return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-      default:
-        return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
-    }
-  };
-
-  const Icon = getIcon(item.type);
-
-  return (
-    <Link
-      href={item.href}
-      onClick={onSelect}
-      className="flex items-center gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors border-b border-slate-700/30 last:border-b-0"
-    >
-      {item.avatar ? (
-        <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-full flex items-center justify-center text-slate-900 font-medium text-sm">
-          {item.avatar}
-        </div>
-      ) : (
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getTypeColor(item.type)}`}>
-          <Icon className="h-4 w-4" />
-        </div>
-      )}
-      
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h4 className="text-sm font-medium text-slate-200 truncate">{item.title}</h4>
-          {item.badge && (
-            <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getBadgeColor(item.badge)}`}>
-              {item.badge.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-slate-400 truncate mt-0.5">{item.subtitle}</p>
-      </div>
-      
-      <div className="text-xs text-slate-500 capitalize">
-        {item.type}
-      </div>
-    </Link>
   );
 }
 
