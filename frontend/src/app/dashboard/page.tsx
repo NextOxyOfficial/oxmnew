@@ -179,7 +179,7 @@ export default function DashboardPage() {
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
         {/* Buy Price Card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
+        <div className="bg-white/3 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
           <div className="flex items-center justify-between">
             <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
               Buy Price
@@ -191,7 +191,7 @@ export default function DashboardPage() {
               <button
                 onClick={refetchStats}
                 disabled={isLoadingStats}
-                className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50"
                 title="Refresh stats"
               >
                 <svg
@@ -226,7 +226,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Sell Price Card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
+        <div className="bg-white/3 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
           <div className="flex items-center justify-between">
             <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
               Sell Price
@@ -250,7 +250,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Estimated Profit Card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
+        <div className="bg-white/3 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
           <div className="flex items-center justify-between">
             <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
               Estimated Profit
@@ -287,7 +287,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Customers Card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
+        <div className="bg-white/3 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group hover:bg-white/15">
           <div className="flex items-center justify-between">
             <p className="text-xs sm:text-sm font-medium text-gray-300 group-hover:text-gray-200">
               Total Customers
@@ -299,7 +299,7 @@ export default function DashboardPage() {
               <button
                 onClick={refetchCustomerStats}
                 disabled={isLoadingCustomerStats}
-                className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50"
                 title="Refresh customer stats"
               >
                 <svg
@@ -343,7 +343,7 @@ export default function DashboardPage() {
       {/* Main Dashboard Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Recent Activities */}
-        <div className="xl:col-span-2 bg-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 shadow-sm">
+        <div className="xl:col-span-2 bg-white/3 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/20 shadow-sm">
           <div className="py-4 px-2 sm:p-6">
             {/* Mobile Layout - Single Row */}
             <div className="md:hidden">
@@ -374,7 +374,7 @@ export default function DashboardPage() {
                   </button>
                   <div className="relative flex-1">
                     <button
-                      className="w-full px-3 py-2 text-sm bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center justify-center"
+                      className="w-full px-3 py-2 text-sm bg-white/3 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center justify-center"
                       onClick={() =>
                         setSortDropdownOpen((prevState) => !prevState)
                       }
@@ -476,7 +476,7 @@ export default function DashboardPage() {
               </div>
               <div className="relative">
                 <button
-                  className="px-4 py-2 text-sm bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center"
+                  className="px-4 py-2 text-sm bg-white/3 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center"
                   onClick={() => setSortDropdownOpen((prevState) => !prevState)}
                   data-dropdown-toggle="true"
                 >
@@ -917,7 +917,7 @@ export default function DashboardPage() {
                   <button
                     onClick={refetchSales}
                     disabled={isLoadingSales}
-                    className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                    className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50"
                     title="Refresh sales data"
                   >
                     <svg
@@ -984,7 +984,7 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={sale.id}
-                        className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors"
+                        className="bg-white/5 rounded-lg p-3 hover:bg-white/3 transition-colors"
                       >
                         {/* First row - always visible */}
                         <div className="flex items-center justify-between">
@@ -1023,7 +1023,7 @@ export default function DashboardPage() {
                               {formatCurrency(sale.total_amount)}
                             </span>
                             <button
-                              className="text-gray-300 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all ml-2"
+                              className="text-gray-300 hover:text-white p-1 rounded-full hover:bg-white/3 transition-all ml-2"
                               title="View Sale Details"
                             >
                               <svg
@@ -1113,7 +1113,7 @@ export default function DashboardPage() {
         {/* Quick Actions & Tasks */}
         <div className="space-y-6">
           {/* Priority Tasks */}
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm px-3 sm:px-6 py-6">
+          <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm px-3 sm:px-6 py-6">
             <div className="flex items-center mb-4">
               <div className="p-2 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 mr-3">
                 <span className="text-white">🚨</span>
@@ -1163,7 +1163,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4">
+          <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4">
             <h3 className="text-lg font-bold text-white mb-4">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -1219,7 +1219,7 @@ export default function DashboardPage() {
       {/* Bottom Section - Banking & Communications */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Banking Overview */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 sm:px-6 px-2">
+        <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 sm:px-6 px-2">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <div className="p-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 mr-3">
@@ -1245,7 +1245,7 @@ export default function DashboardPage() {
               <button
                 onClick={refetchBanking}
                 disabled={isLoadingBanking}
-                className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+                className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50"
                 title="Refresh banking data"
               >
                 <svg
@@ -1385,7 +1385,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Communications Hub */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4">
+        <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4">
           <h3 className="text-lg font-bold text-white mb-6">
             Communications Hub
           </h3>
@@ -1456,7 +1456,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Product Activities */}
-      <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 px-2 sm:px-6">
+      <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 px-2 sm:px-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 mr-3">
@@ -1471,7 +1471,7 @@ export default function DashboardPage() {
             <button
               onClick={refetchStock}
               disabled={isLoadingStock}
-              className="p-1 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+              className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50"
               title="Refresh stock data"
             >
               <svg
