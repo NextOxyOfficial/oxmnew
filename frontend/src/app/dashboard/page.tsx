@@ -1273,29 +1273,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Email Section */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center">
-                  <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 mr-3">
-                    <span className="text-white text-sm">✉️</span>
-                  </div>
-                  <span className="text-white font-medium">Email Status</span>
-                </div>
-                <span className="text-green-400 font-bold">Connected</span>
-              </div>
-
-              <div className="bg-black/20 rounded-xl p-3 border border-white/10">
-                <p className="text-xs text-gray-400 mb-1">Last campaign:</p>
-                <p className="text-sm text-white font-medium">
-                  Monthly Newsletter
-                </p>
-                <p className="text-xs text-gray-300 mt-1">
-                  Sent to 1,234 subscribers
-                </p>
-              </div>
-            </div>
-
             <div className="flex space-x-2">
               <button className="flex-1 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 text-sm font-medium">
                 Send SMS
@@ -1360,8 +1337,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Section - Banking */}
-      <div className="grid grid-cols-1 gap-6 mb-8">
+      {/* Bottom Section - Banking & Low Stock Alert */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Banking Overview */}
         <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 sm:px-6 px-2">
           <div className="flex items-center justify-between mb-6">
@@ -1527,10 +1504,9 @@ export default function DashboardPage() {
             See More Banking Details
           </button>
         </div>
-      </div>
 
-      {/* Product Activities */}
-      <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 px-2 sm:px-6">
+        {/* Low Stock Alert */}
+        <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 px-2 sm:px-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 mr-3">
@@ -1840,16 +1816,19 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <button
-          className="w-full mt-4 py-2 bg-gradient-to-r from-orange-500/30 to-red-500/30 hover:from-orange-500/50 hover:to-red-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium"
-          onClick={() => {
-            setIsNavigating(true);
-            router.push("/dashboard/products");
-          }}
-          disabled={isNavigating}
-        >
-          View Inventory Report
-        </button>
+        <div className="flex justify-center mt-4">
+          <button
+            className="px-6 py-2 bg-gradient-to-r from-orange-500/30 to-red-500/30 hover:from-orange-500/50 hover:to-red-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+            onClick={() => {
+              setIsNavigating(true);
+              router.push("/dashboard/products");
+            }}
+            disabled={isNavigating}
+          >
+            View Inventory Report
+          </button>
+        </div>
+      </div>
       </div>
 
       {/* New Customer Modal */}
