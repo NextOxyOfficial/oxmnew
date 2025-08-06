@@ -423,7 +423,7 @@ export default function DashboardPage() {
                   <button
                     onClick={handleNewOrder}
                     disabled={isNavigating}
-                    className="flex-1 px-3 py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-3 py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <svg
                       className="w-4 h-4 mr-2"
@@ -442,7 +442,7 @@ export default function DashboardPage() {
                   </button>
                   <div className="relative flex-1">
                     <button
-                      className="w-full px-3 py-2 text-sm bg-white/3 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center justify-center"
+                      className="w-full px-3 py-2 text-sm bg-white/3 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center justify-center cursor-pointer"
                       onClick={() =>
                         setSortDropdownOpen((prevState) => !prevState)
                       }
@@ -467,26 +467,26 @@ export default function DashboardPage() {
                     {/* Mobile Dropdown Menu */}
                     {sortDropdownOpen && (
                       <div className="absolute right-0 mt-2 w-full bg-gray-800 rounded-lg border border-gray-700 shadow-lg z-10 py-1">
-                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
+                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
                           Today
                         </button>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
+                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
                           Yesterday
                         </button>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-blue-300 bg-blue-900/50">
+                        <button className="block w-full text-left px-4 py-2 text-sm text-blue-300 bg-blue-900/50 cursor-pointer">
                           This Week
                         </button>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
+                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
                           Last Week
                         </button>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
+                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
                           This Month
                         </button>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
+                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
                           Last Month
                         </button>
                         <button
-                          className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center"
+                          className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowDateRangePicker(true);
@@ -524,7 +524,7 @@ export default function DashboardPage() {
                 <button
                   onClick={handleNewOrder}
                   disabled={isNavigating}
-                  className="px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <svg
                     className="w-4 h-4 mr-2"
@@ -544,7 +544,7 @@ export default function DashboardPage() {
               </div>
               <div className="relative">
                 <button
-                  className="px-4 py-2 text-sm bg-white/3 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center"
+                  className="px-4 py-2 text-sm bg-white/3 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center cursor-pointer"
                   onClick={() => setSortDropdownOpen((prevState) => !prevState)}
                   data-dropdown-toggle="true"
                 >
@@ -566,26 +566,26 @@ export default function DashboardPage() {
 
                 {sortDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg border border-gray-700 shadow-lg z-10 py-1">
-                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
+                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
                       Today
                     </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
+                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
                       Yesterday
                     </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-blue-300 bg-blue-900/50">
+                    <button className="block w-full text-left px-4 py-2 text-sm text-blue-300 bg-blue-900/50 cursor-pointer">
                       This Week
                     </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
+                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
                       Last Week
                     </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
+                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
                       This Month
                     </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors">
+                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
                       Last Month
                     </button>
                     <button
-                      className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center"
+                      className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowDateRangePicker(true);
@@ -621,7 +621,7 @@ export default function DashboardPage() {
                         Select Date Range
                       </h4>
                       <button
-                        className="text-gray-400 hover:text-white"
+                        className="text-gray-400 hover:text-white cursor-pointer"
                         onClick={() => setShowDateRangePicker(false)}
                       >
                         <svg
@@ -846,13 +846,13 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex space-x-2">
                         <button
-                          className="px-3 py-2 bg-gray-700 text-white text-sm rounded hover:bg-gray-600"
+                          className="px-3 py-2 bg-gray-700 text-white text-sm rounded hover:bg-gray-600 cursor-pointer"
                           onClick={() => setShowDateRangePicker(false)}
                         >
                           Cancel
                         </button>
                         <button
-                          className="px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded"
+                          className="px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded cursor-pointer"
                           onClick={() => {
                             setSortDropdownOpen(false);
                             setShowDateRangePicker(false);
@@ -1041,7 +1041,7 @@ export default function DashboardPage() {
                   <button
                     onClick={refetchSales}
                     disabled={isLoadingSales}
-                    className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50"
+                    className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50 cursor-pointer"
                     title="Refresh sales data"
                   >
                     <svg
@@ -1221,7 +1221,7 @@ export default function DashboardPage() {
                 )}
               </div>
               <button
-                className="w-full mt-3 py-2 bg-gradient-to-r from-blue-500/30 to-purple-500/30 hover:from-blue-500/50 hover:to-purple-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+                className="w-full mt-3 py-2 bg-gradient-to-r from-blue-500/30 to-purple-500/30 hover:from-blue-500/50 hover:to-purple-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium cursor-pointer"
                 onClick={() => {
                   setIsNavigating(true);
                   router.push("/dashboard/sales");
@@ -1253,7 +1253,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="text-blue-400 font-bold">2,457 credits</span>
-                  <button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-xs font-medium text-white px-2 py-1 rounded transition-all duration-200">
+                  <button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-xs font-medium text-white px-2 py-1 rounded transition-all duration-200 cursor-pointer">
                     Buy
                   </button>
                 </div>
@@ -1274,11 +1274,8 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex space-x-2">
-              <button className="flex-1 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 text-sm font-medium">
+              <button className="w-full py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 text-sm font-medium cursor-pointer">
                 Send SMS
-              </button>
-              <button className="flex-1 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 text-sm font-medium">
-                Send Email
               </button>
             </div>
           </div>
@@ -1290,7 +1287,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleNewOrder}
                 disabled={isNavigating}
-                className="p-3 bg-gradient-to-br from-green-500/15 to-green-600/8 border border-green-500/25 backdrop-blur-sm rounded-xl hover:from-green-500/20 hover:to-green-600/15 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-3 bg-gradient-to-br from-green-500/15 to-green-600/8 border border-green-500/25 backdrop-blur-sm rounded-xl hover:from-green-500/20 hover:to-green-600/15 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">
                   🛒
@@ -1302,7 +1299,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleAddProduct}
                 disabled={isNavigating}
-                className="p-3 bg-gradient-to-br from-blue-500/15 to-blue-600/8 border border-blue-500/25 backdrop-blur-sm rounded-xl hover:from-blue-500/20 hover:to-blue-600/15 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-3 bg-gradient-to-br from-blue-500/15 to-blue-600/8 border border-blue-500/25 backdrop-blur-sm rounded-xl hover:from-blue-500/20 hover:to-blue-600/15 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">
                   📦
@@ -1313,7 +1310,7 @@ export default function DashboardPage() {
               </button>
               <button
                 onClick={handleNewCustomer}
-                className="p-3 bg-gradient-to-br from-purple-500/15 to-purple-600/8 border border-purple-500/25 backdrop-blur-sm rounded-xl hover:from-purple-500/20 hover:to-purple-600/15 transition-all duration-200 group"
+                className="p-3 bg-gradient-to-br from-purple-500/15 to-purple-600/8 border border-purple-500/25 backdrop-blur-sm rounded-xl hover:from-purple-500/20 hover:to-purple-600/15 transition-all duration-200 group cursor-pointer"
               >
                 <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">
                   👥
@@ -1325,7 +1322,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleDueBook}
                 disabled={isNavigating}
-                className="p-3 bg-gradient-to-br from-orange-500/15 to-orange-600/8 border border-orange-500/25 backdrop-blur-sm rounded-xl hover:from-orange-500/20 hover:to-orange-600/15 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-3 bg-gradient-to-br from-orange-500/15 to-orange-600/8 border border-orange-500/25 backdrop-blur-sm rounded-xl hover:from-orange-500/20 hover:to-orange-600/15 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <span className="text-2xl block mb-2 group-hover:scale-110 transition-transform">
                   �
@@ -1339,6 +1336,213 @@ export default function DashboardPage() {
 
       {/* Bottom Section - Banking & Low Stock Alert */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Low Stock Alert */}
+        <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 px-2 sm:px-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 mr-3">
+                <span className="text-white">⚠️</span>
+              </div>
+              <h3 className="text-lg font-bold text-white">Low Stock Alert</h3>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-gray-400">
+                {outOfStockProducts.length + lowStockProducts.length} alerts
+              </span>
+              <button
+                onClick={refetchStock}
+                disabled={isLoadingStock}
+                className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50 cursor-pointer"
+                title="Refresh stock data"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-3 w-3 text-gray-400 hover:text-white ${
+                    isLoadingStock ? "animate-spin" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2 overflow-y-auto max-h-80 scrollbar-hide">
+            {isLoadingStock ? (
+              // Loading state
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/30"></div>
+                <span className="ml-2 text-sm text-gray-400">
+                  Loading stock alerts...
+                </span>
+              </div>
+            ) : stockError ? (
+              // Error state
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="text-red-400 mb-2">⚠️</div>
+                  <p className="text-sm text-red-400">{stockError}</p>
+                  <button
+                    onClick={refetchStock}
+                    className="mt-2 px-3 py-1 bg-red-500/20 text-red-400 text-xs rounded hover:bg-red-500/30 transition-colors cursor-pointer"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            ) : outOfStockProducts.length === 0 &&
+              lowStockProducts.length === 0 ? (
+              // Empty state
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="text-green-400 mb-2">✅</div>
+                  <p className="text-sm text-green-400">
+                    All products have sufficient stock
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Great job managing your inventory!
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Out of Stock Products */}
+                {outOfStockProducts.map((product) => {
+                  const stockStatus = getStockStatus(product);
+                  const totalStock = getTotalStock(product);
+                  const statusColor = getStockStatusColor(stockStatus);
+                  const lowestVariant = getLowestStockVariant(product);
+
+                  return (
+                    <div
+                      key={`out-${product.id}`}
+                      className="bg-red-500/10 border border-red-400/30 rounded-lg p-3"
+                    >
+                      <div className="flex items-center mb-2">
+                        <div
+                          className={`w-2 h-2 bg-${statusColor}-500 rounded-full mr-2`}
+                        ></div>
+                        <button
+                          className="text-sm font-medium text-white hover:text-blue-300 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setIsNavigating(true);
+                            router.push(`/dashboard/products?search=${encodeURIComponent(product.name)}`);
+                          }}
+                        >
+                          {product.name}
+                          {lowestVariant &&
+                            ` - ${formatVariantName(lowestVariant)}`}
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap items-center mt-2 bg-black/20 rounded-lg p-1.5">
+                        <div className="flex items-center space-x-3 px-1.5">
+                          <div>
+                            <span className="text-xs text-gray-400">
+                              Stock:
+                            </span>
+                            <span
+                              className={`text-xs font-medium text-${statusColor}-400 ml-1`}
+                            >
+                              {totalStock}
+                            </span>
+                          </div>
+                          <div className="h-3 w-px bg-gray-600"></div>
+                          <div>
+                            <span className="text-xs text-gray-400">
+                              Location:
+                            </span>
+                            <span className="text-xs font-medium text-gray-300 ml-1">
+                              {product.location || "N/A"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Low Stock Products */}
+                {lowStockProducts.map((product) => {
+                  const stockStatus = getStockStatus(product);
+                  const totalStock = getTotalStock(product);
+                  const statusColor = getStockStatusColor(stockStatus);
+                  const lowestVariant = getLowestStockVariant(product);
+
+                  return (
+                    <div
+                      key={`low-${product.id}`}
+                      className="bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-3"
+                    >
+                      <div className="flex items-center mb-2">
+                        <div
+                          className={`w-2 h-2 bg-${statusColor}-500 rounded-full mr-2`}
+                        ></div>
+                        <button
+                          className="text-sm font-medium text-white hover:text-blue-300 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setIsNavigating(true);
+                            router.push(`/dashboard/products?search=${encodeURIComponent(product.name)}`);
+                          }}
+                        >
+                          {product.name}
+                          {lowestVariant &&
+                            ` - ${formatVariantName(lowestVariant)}`}
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap items-center mt-2 bg-black/20 rounded-lg p-1.5">
+                        <div className="flex items-center space-x-3 px-1.5">
+                          <div>
+                            <span className="text-xs text-gray-400">
+                              Stock:
+                            </span>
+                            <span
+                              className={`text-xs font-medium text-${statusColor}-400 ml-1`}
+                            >
+                              {totalStock}
+                            </span>
+                          </div>
+                          <div className="h-3 w-px bg-gray-600"></div>
+                          <div>
+                            <span className="text-xs text-gray-400">
+                              Location:
+                            </span>
+                            <span className="text-xs font-medium text-gray-300 ml-1">
+                              {product.location || "N/A"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+
+          <div className="flex justify-center mt-4">
+            <button
+              className="px-6 py-2 bg-gradient-to-r from-orange-500/30 to-red-500/30 hover:from-orange-500/50 hover:to-red-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium cursor-pointer"
+              onClick={() => {
+                setIsNavigating(true);
+                router.push("/dashboard/products");
+              }}
+              disabled={isNavigating}
+            >
+              View Inventory Report
+            </button>
+          </div>
+        </div>
+
         {/* Banking Overview */}
         <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 sm:px-6 px-2">
           <div className="flex items-center justify-between mb-6">
@@ -1366,7 +1570,7 @@ export default function DashboardPage() {
               <button
                 onClick={refetchBanking}
                 disabled={isLoadingBanking}
-                className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50"
+                className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50 cursor-pointer"
                 title="Refresh banking data"
               >
                 <svg
@@ -1494,7 +1698,7 @@ export default function DashboardPage() {
           </div>
 
           <button
-            className="w-full mt-4 py-2 bg-gradient-to-r from-green-500/30 to-emerald-500/30 hover:from-green-500/50 hover:to-emerald-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+            className="w-full mt-4 py-2 bg-gradient-to-r from-green-500/30 to-emerald-500/30 hover:from-green-500/50 hover:to-emerald-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium cursor-pointer"
             onClick={() => {
               setIsNavigating(true);
               router.push("/dashboard/banking");
@@ -1504,331 +1708,6 @@ export default function DashboardPage() {
             See More Banking Details
           </button>
         </div>
-
-        {/* Low Stock Alert */}
-        <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 px-2 sm:px-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 mr-3">
-              <span className="text-white">⚠️</span>
-            </div>
-            <h3 className="text-lg font-bold text-white">Low Stock Alert</h3>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-400">
-              {outOfStockProducts.length + lowStockProducts.length} alerts
-            </span>
-            <button
-              onClick={refetchStock}
-              disabled={isLoadingStock}
-              className="p-1 rounded-full hover:bg-white/3 transition-colors disabled:opacity-50"
-              title="Refresh stock data"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className={`h-3 w-3 text-gray-400 hover:text-white ${
-                  isLoadingStock ? "animate-spin" : ""
-                }`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-2 overflow-y-auto max-h-80 scrollbar-hide">
-          {isLoadingStock ? (
-            // Loading state
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/30"></div>
-              <span className="ml-2 text-sm text-gray-400">
-                Loading stock alerts...
-              </span>
-            </div>
-          ) : stockError ? (
-            // Error state
-            <div className="flex items-center justify-center py-8">
-              <div className="text-center">
-                <div className="text-red-400 mb-2">⚠️</div>
-                <p className="text-sm text-red-400">{stockError}</p>
-                <button
-                  onClick={refetchStock}
-                  className="mt-2 px-3 py-1 bg-red-500/20 text-red-400 text-xs rounded hover:bg-red-500/30 transition-colors"
-                >
-                  Retry
-                </button>
-              </div>
-            </div>
-          ) : outOfStockProducts.length === 0 &&
-            lowStockProducts.length === 0 ? (
-            // Empty state
-            <div className="flex items-center justify-center py-8">
-              <div className="text-center">
-                <div className="text-green-400 mb-2">✅</div>
-                <p className="text-sm text-green-400">
-                  All products have sufficient stock
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Great job managing your inventory!
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Out of Stock Products */}
-              {outOfStockProducts.map((product) => {
-                const stockStatus = getStockStatus(product);
-                const totalStock = getTotalStock(product);
-                const statusColor = getStockStatusColor(stockStatus);
-                const statusText = getStockStatusText(stockStatus);
-                const lowestVariant = getLowestStockVariant(product);
-                const restockSuggestion = getRestockSuggestion(product);
-
-                return (
-                  <div
-                    key={`out-${product.id}`}
-                    className="bg-red-500/10 border border-red-400/30 rounded-lg p-3"
-                  >
-                    {/* Desktop Layout */}
-                    <div className="hidden md:flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div
-                          className={`w-2 h-2 bg-${statusColor}-500 rounded-full mr-2`}
-                        ></div>
-                        <span className="text-sm font-medium text-white mr-2">
-                          {product.name}
-                          {lowestVariant &&
-                            ` - ${formatVariantName(lowestVariant)}`}
-                        </span>
-                        <span
-                          className={`bg-${statusColor}-500/20 text-${statusColor}-300 text-xs font-medium px-2 py-0.5 rounded mr-2`}
-                        >
-                          {statusText}
-                        </span>
-                        <span className="text-xs text-gray-400 mr-2">
-                          ID: {product.id}
-                        </span>
-                      </div>
-                      <button
-                        className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs px-2.5 py-1 rounded transition-all duration-200"
-                        onClick={() => {
-                          // TODO: Implement restock functionality
-                          console.log(`Restock ${product.name}`);
-                        }}
-                      >
-                        Restock
-                      </button>
-                    </div>
-
-                    {/* Mobile Layout */}
-                    <div className="md:hidden">
-                      <div className="flex items-center mb-2">
-                        <div
-                          className={`w-2 h-2 bg-${statusColor}-500 rounded-full mr-2`}
-                        ></div>
-                        <span className="text-sm font-medium text-white">
-                          {product.name}
-                          {lowestVariant &&
-                            ` - ${formatVariantName(lowestVariant)}`}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <span
-                            className={`bg-${statusColor}-500/20 text-${statusColor}-300 text-xs font-medium px-2 py-0.5 rounded mr-2`}
-                          >
-                            {statusText}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            ID: {product.id}
-                          </span>
-                        </div>
-                        <button
-                          className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs px-2.5 py-1 rounded transition-all duration-200"
-                          onClick={() => {
-                            // TODO: Implement restock functionality
-                            console.log(`Restock ${product.name}`);
-                          }}
-                        >
-                          Restock
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center mt-2 bg-black/20 rounded-lg p-1.5">
-                      <div className="flex items-center space-x-3 px-1.5">
-                        <div>
-                          <span className="text-xs text-gray-400">Stock:</span>
-                          <span className="text-xs font-medium text-red-400 ml-1">
-                            {totalStock}
-                          </span>
-                        </div>
-                        <div className="h-3 w-px bg-gray-600"></div>
-                        <div>
-                          <span className="text-xs text-gray-400">
-                            Suggest restock:
-                          </span>
-                          <span className="text-xs font-medium text-blue-400 ml-1">
-                            {restockSuggestion}
-                          </span>
-                        </div>
-                        <div className="h-3 w-px bg-gray-600"></div>
-                        <div>
-                          <span className="text-xs text-gray-400">
-                            Location:
-                          </span>
-                          <span className="text-xs font-medium text-gray-300 ml-1">
-                            {product.location || "N/A"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Low Stock Products */}
-              {lowStockProducts
-                .filter((p) => getTotalStock(p) > 0)
-                .map((product) => {
-                  const stockStatus = getStockStatus(product);
-                  const totalStock = getTotalStock(product);
-                  const statusColor = getStockStatusColor(stockStatus);
-                  const statusText = getStockStatusText(stockStatus);
-                  const lowestVariant = getLowestStockVariant(product);
-                  const restockSuggestion = getRestockSuggestion(product);
-
-                  return (
-                    <div
-                      key={`low-${product.id}`}
-                      className={`bg-${statusColor}-500/10 border border-${statusColor}-400/30 rounded-lg p-3`}
-                    >
-                      {/* Desktop Layout */}
-                      <div className="hidden md:flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div
-                            className={`w-2 h-2 bg-${statusColor}-500 rounded-full mr-2`}
-                          ></div>
-                          <span className="text-sm font-medium text-white mr-2">
-                            {product.name}
-                            {lowestVariant &&
-                              ` - ${formatVariantName(lowestVariant)}`}
-                          </span>
-                          <span
-                            className={`bg-${statusColor}-500/20 text-${statusColor}-300 text-xs font-medium px-2 py-0.5 rounded mr-2`}
-                          >
-                            {statusText} ({totalStock})
-                          </span>
-                          <span className="text-xs text-gray-400 mr-2">
-                            ID: {product.id}
-                          </span>
-                        </div>
-                        <button
-                          className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs px-2.5 py-1 rounded transition-all duration-200"
-                          onClick={() => {
-                            // TODO: Implement restock functionality
-                            console.log(`Restock ${product.name}`);
-                          }}
-                        >
-                          Restock
-                        </button>
-                      </div>
-
-                      {/* Mobile Layout */}
-                      <div className="md:hidden">
-                        <div className="flex items-center mb-2">
-                          <div
-                            className={`w-2 h-2 bg-${statusColor}-500 rounded-full mr-2`}
-                          ></div>
-                          <span className="text-sm font-medium text-white">
-                            {product.name}
-                            {lowestVariant &&
-                              ` - ${formatVariantName(lowestVariant)}`}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <span
-                              className={`bg-${statusColor}-500/20 text-${statusColor}-300 text-xs font-medium px-2 py-0.5 rounded mr-2`}
-                            >
-                              {statusText} ({totalStock})
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              ID: {product.id}
-                            </span>
-                          </div>
-                          <button
-                            className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xs px-2.5 py-1 rounded transition-all duration-200"
-                            onClick={() => {
-                              // TODO: Implement restock functionality
-                              console.log(`Restock ${product.name}`);
-                            }}
-                          >
-                            Restock
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center mt-2 bg-black/20 rounded-lg p-1.5">
-                        <div className="flex items-center space-x-3 px-1.5">
-                          <div>
-                            <span className="text-xs text-gray-400">
-                              Stock:
-                            </span>
-                            <span
-                              className={`text-xs font-medium text-${statusColor}-400 ml-1`}
-                            >
-                              {totalStock}
-                            </span>
-                          </div>
-                          <div className="h-3 w-px bg-gray-600"></div>
-                          <div>
-                            <span className="text-xs text-gray-400">
-                              Suggest restock:
-                            </span>
-                            <span className="text-xs font-medium text-blue-400 ml-1">
-                              {restockSuggestion}
-                            </span>
-                          </div>
-                          <div className="h-3 w-px bg-gray-600"></div>
-                          <div>
-                            <span className="text-xs text-gray-400">
-                              Location:
-                            </span>
-                            <span className="text-xs font-medium text-gray-300 ml-1">
-                              {product.location || "N/A"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-            </>
-          )}
-        </div>
-
-        <div className="flex justify-center mt-4">
-          <button
-            className="px-6 py-2 bg-gradient-to-r from-orange-500/30 to-red-500/30 hover:from-orange-500/50 hover:to-red-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium"
-            onClick={() => {
-              setIsNavigating(true);
-              router.push("/dashboard/products");
-            }}
-            disabled={isNavigating}
-          >
-            View Inventory Report
-          </button>
-        </div>
-      </div>
       </div>
 
       {/* New Customer Modal */}
