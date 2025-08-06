@@ -869,108 +869,164 @@ export default function DashboardPage() {
 
             {/* First row: Buy Price and Sell Price (2 cards) */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
-              <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl p-2.5 border border-green-400/30">
-                <div className="flex items-center justify-between">
-                  <span className="text-green-400 text-sm font-medium">
-                    Buy Price
-                  </span>
-                  {isLoadingSales && (
-                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-green-400/30"></div>
-                  )}
+              <div className="bg-gradient-to-br from-green-500/15 to-green-600/8 border border-green-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+                <div className="flex items-center space-x-2">
+                  <div className="rounded-md bg-green-500/20 p-1.5">
+                    <svg
+                      className="h-7 w-7 text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-green-300 font-medium">
+                      Buy Price
+                    </p>
+                    <p className="text-base font-bold text-green-400">
+                      {isLoadingSales ? (
+                        <span className="animate-pulse">Loading...</span>
+                      ) : salesError ? (
+                        <span className="text-red-400 text-sm">Error</span>
+                      ) : (
+                        formatCurrency(recentActivitiesStats.totalBuyPrice)
+                      )}
+                    </p>
+                    <p className="text-xs text-green-500 opacity-80">
+                      {recentActivitiesStats.salesCount} recent sales
+                    </p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {isLoadingSales ? (
-                    <span className="animate-pulse text-lg">Loading...</span>
-                  ) : salesError ? (
-                    <span className="text-red-400 text-lg">Error</span>
-                  ) : (
-                    formatCurrency(recentActivitiesStats.totalBuyPrice)
-                  )}
-                </p>
-                <p className="text-xs text-green-300 mt-0.5">
-                  {recentActivitiesStats.salesCount} recent sales
-                </p>
               </div>
 
-              <div className="bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-xl p-2.5 border border-red-400/30">
-                <div className="flex items-center justify-between">
-                  <span className="text-red-400 text-sm font-medium">
-                    Sell Price
-                  </span>
-                  {isLoadingSales && (
-                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-red-400/30"></div>
-                  )}
+              <div className="bg-gradient-to-br from-red-500/15 to-red-600/8 border border-red-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+                <div className="flex items-center space-x-2">
+                  <div className="rounded-md bg-red-500/20 p-1.5">
+                    <svg
+                      className="h-7 w-7 text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-red-300 font-medium">
+                      Sell Price
+                    </p>
+                    <p className="text-base font-bold text-red-400">
+                      {isLoadingSales ? (
+                        <span className="animate-pulse">Loading...</span>
+                      ) : salesError ? (
+                        <span className="text-red-400 text-sm">Error</span>
+                      ) : (
+                        formatCurrency(recentActivitiesStats.totalSellPrice)
+                      )}
+                    </p>
+                    <p className="text-xs text-red-500 opacity-80">
+                      Total revenue from recent sales
+                    </p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {isLoadingSales ? (
-                    <span className="animate-pulse text-lg">Loading...</span>
-                  ) : salesError ? (
-                    <span className="text-red-400 text-lg">Error</span>
-                  ) : (
-                    formatCurrency(recentActivitiesStats.totalSellPrice)
-                  )}
-                </p>
-                <p className="text-xs text-red-300 mt-0.5">
-                  Total revenue from recent sales
-                </p>
               </div>
 
               {/* Profit Card - Appears in first row on desktop, but full width in a separate row on mobile */}
-              <div className="bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl p-2.5 border border-purple-400/30 hidden md:block">
-                <div className="flex items-center justify-between">
-                  <span className="text-purple-400 text-sm font-medium">
-                    Profit
-                  </span>
-                  {isLoadingSales && (
-                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-purple-400/30"></div>
-                  )}
+              <div className="bg-gradient-to-br from-purple-500/15 to-purple-600/8 border border-purple-500/25 rounded-lg p-2.5 backdrop-blur-sm hidden md:block">
+                <div className="flex items-center space-x-2">
+                  <div className="rounded-md bg-purple-500/20 p-1.5">
+                    <svg
+                      className="h-7 w-7 text-purple-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2v-14a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-purple-300 font-medium">
+                      Profit
+                    </p>
+                    <p className="text-base font-bold text-purple-400">
+                      {isLoadingSales ? (
+                        <span className="animate-pulse">Loading...</span>
+                      ) : salesError ? (
+                        <span className="text-red-400 text-sm">Error</span>
+                      ) : (
+                        formatCurrency(recentActivitiesStats.totalProfit)
+                      )}
+                    </p>
+                    <p className="text-xs text-purple-500 opacity-80">
+                      {isLoadingSales || salesError
+                        ? "Loading..."
+                        : `${recentActivitiesStats.profitMargin.toFixed(
+                            1
+                          )}% profit margin`}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {isLoadingSales ? (
-                    <span className="animate-pulse text-lg">Loading...</span>
-                  ) : salesError ? (
-                    <span className="text-red-400 text-lg">Error</span>
-                  ) : (
-                    formatCurrency(recentActivitiesStats.totalProfit)
-                  )}
-                </p>
-                <p className="text-xs text-purple-300 mt-0.5">
-                  {isLoadingSales || salesError
-                    ? "Loading..."
-                    : `${recentActivitiesStats.profitMargin.toFixed(
-                        1
-                      )}% profit margin`}
-                </p>
               </div>
             </div>
 
             {/* Second row: Profit Card (full width on mobile only) */}
             <div className="md:hidden mb-4">
-              <div className="bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl p-2.5 border border-purple-400/30">
-                <div className="flex items-center justify-between">
-                  <span className="text-purple-400 text-sm font-medium">
-                    Profit
-                  </span>
-                  {isLoadingSales && (
-                    <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-purple-400/30"></div>
-                  )}
+              <div className="bg-gradient-to-br from-purple-500/15 to-purple-600/8 border border-purple-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+                <div className="flex items-center space-x-2">
+                  <div className="rounded-md bg-purple-500/20 p-1.5">
+                    <svg
+                      className="h-7 w-7 text-purple-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2v-14a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-purple-300 font-medium">
+                      Profit
+                    </p>
+                    <p className="text-base font-bold text-purple-400">
+                      {isLoadingSales ? (
+                        <span className="animate-pulse">Loading...</span>
+                      ) : salesError ? (
+                        <span className="text-red-400 text-sm">Error</span>
+                      ) : (
+                        formatCurrency(recentActivitiesStats.totalProfit)
+                      )}
+                    </p>
+                    <p className="text-xs text-purple-500 opacity-80">
+                      {isLoadingSales || salesError
+                        ? "Loading..."
+                        : `${recentActivitiesStats.profitMargin.toFixed(
+                            1
+                          )}% profit margin`}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-white leading-none mt-0.5">
-                  {isLoadingSales ? (
-                    <span className="animate-pulse text-lg">Loading...</span>
-                  ) : salesError ? (
-                    <span className="text-red-400 text-lg">Error</span>
-                  ) : (
-                    formatCurrency(recentActivitiesStats.totalProfit)
-                  )}
-                </p>
-                <p className="text-xs text-purple-300 mt-0.5">
-                  {isLoadingSales || salesError
-                    ? "Loading..."
-                    : `${recentActivitiesStats.profitMargin.toFixed(
-                        1
-                      )}% profit margin`}
-                </p>
               </div>
             </div>
 
@@ -1180,54 +1236,74 @@ export default function DashboardPage() {
 
         {/* Quick Actions & Tasks */}
         <div className="space-y-6">
-          {/* Priority Tasks */}
-          <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm px-3 sm:px-6 py-6">
-            <div className="flex items-center mb-4">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 mr-3">
-                <span className="text-white">🚨</span>
-              </div>
-              <h3 className="text-lg font-bold text-white">Priority Tasks</h3>
-            </div>
+          {/* Communications Hub */}
+          <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4">
+            <h3 className="text-lg font-bold text-white mb-6">
+              Communications Hub
+            </h3>
 
-            <div className="space-y-3">
-              <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-3">
-                <div className="flex items-start">
-                  <div className="w-2 h-2 bg-red-400 rounded-full mt-2 mr-3"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-white mb-1">
-                      Send monthly newsletter
-                    </p>
-                    <p className="text-xs text-gray-300 mb-2">
-                      Due: Today, 5:00 PM
-                    </p>
-                    <span className="inline-block px-2 py-1 bg-red-500/50 text-red-200 text-xs rounded-full">
-                      High Priority
-                    </span>
+            {/* SMS Section */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 mr-3">
+                    <span className="text-white text-sm">�</span>
                   </div>
+                  <span className="text-white font-medium">SMS Balance</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-blue-400 font-bold">2,457 credits</span>
+                  <button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-xs font-medium text-white px-2 py-1 rounded transition-all duration-200">
+                    Buy
+                  </button>
                 </div>
               </div>
 
-              <div className="bg-yellow-500/20 border border-yellow-400/30 rounded-xl p-3">
-                <div className="flex items-start">
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-white mb-1">
-                      Update inventory
-                    </p>
-                    <p className="text-xs text-gray-300 mb-2">
-                      Due: Tomorrow, 10:00 AM
-                    </p>
-                    <span className="inline-block px-2 py-1 bg-yellow-500/50 text-yellow-200 text-xs rounded-full">
-                      Medium Priority
-                    </span>
-                  </div>
-                </div>
+              <div className="bg-black/20 rounded-xl p-3 border border-white/10">
+                <p className="text-xs text-gray-400 mb-1">Last SMS sent:</p>
+                <p className="text-sm text-white font-medium">
+                  John Doe (+1234567890)
+                </p>
+                <p className="text-xs text-gray-300 mt-1">
+                  &ldquo;Your order #1245 has been shipped...&rdquo;
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  June 25, 2025, 2:30 PM
+                </p>
               </div>
             </div>
 
-            <button className="w-full mt-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-200 text-sm font-medium">
-              View All Tasks
-            </button>
+            {/* Email Section */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 mr-3">
+                    <span className="text-white text-sm">✉️</span>
+                  </div>
+                  <span className="text-white font-medium">Email Status</span>
+                </div>
+                <span className="text-green-400 font-bold">Connected</span>
+              </div>
+
+              <div className="bg-black/20 rounded-xl p-3 border border-white/10">
+                <p className="text-xs text-gray-400 mb-1">Last campaign:</p>
+                <p className="text-sm text-white font-medium">
+                  Monthly Newsletter
+                </p>
+                <p className="text-xs text-gray-300 mt-1">
+                  Sent to 1,234 subscribers
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-2">
+              <button className="flex-1 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 text-sm font-medium">
+                Send SMS
+              </button>
+              <button className="flex-1 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 text-sm font-medium">
+                Send Email
+              </button>
+            </div>
           </div>
 
           {/* Quick Actions */}
@@ -1284,8 +1360,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Section - Banking & Communications */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* Bottom Section - Banking */}
+      <div className="grid grid-cols-1 gap-6 mb-8">
         {/* Banking Overview */}
         <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm py-6 sm:px-6 px-2">
           <div className="flex items-center justify-between mb-6">
@@ -1450,76 +1526,6 @@ export default function DashboardPage() {
           >
             See More Banking Details
           </button>
-        </div>
-
-        {/* Communications Hub */}
-        <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4">
-          <h3 className="text-lg font-bold text-white mb-6">
-            Communications Hub
-          </h3>
-
-          {/* SMS Section */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center">
-                <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 mr-3">
-                  <span className="text-white text-sm">📱</span>
-                </div>
-                <span className="text-white font-medium">SMS Balance</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-blue-400 font-bold">2,457 credits</span>
-                <button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-xs font-medium text-white px-2 py-1 rounded transition-all duration-200">
-                  Buy
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-black/20 rounded-xl p-3 border border-white/10">
-              <p className="text-xs text-gray-400 mb-1">Last SMS sent:</p>
-              <p className="text-sm text-white font-medium">
-                John Doe (+1234567890)
-              </p>
-              <p className="text-xs text-gray-300 mt-1">
-                &ldquo;Your order #1245 has been shipped...&rdquo;
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                June 25, 2025, 2:30 PM
-              </p>
-            </div>
-          </div>
-
-          {/* Email Section */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center">
-                <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 mr-3">
-                  <span className="text-white text-sm">✉️</span>
-                </div>
-                <span className="text-white font-medium">Email Status</span>
-              </div>
-              <span className="text-green-400 font-bold">Connected</span>
-            </div>
-
-            <div className="bg-black/20 rounded-xl p-3 border border-white/10">
-              <p className="text-xs text-gray-400 mb-1">Last campaign:</p>
-              <p className="text-sm text-white font-medium">
-                Monthly Newsletter
-              </p>
-              <p className="text-xs text-gray-300 mt-1">
-                Sent to 1,234 subscribers
-              </p>
-            </div>
-          </div>
-
-          <div className="flex space-x-2">
-            <button className="flex-1 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 text-sm font-medium">
-              Send SMS
-            </button>
-            <button className="flex-1 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 text-sm font-medium">
-              Send Email
-            </button>
-          </div>
         </div>
       </div>
 
