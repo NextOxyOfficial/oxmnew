@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Order } from "@/types/order";
-import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -99,10 +99,10 @@ export default function OrdersPage() {
     try {
       setIsDeleting(true);
       await ApiService.deleteProductSale(orderToDelete.id);
-      
+
       // Refresh the orders list
       await fetchOrders();
-      
+
       // Close the confirmation dialog
       setShowDeleteConfirm(false);
       setOrderToDelete(null);
@@ -143,7 +143,7 @@ export default function OrdersPage() {
     const unitPrice = parseFloat(String(order.unit_price || 0));
     const buyPrice = parseFloat(String(order.buy_price || 0));
     const quantity = order.quantity || 0;
-    
+
     if (!isNaN(unitPrice) && !isNaN(buyPrice) && quantity > 0) {
       const orderProfit = (unitPrice - buyPrice) * quantity;
       return sum + (isNaN(orderProfit) ? 0 : orderProfit);
@@ -371,7 +371,9 @@ export default function OrdersPage() {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-blue-300 font-medium">Total Profit</p>
+                <p className="text-sm text-blue-300 font-medium">
+                  Total Profit
+                </p>
                 <p className="text-base font-bold text-blue-400">
                   {formatCurrency(totalProfit || 0)}
                 </p>
@@ -592,6 +594,11 @@ export default function OrdersPage() {
                       <div className="flex-1 min-w-0 pr-2">
                         <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 transition-colors">
                           Order #{order.id}
+                          {order.product_name && (
+                            <span className="text-sm text-cyan-400 ml-2">
+                              • {order.product_name}
+                            </span>
+                          )}
                         </h4>
                         <p className="text-xs text-slate-400 mt-1">
                           {formatDate(order.sale_date)}
@@ -600,8 +607,8 @@ export default function OrdersPage() {
                       <div className="text-right">
                         <p className="text-lg font-bold text-cyan-400">
                           {formatCurrency(
-                            ((order.unit_price || 0) - (order.buy_price || 0)) * 
-                            (order.quantity || 0)
+                            ((order.unit_price || 0) - (order.buy_price || 0)) *
+                              (order.quantity || 0)
                           )}
                         </p>
                         <p className="text-xs text-slate-400">Profit</p>
@@ -633,7 +640,8 @@ export default function OrdersPage() {
                           Buy & Sell Price
                         </p>
                         <p className="text-sm font-medium text-slate-100">
-                          {formatCurrency(order.buy_price || 0)} → {formatCurrency(order.unit_price || 0)}
+                          {formatCurrency(order.buy_price || 0)} →{" "}
+                          {formatCurrency(order.unit_price || 0)}
                         </p>
                       </div>
                     </div>
@@ -648,13 +656,23 @@ export default function OrdersPage() {
 
                     {/* Invoice line with print and edit icons */}
                     <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
-                      <div 
+                      <div
                         className="flex items-center gap-2 cursor-pointer hover:text-cyan-400 transition-colors"
                         onClick={(e) => handleViewInvoice(order, e)}
                         title="View Invoice"
                       >
-                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <svg
+                          className="w-4 h-4 text-slate-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
                         </svg>
                         <div>
                           <p className="text-xs text-slate-400">Invoice</p>
@@ -662,22 +680,42 @@ export default function OrdersPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button 
+                        <button
                           className="p-2 text-slate-400 hover:text-cyan-400 transition-colors"
                           onClick={(e) => handlePrintInvoice(order, e)}
                           title="Print Invoice"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                            />
                           </svg>
                         </button>
-                        <button 
+                        <button
                           className="p-2 text-slate-400 hover:text-cyan-400 transition-colors"
                           onClick={(e) => handleEditInvoice(order, e)}
                           title="Edit Invoice"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
                           </svg>
                         </button>
                       </div>
@@ -725,7 +763,7 @@ export default function OrdersPage() {
                     <thead>
                       <tr className="border-b border-slate-700/50">
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Order ID
+                          Order ID & Product
                         </th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
                           Customer
@@ -755,6 +793,11 @@ export default function OrdersPage() {
                             <div>
                               <p className="text-sm font-medium text-slate-100">
                                 #{order.id}
+                                {order.product_name && (
+                                  <span className="text-xs text-cyan-400 ml-2">
+                                    • {order.product_name}
+                                  </span>
+                                )}
                               </p>
                               <p className="text-xs text-slate-400 mt-1">
                                 {formatDate(order.sale_date)}
@@ -789,49 +832,93 @@ export default function OrdersPage() {
                           </td>
                           <td className="py-4 px-4 text-sm font-medium text-cyan-400">
                             {formatCurrency(
-                              ((order.unit_price || 0) - (order.buy_price || 0)) * 
-                              (order.quantity || 0)
+                              ((order.unit_price || 0) -
+                                (order.buy_price || 0)) *
+                                (order.quantity || 0)
                             )}
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center justify-between">
-                              <div 
+                              <div
                                 className="flex items-center gap-2 cursor-pointer hover:text-cyan-400 transition-colors"
                                 onClick={(e) => handleViewInvoice(order, e)}
                                 title="View Invoice"
                               >
-                                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                <svg
+                                  className="w-4 h-4 text-slate-400"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                  />
                                 </svg>
-                                <button 
+                                <button
                                   className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
                                   onClick={(e) => handleEditInvoice(order, e)}
                                   title="Edit Invoice"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                    />
                                   </svg>
                                 </button>
-                                <button 
+                                <button
                                   className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     // TODO: Handle SMS functionality
-                                    console.log("SMS clicked for order:", order.id);
+                                    console.log(
+                                      "SMS clicked for order:",
+                                      order.id
+                                    );
                                   }}
                                   title="Send SMS"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                    />
                                   </svg>
                                 </button>
-                                <button 
+                                <button
                                   className="p-1 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
                                   onClick={(e) => handleDeleteOrder(order, e)}
                                   title="Delete Order"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
                                   </svg>
                                 </button>
                               </div>
@@ -858,8 +945,18 @@ export default function OrdersPage() {
                     onClick={printInvoice}
                     className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 flex items-center gap-2 shadow-lg cursor-pointer"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                      />
                     </svg>
                     Print
                   </button>
@@ -867,8 +964,18 @@ export default function OrdersPage() {
                     onClick={closeInvoicePopup}
                     className="p-2 text-slate-400 hover:text-slate-200 transition-colors rounded-lg hover:bg-slate-800/50"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -879,27 +986,47 @@ export default function OrdersPage() {
                 {/* Invoice Header */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center justify-start">
-                    {userProfile?.profile?.store_logo && userProfile.profile.store_logo.trim() !== '' ? (
+                    {userProfile?.profile?.store_logo &&
+                    userProfile.profile.store_logo.trim() !== "" ? (
                       <img
-                        src={ApiService.getImageUrl(userProfile.profile.store_logo)}
+                        src={ApiService.getImageUrl(
+                          userProfile.profile.store_logo
+                        )}
                         alt="Store Logo"
                         className="h-12 max-w-48 object-contain object-left"
                         onError={(e) => {
-                          console.log("Image failed to load:", userProfile.profile.store_logo);
+                          console.log(
+                            "Image failed to load:",
+                            userProfile.profile.store_logo
+                          );
                           // Fallback to default logo if image fails to load
                           const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const fallback = target.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = 'flex';
+                          target.style.display = "none";
+                          const fallback =
+                            target.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = "flex";
                         }}
                       />
                     ) : null}
-                    <div className={`w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center print:bg-gray-800 ${userProfile?.profile?.store_logo && userProfile.profile.store_logo.trim() !== '' ? 'hidden' : 'flex'}`}>
-                      <span className="text-white font-bold text-xs print:text-white">Logo</span>
+                    <div
+                      className={`w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center print:bg-gray-800 ${
+                        userProfile?.profile?.store_logo &&
+                        userProfile.profile.store_logo.trim() !== ""
+                          ? "hidden"
+                          : "flex"
+                      }`}
+                    >
+                      <span className="text-white font-bold text-xs print:text-white">
+                        Logo
+                      </span>
                     </div>
                   </div>
-                  <h2 className="text-lg font-bold text-slate-100 print:text-gray-900">Invoice #{selectedOrder.id}</h2>
-                  <p className="text-sm text-slate-300 print:text-gray-600">{new Date(selectedOrder.sale_date).toLocaleDateString()}</p>
+                  <h2 className="text-lg font-bold text-slate-100 print:text-gray-900">
+                    Invoice #{selectedOrder.id}
+                  </h2>
+                  <p className="text-sm text-slate-300 print:text-gray-600">
+                    {new Date(selectedOrder.sale_date).toLocaleDateString()}
+                  </p>
                 </div>
 
                 {/* Invoice Details */}
@@ -909,22 +1036,43 @@ export default function OrdersPage() {
                       <p className="font-medium text-slate-100 print:text-gray-900">
                         {userProfile?.profile?.company || "Your Store Name"}
                       </p>
-                      <p>{userProfile?.profile?.company_address || "123 Business Street"}</p>
-                      {!userProfile?.profile?.company_address && <p>City, State 12345</p>}
-                      <p>Phone: {userProfile?.profile?.phone || userProfile?.profile?.contact_number || "(555) 123-4567"}</p>
-                      <p>Email: {userProfile?.user?.email || "store@yourstore.com"}</p>
+                      <p>
+                        {userProfile?.profile?.company_address ||
+                          "123 Business Street"}
+                      </p>
+                      {!userProfile?.profile?.company_address && (
+                        <p>City, State 12345</p>
+                      )}
+                      <p>
+                        Phone:{" "}
+                        {userProfile?.profile?.phone ||
+                          userProfile?.profile?.contact_number ||
+                          "(555) 123-4567"}
+                      </p>
+                      <p>
+                        Email:{" "}
+                        {userProfile?.user?.email || "store@yourstore.com"}
+                      </p>
                     </div>
                   </div>
 
                   <div className="bg-slate-800/50 rounded-lg p-3 print:bg-transparent">
                     {selectedOrder.customer_name ? (
                       <div className="text-slate-300 print:text-gray-600 space-y-0.5 text-xs">
-                        <p className="font-medium text-slate-100 print:text-gray-900">{selectedOrder.customer_name}</p>
-                        {selectedOrder.customer_phone && <p>{selectedOrder.customer_phone}</p>}
-                        {selectedOrder.customer_email && <p>{selectedOrder.customer_email}</p>}
+                        <p className="font-medium text-slate-100 print:text-gray-900">
+                          {selectedOrder.customer_name}
+                        </p>
+                        {selectedOrder.customer_phone && (
+                          <p>{selectedOrder.customer_phone}</p>
+                        )}
+                        {selectedOrder.customer_email && (
+                          <p>{selectedOrder.customer_email}</p>
+                        )}
                       </div>
                     ) : (
-                      <p className="text-slate-400 italic print:text-gray-500 text-xs">Walk-in Customer</p>
+                      <p className="text-slate-400 italic print:text-gray-500 text-xs">
+                        Walk-in Customer
+                      </p>
                     )}
                   </div>
                 </div>
@@ -934,29 +1082,48 @@ export default function OrdersPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-slate-700/50 print:bg-gray-50">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">Item</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">Qty</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">Unit Price</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">Total</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
+                          Item
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
+                          Qty
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
+                          Unit Price
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
+                          Total
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-b border-slate-700/30 print:border-gray-200">
                         <td className="px-4 py-3">
                           <div>
-                            <p className="text-sm font-medium text-slate-100 print:text-gray-900">{selectedOrder.product_name}</p>
+                            <p className="text-sm font-medium text-slate-100 print:text-gray-900">
+                              {selectedOrder.product_name}
+                            </p>
                             {selectedOrder.variant && (
                               <p className="text-xs text-slate-400 print:text-gray-600 mt-0.5">
-                                {selectedOrder.variant.color && `Color: ${selectedOrder.variant.color}`}
-                                {selectedOrder.variant.size && ` | Size: ${selectedOrder.variant.size}`}
-                                {selectedOrder.variant.custom_variant && ` | ${selectedOrder.variant.custom_variant}`}
+                                {selectedOrder.variant.color &&
+                                  `Color: ${selectedOrder.variant.color}`}
+                                {selectedOrder.variant.size &&
+                                  ` | Size: ${selectedOrder.variant.size}`}
+                                {selectedOrder.variant.custom_variant &&
+                                  ` | ${selectedOrder.variant.custom_variant}`}
                               </p>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-center text-sm text-slate-200 print:text-gray-800">{selectedOrder.quantity}</td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-200 print:text-gray-800">{formatCurrency(selectedOrder.unit_price || 0)}</td>
-                        <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400 print:text-gray-900">{formatCurrency(selectedOrder.total_amount || 0)}</td>
+                        <td className="px-4 py-3 text-center text-sm text-slate-200 print:text-gray-800">
+                          {selectedOrder.quantity}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm text-slate-200 print:text-gray-800">
+                          {formatCurrency(selectedOrder.unit_price || 0)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400 print:text-gray-900">
+                          {formatCurrency(selectedOrder.total_amount || 0)}
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -968,12 +1135,16 @@ export default function OrdersPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between py-1 text-slate-300 print:text-gray-600 text-sm">
                         <span>Subtotal:</span>
-                        <span className="font-semibold">{formatCurrency(selectedOrder.total_amount || 0)}</span>
+                        <span className="font-semibold">
+                          {formatCurrency(selectedOrder.total_amount || 0)}
+                        </span>
                       </div>
                       <div className="border-t border-slate-600/50 print:border-gray-300 pt-2">
                         <div className="flex justify-between text-base font-bold text-slate-100 print:text-gray-900">
                           <span>Total:</span>
-                          <span className="text-cyan-400 print:text-gray-900">{formatCurrency(selectedOrder.total_amount || 0)}</span>
+                          <span className="text-cyan-400 print:text-gray-900">
+                            {formatCurrency(selectedOrder.total_amount || 0)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -991,8 +1162,18 @@ export default function OrdersPage() {
               {/* Modal Header */}
               <div className="p-6 border-b border-slate-700/50">
                 <h3 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
-                  <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  <svg
+                    className="w-6 h-6 text-red-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                    />
                   </svg>
                   Confirm Delete
                 </h3>
@@ -1006,14 +1187,36 @@ export default function OrdersPage() {
                 <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 mb-4">
                   <ul className="space-y-2 text-sm text-slate-300">
                     <li className="flex items-start gap-2">
-                      <svg className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
-                      Restore <strong>{orderToDelete.quantity}</strong> units of <strong>{orderToDelete.product_name}</strong> back to stock
+                      Restore <strong>{orderToDelete.quantity}</strong> units of{" "}
+                      <strong>{orderToDelete.product_name}</strong> back to
+                      stock
                     </li>
                     <li className="flex items-start gap-2">
-                      <svg className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                       Permanently remove this order from your records
                     </li>
@@ -1040,16 +1243,41 @@ export default function OrdersPage() {
                 >
                   {isDeleting ? (
                     <>
-                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       Deleting...
                     </>
                   ) : (
                     <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
                       </svg>
                       Delete Order
                     </>

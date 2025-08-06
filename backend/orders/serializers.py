@@ -1,4 +1,5 @@
 from rest_framework import serializers
+
 from .models import Order, OrderItem, OrderPayment
 
 
@@ -54,6 +55,7 @@ class OrderSerializer(serializers.ModelSerializer):
     variant = serializers.SerializerMethodField()
     quantity = serializers.SerializerMethodField()
     unit_price = serializers.SerializerMethodField()
+    buy_price = serializers.SerializerMethodField()
     sale_date = serializers.DateTimeField(source="created_at", read_only=True)
 
     class Meta:
@@ -86,6 +88,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "variant",
             "quantity",
             "unit_price",
+            "buy_price",
             "sale_date",
         ]
         read_only_fields = [
@@ -125,6 +128,11 @@ class OrderSerializer(serializers.ModelSerializer):
         """Get first item's unit price for backward compatibility"""
         first_item = obj.items.first()
         return first_item.unit_price if first_item else 0
+
+    def get_buy_price(self, obj):
+        """Get first item's buy price for backward compatibility"""
+        first_item = obj.items.first()
+        return first_item.buy_price if first_item else 0
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
@@ -171,9 +179,10 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        from products.models import Product, ProductVariant
-        from customers.models import Customer
         import uuid
+
+        from customers.models import Customer
+        from products.models import Product, ProductVariant
 
         items_data = validated_data.pop("items", [])
         payments_data = validated_data.pop("payments", [])
@@ -256,7 +265,14 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 product = Product.objects.get(id=product_id)
                 item_data["product"] = product  # Assign the instance, not the ID
                 item_data["product_name"] = product.name
-                item_data["buy_price"] = getattr(product, "cost_price", 0) or 0
+
+                # Ensure buy_price is always saved from product at order creation time
+                # This preserves the buy_price even if product price changes later
+                product_buy_price = getattr(product, "buy_price", None)
+                item_data["buy_price"] = (
+                    product_buy_price if product_buy_price is not None else 0
+                )
+
                 item_data["total_price"] = (
                     item_data["quantity"] * item_data["unit_price"]
                 )
@@ -271,6 +287,10 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                         item_data["variant_details"] = (
                             f"{variant.color} - {variant.size}"
                         )
+                        # Use variant's buy_price if available and not None/0, otherwise keep product's buy_price
+                        variant_buy_price = getattr(variant, "buy_price", None)
+                        if variant_buy_price is not None and variant_buy_price > 0:
+                            item_data["buy_price"] = variant_buy_price
                     except ProductVariant.DoesNotExist:
                         item_data["variant"] = None
 
