@@ -434,8 +434,27 @@ export class ApiService {
 
   // Employee methods
   static async getEmployees(page?: number) {
-    const url = page ? `/employees/?page=${page}` : "/employees/";
-    return this.get(url);
+    try {
+      const url = page ? `/employees/?page=${page}` : "/employees/";
+      const result = await this.get(url);
+
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected employees response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async getEmployee(id: number) {
@@ -612,7 +631,26 @@ export class ApiService {
 
   // Categories methods
   static async getCategories() {
-    return this.get("/categories/");
+    try {
+      const result = await this.get("/categories/");
+
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected categories response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async createCategory(categoryData: {
@@ -665,7 +703,26 @@ export class ApiService {
 
   // Gift methods
   static async getGifts() {
-    return this.get("/gifts/");
+    try {
+      const result = await this.get("/gifts/");
+
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected gifts response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching gifts:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async createGift(giftData: { name: string; is_active?: boolean }) {
@@ -692,7 +749,26 @@ export class ApiService {
 
   // Achievement methods
   static async getAchievements() {
-    return this.get("/achievements/");
+    try {
+      const result = await this.get("/achievements/");
+
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected achievements response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async createAchievement(achievementData: {
@@ -812,8 +888,27 @@ export class ApiService {
 
   // Suppliers methods
   static async getSuppliers(page?: number) {
-    const url = page ? `/suppliers/?page=${page}` : "/suppliers/";
-    return this.get(url);
+    try {
+      const url = page ? `/suppliers/?page=${page}` : "/suppliers/";
+      const result = await this.get(url);
+
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected suppliers response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching suppliers:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async createSupplier(supplierData: {
@@ -1082,7 +1177,26 @@ export class ApiService {
 
   // Order methods
   static async getOrders() {
-    return this.get("/orders/");
+    try {
+      const result = await this.get("/orders/");
+
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected orders response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async getOrder(id: number) {
@@ -1113,7 +1227,26 @@ export class ApiService {
 
   // Product Sales methods
   static async getProductSales() {
-    return this.get("/sales/");
+    try {
+      const result = await this.get("/sales/");
+
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected product sales response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching product sales:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async getProductSale(id: number) {
@@ -1155,7 +1288,26 @@ export class ApiService {
 
   // Purchase methods
   static async getPurchases() {
-    return this.get("/purchases/");
+    try {
+      const result = await this.get("/purchases/");
+
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected purchases response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching purchases:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async createPurchase(purchaseData: {
@@ -1201,7 +1353,26 @@ export class ApiService {
 
   // Payment methods
   static async getPayments() {
-    return this.get("/payments/");
+    try {
+      const result = await this.get("/payments/");
+
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected payments response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async createPayment(paymentData: {
