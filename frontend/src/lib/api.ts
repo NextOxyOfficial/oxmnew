@@ -1309,8 +1309,34 @@ export class ApiService {
     }
   }
 
+  static async getProductSalesWithPagination(params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    customer?: string;
+    ordering?: string;
+  }) {
+    let endpoint = "/sales/";
+
+    if (params && Object.keys(params).length > 0) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, value.toString());
+        }
+      });
+      endpoint += `?${searchParams.toString()}`;
+    }
+
+    return this.get(endpoint);
+  }
+
   static async getProductSale(id: number) {
     return this.get(`/sales/${id}/`);
+  }
+
+  static async getOrderStats() {
+    return this.get("/sales/stats/");
   }
 
   static async createProductSale(saleData: {
