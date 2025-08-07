@@ -27,10 +27,10 @@ const SmsHistory: React.FC<SmsHistoryProps> = ({ history }) => (
       <tbody>
         {history.map(h => (
           <tr key={h.id} className="border-b border-slate-800 hover:bg-slate-800/40">
-            <td className="py-2 px-2 whitespace-nowrap">{h.time}</td>
-            <td className="py-2 px-2">{h.contacts.length}</td>
-            <td className="py-2 px-2">{h.text.length} / {Math.max(1, Math.ceil(h.text.length / 160))}</td>
-            <td className="py-2 px-2 break-all max-w-xs">{h.text}</td>
+            <td className="py-2 px-2 whitespace-nowrap">{h.time || 'N/A'}</td>
+            <td className="py-2 px-2">{h.contacts?.length || 0}</td>
+            <td className="py-2 px-2">{(h.text || '').length} / {Math.max(1, Math.ceil((h.text || '').length / 160))}</td>
+            <td className="py-2 px-2 break-all max-w-xs">{h.text || ''}</td>
           </tr>
         ))}
       </tbody>
