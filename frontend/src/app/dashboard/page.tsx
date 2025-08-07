@@ -16,10 +16,8 @@ import {
 import {
   formatVariantName,
   getLowestStockVariant,
-  getRestockSuggestion,
   getStockStatus,
   getStockStatusColor,
-  getStockStatusText,
   getTotalStock,
 } from "@/lib/utils/stockUtils";
 import { X } from "lucide-react";
@@ -106,6 +104,36 @@ export default function DashboardPage() {
   const handleDueBook = () => {
     setIsNavigating(true);
     router.push("/dashboard/duebook");
+  };
+
+  const handleCreateMainAccount = async () => {
+    try {
+      // Create main account via API using the banking API
+      const response = await fetch("/api/banking/accounts/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${localStorage.getItem("authToken") || ""}`,
+        },
+        body: JSON.stringify({
+          name: "Main",
+          balance: 0.0,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh banking data
+        refetchBanking();
+        alert("Main account created successfully!");
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to create account:", errorData);
+        alert("Failed to create account. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error creating main account:", error);
+      alert("Failed to create account. Please try again.");
+    }
   };
 
   const handleCreateCustomer = async () => {
@@ -237,7 +265,9 @@ export default function DashboardPage() {
                   formatCurrency(stats?.total_buy_value || 0)
                 )}
               </p>
-              <p className="text-xs text-red-500 opacity-80">Total purchase cost</p>
+              <p className="text-xs text-red-500 opacity-80">
+                Total purchase cost
+              </p>
             </div>
           </div>
         </div>
@@ -278,7 +308,9 @@ export default function DashboardPage() {
                   formatCurrency(stats?.total_sell_value || 0)
                 )}
               </p>
-              <p className="text-xs text-cyan-500 opacity-80">Total sales revenue</p>
+              <p className="text-xs text-cyan-500 opacity-80">
+                Total sales revenue
+              </p>
             </div>
           </div>
         </div>
@@ -303,7 +335,9 @@ export default function DashboardPage() {
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-green-300 font-medium">Estimated Profit</p>
+                <p className="text-sm text-green-300 font-medium">
+                  Estimated Profit
+                </p>
                 <div className="flex items-center space-x-1">
                   {isLoadingStats && (
                     <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-400/30"></div>
@@ -317,7 +351,8 @@ export default function DashboardPage() {
                   <span className="text-red-400 text-sm">Error</span>
                 ) : (
                   formatCurrency(
-                    (stats?.total_sell_value || 0) - (stats?.total_buy_value || 0)
+                    (stats?.total_sell_value || 0) -
+                      (stats?.total_buy_value || 0)
                   )
                 )}
               </p>
@@ -357,7 +392,9 @@ export default function DashboardPage() {
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-purple-300 font-medium">Total Customers</p>
+                <p className="text-sm text-purple-300 font-medium">
+                  Total Customers
+                </p>
                 <div className="flex items-center space-x-1">
                   {isLoadingCustomerStats && (
                     <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-400/30"></div>
@@ -1434,7 +1471,11 @@ export default function DashboardPage() {
                           className="text-sm font-medium text-white hover:text-blue-300 transition-colors cursor-pointer"
                           onClick={() => {
                             setIsNavigating(true);
-                            router.push(`/dashboard/products?search=${encodeURIComponent(product.name)}`);
+                            router.push(
+                              `/dashboard/products?search=${encodeURIComponent(
+                                product.name
+                              )}`
+                            );
                           }}
                         >
                           {product.name}
@@ -1490,7 +1531,11 @@ export default function DashboardPage() {
                           className="text-sm font-medium text-white hover:text-blue-300 transition-colors cursor-pointer"
                           onClick={() => {
                             setIsNavigating(true);
-                            router.push(`/dashboard/products?search=${encodeURIComponent(product.name)}`);
+                            router.push(
+                              `/dashboard/products?search=${encodeURIComponent(
+                                product.name
+                              )}`
+                            );
                           }}
                         >
                           {product.name}
@@ -1651,9 +1696,15 @@ export default function DashboardPage() {
                   <p className="text-sm text-gray-400">
                     No bank accounts found
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-1 mb-3">
                     Create your first account to get started
                   </p>
+                  <button
+                    onClick={handleCreateMainAccount}
+                    className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white text-sm rounded-lg transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
+                  >
+                    Create Main Account
+                  </button>
                 </div>
               </div>
             ) : (

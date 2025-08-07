@@ -1,6 +1,6 @@
-import { API_BASE_URL } from "./config";
-import { AuthToken } from "../api";
 import { BankAccount, Transaction } from "@/types/banking";
+import { AuthToken } from "../api";
+import { API_BASE_URL } from "./config";
 
 export interface BankingOverviewStats {
   total_accounts: number;
@@ -32,11 +32,35 @@ export const bankingAPI = {
       }
 
       const data = await response.json();
-      
+
       // Ensure we return an array
       return Array.isArray(data) ? data : [];
     } catch (error) {
-      console.error('Error fetching bank accounts:', error);
+      console.error("Error fetching bank accounts:", error);
+      return []; // Return empty array on error
+    }
+  },
+
+  // Get user's accounts (triggers account creation if needed)
+  getMyAccounts: async (): Promise<BankAccount[]> => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/banking/accounts/my_accounts/`,
+        {
+          headers: bankingAPI.getHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch my bank accounts: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Ensure we return an array
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error("Error fetching my bank accounts:", error);
       return []; // Return empty array on error
     }
   },
@@ -44,22 +68,20 @@ export const bankingAPI = {
   // Get banking overview statistics
   getBankingOverview: async (): Promise<BankingOverviewStats> => {
     try {
-      // Since there's no overview endpoint, we'll calculate from accounts
-      const accounts = await bankingAPI.getAccounts();
-      
+      // Use getMyAccounts to ensure main account is created
+      const accounts = await bankingAPI.getMyAccounts();
+
       // Ensure accounts is an array
       const accountsArray = Array.isArray(accounts) ? accounts : [];
-      
-      const totalBalance = accountsArray.reduce(
-        (sum, account) => {
-          // Handle balance as string or number
-          const balance = typeof account.balance === 'string' 
-            ? parseFloat(account.balance) 
-            : (account.balance || 0);
-          return sum + balance;
-        },
-        0
-      );
+
+      const totalBalance = accountsArray.reduce((sum, account) => {
+        // Handle balance as string or number
+        const balance =
+          typeof account.balance === "string"
+            ? parseFloat(account.balance)
+            : account.balance || 0;
+        return sum + balance;
+      }, 0);
 
       return {
         total_accounts: accountsArray.length,
@@ -68,7 +90,7 @@ export const bankingAPI = {
         monthly_change_percentage: 2.3, // Mock value for now
       };
     } catch (error) {
-      console.error('Error fetching banking overview:', error);
+      console.error("Error fetching banking overview:", error);
       // Return default values if API call fails
       return {
         total_accounts: 0,
@@ -81,12 +103,9 @@ export const bankingAPI = {
 
   // Get a specific bank account
   getAccount: async (id: string): Promise<BankAccount> => {
-    const response = await fetch(
-      `${API_BASE_URL}/banking/accounts/${id}/`,
-      {
-        headers: bankingAPI.getHeaders(),
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/banking/accounts/${id}/`, {
+      headers: bankingAPI.getHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error("Failed to fetch bank account");
@@ -169,14 +188,11 @@ export const bankingAPI = {
     id: string,
     data: { name: string }
   ): Promise<BankAccount> => {
-    const response = await fetch(
-      `${API_BASE_URL}/banking/accounts/${id}/`,
-      {
-        method: "PATCH",
-        headers: bankingAPI.getHeaders(),
-        body: JSON.stringify(data),
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/banking/accounts/${id}/`, {
+      method: "PATCH",
+      headers: bankingAPI.getHeaders(),
+      body: JSON.stringify(data),
+    });
 
     if (!response.ok) {
       throw new Error("Failed to update bank account");
@@ -187,13 +203,10 @@ export const bankingAPI = {
 
   // Delete a bank account
   deleteAccount: async (id: string): Promise<void> => {
-    const response = await fetch(
-      `${API_BASE_URL}/banking/accounts/${id}/`,
-      {
-        method: "DELETE",
-        headers: bankingAPI.getHeaders(),
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/banking/accounts/${id}/`, {
+      method: "DELETE",
+      headers: bankingAPI.getHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error("Failed to delete bank account");
