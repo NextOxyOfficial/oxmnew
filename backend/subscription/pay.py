@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from shurjopay_plugin import *
 from django.conf import settings
 
@@ -19,6 +20,7 @@ engine = ShurjopayPlugin(
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def verifyPayment(request):
     # Extracting query parameters
     required_params = [
@@ -53,6 +55,7 @@ def verifyPayment(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def makePayment(request):
     # Extracting query parameters
     required_params = [
@@ -114,5 +117,17 @@ def makePayment(request):
         return Response(payment_details_dict, status=status.HTTP_200_OK)
 
     except Exception as e:
-        print(str(e))
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print("=== PAYMENT ERROR ===")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        print(f"Request user: {request.user}")
+        print(f"Request params: {dict(request.query_params)}")
+        
+        # More specific error messages based on the error type
+        error_message = str(e)
+        if "ShurjoPay" in error_message or "SP_" in error_message:
+            error_message = "Payment gateway configuration error. Please contact support."
+        elif "Invalid" in error_message:
+            error_message = f"Invalid payment data: {error_message}"
+        
+        return Response({"error": error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -488,6 +488,11 @@ export default function SubscriptionsPage() {
         return;
       }
 
+      console.log("=== SMS PACKAGE PAYMENT DEBUG ===");
+      console.log("Package ID:", packageId, "Price:", packagePrice);
+      console.log("User:", user);
+      console.log("Profile:", profile);
+
       // Generate a unique order ID using timestamp
       const uniqueOrderId = `SMS-${packageId}-${Date.now()}-${Math.floor(
         Math.random() * 1000
@@ -504,27 +509,50 @@ export default function SubscriptionsPage() {
       const phone = profile?.phone || profile?.contact_number || "N/A";
       const zip = profile?.post_code || "0000";
 
-      // Create payment request
-      const payment = await ApiService.makePayment({
+      const paymentData = {
         amount: packagePrice,
         order_id: uniqueOrderId,
         currency: "BDT",
-        customer_name: `${firstName} ${lastName}`,
+        customer_name: `${firstName} ${lastName}`.trim(),
         customer_address: address,
         customer_phone: phone,
         customer_city: city,
         customer_post_code: zip,
-      });
+      };
 
-      if (payment.checkout_url) {
+      console.log("Payment data:", paymentData);
+
+      // Create payment request
+      const payment = await ApiService.makePayment(paymentData);
+
+      console.log("Payment response:", payment);
+
+      if (payment && payment.checkout_url) {
+        console.log("Opening payment URL:", payment.checkout_url);
         window.open(payment.checkout_url, "_blank");
       } else {
-        console.error("Payment response:", payment);
-        throw new Error("Failed to get payment URL. Please try again later.");
+        console.error("Payment response missing checkout_url:", payment);
+        
+        // Check if there's an error message in the response
+        const errorMessage = payment?.error || 
+                           payment?.message || 
+                           "Failed to get payment URL. Please try again later.";
+        
+        throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error("Failed to purchase SMS package:", error);
-      alert("Failed to purchase SMS package. Please try again.");
+      console.error("=== SMS PACKAGE PAYMENT ERROR ===");
+      console.error("Error details:", error);
+      
+      // Type-safe error handling
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : typeof error === 'string' 
+        ? error 
+        : "Failed to purchase SMS package. Please try again.";
+      
+      console.error("Error message:", errorMessage);
+      alert(`Payment Error: ${errorMessage}`);
       localStorage.removeItem("pending_sms_package");
     } finally {
       setIsSmsPaymentLoading(false);
@@ -543,6 +571,11 @@ export default function SubscriptionsPage() {
         return;
       }
 
+      console.log("=== SUBSCRIPTION PAYMENT DEBUG ===");
+      console.log("Plan:", planName, "Price:", planPrice);
+      console.log("User:", user);
+      console.log("Profile:", profile);
+
       // Generate a unique order ID using timestamp
       const uniqueOrderId = `SUB-${planName.toUpperCase()}-${Date.now()}-${Math.floor(
         Math.random() * 1000
@@ -559,29 +592,52 @@ export default function SubscriptionsPage() {
       const phone = profile?.phone || profile?.contact_number || "N/A";
       const zip = profile?.post_code || "0000";
 
-      // Create payment request
-      const payment = await ApiService.makePayment({
+      const paymentData = {
         amount: planPrice,
         order_id: uniqueOrderId,
         currency: "BDT",
-        customer_name: `${firstName} ${lastName}`,
+        customer_name: `${firstName} ${lastName}`.trim(),
         customer_address: address,
         customer_phone: phone,
         customer_city: city,
         customer_post_code: zip,
-      });
+      };
 
-      if (payment.checkout_url) {
+      console.log("Payment data:", paymentData);
+
+      // Create payment request
+      const payment = await ApiService.makePayment(paymentData);
+
+      console.log("Payment response:", payment);
+
+      if (payment && payment.checkout_url) {
+        console.log("Opening payment URL:", payment.checkout_url);
         window.open(payment.checkout_url, "_blank");
       } else {
-        console.error("Payment response:", payment);
-        throw new Error(
-          "Failed to get payment URL. Please check your information and try again."
-        );
+        console.error("Payment response missing checkout_url:", payment);
+        
+        // Check if there's an error message in the response
+        const errorMessage = payment?.error || 
+                           payment?.message || 
+                           "Failed to get payment URL. Please check your information and try again.";
+        
+        throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error("Failed to process subscription payment:", error);
-      alert("Failed to process subscription payment. Please try again.");
+      console.error("=== SUBSCRIPTION PAYMENT ERROR ===");
+      console.error("Error details:", error);
+      
+      // Type-safe error handling
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : typeof error === 'string' 
+        ? error 
+        : "Failed to process subscription payment. Please try again.";
+      
+      console.error("Error message:", errorMessage);
+      
+      // Show more specific error message
+      alert(`Payment Error: ${errorMessage}`);
       localStorage.removeItem("pending_subscription_plan");
     } finally {
       setIsSubscriptionPaymentLoading(false);

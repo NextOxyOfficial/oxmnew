@@ -1702,12 +1702,25 @@ export class ApiService {
     customer_city: string;
     customer_post_code: string;
   }) {
+    console.log("=== MAKE PAYMENT API CALL ===");
+    console.log("Params:", params);
+    
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       queryParams.append(key, value.toString());
     });
 
-    return this.get(`/pay/?${queryParams.toString()}`);
+    const endpoint = `/pay/?${queryParams.toString()}`;
+    console.log("Payment endpoint:", endpoint);
+    
+    try {
+      const result = await this.get(endpoint);
+      console.log("Payment API result:", result);
+      return result;
+    } catch (error) {
+      console.error("Payment API error:", error);
+      throw error;
+    }
   }
 
   static async verifyPayment(orderId: string) {
