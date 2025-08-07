@@ -619,7 +619,7 @@ export default function SubscriptionsPage() {
         <div className="relative bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg mb-8">
           <button
             onClick={() => setShowSuccessMessage(false)}
-            className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
+            className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors cursor-pointer"
           >
             <svg
               className="w-6 h-6"
@@ -734,8 +734,8 @@ export default function SubscriptionsPage() {
                 (plan.name === "free" && currentPlan === "pro") // Disable free plan when user has pro
                   ? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
                   : plan.popular
-                  ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  : "bg-slate-700 text-white hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                  ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
+                  : "bg-slate-700 text-white hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 cursor-pointer"
               }`}
               disabled={
                 currentPlan === plan.name ||
@@ -803,7 +803,7 @@ export default function SubscriptionsPage() {
                 ৳{(pkg.price / (pkg.sms || pkg.sms_count)).toFixed(2)} per SMS
               </div>
               <button
-                className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 onClick={() =>
                   pkg.id && handleSmsPackagePurchase(pkg.id, pkg.price)
                 }
@@ -858,7 +858,7 @@ export default function SubscriptionsPage() {
                   url.searchParams.delete("order_id");
                   window.history.replaceState({}, "", url.toString());
                 }}
-                className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200 font-medium"
+                className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200 font-medium cursor-pointer"
               >
                 Close
               </button>
