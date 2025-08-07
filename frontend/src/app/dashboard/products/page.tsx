@@ -50,6 +50,7 @@ export default function ProductsPage() {
     totalSalePrice: 0,
     estimatedProfit: 0,
   });
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
 
   const showNotification = (type: "success" | "error", message: string) => {
     setNotification({ isVisible: true, type, message });
@@ -260,33 +261,30 @@ export default function ProductsPage() {
   useEffect(() => {
     const fetchOverallStats = async () => {
       try {
-        // Fetch all products to calculate overall statistics
-        const allProductsData = await ApiService.getProducts({
-          page_size: 10000,
-        });
-        const allProducts = allProductsData.results || allProductsData || [];
+        setIsStatsLoading(true);
 
-        let totalBuyPrice = 0;
-        let totalSalePrice = 0;
-
-        allProducts.forEach((product: Product) => {
-          // Calculate totals directly here to avoid dependency issues
-          const productTotals = {
-            totalBuyPrice: Number(product.total_buy_price) || 0,
-            totalSellPrice: Number(product.total_sell_price) || 0,
-          };
-          totalBuyPrice += productTotals.totalBuyPrice;
-          totalSalePrice += productTotals.totalSellPrice;
-        });
+        // Use the dedicated stats endpoint to get overall statistics
+        const statsData = await ApiService.getInventoryStats();
 
         setOverallStats({
-          totalProducts: allProducts.length,
-          totalBuyPrice,
-          totalSalePrice,
-          estimatedProfit: totalSalePrice - totalBuyPrice,
+          totalProducts: statsData.total_products || 0,
+          totalBuyPrice: statsData.total_buy_value || 0,
+          totalSalePrice: statsData.total_sell_value || 0,
+          estimatedProfit:
+            (statsData.total_sell_value || 0) -
+            (statsData.total_buy_value || 0),
         });
       } catch (error) {
         console.error("Error fetching overall statistics:", error);
+        // Set default values on error
+        setOverallStats({
+          totalProducts: 0,
+          totalBuyPrice: 0,
+          totalSalePrice: 0,
+          estimatedProfit: 0,
+        });
+      } finally {
+        setIsStatsLoading(false);
       }
     };
 
@@ -557,12 +555,21 @@ export default function ProductsPage() {
                   <p className="text-sm text-cyan-300 font-medium">
                     Total Products
                   </p>
-                  <p className="text-base font-bold text-cyan-400">
-                    {overallStats.totalProducts}
-                  </p>
-                  <p className="text-xs text-cyan-500 opacity-80">
-                    Active inventory items
-                  </p>
+                  {isStatsLoading ? (
+                    <div className="animate-pulse space-y-1">
+                      <div className="h-6 bg-cyan-600/30 rounded w-12"></div>
+                      <div className="h-3 bg-cyan-600/20 rounded w-20"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-base font-bold text-cyan-400">
+                        {overallStats.totalProducts}
+                      </p>
+                      <p className="text-xs text-cyan-500 opacity-80">
+                        Active inventory items
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -589,12 +596,21 @@ export default function ProductsPage() {
                   <p className="text-sm text-red-300 font-medium">
                     Total Buy Price
                   </p>
-                  <p className="text-base font-bold text-red-400">
-                    {formatCurrency(overallStats.totalBuyPrice)}
-                  </p>
-                  <p className="text-xs text-red-500 opacity-80">
-                    Total investment
-                  </p>
+                  {isStatsLoading ? (
+                    <div className="animate-pulse space-y-1">
+                      <div className="h-6 bg-red-600/30 rounded w-16"></div>
+                      <div className="h-3 bg-red-600/20 rounded w-20"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-base font-bold text-red-400">
+                        {formatCurrency(overallStats.totalBuyPrice)}
+                      </p>
+                      <p className="text-xs text-red-500 opacity-80">
+                        Total investment
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -621,12 +637,21 @@ export default function ProductsPage() {
                   <p className="text-sm text-green-300 font-medium">
                     Total Sale Price
                   </p>
-                  <p className="text-base font-bold text-green-400">
-                    {formatCurrency(overallStats.totalSalePrice)}
-                  </p>
-                  <p className="text-xs text-green-500 opacity-80">
-                    Potential revenue
-                  </p>
+                  {isStatsLoading ? (
+                    <div className="animate-pulse space-y-1">
+                      <div className="h-6 bg-green-600/30 rounded w-16"></div>
+                      <div className="h-3 bg-green-600/20 rounded w-24"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-base font-bold text-green-400">
+                        {formatCurrency(overallStats.totalSalePrice)}
+                      </p>
+                      <p className="text-xs text-green-500 opacity-80">
+                        Potential revenue
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -653,12 +678,21 @@ export default function ProductsPage() {
                   <p className="text-sm text-purple-300 font-medium">
                     Estimated Profit
                   </p>
-                  <p className="text-base font-bold text-purple-400">
-                    {formatCurrency(overallStats.estimatedProfit)}
-                  </p>
-                  <p className="text-xs text-purple-500 opacity-80">
-                    If all sold at full price
-                  </p>
+                  {isStatsLoading ? (
+                    <div className="animate-pulse space-y-1">
+                      <div className="h-6 bg-purple-600/30 rounded w-16"></div>
+                      <div className="h-3 bg-purple-600/20 rounded w-32"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-base font-bold text-purple-400">
+                        {formatCurrency(overallStats.estimatedProfit)}
+                      </p>
+                      <p className="text-xs text-purple-500 opacity-80">
+                        If all sold at full price
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

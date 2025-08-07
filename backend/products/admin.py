@@ -36,7 +36,14 @@ class ProductAdmin(admin.ModelAdmin):
         "is_active",
         "created_at",
     ]
-    list_filter = ["has_variants", "is_active", "category", "supplier", "created_at"]
+    list_filter = [
+        "has_variants",
+        "is_active",
+        "category",
+        "supplier",
+        "created_at",
+        "user",
+    ]
     search_fields = ["name", "details", "location"]
     readonly_fields = [
         "total_stock",
