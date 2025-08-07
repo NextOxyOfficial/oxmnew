@@ -1696,8 +1696,8 @@ export default function CustomerDetailsPage() {
                       }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
                     >
-                      <option value="due">Due Payment</option>
-                      <option value="advance">Advance Payment</option>
+                      <option value="due">Due</option>
+                      <option value="advance">Payment/Advance</option>
                     </select>
                   </div>
 
