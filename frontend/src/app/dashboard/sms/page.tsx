@@ -19,39 +19,96 @@ export default function SmsPage() {
 	const [suppliers, setSuppliers] = useState<{ id: number; name: string; phone: string }[]>([]);
 	const [history, setHistory] = useState<any[]>([]);
 	const [smsCredits, setSmsCredits] = useState<number | null>(null);
+	const [isLoading, setIsLoading] = useState(true);
 
 	// Fetch real data for customers, employees, suppliers, SMS credits, and SMS history
 	useEffect(() => {
 		async function fetchData() {
+			setIsLoading(true);
 			try {
-				const [cust, emp, supp] = await Promise.all([
-					customersAPI.getCustomers().then((list: any) => list.map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }))) ,
-					employeeAPI.getEmployees().then((list: any) => {
-						// Handle both array and paginated response
-						const employees = Array.isArray(list) ? list : list.results || [];
-						return employees.map((e: any) => ({ id: e.id, name: e.name, phone: e.phone }));
-					}),
-					ApiService.getSuppliers().then((list: any) => list.map((s: any) => ({ id: s.id, name: s.name, phone: s.phone }))) ,
-				]);
-				setCustomers(cust || []);
-				setEmployees(emp || []);
-				setSuppliers(supp || []);
-				// Fetch SMS history if available
-				if (ApiService.getSmsHistory) {
-					const hist = await ApiService.getSmsHistory();
-					setHistory(hist || []);
+				// Fetch customers
+				try {
+					const customersData = await customersAPI.getCustomers();
+					const customersFormatted = customersData.map((c: any) => ({ 
+						id: c.id, 
+						name: c.name, 
+						phone: c.phone || c.mobile || c.contact_number || ''
+					}));
+					setCustomers(customersFormatted);
+					console.log("Customers loaded:", customersFormatted.length);
+				} catch (custError) {
+					console.error("Failed to fetch customers:", custError);
+					setCustomers([]);
 				}
+
+				// Fetch employees
+				try {
+					const employeesData = await employeeAPI.getEmployees();
+					// Handle both array and paginated response
+					const employees = Array.isArray(employeesData) ? employeesData : employeesData.results || [];
+					const employeesFormatted = employees.map((e: any) => ({ 
+						id: e.id, 
+						name: e.name, 
+						phone: e.phone || e.mobile || e.contact_number || ''
+					}));
+					setEmployees(employeesFormatted);
+					console.log("Employees loaded:", employeesFormatted.length);
+				} catch (empError) {
+					console.error("Failed to fetch employees:", empError);
+					setEmployees([]);
+				}
+
+				// Fetch suppliers
+				try {
+					const suppliersData = await ApiService.getSuppliers();
+					const suppliersFormatted = suppliersData.map((s: any) => ({ 
+						id: s.id, 
+						name: s.name, 
+						phone: s.phone || s.mobile || s.contact_number || ''
+					}));
+					setSuppliers(suppliersFormatted);
+					console.log("Suppliers loaded:", suppliersFormatted.length);
+				} catch (suppError) {
+					console.error("Failed to fetch suppliers:", suppError);
+					setSuppliers([]);
+				}
+
+				// Fetch SMS history
+				try {
+					const historyData = await ApiService.getSmsHistory();
+					setHistory(historyData || []);
+					console.log("SMS history loaded:", historyData?.length || 0);
+				} catch (histError) {
+					console.error("Failed to fetch SMS history:", histError);
+					setHistory([]);
+				}
+
 				// Fetch SMS credits
 				try {
 					const creditsData = await ApiService.getSmsCredits();
-					setSmsCredits(creditsData.credits || 0);
+					console.log("Credits response:", creditsData);
+					// Handle different response formats
+					let credits = 0;
+					if (typeof creditsData === 'number') {
+						credits = creditsData;
+					} else if (creditsData && typeof creditsData.credits === 'number') {
+						credits = creditsData.credits;
+					} else if (creditsData && typeof creditsData.sms_credits === 'number') {
+						credits = creditsData.sms_credits;
+					} else if (creditsData && typeof creditsData.balance === 'number') {
+						credits = creditsData.balance;
+					}
+					setSmsCredits(credits);
+					console.log("SMS credits loaded:", credits);
 				} catch (creditsError) {
 					console.error("Failed to fetch SMS credits:", creditsError);
 					setSmsCredits(0);
 				}
 			} catch (e) {
-				// fallback to empty
+				console.error("General error in fetchData:", e);
 				setSmsCredits(0);
+			} finally {
+				setIsLoading(false);
 			}
 		}
 		fetchData();
@@ -193,7 +250,7 @@ export default function SmsPage() {
 						<div>
 							<div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
 							<div className="text-xs text-emerald-400/70">
-								{smsCredits === null ? "Loading..." : `${smsCredits.toLocaleString()} available`}
+								{isLoading ? "Loading..." : smsCredits === null ? "Error loading" : `${smsCredits.toLocaleString()} available`}
 							</div>
 						</div>
 					</div>
@@ -250,7 +307,7 @@ export default function SmsPage() {
 							<div className="text-left">
 								<div className="font-semibold text-sm">All Customers</div>
 								<div className={`text-xs ${tab === "customers" ? "text-purple-400" : "text-slate-500"}`}>
-									{customers.length} contacts
+									{isLoading ? "Loading..." : `${customers.length} contacts`}
 								</div>
 							</div>
 							{tab === "customers" && (
@@ -270,7 +327,7 @@ export default function SmsPage() {
 							<div className="text-left">
 								<div className="font-semibold text-sm">All Employees</div>
 								<div className={`text-xs ${tab === "employees" ? "text-green-400" : "text-slate-500"}`}>
-									{employees.length} contacts
+									{isLoading ? "Loading..." : `${employees.length} contacts`}
 								</div>
 							</div>
 							{tab === "employees" && (
@@ -290,7 +347,7 @@ export default function SmsPage() {
 							<div className="text-left">
 								<div className="font-semibold text-sm">All Suppliers</div>
 								<div className={`text-xs ${tab === "suppliers" ? "text-orange-400" : "text-slate-500"}`}>
-									{suppliers.length} contacts
+									{isLoading ? "Loading..." : `${suppliers.length} contacts`}
 								</div>
 							</div>
 							{tab === "suppliers" && (
@@ -310,7 +367,7 @@ export default function SmsPage() {
 							<div className="text-left">
 								<div className="font-semibold text-sm">History</div>
 								<div className={`text-xs ${tab === "history" ? "text-cyan-400" : "text-slate-500"}`}>
-									View logs
+									{isLoading ? "Loading..." : `${history.length} logs`}
 								</div>
 							</div>
 							{tab === "history" && (
