@@ -356,17 +356,15 @@ export default function EditProductPage() {
   }
 
   return (
-    <div className="sm:p-6 p-1 space-y-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-            Edit Product
-          </h1>
-          <p className="text-gray-400 text-sm sm:text-base mt-2">
-            Update product information
-          </p>
-        </div>
+    <div className="w-full max-w-4xl mx-auto sm:p-6 p-2 space-y-8">
+      <div className="text-center mb-4">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+          Edit Product
+        </h1>
+        <p className="text-gray-400 text-base mt-2">
+          Update product information and details
+        </p>
+      </div>
 
         {/* Notification */}
         {notification.isVisible && (
@@ -417,13 +415,13 @@ export default function EditProductPage() {
         )}
 
         {/* Form */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Product Name */}
             <div>
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-slate-300 mb-2"
+                className="block text-slate-300 mb-2 font-medium text-sm"
               >
                 Product Name *
               </label>
@@ -433,9 +431,9 @@ export default function EditProductPage() {
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                  errors.name ? "border-red-500" : "border-slate-700/50"
-                }`}
+                className={`w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-200 border transition-all duration-200 text-sm ${
+                  errors.name ? "border-red-500" : "border-slate-700"
+                } focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500`}
                 placeholder="Enter product name"
               />
               {errors.name && (
@@ -448,7 +446,7 @@ export default function EditProductPage() {
               <div>
                 <label
                   htmlFor="productCode"
-                  className="block text-sm font-medium text-slate-300 mb-2"
+                  className="block text-slate-300 mb-2 font-medium text-sm"
                 >
                   Product Code
                 </label>
@@ -458,11 +456,9 @@ export default function EditProductPage() {
                   name="productCode"
                   value={formData.productCode}
                   onChange={handleInputChange}
-                  className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                    errors.productCode
-                      ? "border-red-500"
-                      : "border-slate-700/50"
-                  }`}
+                  className={`w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-200 border transition-all duration-200 text-sm ${
+                    errors.productCode ? "border-red-500" : "border-slate-700"
+                  } focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500`}
                   placeholder="Enter product code, SKU, or part number"
                 />
                 {errors.productCode && (
@@ -475,7 +471,7 @@ export default function EditProductPage() {
               <div>
                 <label
                   htmlFor="location"
-                  className="block text-sm font-medium text-slate-300 mb-2"
+                  className="block text-slate-300 mb-2 font-medium text-sm"
                 >
                   Location
                 </label>
@@ -485,9 +481,9 @@ export default function EditProductPage() {
                   name="location"
                   value={formData.location}
                   onChange={handleInputChange}
-                  className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                    errors.location ? "border-red-500" : "border-slate-700/50"
-                  }`}
+                  className={`w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-200 border transition-all duration-200 text-sm ${
+                    errors.location ? "border-red-500" : "border-slate-700"
+                  } focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500`}
                   placeholder="Enter storage location (optional)"
                 />
                 {errors.location && (
@@ -501,7 +497,7 @@ export default function EditProductPage() {
               <div>
                 <label
                   htmlFor="category"
-                  className="block text-sm font-medium text-slate-300 mb-2"
+                  className="block text-slate-300 mb-2 font-medium text-sm"
                 >
                   Category
                 </label>
@@ -510,7 +506,7 @@ export default function EditProductPage() {
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
                 >
                   <option value="" className="bg-slate-800">
                     Select a category
@@ -530,7 +526,7 @@ export default function EditProductPage() {
               <div>
                 <label
                   htmlFor="supplier"
-                  className="block text-sm font-medium text-slate-300 mb-2"
+                  className="block text-slate-300 mb-2 font-medium text-sm"
                 >
                   Supplier
                 </label>
@@ -539,7 +535,7 @@ export default function EditProductPage() {
                   name="supplier"
                   value={formData.supplier}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
                 >
                   <option value="" className="bg-slate-800">
                     Select a supplier
@@ -563,12 +559,12 @@ export default function EditProductPage() {
                 <div>
                   <label
                     htmlFor="buyPrice"
-                    className="block text-sm font-medium text-slate-300 mb-2"
+                    className="block text-slate-300 mb-2 font-medium text-sm"
                   >
                     Buy Price *
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
                       {formatCurrency(0)
                         .replace(/\d|[.,]/g, "")
                         .trim()}
@@ -581,11 +577,9 @@ export default function EditProductPage() {
                       onChange={handleInputChange}
                       step="0.01"
                       min="0"
-                      className={`w-full bg-slate-800/50 border rounded-lg py-2 pl-8 pr-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                        errors.buyPrice
-                          ? "border-red-500"
-                          : "border-slate-700/50"
-                      }`}
+                      className={`w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-200 border pl-8 transition-all duration-200 text-sm ${
+                        errors.buyPrice ? "border-red-500" : "border-slate-700"
+                      } focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500`}
                       placeholder="0.00"
                     />
                   </div>
@@ -598,12 +592,12 @@ export default function EditProductPage() {
                 <div>
                   <label
                     htmlFor="sellPrice"
-                    className="block text-sm font-medium text-slate-300 mb-2"
+                    className="block text-slate-300 mb-2 font-medium text-sm"
                   >
                     Sell Price *
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
                       {formatCurrency(0)
                         .replace(/\d|[.,]/g, "")
                         .trim()}
@@ -616,11 +610,9 @@ export default function EditProductPage() {
                       onChange={handleInputChange}
                       step="0.01"
                       min="0"
-                      className={`w-full bg-slate-800/50 border rounded-lg py-2 pl-8 pr-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                        errors.sellPrice
-                          ? "border-red-500"
-                          : "border-slate-700/50"
-                      }`}
+                      className={`w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-200 border pl-8 transition-all duration-200 text-sm ${
+                        errors.sellPrice ? "border-red-500" : "border-slate-700"
+                      } focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500`}
                       placeholder="0.00"
                     />
                   </div>
@@ -633,7 +625,7 @@ export default function EditProductPage() {
                 <div>
                   <label
                     htmlFor="stock"
-                    className="block text-sm font-medium text-slate-300 mb-2"
+                    className="block text-slate-300 mb-2 font-medium text-sm"
                   >
                     Stock Quantity
                   </label>
@@ -645,9 +637,9 @@ export default function EditProductPage() {
                     onChange={handleInputChange}
                     min="0"
                     step="1"
-                    className={`w-full bg-slate-800/50 border rounded-lg py-2 px-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                      errors.stock ? "border-red-500" : "border-slate-700/50"
-                    }`}
+                    className={`w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-200 border transition-all duration-200 text-sm ${
+                      errors.stock ? "border-red-500" : "border-slate-700"
+                    } focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500`}
                     placeholder="0"
                   />
                   {errors.stock && (
@@ -661,7 +653,7 @@ export default function EditProductPage() {
             {!product.has_variants &&
               formData.buyPrice > 0 &&
               formData.sellPrice > 0 && (
-                <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
+                <div className="bg-gradient-to-br from-emerald-500/15 to-emerald-600/8 border border-emerald-500/25 rounded-lg p-4 backdrop-blur-sm">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Profit per unit:</span>
                     <span
@@ -708,7 +700,7 @@ export default function EditProductPage() {
             <div>
               <label
                 htmlFor="details"
-                className="block text-sm font-medium text-slate-300 mb-2"
+                className="block text-slate-300 mb-2 font-medium text-sm"
               >
                 Details
               </label>
@@ -718,7 +710,7 @@ export default function EditProductPage() {
                 value={formData.details}
                 onChange={handleInputChange}
                 rows={4}
-                className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 resize-none"
+                className="w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 resize-none text-sm"
                 placeholder="Enter additional product details..."
               />
             </div>
@@ -731,7 +723,7 @@ export default function EditProductPage() {
                 name="is_active"
                 checked={formData.is_active}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-slate-700 rounded bg-slate-800"
+                className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-slate-600 rounded bg-slate-800 transition-all duration-200"
               />
               <label
                 htmlFor="is_active"
@@ -743,7 +735,7 @@ export default function EditProductPage() {
 
             {/* Variant Product Notice */}
             {product.has_variants && (
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <div className="bg-gradient-to-br from-blue-500/15 to-blue-600/8 border border-blue-500/25 rounded-lg p-4 backdrop-blur-sm">
                 <div className="flex items-start">
                   <svg
                     className="w-5 h-5 text-blue-400 mt-0.5 mr-3 flex-shrink-0"
@@ -772,18 +764,18 @@ export default function EditProductPage() {
             )}
 
             {/* Submit Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-700/50">
+            <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-700/30">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${
+                className={`flex-1 px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center justify-center gap-2 text-sm ${
                   isSubmitting ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
                 {isSubmitting ? (
                   <>
                     <svg
-                      className="animate-spin h-5 w-5"
+                      className="animate-spin h-4 w-4"
                       fill="none"
                       viewBox="0 0 24 24"
                     >
@@ -806,7 +798,7 @@ export default function EditProductPage() {
                 ) : (
                   <>
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -827,14 +819,13 @@ export default function EditProductPage() {
                 type="button"
                 onClick={handleCancel}
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-3 bg-slate-700 text-slate-300 font-medium rounded-lg hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-6 py-2 bg-slate-700/50 text-slate-300 font-medium rounded-lg hover:bg-slate-600/50 focus:outline-none focus:ring-2 focus:ring-slate-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm border border-slate-600/30 text-sm"
               >
                 Cancel
               </button>
             </div>
           </form>
         </div>
-      </div>
     </div>
   );
 }

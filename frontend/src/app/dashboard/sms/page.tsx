@@ -29,7 +29,15 @@ export default function SmsPage() {
 				// Fetch customers
 				try {
 					const customersData = await customersAPI.getCustomers();
-					const customersFormatted = customersData.map((c: any) => ({ 
+					console.log("Raw customers data:", customersData);
+					// Handle both array and paginated response
+					let customers: any[] = [];
+					if (Array.isArray(customersData)) {
+						customers = customersData;
+					} else if (customersData && typeof customersData === 'object') {
+						customers = (customersData as any).results || (customersData as any).data || [];
+					}
+					const customersFormatted = customers.map((c: any) => ({ 
 						id: c.id, 
 						name: c.name, 
 						phone: c.phone || c.mobile || c.contact_number || ''
@@ -61,7 +69,15 @@ export default function SmsPage() {
 				// Fetch suppliers
 				try {
 					const suppliersData = await ApiService.getSuppliers();
-					const suppliersFormatted = suppliersData.map((s: any) => ({ 
+					console.log("Raw suppliers data:", suppliersData);
+					// Handle both array and paginated response
+					let suppliers: any[] = [];
+					if (Array.isArray(suppliersData)) {
+						suppliers = suppliersData;
+					} else if (suppliersData && typeof suppliersData === 'object') {
+						suppliers = (suppliersData as any).results || (suppliersData as any).data || [];
+					}
+					const suppliersFormatted = suppliers.map((s: any) => ({ 
 						id: s.id, 
 						name: s.name, 
 						phone: s.phone || s.mobile || s.contact_number || ''
@@ -76,8 +92,16 @@ export default function SmsPage() {
 				// Fetch SMS history
 				try {
 					const historyData = await ApiService.getSmsHistory();
-					setHistory(historyData || []);
-					console.log("SMS history loaded:", historyData?.length || 0);
+					console.log("Raw SMS history data:", historyData);
+					// Handle both array and paginated response
+					let history: any[] = [];
+					if (Array.isArray(historyData)) {
+						history = historyData;
+					} else if (historyData && typeof historyData === 'object') {
+						history = (historyData as any).results || (historyData as any).data || [];
+					}
+					setHistory(history);
+					console.log("SMS history loaded:", history.length);
 				} catch (histError) {
 					console.error("Failed to fetch SMS history:", histError);
 					setHistory([]);

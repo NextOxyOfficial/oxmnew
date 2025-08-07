@@ -193,7 +193,15 @@ export default function CustomerDetailsPage() {
         const ordersData = await customersAPI.getOrders({
           customer: customerId,
         });
-        const formattedOrders = ordersData.map((order) => ({
+        console.log("Raw orders data:", ordersData);
+        // Handle both array and paginated response
+        let orders: any[] = [];
+        if (Array.isArray(ordersData)) {
+          orders = ordersData;
+        } else if (ordersData && typeof ordersData === 'object') {
+          orders = (ordersData as any).results || (ordersData as any).data || [];
+        }
+        const formattedOrders = orders.map((order) => ({
           id: order.id,
           date: order.created_at,
           total: order.total_amount,
@@ -204,7 +212,15 @@ export default function CustomerDetailsPage() {
 
         // Fetch due payments for this customer
         const duePaymentsData = await customersAPI.getDuePayments(customerId);
-        const formattedDuePayments = duePaymentsData.map((payment) => ({
+        console.log("Raw due payments data:", duePaymentsData);
+        // Handle both array and paginated response
+        let duePayments: any[] = [];
+        if (Array.isArray(duePaymentsData)) {
+          duePayments = duePaymentsData;
+        } else if (duePaymentsData && typeof duePaymentsData === 'object') {
+          duePayments = (duePaymentsData as any).results || (duePaymentsData as any).data || [];
+        }
+        const formattedDuePayments = duePayments.map((payment) => ({
           id: payment.id,
           order_id: payment.order || 0,
           amount: payment.amount,
@@ -216,7 +232,15 @@ export default function CustomerDetailsPage() {
 
         // Fetch gifts for this customer
         const giftsData = await customersAPI.getCustomerGifts(customerId);
-        const formattedGifts = giftsData.map((gift) => ({
+        console.log("Raw gifts data:", giftsData);
+        // Handle both array and paginated response
+        let gifts: any[] = [];
+        if (Array.isArray(giftsData)) {
+          gifts = giftsData;
+        } else if (giftsData && typeof giftsData === 'object') {
+          gifts = (giftsData as any).results || (giftsData as any).data || [];
+        }
+        const formattedGifts = gifts.map((gift) => ({
           id: gift.id,
           name: gift.gift_name,
           description: gift.description || "",
@@ -228,14 +252,30 @@ export default function CustomerDetailsPage() {
 
         // Fetch available gifts and levels
         const availableGiftsData = await customersAPI.getAvailableGifts();
-        const formattedAvailableGifts = availableGiftsData.map((gift) => ({
+        console.log("Raw available gifts data:", availableGiftsData);
+        // Handle both array and paginated response
+        let availableGifts: any[] = [];
+        if (Array.isArray(availableGiftsData)) {
+          availableGifts = availableGiftsData;
+        } else if (availableGiftsData && typeof availableGiftsData === 'object') {
+          availableGifts = (availableGiftsData as any).results || (availableGiftsData as any).data || [];
+        }
+        const formattedAvailableGifts = availableGifts.map((gift) => ({
           id: gift.id,
           name: gift.name,
         }));
         setAvailableGifts(formattedAvailableGifts);
 
         const availableLevelsData = await customersAPI.getAvailableLevels();
-        const formattedLevels = availableLevelsData.map((level) => ({
+        console.log("Raw available levels data:", availableLevelsData);
+        // Handle both array and paginated response
+        let availableLevels: any[] = [];
+        if (Array.isArray(availableLevelsData)) {
+          availableLevels = availableLevelsData;
+        } else if (availableLevelsData && typeof availableLevelsData === 'object') {
+          availableLevels = (availableLevelsData as any).results || (availableLevelsData as any).data || [];
+        }
+        const formattedLevels = availableLevels.map((level) => ({
           id: level.id,
           name: level.name,
           is_active: level.is_active,
