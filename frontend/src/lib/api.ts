@@ -1283,8 +1283,12 @@ export class ApiService {
       const result = await this.get("/plans/");
       console.log("Subscription plans result:", result);
 
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
       // Ensure we return an array
-      if (Array.isArray(result)) {
+      else if (Array.isArray(result)) {
         return result;
       } else if (result && Array.isArray(result.data)) {
         return result.data;
@@ -1304,8 +1308,12 @@ export class ApiService {
       const result = await this.get("/sms-packages/");
       console.log("SMS packages result:", result);
 
+      // Handle paginated response
+      if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
       // Ensure we return an array
-      if (Array.isArray(result)) {
+      else if (Array.isArray(result)) {
         return result;
       } else if (result && Array.isArray(result.data)) {
         return result.data;
