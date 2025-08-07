@@ -135,12 +135,14 @@ class Product(models.Model):
             # Sum sales from all variants
             for variant in self.variants.all():
                 variant_sold = (
-                    variant.sales.aggregate(total=Sum("quantity"))["total"] or 0
+                    variant.orderitem_set.aggregate(total=Sum("quantity"))["total"] or 0
                 )
                 total_sold += variant_sold
         else:
             # Sum sales from main product
-            total_sold = self.sales.aggregate(total=Sum("quantity"))["total"] or 0
+            total_sold = (
+                self.orderitem_set.aggregate(total=Sum("quantity"))["total"] or 0
+            )
         return total_sold
 
     @property

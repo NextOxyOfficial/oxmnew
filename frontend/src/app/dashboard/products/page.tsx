@@ -918,7 +918,7 @@ export default function ProductsPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-slate-400">Stock</p>
+                        <p className="text-xs text-slate-400">Stock & Sold</p>
                         <div className="flex items-center space-x-1">
                           <p className="text-sm font-medium text-slate-100">
                             {getDisplayStock(product)} units
@@ -960,6 +960,9 @@ export default function ProductsPage() {
                             }
                             return null;
                           })()}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1">
+                          {product.sold || 0} sold
                         </div>
                       </div>
                       <div>

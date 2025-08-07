@@ -30,6 +30,7 @@ export interface Product {
   total_sell_price?: number;
   total_profit?: number;
   total_quantity?: number;
+  sold?: number; // Total sold quantity across all variants
 
   // Legacy fields for backward compatibility
   sku?: string;
@@ -38,7 +39,6 @@ export interface Product {
   status?: string;
   buyPrice?: number;
   salePrice?: number;
-  sold?: number;
 }
 
 export interface ProductVariant {
