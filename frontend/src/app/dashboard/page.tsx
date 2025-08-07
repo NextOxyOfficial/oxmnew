@@ -7,6 +7,7 @@ import { useInventoryStats } from "@/hooks/useInventoryStats";
 import { useLowStock } from "@/hooks/useLowStock";
 import { useRecentActivitiesStats } from "@/hooks/useRecentActivitiesStats";
 import { useRecentSales } from "@/hooks/useRecentSales";
+import { useSmsCredits } from "@/hooks/useSmsCredits";
 import { customersAPI } from "@/lib/api/customers";
 import {
   formatDateTime,
@@ -73,6 +74,14 @@ export default function DashboardPage() {
     refetch: refetchBanking,
   } = useBankingOverview();
 
+  // Use the custom hook for SMS credits
+  const {
+    credits: smsCredits,
+    isLoading: isLoadingSmsCredits,
+    error: smsCreditsError,
+    refetch: refetchSmsCredits,
+  } = useSmsCredits();
+
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",
@@ -104,6 +113,11 @@ export default function DashboardPage() {
   const handleDueBook = () => {
     setIsNavigating(true);
     router.push("/dashboard/duebook");
+  };
+
+  const handleBuySubscription = () => {
+    setIsNavigating(true);
+    router.push("/dashboard/subscriptions");
   };
 
   const handleCreateMainAccount = async () => {
@@ -1289,8 +1303,46 @@ export default function DashboardPage() {
                   <span className="text-white font-medium">SMS Balance</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-blue-400 font-bold">2,457 credits</span>
-                  <button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-xs font-medium text-white px-2 py-1 rounded transition-all duration-200 cursor-pointer">
+                  {isLoadingSmsCredits && (
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-400/30"></div>
+                  )}
+                  <span className="text-blue-400 font-bold">
+                    {isLoadingSmsCredits ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : smsCreditsError ? (
+                      <span className="text-red-400 text-xs">Error</span>
+                    ) : (
+                      `${smsCredits.toLocaleString()} credits`
+                    )}
+                  </span>
+                  <button
+                    onClick={refetchSmsCredits}
+                    disabled={isLoadingSmsCredits}
+                    className="p-1 rounded-full hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                    title="Refresh SMS credits"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className={`h-3 w-3 text-blue-400 hover:text-blue-300 ${
+                        isLoadingSmsCredits ? "animate-spin" : ""
+                      }`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={handleBuySubscription}
+                    disabled={isNavigating}
+                    className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-xs font-medium text-white px-2 py-1 rounded transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     Buy
                   </button>
                 </div>
