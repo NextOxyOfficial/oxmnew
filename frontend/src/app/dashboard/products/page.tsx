@@ -1,11 +1,11 @@
 "use client";
 
+import Pagination from "@/components/ui/Pagination";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Product, ProductVariant } from "@/types/product";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Pagination from "@/components/ui/Pagination";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -13,8 +13,11 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState(""); // For immediate UI updates
+  const [searchTerm, setSearchTerm] = useState(""); // For debounced API calls
   const [filterCategory, setFilterCategory] = useState("all");
   const [sortBy, setSortBy] = useState("name");
   const [loadingStates, setLoadingStates] = useState<{
@@ -40,12 +43,29 @@ export default function ProductsPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
+  // Overall statistics (not affected by search/filter)
+  const [overallStats, setOverallStats] = useState({
+    totalProducts: 0,
+    totalBuyPrice: 0,
+    totalSalePrice: 0,
+    estimatedProfit: 0,
+  });
+
   const showNotification = (type: "success" | "error", message: string) => {
     setNotification({ isVisible: true, type, message });
     setTimeout(() => {
       setNotification({ isVisible: false, type: "success", message: "" });
     }, 5000);
   };
+
+  // Debounce search input to prevent excessive API calls
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setSearchTerm(searchInput);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchInput]);
 
   // Helper functions using backend data structure
   const getBuyPrice = (product: Product, variant?: ProductVariant) => {
@@ -117,11 +137,24 @@ export default function ProductsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setIsLoading(true);
+        // Only show full loading on very first load when no products exist
+        // For all other cases (search/filter/pagination), show subtle loading
+        const hasNoProducts = products.length === 0;
+        if (isInitialLoad && hasNoProducts) {
+          setIsLoading(true);
+        } else {
+          setIsSearching(true);
+        }
         setError(null);
 
         // Build search parameters
-        const params: any = {
+        const params: {
+          page: number;
+          page_size: number;
+          search?: string;
+          category__name?: string;
+          ordering?: string;
+        } = {
           page: currentPage,
           page_size: pageSize,
         };
@@ -173,11 +206,38 @@ export default function ProductsPage() {
           setTotalItems(productsList.length);
           setTotalPages(1);
         }
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to load products"
+        );
+      } finally {
+        setIsLoading(false);
+        setIsSearching(false);
+        setIsInitialLoad(false);
+      }
+    };
 
-        // Extract unique categories from all products (need to fetch all for categories)
-        if (currentPage === 1 && categories.length === 0) {
+    fetchData();
+  }, [
+    currentPage,
+    pageSize,
+    searchTerm,
+    filterCategory,
+    sortBy,
+    isInitialLoad,
+    products.length,
+  ]);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (categories.length === 0) {
+        try {
           // Fetch all products to get categories
-          const allProductsData = await ApiService.getProducts({ page_size: 1000 });
+          const allProductsData = await ApiService.getProducts({
+            page_size: 1000,
+          });
           const allProducts = allProductsData.results || allProductsData || [];
           const uniqueCategories = [
             ...new Set(
@@ -187,24 +247,56 @@ export default function ProductsPage() {
             ),
           ] as string[];
           setCategories(uniqueCategories);
+        } catch (error) {
+          console.error("Error fetching categories:", error);
         }
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setError(
-          error instanceof Error ? error.message : "Failed to load products"
-        );
-      } finally {
-        setIsLoading(false);
       }
     };
 
-    fetchData();
-  }, [currentPage, pageSize, searchTerm, filterCategory, sortBy]);
+    fetchCategories();
+  }, [categories.length]);
+
+  // Fetch overall statistics on component mount (not affected by search/filter)
+  useEffect(() => {
+    const fetchOverallStats = async () => {
+      try {
+        // Fetch all products to calculate overall statistics
+        const allProductsData = await ApiService.getProducts({
+          page_size: 10000,
+        });
+        const allProducts = allProductsData.results || allProductsData || [];
+
+        let totalBuyPrice = 0;
+        let totalSalePrice = 0;
+
+        allProducts.forEach((product: Product) => {
+          // Calculate totals directly here to avoid dependency issues
+          const productTotals = {
+            totalBuyPrice: Number(product.total_buy_price) || 0,
+            totalSellPrice: Number(product.total_sell_price) || 0,
+          };
+          totalBuyPrice += productTotals.totalBuyPrice;
+          totalSalePrice += productTotals.totalSellPrice;
+        });
+
+        setOverallStats({
+          totalProducts: allProducts.length,
+          totalBuyPrice,
+          totalSalePrice,
+          estimatedProfit: totalSalePrice - totalBuyPrice,
+        });
+      } catch (error) {
+        console.error("Error fetching overall statistics:", error);
+      }
+    };
+
+    fetchOverallStats();
+  }, []); // Only run once on mount
 
   const handleProductClick = (product: Product) => {
-    setLoadingStates(prev => ({
+    setLoadingStates((prev) => ({
       ...prev,
-      navigating: { ...prev.navigating, [product.id]: true }
+      navigating: { ...prev.navigating, [product.id]: true },
     }));
     setTimeout(() => {
       router.push(`/dashboard/products/${product.id}`);
@@ -212,9 +304,9 @@ export default function ProductsPage() {
   };
 
   const handleEditProduct = (product: Product) => {
-    setLoadingStates(prev => ({
+    setLoadingStates((prev) => ({
       ...prev,
-      navigating: { ...prev.navigating, [`edit-${product.id}`]: true }
+      navigating: { ...prev.navigating, [`edit-${product.id}`]: true },
     }));
     // Navigate to edit page
     router.push(`/dashboard/products/${product.id}/edit`);
@@ -223,9 +315,9 @@ export default function ProductsPage() {
   const handleDeleteProduct = async () => {
     if (!productToDelete) return;
 
-    setLoadingStates(prev => ({
+    setLoadingStates((prev) => ({
       ...prev,
-      deleting: { ...prev.deleting, [productToDelete.id]: true }
+      deleting: { ...prev.deleting, [productToDelete.id]: true },
     }));
     try {
       await ApiService.deleteProduct(productToDelete.id);
@@ -246,9 +338,9 @@ export default function ProductsPage() {
       // Show error notification
       showNotification("error", "Failed to delete product. Please try again.");
     } finally {
-      setLoadingStates(prev => ({
+      setLoadingStates((prev) => ({
         ...prev,
-        deleting: { ...prev.deleting, [productToDelete.id]: false }
+        deleting: { ...prev.deleting, [productToDelete.id]: false },
       }));
     }
   };
@@ -264,9 +356,9 @@ export default function ProductsPage() {
   };
 
   const handleAddProduct = () => {
-    setLoadingStates(prev => ({
+    setLoadingStates((prev) => ({
       ...prev,
-      addProduct: true
+      addProduct: true,
     }));
     setTimeout(() => {
       router.push("/dashboard/products/add");
@@ -288,25 +380,11 @@ export default function ProductsPage() {
     setCurrentPage(1);
   }, [searchTerm, filterCategory, sortBy]);
 
-  // Calculate totals from current page data using backend structure
-  const totalProducts = totalItems; // Use total from pagination
-  const totalBuyPrice = products.reduce((sum, product) => {
-    const { totalBuyPrice } = getProductTotals(product);
-    return sum + totalBuyPrice;
-  }, 0);
-
-  const totalSalePrice = products.reduce((sum, product) => {
-    const { totalSellPrice } = getProductTotals(product);
-    return sum + totalSellPrice;
-  }, 0);
-
-  const estimatedProfit = totalSalePrice - totalBuyPrice;
-
   // Products are already filtered and sorted by the backend, so we use them directly
   const filteredProducts = products;
 
-  // Loading state
-  if (isLoading) {
+  // Loading state - only show full skeleton on initial load
+  if (isLoading && isInitialLoad) {
     return (
       <div className="sm:p-6 p-1 space-y-6">
         <div className="max-w-7xl">
@@ -480,7 +558,7 @@ export default function ProductsPage() {
                     Total Products
                   </p>
                   <p className="text-base font-bold text-cyan-400">
-                    {totalProducts}
+                    {overallStats.totalProducts}
                   </p>
                   <p className="text-xs text-cyan-500 opacity-80">
                     Active inventory items
@@ -512,7 +590,7 @@ export default function ProductsPage() {
                     Total Buy Price
                   </p>
                   <p className="text-base font-bold text-red-400">
-                    {formatCurrency(totalBuyPrice)}
+                    {formatCurrency(overallStats.totalBuyPrice)}
                   </p>
                   <p className="text-xs text-red-500 opacity-80">
                     Total investment
@@ -544,7 +622,7 @@ export default function ProductsPage() {
                     Total Sale Price
                   </p>
                   <p className="text-base font-bold text-green-400">
-                    {formatCurrency(totalSalePrice)}
+                    {formatCurrency(overallStats.totalSalePrice)}
                   </p>
                   <p className="text-xs text-green-500 opacity-80">
                     Potential revenue
@@ -576,7 +654,7 @@ export default function ProductsPage() {
                     Estimated Profit
                   </p>
                   <p className="text-base font-bold text-purple-400">
-                    {formatCurrency(estimatedProfit)}
+                    {formatCurrency(overallStats.estimatedProfit)}
                   </p>
                   <p className="text-xs text-purple-500 opacity-80">
                     If all sold at full price
@@ -655,9 +733,9 @@ export default function ProductsPage() {
                     <input
                       type="text"
                       placeholder="Search products by name or code..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-10 pr-4 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-10 pr-10 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
                     />
                     <svg
                       className="w-5 h-5 text-gray-400 absolute left-3 top-2.5"
@@ -672,6 +750,30 @@ export default function ProductsPage() {
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                       />
                     </svg>
+                    {/* Search loading indicator */}
+                    {(searchInput !== searchTerm || isSearching) && (
+                      <div className="absolute right-3 top-2.5">
+                        <svg
+                          className="w-5 h-5 text-cyan-400 animate-spin"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                      </div>
+                    )}
                   </div>
 
                   {/* Category Filter */}
@@ -721,7 +823,37 @@ export default function ProductsPage() {
             </div>
 
             {/* Scrollable content area */}
-            <div className="flex-1 overflow-x-auto">
+            <div className="flex-1 overflow-x-auto relative">
+              {/* Search loading overlay */}
+              {isSearching && (
+                <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <div className="bg-slate-800/90 rounded-lg p-4 border border-slate-700/50 flex items-center gap-3">
+                    <svg
+                      className="w-5 h-5 text-cyan-400 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    <span className="text-slate-200 text-sm">
+                      Searching products...
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Mobile Card Layout */}
               <div className="block lg:hidden space-y-4 p-2 sm:p-4">
                 {filteredProducts.map((product) => (
@@ -1035,7 +1167,9 @@ export default function ProductsPage() {
                               <div className="text-center">
                                 <button
                                   onClick={() => handleProductClick(product)}
-                                  disabled={loadingStates.navigating[product.id]}
+                                  disabled={
+                                    loadingStates.navigating[product.id]
+                                  }
                                   className={`text-xs transition-colors cursor-pointer ${
                                     loadingStates.navigating[product.id]
                                       ? "text-slate-500 cursor-not-allowed"
@@ -1302,7 +1436,9 @@ export default function ProductsPage() {
                                 e.stopPropagation();
                                 handleEditProduct(product);
                               }}
-                              disabled={loadingStates.navigating[`edit-${product.id}`]}
+                              disabled={
+                                loadingStates.navigating[`edit-${product.id}`]
+                              }
                               className={`text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors ${
                                 loadingStates.navigating[`edit-${product.id}`]
                                   ? "opacity-50 cursor-not-allowed"
@@ -1310,7 +1446,9 @@ export default function ProductsPage() {
                               }`}
                               title="Edit"
                             >
-                              {loadingStates.navigating[`edit-${product.id}`] ? (
+                              {loadingStates.navigating[
+                                `edit-${product.id}`
+                              ] ? (
                                 <svg
                                   className="animate-spin w-4 h-4"
                                   fill="none"
@@ -1477,10 +1615,16 @@ export default function ProductsPage() {
                   </button>
                   <button
                     onClick={handleDeleteProduct}
-                    disabled={productToDelete && loadingStates.deleting[productToDelete.id]}
+                    disabled={
+                      productToDelete &&
+                      loadingStates.deleting[productToDelete.id]
+                    }
                     className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    {productToDelete && loadingStates.deleting[productToDelete.id] ? "Deleting..." : "Delete"}
+                    {productToDelete &&
+                    loadingStates.deleting[productToDelete.id]
+                      ? "Deleting..."
+                      : "Delete"}
                   </button>
                 </div>
               </div>
