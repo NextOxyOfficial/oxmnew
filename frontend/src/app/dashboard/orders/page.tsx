@@ -594,11 +594,6 @@ export default function OrdersPage() {
                       <div className="flex-1 min-w-0 pr-2">
                         <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 transition-colors">
                           Order #{order.id}
-                          {order.product_name && (
-                            <span className="text-sm text-cyan-400 ml-2">
-                              • {order.product_name}
-                            </span>
-                          )}
                         </h4>
                         <p className="text-xs text-slate-400 mt-1">
                           {formatDate(order.sale_date)}
@@ -763,7 +758,7 @@ export default function OrdersPage() {
                     <thead>
                       <tr className="border-b border-slate-700/50">
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                          Order ID & Product
+                          Order ID
                         </th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
                           Customer
@@ -793,11 +788,6 @@ export default function OrdersPage() {
                             <div>
                               <p className="text-sm font-medium text-slate-100">
                                 #{order.id}
-                                {order.product_name && (
-                                  <span className="text-xs text-cyan-400 ml-2">
-                                    • {order.product_name}
-                                  </span>
-                                )}
                               </p>
                               <p className="text-xs text-slate-400 mt-1">
                                 {formatDate(order.sale_date)}
