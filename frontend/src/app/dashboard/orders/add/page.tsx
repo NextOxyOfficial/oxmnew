@@ -1,10 +1,14 @@
 "use client";
 
+import ProductDropdown from "@/components/ProductDropdown";
+import ProductSearchInput, {
+  ProductSearchInputRef,
+} from "@/components/ProductSearchInput";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Product } from "@/types/product";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Customer interface
 interface Customer {
@@ -116,7 +120,15 @@ export default function AddOrderPage() {
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
+
+  // Ref to maintain focus on product search input
+  const productSearchInputRef = useRef<ProductSearchInputRef>(null);
+
+  // Track if user is actively typing to manage focus appropriately
+  const isActivelyTypingRef = useRef(false);
 
   // Order form state
   const [orderForm, setOrderForm] = useState<OrderForm>({
@@ -184,6 +196,48 @@ export default function AddOrderPage() {
     };
   }, [searchTimeout]);
 
+  // Focus management effect - restore focus when search results change
+  useEffect(() => {
+    if (isSearchingProducts || searchResults.length === 0) return;
+
+    // Only restore focus if the dropdown is open, user is actively searching, and was actively typing
+    if (
+      isProductDropdownOpen &&
+      productSearch.trim().length >= 1 &&
+      isActivelyTypingRef.current
+    ) {
+      const timer = requestAnimationFrame(() => {
+        if (productSearchInputRef.current) {
+          productSearchInputRef.current.focus();
+        }
+      });
+
+      return () => cancelAnimationFrame(timer);
+    }
+  }, [
+    searchResults,
+    isProductDropdownOpen,
+    productSearch,
+    isSearchingProducts,
+  ]);
+
+  // Handle new item form changes - defined early to avoid initialization issues
+  const handleNewItemChange = useCallback(
+    (field: string, value: string | number) => {
+      setNewItem((prev) => {
+        const updated = { ...prev, [field]: value };
+
+        // Reset variant when product changes
+        if (field === "product") {
+          updated.variant = "";
+        }
+
+        return updated;
+      });
+    },
+    []
+  );
+
   const fetchProducts = async () => {
     try {
       setIsLoadingProducts(true);
@@ -203,40 +257,137 @@ export default function AddOrderPage() {
   };
 
   // New function to search products from backend
-  const searchProducts = async (query: string) => {
-    if (!query || query.trim().length < 1) {
-      setSearchResults([]);
-      return;
-    }
+  const searchProducts = useCallback(
+    async (query: string) => {
+      if (!query || query.trim().length < 1) {
+        setSearchResults([]);
+        return;
+      }
 
-    try {
-      setIsSearchingProducts(true);
-      const response = await ApiService.searchProducts(query.trim());
-      console.log("Search API response:", response);
-      const results = Array.isArray(response)
-        ? response
-        : response?.results || [];
-      setSearchResults(results);
-    } catch (error) {
-      console.error("Error searching products:", error);
-      setSearchResults([]);
-    } finally {
-      setIsSearchingProducts(false);
-    }
-  };
+      try {
+        setIsSearchingProducts(true);
+        const response = await ApiService.searchProducts(query.trim());
+        console.log("Search API response:", response);
+        const results = Array.isArray(response)
+          ? response
+          : response?.results || [];
+
+        // If no backend results, fallback to local filtering
+        if (results.length === 0) {
+          const localResults = products.filter((product) => {
+            const search = query.toLowerCase().trim();
+            const safeIncludes = (field: string | null | undefined) => {
+              return field && field.toString().toLowerCase().includes(search);
+            };
+            return (
+              safeIncludes(product.name) ||
+              safeIncludes(product.product_code) ||
+              safeIncludes(product.category_name) ||
+              safeIncludes(product.supplier_name) ||
+              safeIncludes(product.details)
+            );
+          });
+          setSearchResults(localResults);
+        } else {
+          setSearchResults(results);
+        }
+      } catch (error) {
+        console.error("Error searching products:", error);
+        // Fallback to local search on error
+        const localResults = products.filter((product) => {
+          const search = query.toLowerCase().trim();
+          const safeIncludes = (field: string | null | undefined) => {
+            return field && field.toString().toLowerCase().includes(search);
+          };
+          return (
+            safeIncludes(product.name) ||
+            safeIncludes(product.product_code) ||
+            safeIncludes(product.category_name) ||
+            safeIncludes(product.supplier_name) ||
+            safeIncludes(product.details)
+          );
+        });
+        setSearchResults(localResults);
+      } finally {
+        setIsSearchingProducts(false);
+      }
+    },
+    [products]
+  );
 
   // Debounced search function
-  const debouncedSearch = (query: string) => {
+  const debouncedSearch = useCallback(
+    (query: string) => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      const timeout = setTimeout(() => {
+        searchProducts(query);
+      }, 300); // 300ms delay
+
+      setSearchTimeout(timeout);
+    },
+    [searchTimeout, searchProducts]
+  );
+
+  // Callbacks for the search input component
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      isActivelyTypingRef.current = true; // Mark that user is actively typing
+      setProductSearch(value);
+      // Open dropdown if user has typed at least 1 character
+      if (value.trim().length >= 1) {
+        setIsProductDropdownOpen(true);
+        // Use debounced search for backend API
+        debouncedSearch(value.trim());
+      } else {
+        setIsProductDropdownOpen(false);
+        setSearchResults([]); // Clear search results
+        isActivelyTypingRef.current = false; // No longer actively typing
+      }
+      // Clear selected product when searching
+      if (newItem.product) {
+        handleNewItemChange("product", "");
+      }
+    },
+    [newItem.product, debouncedSearch, handleNewItemChange]
+  );
+
+  const handleSearchFocus = useCallback(() => {
+    // Open dropdown on focus if user has already typed at least 1 character
+    if (productSearch.trim().length >= 1) {
+      setIsProductDropdownOpen(true);
+    }
+  }, [productSearch]);
+
+  const handleSearchClear = useCallback(() => {
+    isActivelyTypingRef.current = false; // User cleared, no longer actively typing
+    setProductSearch("");
+    setSearchResults([]); // Clear search results
+    handleNewItemChange("product", "");
+    handleNewItemChange("variant", "");
+    setIsProductDropdownOpen(false);
+    // Clear any pending search timeout
     if (searchTimeout) {
       clearTimeout(searchTimeout);
+      setSearchTimeout(null);
     }
+  }, [searchTimeout, handleNewItemChange]);
 
-    const timeout = setTimeout(() => {
-      searchProducts(query);
-    }, 300); // 300ms delay
+  const handleProductSelect = useCallback(
+    (productId: string, displayText: string) => {
+      isActivelyTypingRef.current = false; // User selected, no longer actively typing
+      handleNewItemChange("product", productId);
+      setProductSearch(displayText);
+      setIsProductDropdownOpen(false);
+    },
+    [handleNewItemChange]
+  );
 
-    setSearchTimeout(timeout);
-  };
+  const handleDropdownClose = useCallback(() => {
+    setIsProductDropdownOpen(false);
+  }, []);
 
   const fetchCustomers = async () => {
     try {
@@ -489,20 +640,6 @@ export default function AddOrderPage() {
       previous_due: 0,
       apply_previous_due_to_total: true,
     }));
-  };
-
-  // Handle new item form changes
-  const handleNewItemChange = (field: string, value: string | number) => {
-    setNewItem((prev) => {
-      const updated = { ...prev, [field]: value };
-
-      // Reset variant when product changes
-      if (field === "product") {
-        updated.variant = "";
-      }
-
-      return updated;
-    });
   };
 
   // Add item to order
@@ -837,45 +974,6 @@ export default function AddOrderPage() {
       (employee.role && employee.role.toLowerCase().includes(search))
     );
   });
-
-  // Filter products based on search - use backend search results when available
-  const filteredProducts =
-    productSearch.trim().length >= 1 && searchResults.length > 0
-      ? searchResults
-      : products.filter((product) => {
-          if (!productSearch.trim()) return true;
-          const search = productSearch.toLowerCase().trim();
-
-          // Helper function to safely convert to string and search
-          const safeIncludes = (field: string | null | undefined) => {
-            return field && field.toString().toLowerCase().includes(search);
-          };
-
-          // Search in multiple fields with better handling
-          const matches =
-            safeIncludes(product.name) ||
-            safeIncludes(product.product_code) ||
-            safeIncludes(product.category_name) ||
-            safeIncludes(product.supplier_name) ||
-            // Also search in product details if available
-            safeIncludes(product.details) ||
-            // Search by partial matches (split search terms)
-            search
-              .split(" ")
-              .every(
-                (term) =>
-                  term.trim() &&
-                  (safeIncludes(product.name) ||
-                    safeIncludes(product.product_code))
-              ); // Debug logging for search (only for local filtering)
-          if (search.length <= 3) {
-            console.log(
-              `Product: ${product.name}, Search: "${search}", Matches: ${matches}`
-            );
-          }
-
-          return matches;
-        });
 
   // Helper function to highlight search terms
   const highlightText = (text: string, search: string) => {
@@ -1498,193 +1596,26 @@ export default function AddOrderPage() {
                     </h4>
                     <div className="flex flex-col md:flex-row gap-4 items-end">
                       <div className="flex-1 md:flex-[2] relative">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            placeholder="Search products by name, product code, category..."
-                            value={productSearch}
-                            onChange={(e) => {
-                              setProductSearch(e.target.value);
-                              // Open dropdown if user has typed at least 1 character
-                              if (e.target.value.trim().length >= 1) {
-                                setIsProductDropdownOpen(true);
-                                // Use debounced search for backend API
-                                debouncedSearch(e.target.value.trim());
-                              } else {
-                                setIsProductDropdownOpen(false);
-                                setSearchResults([]); // Clear search results
-                              }
-                              // Clear selected product when searching
-                              if (newItem.product) {
-                                handleNewItemChange("product", "");
-                              }
-                            }}
-                            onFocus={() => {
-                              // Open dropdown on focus if user has already typed at least 1 character
-                              if (productSearch.trim().length >= 1) {
-                                setIsProductDropdownOpen(true);
-                              }
-                            }}
-                            disabled={isLoadingProducts}
-                            className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                              isLoadingProducts
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
-                            }`}
-                          />
-                          {/* Clear button */}
-                          {productSearch && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setProductSearch("");
-                                setSearchResults([]); // Clear search results
-                                handleNewItemChange("product", "");
-                                handleNewItemChange("variant", "");
-                                setIsProductDropdownOpen(false);
-                                // Clear any pending search timeout
-                                if (searchTimeout) {
-                                  clearTimeout(searchTimeout);
-                                  setSearchTimeout(null);
-                                }
-                              }}
-                              className="absolute right-12 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
-                              title="Clear search"
-                            >
-                              Clear
-                            </button>
-                          )}
-                          <svg
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                          </svg>
-                        </div>
+                        <ProductSearchInput
+                          ref={productSearchInputRef}
+                          value={productSearch}
+                          onChange={handleSearchChange}
+                          onFocus={handleSearchFocus}
+                          onClear={handleSearchClear}
+                          isSearching={isSearchingProducts}
+                          isLoading={isLoadingProducts}
+                        />
 
-                        {/* Product Dropdown Options */}
-                        {isProductDropdownOpen &&
-                          productSearch.trim().length >= 1 && (
-                            <div
-                              className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl"
-                              style={{
-                                bottom: "auto",
-                                top: "100%",
-                              }}
-                            >
-                              {isLoadingProducts || isSearchingProducts ? (
-                                <div className="p-3 text-slate-400">
-                                  {isSearchingProducts
-                                    ? "Searching products..."
-                                    : "Loading products..."}
-                                </div>
-                              ) : filteredProducts.length > 0 ? (
-                                filteredProducts.slice(0, 10).map((product) => (
-                                  <div
-                                    key={product.id}
-                                    onClick={() => {
-                                      handleNewItemChange(
-                                        "product",
-                                        product.id.toString()
-                                      );
-                                      setProductSearch(
-                                        `${product.name}${
-                                          product.product_code
-                                            ? ` (${product.product_code})`
-                                            : ""
-                                        }`
-                                      );
-                                      setIsProductDropdownOpen(false);
-                                    }}
-                                    className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
-                                  >
-                                    <div className="text-white font-medium">
-                                      {highlightText(
-                                        product.name,
-                                        productSearch.trim()
-                                      )}
-                                    </div>
-                                    <div className="text-slate-400 text-sm flex flex-wrap items-center gap-2">
-                                      {product.product_code && (
-                                        <span className="bg-slate-700 px-2 py-0.5 rounded text-xs">
-                                          Code: {product.product_code}
-                                        </span>
-                                      )}
-                                      {product.category_name && (
-                                        <span className="bg-blue-900/50 px-2 py-0.5 rounded text-xs text-blue-300">
-                                          {product.category_name}
-                                        </span>
-                                      )}
-                                      <span
-                                        className={`font-medium px-2 py-0.5 rounded text-xs ${
-                                          (product.stock || 0) <= 0
-                                            ? "text-red-400 bg-red-900/30"
-                                            : (product.stock || 0) <= 10
-                                            ? "text-yellow-400 bg-yellow-900/30"
-                                            : "text-cyan-400 bg-cyan-900/30"
-                                        }`}
-                                      >
-                                        Stock: {product.stock || 0}
-                                      </span>
-                                      <span className="text-green-400 bg-green-900/30 px-2 py-0.5 rounded text-xs font-medium">
-                                        ${product.sell_price || 0}
-                                      </span>
-                                    </div>
-                                    {product.has_variants && (
-                                      <div className="text-xs text-blue-400 mt-1">
-                                        Has variants available
-                                      </div>
-                                    )}
-                                    {!product.has_variants &&
-                                      (product.stock || 0) <= 0 && (
-                                        <div className="text-xs text-red-400 mt-1 font-medium">
-                                          Out of Stock
-                                        </div>
-                                      )}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="p-4 text-slate-400 text-center">
-                                  <div className="text-sm">
-                                    No products found for &ldquo;{productSearch}
-                                    &rdquo;
-                                  </div>
-                                  <div className="text-xs mt-1 text-slate-500">
-                                    Try searching by product name, product code,
-                                    or category
-                                  </div>
-                                  {products.length > 0 && (
-                                    <div className="text-xs mt-1 text-slate-500">
-                                      Total products available:{" "}
-                                      {products.length}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                              {/* Show indicator when there are more than 10 results */}
-                              {filteredProducts.length > 10 && (
-                                <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
-                                  Showing 10 of {filteredProducts.length}{" "}
-                                  results. Type more to refine search.
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                        {/* Click outside to close dropdown */}
-                        {isProductDropdownOpen && (
-                          <div
-                            className="fixed inset-0 z-5"
-                            onClick={() => setIsProductDropdownOpen(false)}
-                          />
-                        )}
+                        <ProductDropdown
+                          isOpen={isProductDropdownOpen}
+                          searchQuery={productSearch}
+                          searchResults={searchResults}
+                          isLoading={isLoadingProducts}
+                          isSearching={isSearchingProducts}
+                          onProductSelect={handleProductSelect}
+                          onClose={handleDropdownClose}
+                          highlightText={highlightText}
+                        />
                       </div>
 
                       {selectedProduct?.has_variants && (
