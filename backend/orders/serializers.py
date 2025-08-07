@@ -37,8 +37,8 @@ class OrderPaymentSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "amount",
-            "payment_method",
-            "payment_reference",
+            "method",
+            "reference",
             "notes",
             "created_at",
         ]
@@ -80,6 +80,10 @@ class OrderSerializer(serializers.ModelSerializer):
             "due_date",
             "items",
             "payments",
+            "total_buy_price",
+            "total_sell_price",
+            "gross_profit",
+            "net_profit",
             "created_at",
             "updated_at",
             # Backward compatibility fields
@@ -135,11 +139,71 @@ class OrderSerializer(serializers.ModelSerializer):
         return first_item.buy_price if first_item else 0
 
 
+class OrderItemCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating order items"""
+
+    class Meta:
+        model = OrderItem
+        fields = [
+            "product",
+            "variant",
+            "quantity",
+            "unit_price",
+            "buy_price",
+        ]
+
+    def validate(self, data):
+        """Validate order item data"""
+        from products.models import Product, ProductVariant
+
+        # Validate product exists
+        try:
+            product = Product.objects.get(
+                id=data["product"].id
+                if hasattr(data["product"], "id")
+                else data["product"]
+            )
+        except (Product.DoesNotExist, AttributeError):
+            raise serializers.ValidationError("Product not found")
+
+        # Validate variant if provided
+        if data.get("variant"):
+            try:
+                variant = ProductVariant.objects.get(
+                    id=data["variant"].id
+                    if hasattr(data["variant"], "id")
+                    else data["variant"]
+                )
+                if variant.product != product:
+                    raise serializers.ValidationError(
+                        "Variant does not belong to the specified product"
+                    )
+            except (ProductVariant.DoesNotExist, AttributeError):
+                raise serializers.ValidationError("Product variant not found")
+
+        return data
+
+
 class OrderCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating orders with items"""
 
-    items = OrderItemSerializer(many=True, required=False)
+    items = OrderItemCreateSerializer(many=True, required=True)
     payments = OrderPaymentSerializer(many=True, required=False)
+
+    # Financial calculation fields
+    discount_percentage = serializers.DecimalField(
+        max_digits=5, decimal_places=2, default=0
+    )
+    vat_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, default=0)
+    due_amount = serializers.DecimalField(max_digits=12, decimal_places=2, default=0)
+    previous_due = serializers.DecimalField(max_digits=12, decimal_places=2, default=0)
+    apply_previous_due_to_total = serializers.BooleanField(default=False)
+
+    # Internal company fields
+    employee = serializers.IntegerField(required=False, allow_null=True)
+    incentive_amount = serializers.DecimalField(
+        max_digits=12, decimal_places=2, default=0
+    )
 
     # For backward compatibility with ProductSale creation
     product = serializers.IntegerField(required=False, write_only=True)
@@ -159,14 +223,17 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             "customer_address",
             "customer_company",
             "status",
-            "subtotal",
-            "discount_amount",
-            "vat_amount",
-            "total_amount",
+            "discount_percentage",
+            "vat_percentage",
+            "due_amount",
+            "previous_due",
+            "apply_previous_due_to_total",
             "notes",
             "due_date",
             "items",
             "payments",
+            "employee",
+            "incentive_amount",
             # Backward compatibility fields
             "product",
             "variant",
@@ -175,17 +242,23 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "subtotal",
+            "discount_amount",
+            "vat_amount",
             "total_amount",
+            "total_buy_price",
+            "total_sell_price",
+            "gross_profit",
+            "net_profit",
         ]
 
     def create(self, validated_data):
-        import uuid
-
         from customers.models import Customer
+        from employees.models import Employee
         from products.models import Product, ProductVariant
 
         items_data = validated_data.pop("items", [])
         payments_data = validated_data.pop("payments", [])
+        employee_id = validated_data.pop("employee", None)
 
         # Handle backward compatibility - create order from ProductSale-style data
         if "product" in validated_data:
@@ -196,45 +269,21 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 
             # Validate product exists
             try:
-                Product.objects.get(id=product_id)
+                product = Product.objects.get(id=product_id)
             except Product.DoesNotExist:
                 raise serializers.ValidationError("Product not found")
 
-            # Validate variant exists if provided
+            # Get buy price from product or variant
+            buy_price = 0
             if variant_id:
                 try:
-                    ProductVariant.objects.get(id=variant_id)
+                    variant = ProductVariant.objects.get(id=variant_id)
+                    buy_price = variant.buy_price or product.buy_price or 0
                 except ProductVariant.DoesNotExist:
                     variant_id = None
-
-            # Find or create customer if customer info provided
-            customer = validated_data.get("customer")
-            if not customer and (
-                validated_data.get("customer_email")
-                or validated_data.get("customer_phone")
-            ):
-                customer_email = validated_data.get("customer_email", "")
-                customer_phone = validated_data.get("customer_phone", "")
-                customer_name = validated_data.get("customer_name", "Anonymous")
-
-                if customer_email:
-                    try:
-                        customer = Customer.objects.get(
-                            email=customer_email, user=self.context["request"].user
-                        )
-                    except Customer.DoesNotExist:
-                        customer = Customer.objects.create(
-                            name=customer_name,
-                            email=customer_email,
-                            phone=customer_phone,
-                            user=self.context["request"].user,
-                        )
-                    validated_data["customer"] = customer
-
-            # Calculate totals
-            total_price = quantity * unit_price
-            validated_data["subtotal"] = total_price
-            validated_data["total_amount"] = total_price
+                    buy_price = product.buy_price or 0
+            else:
+                buy_price = product.buy_price or 0
 
             # Create single item data
             items_data = [
@@ -243,12 +292,46 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     "variant": variant_id,
                     "quantity": quantity,
                     "unit_price": unit_price,
+                    "buy_price": buy_price,
                 }
             ]
 
-        # Generate order number if not provided
-        if "order_number" not in validated_data:
-            validated_data["order_number"] = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+        # Validate that we have items
+        if not items_data:
+            raise serializers.ValidationError("At least one item is required")
+
+        # Find or create customer if customer info provided
+        customer = validated_data.get("customer")
+        if not customer and (
+            validated_data.get("customer_email") or validated_data.get("customer_phone")
+        ):
+            customer_email = validated_data.get("customer_email", "")
+            customer_phone = validated_data.get("customer_phone", "")
+            customer_name = validated_data.get("customer_name", "Anonymous")
+
+            if customer_email:
+                try:
+                    customer = Customer.objects.get(
+                        email=customer_email, user=self.context["request"].user
+                    )
+                except Customer.DoesNotExist:
+                    customer = Customer.objects.create(
+                        name=customer_name,
+                        email=customer_email,
+                        phone=customer_phone,
+                        user=self.context["request"].user,
+                    )
+                validated_data["customer"] = customer
+
+        # Set employee if provided
+        if employee_id:
+            try:
+                employee = Employee.objects.get(
+                    id=employee_id, user=self.context["request"].user
+                )
+                validated_data["employee"] = employee
+            except Employee.DoesNotExist:
+                pass  # Ignore invalid employee
 
         # Create order
         order = Order.objects.create(
@@ -257,54 +340,86 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 
         # Create order items
         for item_data in items_data:
-            # Get product instance instead of just ID
-            product_id = item_data.pop("product")
-            variant_id = item_data.pop("variant", None)
-
+            # Get product instance
             try:
+                # Handle both product ID and product object
+                product_id = (
+                    item_data["product"].id
+                    if hasattr(item_data["product"], "id")
+                    else item_data["product"]
+                )
                 product = Product.objects.get(id=product_id)
-                item_data["product"] = product  # Assign the instance, not the ID
-                item_data["product_name"] = product.name
 
-                # Ensure buy_price is always saved from product at order creation time
-                # This preserves the buy_price even if product price changes later
-                product_buy_price = getattr(product, "buy_price", None)
-                item_data["buy_price"] = (
-                    product_buy_price if product_buy_price is not None else 0
-                )
-
-                item_data["total_price"] = (
-                    item_data["quantity"] * item_data["unit_price"]
-                )
-
-                # Get variant instance if present
-                if variant_id:
+                # Get variant instance if provided
+                variant = None
+                if item_data.get("variant"):
                     try:
+                        # Handle both variant ID and variant object
+                        variant_id = (
+                            item_data["variant"].id
+                            if hasattr(item_data["variant"], "id")
+                            else item_data["variant"]
+                        )
                         variant = ProductVariant.objects.get(id=variant_id)
-                        item_data["variant"] = (
-                            variant  # Assign the instance, not the ID
-                        )
-                        item_data["variant_details"] = (
-                            f"{variant.color} - {variant.size}"
-                        )
-                        # Use variant's buy_price if available and not None/0, otherwise keep product's buy_price
-                        variant_buy_price = getattr(variant, "buy_price", None)
-                        if variant_buy_price is not None and variant_buy_price > 0:
-                            item_data["buy_price"] = variant_buy_price
                     except ProductVariant.DoesNotExist:
-                        item_data["variant"] = None
+                        pass
+
+                # Ensure buy_price is set
+                if "buy_price" not in item_data or item_data["buy_price"] is None:
+                    if variant and variant.buy_price:
+                        item_data["buy_price"] = variant.buy_price
+                    else:
+                        item_data["buy_price"] = product.buy_price or 0
+
+                # Create order item
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    variant=variant,
+                    quantity=item_data["quantity"],
+                    unit_price=item_data["unit_price"],
+                    buy_price=item_data["buy_price"],
+                    total_price=item_data["quantity"] * item_data["unit_price"],
+                    product_name=product.name,
+                    variant_details=f"{variant.color} - {variant.size}"
+                    if variant
+                    else None,
+                )
+
+                # Update stock
+                if variant:
+                    if variant.stock >= item_data["quantity"]:
+                        variant.stock -= item_data["quantity"]
+                        variant.save()
+                    else:
+                        raise serializers.ValidationError(
+                            f"Insufficient stock for {product.name} - {variant}"
+                        )
+                else:
+                    if product.stock >= item_data["quantity"]:
+                        product.stock -= item_data["quantity"]
+                        product.save()
+                    else:
+                        raise serializers.ValidationError(
+                            f"Insufficient stock for {product.name}"
+                        )
 
             except Product.DoesNotExist:
-                continue  # Skip invalid products
-
-            OrderItem.objects.create(order=order, **item_data)
+                raise serializers.ValidationError(
+                    f"Product with id {product_id} not found"
+                )
 
         # Create payments
         for payment_data in payments_data:
-            OrderPayment.objects.create(order=order, **payment_data)
+            OrderPayment.objects.create(
+                order=order, user=self.context["request"].user, **payment_data
+            )
 
-        # Update calculated fields
+        # Calculate and update totals
         order.calculate_totals()
         order.save()
+
+        # Refresh from database to get updated calculated fields
+        order.refresh_from_db()
 
         return order

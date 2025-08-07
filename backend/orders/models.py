@@ -1,9 +1,10 @@
-from django.db import models
+import datetime
+from decimal import Decimal
+
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
-from django.db.models import Sum, Count
-from decimal import Decimal
-import datetime
+from django.db import models
+from django.db.models import Sum
 
 
 class Order(models.Model):
@@ -56,7 +57,7 @@ class Order(models.Model):
         max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
     )
     total_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
+        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
     )
 
     # Payment tracking
@@ -149,6 +150,11 @@ class Order(models.Model):
 
         # Calculate final total
         self.total_amount = after_discount + self.vat_amount
+
+        # Subtract due amount (this is like an advance payment or credit applied)
+        self.total_amount -= self.due_amount
+
+        # Add previous due if applicable (this is debt from previous orders)
         if self.apply_previous_due_to_total:
             self.total_amount += self.previous_due
 
@@ -163,8 +169,14 @@ class Order(models.Model):
             count = Order.objects.filter(created_at__date=today).count() + 1
             self.order_number = f"ORD{today.strftime('%Y%m%d')}{count:04d}"
 
-        # Calculate totals before saving
-        if self.pk:  # Only if order already exists (has items)
+        # For new orders, set total_amount to 0 if not provided
+        if not self.pk and self.total_amount is None:
+            self.total_amount = Decimal("0")
+
+        # Calculate totals if order has items (for existing orders or when explicitly requested)
+        if self.pk and hasattr(self, "_recalculate_totals"):
+            self.calculate_totals()
+        elif self.pk:  # Only recalculate for existing orders by default
             self.calculate_totals()
 
         super().save(*args, **kwargs)
@@ -235,6 +247,7 @@ class OrderItem(models.Model):
 
         # Update order totals after saving item
         if self.order_id:
+            self.order._recalculate_totals = True
             self.order.calculate_totals()
             self.order.save()
 
@@ -318,4 +331,5 @@ class OrderStockMovement(models.Model):
 
     def __str__(self):
         variant_info = f" - {self.variant}" if self.variant else ""
+        return f"{self.get_movement_type_display()} - {self.product.name}{variant_info} - {self.quantity}"
         return f"{self.get_movement_type_display()} - {self.product.name}{variant_info} - {self.quantity}"

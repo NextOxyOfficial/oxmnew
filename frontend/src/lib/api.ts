@@ -1204,15 +1204,35 @@ export class ApiService {
   }
 
   static async createOrder(orderData: {
-    customer: number;
+    customer?: number;
+    customer_name: string;
+    customer_phone?: string;
+    customer_email?: string;
+    customer_address?: string;
+    customer_company?: string;
     status?: string;
-    total_amount: number;
-    paid_amount?: number;
-    discount_amount?: number;
-    tax_amount?: number;
+    discount_percentage?: number;
+    vat_percentage?: number;
+    due_amount?: number;
+    previous_due?: number;
+    apply_previous_due_to_total?: boolean;
     notes?: string;
-    delivery_address?: string;
-    expected_delivery_date?: string;
+    due_date?: string;
+    employee?: number;
+    incentive_amount?: number;
+    items: {
+      product: number;
+      variant?: number;
+      quantity: number;
+      unit_price: number;
+      buy_price?: number;
+    }[];
+    payments?: {
+      method: string;
+      amount: number;
+      reference?: string;
+      notes?: string;
+    }[];
   }) {
     return this.post("/orders/", orderData);
   }

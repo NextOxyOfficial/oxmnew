@@ -1,8 +1,9 @@
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
 from .models import Order
-from .serializers import OrderSerializer, OrderCreateSerializer
+from .serializers import OrderCreateSerializer, OrderSerializer
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -39,8 +40,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         """Add a payment to an order"""
         order = self.get_object()
         amount = request.data.get("amount", 0)
-        payment_method = request.data.get("payment_method", "cash")
-        payment_reference = request.data.get("payment_reference", "")
+        method = request.data.get("method", "cash")
+        reference = request.data.get("reference", "")
         notes = request.data.get("notes", "")
 
         from .models import OrderPayment
@@ -48,9 +49,10 @@ class OrderViewSet(viewsets.ModelViewSet):
         OrderPayment.objects.create(
             order=order,
             amount=amount,
-            payment_method=payment_method,
-            payment_reference=payment_reference,
+            method=method,
+            reference=reference,
             notes=notes,
+            user=request.user,
         )
 
         serializer = OrderSerializer(order, context={"request": request})
@@ -95,7 +97,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """Delete an order and restore stock"""
         order = self.get_object()
-        
+
         # Restore stock for all items before deleting
         for item in order.items.all():
             if item.variant:
@@ -104,6 +106,6 @@ class OrderViewSet(viewsets.ModelViewSet):
             else:
                 item.product.stock += item.quantity
                 item.product.save()
-        
+
         # Delete the order
         return super().destroy(request, *args, **kwargs)

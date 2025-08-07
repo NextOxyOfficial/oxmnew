@@ -139,16 +139,9 @@ export default function OrdersPage() {
 
   // Calculate total profit from all orders
   const totalProfit = orders.reduce((sum, order) => {
-    // Calculate profit as (unit_price - buy_price) * quantity
-    const unitPrice = parseFloat(String(order.unit_price || 0));
-    const buyPrice = parseFloat(String(order.buy_price || 0));
-    const quantity = order.quantity || 0;
-
-    if (!isNaN(unitPrice) && !isNaN(buyPrice) && quantity > 0) {
-      const orderProfit = (unitPrice - buyPrice) * quantity;
-      return sum + (isNaN(orderProfit) ? 0 : orderProfit);
-    }
-    return sum;
+    // Use the calculated gross_profit from the order instead of calculating manually
+    const orderProfit = parseFloat(String(order.gross_profit || 0));
+    return sum + (isNaN(orderProfit) ? 0 : orderProfit);
   }, 0);
 
   // Today's orders
@@ -601,10 +594,7 @@ export default function OrdersPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-cyan-400">
-                          {formatCurrency(
-                            ((order.unit_price || 0) - (order.buy_price || 0)) *
-                              (order.quantity || 0)
-                          )}
+                          {formatCurrency(order.gross_profit || 0)}
                         </p>
                         <p className="text-xs text-slate-400">Profit</p>
                       </div>
@@ -815,17 +805,13 @@ export default function OrdersPage() {
                             </div>
                           </td>
                           <td className="py-4 px-4 text-sm text-slate-100">
-                            {formatCurrency(order.buy_price || 0)}
+                            {formatCurrency(order.total_buy_price || 0)}
                           </td>
                           <td className="py-4 px-4 text-sm text-slate-100">
-                            {formatCurrency(order.unit_price || 0)}
+                            {formatCurrency(order.total_sell_price || 0)}
                           </td>
                           <td className="py-4 px-4 text-sm font-medium text-cyan-400">
-                            {formatCurrency(
-                              ((order.unit_price || 0) -
-                                (order.buy_price || 0)) *
-                                (order.quantity || 0)
-                            )}
+                            {formatCurrency(order.gross_profit || 0)}
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center justify-between">

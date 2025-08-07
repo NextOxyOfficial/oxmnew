@@ -33,6 +33,11 @@ export interface Order {
   customer_email?: string;
   notes?: string;
   sale_date: string;
+  // New calculated fields for multiple items
+  total_buy_price?: number;
+  total_sell_price?: number;
+  gross_profit?: number;
+  net_profit?: number;
 }
 
 export interface OrderForm {

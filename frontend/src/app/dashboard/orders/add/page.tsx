@@ -604,26 +604,6 @@ export default function AddOrderPage() {
     }
   };
 
-  // Handle customer type change
-  const handleCustomerTypeChange = (type: "existing" | "guest") => {
-    setCustomerType(type);
-    if (type === "guest") {
-      setSelectedCustomerId(null);
-      setOrderForm((prev) => ({
-        ...prev,
-        customer: {
-          name: "",
-          email: "",
-          phone: "",
-          address: "",
-          company: "",
-        },
-        previous_due: 0,
-        apply_previous_due_to_total: true,
-      }));
-    }
-  };
-
   // Handle new customer selection
   const handleGuestCustomer = () => {
     setCustomerType("guest");
@@ -649,59 +629,126 @@ export default function AddOrderPage() {
       return;
     }
 
-    const selectedProduct = products.find(
-      (p) => p.id === parseInt(newItem.product)
-    );
-    if (!selectedProduct) return;
+    // Use the same logic as selectedProduct calculation
+    const productToAdd = newItem.product
+      ? products.find(
+          (p) =>
+            p.id === parseInt(newItem.product) ||
+            p.id.toString() === newItem.product
+        ) ||
+        searchResults.find(
+          (p) =>
+            p.id === parseInt(newItem.product) ||
+            p.id.toString() === newItem.product
+        )
+      : null;
 
-    const selectedVariant = selectedProduct.variants?.find(
+    if (!productToAdd) {
+      setError("Selected product not found");
+      return;
+    }
+    const selectedVariant = productToAdd.variants?.find(
       (v) => v.id === parseInt(newItem.variant)
     );
 
-    // Check stock availability before adding
-    let availableStock = 0;
-
-    if (selectedProduct.has_variants && selectedVariant) {
-      availableStock = selectedVariant.stock || 0;
-    } else {
-      availableStock = selectedProduct.stock || 0;
-    }
-
-    if (availableStock <= 0) {
+    // Check if product requires variant selection
+    if (productToAdd.has_variants && !selectedVariant) {
+      setError("Please select a variant for this product");
       return;
     }
 
-    // Use default quantity of 1 and unit price from product/variant
-    const quantity = 1;
-    const unitPrice = selectedVariant
-      ? selectedVariant.sell_price || 0
-      : selectedProduct.sell_price || 0;
-    const buyPrice = selectedVariant
-      ? selectedVariant.buy_price || 0
-      : selectedProduct.buy_price || 0;
+    // Check stock availability before adding
+    let availableStock = 0;
+    const requestedQuantity = newItem.quantity || 1;
 
-    const item: OrderItem = {
-      id: Date.now().toString(),
-      product: parseInt(newItem.product),
-      variant: newItem.variant ? parseInt(newItem.variant) : undefined,
-      quantity: quantity,
-      unit_price: unitPrice,
-      buy_price: buyPrice,
-      total: quantity * unitPrice,
-      product_name: selectedProduct.name,
-      variant_details: selectedVariant
-        ? `${selectedVariant.color} - ${selectedVariant.size}${
-            selectedVariant.custom_variant
-              ? ` - ${selectedVariant.custom_variant}`
-              : ""
+    if (productToAdd.has_variants && selectedVariant) {
+      availableStock = selectedVariant.stock || 0;
+    } else {
+      availableStock = productToAdd.stock || 0;
+    }
+
+    if (availableStock <= 0) {
+      setError("Product is out of stock");
+      return;
+    }
+
+    if (requestedQuantity > availableStock) {
+      setError(`Only ${availableStock} items available in stock`);
+      return;
+    }
+
+    // Check if the same product-variant combination already exists in the order
+    const existingItemIndex = orderForm.items.findIndex(
+      (item) =>
+        item.product === parseInt(newItem.product) &&
+        item.variant ===
+          (newItem.variant ? parseInt(newItem.variant) : undefined)
+    );
+
+    if (existingItemIndex >= 0) {
+      // Update existing item quantity
+      const existingItem = orderForm.items[existingItemIndex];
+      const newQuantity = existingItem.quantity + requestedQuantity;
+
+      if (newQuantity > availableStock) {
+        setError(
+          `Cannot add ${requestedQuantity} more. Maximum available: ${
+            availableStock - existingItem.quantity
           }`
-        : undefined,
-    };
+        );
+        return;
+      }
 
-    setOrderForm((prev) => ({
-      ...prev,
-      items: [...prev.items, item],
-    }));
+      setOrderForm((prev) => {
+        const updatedItems = prev.items.map((item, index) =>
+          index === existingItemIndex
+            ? {
+                ...item,
+                quantity: newQuantity,
+                total: newQuantity * item.unit_price,
+              }
+            : item
+        );
+        return {
+          ...prev,
+          items: updatedItems,
+        };
+      });
+    } else {
+      // Add new item
+      const unitPrice = selectedVariant
+        ? selectedVariant.sell_price || 0
+        : productToAdd.sell_price || 0;
+      const buyPrice = selectedVariant
+        ? selectedVariant.buy_price || 0
+        : productToAdd.buy_price || 0;
+
+      const item: OrderItem = {
+        id: Date.now().toString(),
+        product: parseInt(newItem.product),
+        variant: newItem.variant ? parseInt(newItem.variant) : undefined,
+        quantity: requestedQuantity,
+        unit_price: unitPrice,
+        buy_price: buyPrice,
+        total: requestedQuantity * unitPrice,
+        product_name: productToAdd.name,
+        variant_details: selectedVariant
+          ? `${selectedVariant.color} - ${selectedVariant.size}${
+              selectedVariant.custom_variant
+                ? ` - ${selectedVariant.custom_variant}`
+                : ""
+            }`
+          : undefined,
+      };
+
+      setOrderForm((prev) => {
+        const newItems = [...prev.items, item];
+        return {
+          ...prev,
+          items: newItems,
+        };
+      });
+    }
 
     // Reset new item form and clear search
     setNewItem({
@@ -853,85 +900,52 @@ export default function AddOrderPage() {
       setIsSubmitting(true);
       setError(null);
 
-      // Create individual sales for each item
-      for (const item of orderForm.items) {
-        // Build payment summary for notes
-        const paymentSummary =
-          orderForm.payments.length > 0
-            ? `\nPayments:\n${orderForm.payments
-                .map((p) => `- ${p.method}: ${formatCurrency(p.amount)}`)
-                .join("\n")}\nTotal Paid: ${formatCurrency(
-                orderForm.total_payment_received
-              )}\nRemaining Balance: ${formatCurrency(
-                orderForm.remaining_balance
-              )}`
-            : "\nNo payments recorded";
+      // Prepare order data with multiple items
+      const orderData = {
+        // Customer information
+        customer:
+          customerType === "existing" && selectedCustomerId
+            ? selectedCustomerId
+            : undefined,
+        customer_name: orderForm.customer.name,
+        customer_phone: orderForm.customer.phone?.trim() || undefined,
+        customer_email: orderForm.customer.email?.trim() || undefined,
+        customer_address: orderForm.customer.address?.trim() || undefined,
+        customer_company: orderForm.customer.company?.trim() || undefined,
 
-        const saleData = {
+        // Order details
+        status,
+        discount_percentage: orderForm.discount_percentage,
+        vat_percentage: orderForm.vat_percentage,
+        due_amount: orderForm.due_amount,
+        previous_due: orderForm.previous_due,
+        apply_previous_due_to_total: orderForm.apply_previous_due_to_total,
+        due_date: orderForm.due_date || undefined,
+        notes: orderForm.notes || undefined,
+
+        // Internal company fields
+        employee: orderForm.employee_id || undefined,
+        incentive_amount: orderForm.incentive_amount,
+
+        // Items - convert frontend format to backend format
+        items: orderForm.items.map((item) => ({
           product: item.product,
           variant: item.variant,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          customer_name: orderForm.customer.name,
-          customer_phone: orderForm.customer.phone?.trim() || undefined,
-          customer_email: orderForm.customer.email?.trim() || undefined,
-          notes: `Order Status: ${status}\nDue Date: ${
-            orderForm.due_date
-          }\nCustomer Address: ${
-            orderForm.customer.address || "Not provided"
-          }\n${
-            orderForm.customer.company
-              ? `Company: ${orderForm.customer.company}\n`
-              : ""
-          }Order Notes: ${orderForm.notes}${paymentSummary}`,
-        };
+          buy_price: item.buy_price,
+        })),
 
-        await ApiService.createProductSale(saleData);
-      }
+        // Payments - convert frontend format to backend format
+        payments: orderForm.payments.map((payment) => ({
+          method: payment.method.toLowerCase(),
+          amount: payment.amount,
+        })),
+      };
 
-      // Create incentive record if employee is selected and incentive amount is greater than 0
-      if (orderForm.employee_id && orderForm.incentive_amount > 0) {
-        const selectedEmployee = employees.find(
-          (e) => e.id === orderForm.employee_id
-        );
-        const incentiveData = {
-          employee: orderForm.employee_id,
-          title: `Sales Incentive - Order for ${orderForm.customer.name}`,
-          description: `Sales incentive for order containing ${
-            orderForm.items.length
-          } items. Total order value: ${formatCurrency(
-            orderForm.total
-          )}. Items: ${orderForm.items
-            .map(
-              (item) =>
-                `${item.product_name}${
-                  item.variant_details ? ` (${item.variant_details})` : ""
-                } x${item.quantity}`
-            )
-            .join(", ")}`,
-          amount: orderForm.incentive_amount,
-          type: "commission" as const,
-          status: "pending" as const,
-        };
-
-        try {
-          await ApiService.createIncentive(incentiveData);
-          console.log(
-            "Incentive created successfully for employee:",
-            selectedEmployee?.name
-          );
-        } catch (incentiveError) {
-          console.error("Error creating incentive:", incentiveError);
-          // Don't fail the whole order creation if incentive creation fails
-          setError(
-            `Order created successfully, but failed to create incentive: ${
-              incentiveError instanceof Error
-                ? incentiveError.message
-                : "Unknown error"
-            }`
-          );
-        }
-      }
+      // Create the order using the orders API
+      const response = await ApiService.createOrder(orderData);
+      console.log("Order created successfully:", response);
 
       // Navigate back to orders page
       router.push("/dashboard/orders");
@@ -945,13 +959,27 @@ export default function AddOrderPage() {
     }
   };
 
-  // Get selected product for new item
-  const selectedProduct = products.find(
-    (p) => p.id === parseInt(newItem.product)
-  );
+  // Get selected product for new item - check both products and searchResults
+  const selectedProduct = newItem.product
+    ? products.find(
+        (p) =>
+          p.id === parseInt(newItem.product) ||
+          p.id.toString() === newItem.product
+      ) ||
+      searchResults.find(
+        (p) =>
+          p.id === parseInt(newItem.product) ||
+          p.id.toString() === newItem.product
+      )
+    : null;
   const availableVariants = selectedProduct?.has_variants
     ? selectedProduct.variants || []
     : [];
+
+  // Check if button should be enabled
+  const isAddItemEnabled = Boolean(
+    selectedProduct && (!selectedProduct.has_variants || newItem.variant)
+  );
 
   // Filter customers based on search
   const filteredCustomers = customers.filter((customer) => {
@@ -1392,7 +1420,7 @@ export default function AddOrderPage() {
                     ) : (
                       <>
                         {/* Column Headers */}
-                        <div className="grid grid-cols-4 gap-4 pb-2 border-b border-slate-700/30 mb-2">
+                        <div className="grid grid-cols-5 gap-4 pb-2 border-b border-slate-700/30 mb-2">
                           <div className="text-xs font-medium text-slate-400 uppercase tracking-wider">
                             Product
                           </div>
@@ -1400,7 +1428,10 @@ export default function AddOrderPage() {
                             Quantity
                           </div>
                           <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
-                            Unit Price
+                            Buy Price
+                          </div>
+                          <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
+                            Sell Price
                           </div>
                           <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
                             Total
@@ -1411,7 +1442,7 @@ export default function AddOrderPage() {
                           {orderForm.items.map((item) => (
                             <div
                               key={item.id}
-                              className="grid grid-cols-4 gap-4 items-center py-3 px-2 hover:bg-slate-800/20 rounded-lg transition-colors"
+                              className="grid grid-cols-5 gap-4 items-center py-3 px-2 hover:bg-slate-800/20 rounded-lg transition-colors"
                             >
                               {/* Product Name */}
                               <div className="flex-1">
@@ -1542,6 +1573,13 @@ export default function AddOrderPage() {
                                 </button>
                               </div>
 
+                              {/* Buy Price */}
+                              <div className="text-center">
+                                <div className="text-sm text-slate-300">
+                                  {formatCurrency(item.buy_price || 0)}
+                                </div>
+                              </div>
+
                               {/* Unit Price */}
                               <div className="text-center">
                                 <input
@@ -1594,65 +1632,189 @@ export default function AddOrderPage() {
                     <h4 className="text-sm font-medium text-slate-300 mb-3">
                       Add New Item
                     </h4>
-                    <div className="flex flex-col md:flex-row gap-4 items-end">
-                      <div className="flex-1 md:flex-[2] relative">
-                        <ProductSearchInput
-                          ref={productSearchInputRef}
-                          value={productSearch}
-                          onChange={handleSearchChange}
-                          onFocus={handleSearchFocus}
-                          onClear={handleSearchClear}
-                          isSearching={isSearchingProducts}
-                          isLoading={isLoadingProducts}
-                        />
+                    <div className="space-y-4">
+                      {/* Product Search Row */}
+                      <div className="flex flex-col md:flex-row gap-4 items-end">
+                        <div className="flex-1 md:flex-[2] relative">
+                          <label className="block text-xs font-medium text-slate-400 mb-1">
+                            Product Search
+                          </label>
+                          <ProductSearchInput
+                            ref={productSearchInputRef}
+                            value={productSearch}
+                            onChange={handleSearchChange}
+                            onFocus={handleSearchFocus}
+                            onClear={handleSearchClear}
+                            isSearching={isSearchingProducts}
+                            isLoading={isLoadingProducts}
+                          />
 
-                        <ProductDropdown
-                          isOpen={isProductDropdownOpen}
-                          searchQuery={productSearch}
-                          searchResults={searchResults}
-                          isLoading={isLoadingProducts}
-                          isSearching={isSearchingProducts}
-                          onProductSelect={handleProductSelect}
-                          onClose={handleDropdownClose}
-                          highlightText={highlightText}
-                        />
+                          <ProductDropdown
+                            isOpen={isProductDropdownOpen}
+                            searchQuery={productSearch}
+                            searchResults={searchResults}
+                            isLoading={isLoadingProducts}
+                            isSearching={isSearchingProducts}
+                            onProductSelect={handleProductSelect}
+                            onClose={handleDropdownClose}
+                            highlightText={highlightText}
+                          />
+                        </div>
+
+                        {selectedProduct?.has_variants && (
+                          <div className="flex-1">
+                            <label className="block text-xs font-medium text-slate-400 mb-1">
+                              Variant
+                            </label>
+                            <select
+                              value={newItem.variant}
+                              onChange={(e) =>
+                                handleNewItemChange("variant", e.target.value)
+                              }
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                            >
+                              <option value="" className="bg-slate-800">
+                                Select variant
+                              </option>
+                              {availableVariants.map((variant) => (
+                                <option
+                                  key={variant.id}
+                                  value={variant.id}
+                                  className="bg-slate-800"
+                                >
+                                  {variant.color} - {variant.size}
+                                  {variant.custom_variant &&
+                                    ` - ${variant.custom_variant}`}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div className="flex-shrink-0">
+                          <label className="block text-xs font-medium text-slate-400 mb-1">
+                            Qty
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                const currentQty = newItem.quantity || 1;
+                                if (currentQty > 1) {
+                                  handleNewItemChange(
+                                    "quantity",
+                                    currentQty - 1
+                                  );
+                                }
+                              }}
+                              className="w-8 h-8 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-sm"
+                            >
+                              −
+                            </button>
+                            <input
+                              type="number"
+                              value={newItem.quantity}
+                              onChange={(e) =>
+                                handleNewItemChange(
+                                  "quantity",
+                                  parseInt(e.target.value) || 1
+                                )
+                              }
+                              className="w-16 bg-slate-800/50 border border-slate-700/50 text-white text-center rounded py-2 px-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              min="1"
+                            />
+                            <button
+                              onClick={() => {
+                                const currentQty = newItem.quantity || 1;
+                                // Check stock availability
+                                if (selectedProduct) {
+                                  let availableStock = 0;
+                                  if (
+                                    selectedProduct.has_variants &&
+                                    newItem.variant
+                                  ) {
+                                    const variant = availableVariants.find(
+                                      (v) => v.id === parseInt(newItem.variant)
+                                    );
+                                    availableStock = variant?.stock || 0;
+                                  } else {
+                                    availableStock = selectedProduct.stock || 0;
+                                  }
+                                  if (currentQty < availableStock) {
+                                    handleNewItemChange(
+                                      "quantity",
+                                      currentQty + 1
+                                    );
+                                  }
+                                }
+                              }}
+                              className="w-8 h-8 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-sm"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex-shrink-0">
+                          <button
+                            onClick={addItemToOrder}
+                            disabled={!isAddItemEnabled}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shadow-lg whitespace-nowrap ${
+                              isAddItemEnabled
+                                ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
+                                : "bg-slate-700/50 text-slate-400 cursor-not-allowed"
+                            }`}
+                          >
+                            Add Item
+                          </button>
+                        </div>
                       </div>
 
-                      {selectedProduct?.has_variants && (
-                        <div className="flex-1">
-                          <select
-                            value={newItem.variant}
-                            onChange={(e) =>
-                              handleNewItemChange("variant", e.target.value)
-                            }
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                          >
-                            <option value="" className="bg-slate-800">
-                              Select variant
-                            </option>
-                            {availableVariants.map((variant) => (
-                              <option
-                                key={variant.id}
-                                value={variant.id}
-                                className="bg-slate-800"
-                              >
-                                {variant.color} - {variant.size}
-                                {variant.custom_variant &&
-                                  ` - ${variant.custom_variant}`}
-                              </option>
-                            ))}
-                          </select>
+                      {/* Selected Product Info */}
+                      {selectedProduct && (
+                        <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/30">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h5 className="text-sm font-medium text-slate-200">
+                                {selectedProduct.name}
+                              </h5>
+                              <p className="text-xs text-slate-400">
+                                {selectedProduct.category_name} • Stock:{" "}
+                                {selectedProduct.has_variants && newItem.variant
+                                  ? availableVariants.find(
+                                      (v) => v.id === parseInt(newItem.variant)
+                                    )?.stock || 0
+                                  : selectedProduct.stock}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-cyan-400">
+                                {formatCurrency(
+                                  selectedProduct.has_variants &&
+                                    newItem.variant
+                                    ? availableVariants.find(
+                                        (v) =>
+                                          v.id === parseInt(newItem.variant)
+                                      )?.sell_price || 0
+                                    : selectedProduct.sell_price || 0
+                                )}
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                Total:{" "}
+                                {formatCurrency(
+                                  (selectedProduct.has_variants &&
+                                  newItem.variant
+                                    ? availableVariants.find(
+                                        (v) =>
+                                          v.id === parseInt(newItem.variant)
+                                      )?.sell_price || 0
+                                    : selectedProduct.sell_price || 0) *
+                                    newItem.quantity
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       )}
-
-                      <div>
-                        <button
-                          onClick={addItemToOrder}
-                          className="px-3 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap"
-                        >
-                          Add Item
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </div>
