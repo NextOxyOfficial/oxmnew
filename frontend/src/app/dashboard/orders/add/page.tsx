@@ -399,6 +399,7 @@ export default function AddOrderPage() {
         ? response
         : response?.results || [];
       console.log("Processed customers:", customers);
+      console.log("Number of customers found:", customers.length);
 
       // For each customer, we'll set previous_due to 0 initially
       // In a real scenario, you might want to fetch due payment info from a separate endpoint
@@ -409,6 +410,7 @@ export default function AddOrderPage() {
 
       setCustomers(customersWithDue);
       console.log("Customers set to state:", customersWithDue);
+      console.log("Customers state length after set:", customersWithDue.length);
     } catch (error) {
       console.error("Error fetching customers:", error);
       setError("Failed to load customers");
@@ -900,13 +902,36 @@ export default function AddOrderPage() {
       setIsSubmitting(true);
       setError(null);
 
+      let customerId = selectedCustomerId;
+
+      // If this is a new customer (guest), create the customer first
+      if (customerType === "guest" && !selectedCustomerId) {
+        console.log("Creating new customer...");
+        try {
+          const customerData = {
+            name: orderForm.customer.name,
+            phone: orderForm.customer.phone?.trim() || undefined,
+            email: orderForm.customer.email?.trim() || undefined,
+            address: orderForm.customer.address?.trim() || undefined,
+            company: orderForm.customer.company?.trim() || undefined,
+          };
+
+          const newCustomer = await ApiService.createCustomer(customerData);
+          customerId = newCustomer.id;
+          console.log("New customer created:", newCustomer);
+        } catch (customerError) {
+          console.error("Error creating customer:", customerError);
+          // If customer creation fails, we can still proceed with the order as guest
+          console.log(
+            "Proceeding with guest order due to customer creation error"
+          );
+        }
+      }
+
       // Prepare order data with multiple items
       const orderData = {
-        // Customer information
-        customer:
-          customerType === "existing" && selectedCustomerId
-            ? selectedCustomerId
-            : undefined,
+        // Customer information - use the customer ID if available
+        customer: customerId || undefined,
         customer_name: orderForm.customer.name,
         customer_phone: orderForm.customer.phone?.trim() || undefined,
         customer_email: orderForm.customer.email?.trim() || undefined,
@@ -985,12 +1010,30 @@ export default function AddOrderPage() {
   const filteredCustomers = customers.filter((customer) => {
     if (!customerSearch.trim()) return true;
     const search = customerSearch.toLowerCase();
-    return (
-      customer.name.toLowerCase().includes(search) ||
-      customer.email.toLowerCase().includes(search) ||
-      customer.phone.includes(search)
-    );
+    const matches =
+      customer.name?.toLowerCase().includes(search) ||
+      customer.email?.toLowerCase().includes(search) ||
+      customer.phone?.includes(search);
+
+    // Debug logging
+    if (customerSearch.trim().length >= 2) {
+      console.log(
+        `Filtering customer: ${customer.name}, Search: "${search}", Matches: ${matches}`
+      );
+      console.log(
+        `Customer details: name="${customer.name}", email="${customer.email}", phone="${customer.phone}"`
+      );
+    }
+
+    return matches;
   });
+
+  // Debug the filtered results
+  if (customerSearch.trim().length >= 2) {
+    console.log(
+      `Total customers: ${customers.length}, Filtered: ${filteredCustomers.length}, Search term: "${customerSearch}"`
+    );
+  }
 
   // Filter employees based on search
   const filteredEmployees = employees.filter((employee) => {
@@ -1189,7 +1232,15 @@ export default function AddOrderPage() {
                                       onClick={() => {
                                         handleCustomerSelection(customer.id);
                                         setCustomerSearch(
-                                          `${customer.name} (${customer.email}) - ${customer.phone}`
+                                          `${customer.name}${
+                                            customer.email
+                                              ? ` (${customer.email})`
+                                              : ""
+                                          }${
+                                            customer.phone
+                                              ? ` - ${customer.phone}`
+                                              : ""
+                                          }`
                                         );
                                         setIsCustomerDropdownOpen(false);
                                       }}
@@ -1199,7 +1250,8 @@ export default function AddOrderPage() {
                                         {customer.name}
                                       </div>
                                       <div className="text-slate-400 text-sm">
-                                        {customer.email} • {customer.phone}
+                                        {customer.email || "No email"} •{" "}
+                                        {customer.phone || "No phone"}
                                       </div>
                                       {customer.previous_due &&
                                         customer.previous_due > 0 && (

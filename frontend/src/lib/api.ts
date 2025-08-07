@@ -1154,8 +1154,48 @@ export class ApiService {
     phone?: string;
     address?: string;
     notes?: string;
+    company?: string;
   }) {
-    return this.post("/customers/", customerData);
+    // Prepare the data for the backend
+    const data: {
+      name: string;
+      email?: string;
+      phone?: string;
+      address?: string;
+      notes?: string;
+    } = {
+      name: customerData.name,
+    };
+
+    // Only include email if it exists and is not empty
+    if (customerData.email && customerData.email.trim()) {
+      data.email = customerData.email.trim();
+    }
+
+    // Only include phone if it exists and is not empty
+    if (customerData.phone && customerData.phone.trim()) {
+      data.phone = customerData.phone.trim();
+    }
+
+    // Include address if provided
+    if (customerData.address && customerData.address.trim()) {
+      data.address = customerData.address.trim();
+    }
+
+    // Combine notes and company into notes field
+    let notes = "";
+    if (customerData.company && customerData.company.trim()) {
+      notes += `Company: ${customerData.company.trim()}`;
+    }
+    if (customerData.notes && customerData.notes.trim()) {
+      if (notes) notes += "\n";
+      notes += customerData.notes.trim();
+    }
+    if (notes) {
+      data.notes = notes;
+    }
+
+    return this.post("/customers/", data);
   }
 
   static async updateCustomer(
@@ -1724,7 +1764,7 @@ export class ApiService {
   }) {
     console.log("=== MAKE PAYMENT API CALL ===");
     console.log("Params:", params);
-    
+
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       queryParams.append(key, value.toString());
@@ -1732,7 +1772,7 @@ export class ApiService {
 
     const endpoint = `/pay/?${queryParams.toString()}`;
     console.log("Payment endpoint:", endpoint);
-    
+
     try {
       const result = await this.get(endpoint);
       console.log("Payment API result:", result);
