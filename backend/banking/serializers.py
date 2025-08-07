@@ -95,14 +95,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        # Check if debit transaction would make account balance negative
-        if data.get("type") == "debit":
-            account = data.get("account")
-            amount = data.get("amount")
-            if account and account.balance < amount:
-                raise serializers.ValidationError(
-                    f"Insufficient balance. Account balance: ${account.balance}"
-                )
+        # Allow negative balances - no balance check required
         return data
 
 
@@ -117,12 +110,5 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        # Check if debit transaction would make account balance negative
-        if data.get("type") == "debit":
-            account = data.get("account")
-            amount = data.get("amount")
-            if account and account.balance < amount:
-                raise serializers.ValidationError(
-                    f"Insufficient balance. Account balance: ${account.balance}"
-                )
+        # Allow negative balances - no balance check required
         return data
