@@ -974,7 +974,7 @@ export class ApiService {
   }
 
   static async searchProducts(query: string) {
-    if (!query || query.trim().length < 2) {
+    if (!query || query.trim().length < 1) {
       return [];
     }
     return this.get(`/products/?search=${encodeURIComponent(query.trim())}`);

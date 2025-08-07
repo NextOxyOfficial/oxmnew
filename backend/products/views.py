@@ -35,7 +35,14 @@ class ProductViewSet(viewsets.ModelViewSet):
         filters.OrderingFilter,
     ]
     filterset_fields = ["category", "supplier", "has_variants", "is_active"]
-    search_fields = ["name", "details", "location"]
+    search_fields = [
+        "name",
+        "product_code",
+        "details",
+        "location",
+        "category__name",
+        "supplier__name",
+    ]
     ordering_fields = ["name", "created_at", "updated_at", "buy_price", "sell_price"]
     ordering = ["-created_at"]
 

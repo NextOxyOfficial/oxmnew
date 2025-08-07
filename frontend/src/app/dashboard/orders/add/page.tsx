@@ -1,7 +1,6 @@
 "use client";
 
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { ApiService } from "@/lib/api";
 import { Product } from "@/types/product";
 import { useRouter } from "next/navigation";
@@ -92,9 +91,11 @@ export default function AddOrderPage() {
   const router = useRouter();
   const formatCurrency = useCurrencyFormatter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isSearchingProducts, setIsSearchingProducts] = useState(false);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +116,7 @@ export default function AddOrderPage() {
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Order form state
   const [orderForm, setOrderForm] = useState<OrderForm>({
@@ -173,17 +175,67 @@ export default function AddOrderPage() {
     }));
   }, []);
 
+  // Cleanup effect for search timeout
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
   const fetchProducts = async () => {
     try {
       setIsLoadingProducts(true);
       const response = await ApiService.getProducts();
-      setProducts(Array.isArray(response) ? response : response?.results || []);
+      console.log("Products API response:", response);
+      const productsData = Array.isArray(response)
+        ? response
+        : response?.results || [];
+      console.log("Processed products:", productsData);
+      setProducts(productsData);
     } catch (error) {
       console.error("Error fetching products:", error);
       setError("Failed to load products");
     } finally {
       setIsLoadingProducts(false);
     }
+  };
+
+  // New function to search products from backend
+  const searchProducts = async (query: string) => {
+    if (!query || query.trim().length < 1) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearchingProducts(true);
+      const response = await ApiService.searchProducts(query.trim());
+      console.log("Search API response:", response);
+      const results = Array.isArray(response)
+        ? response
+        : response?.results || [];
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Error searching products:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearchingProducts(false);
+    }
+  };
+
+  // Debounced search function
+  const debouncedSearch = (query: string) => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      searchProducts(query);
+    }, 300); // 300ms delay
+
+    setSearchTimeout(timeout);
   };
 
   const fetchCustomers = async () => {
@@ -471,7 +523,7 @@ export default function AddOrderPage() {
 
     // Check stock availability before adding
     let availableStock = 0;
-    
+
     if (selectedProduct.has_variants && selectedVariant) {
       availableStock = selectedVariant.stock || 0;
     } else {
@@ -539,18 +591,20 @@ export default function AddOrderPage() {
     if (quantity <= 0) return;
 
     // Find the item to check stock availability
-    const currentItem = orderForm.items.find(item => item.id === itemId);
+    const currentItem = orderForm.items.find((item) => item.id === itemId);
     if (!currentItem) return;
 
     // Find the product to check stock
-    const product = products.find(p => p.id === currentItem.product);
+    const product = products.find((p) => p.id === currentItem.product);
     if (!product) return;
 
     let availableStock = 0;
-    
+
     if (product.has_variants && currentItem.variant) {
       // For products with variants, check variant stock
-      const variant = product.variants?.find(v => v.id === currentItem.variant);
+      const variant = product.variants?.find(
+        (v) => v.id === currentItem.variant
+      );
       availableStock = variant?.stock || 0;
     } else {
       // For products without variants, check product stock
@@ -574,14 +628,14 @@ export default function AddOrderPage() {
 
   // Check if quantity can be increased based on available stock
   const canIncreaseQuantity = (item: OrderItem) => {
-    const product = products.find(p => p.id === item.product);
+    const product = products.find((p) => p.id === item.product);
     if (!product) return false;
 
     let availableStock = 0;
-    
+
     if (product.has_variants && item.variant) {
       // For products with variants, check variant stock
-      const variant = product.variants?.find(v => v.id === item.variant);
+      const variant = product.variants?.find((v) => v.id === item.variant);
       availableStock = variant?.stock || 0;
     } else {
       // For products without variants, check product stock
@@ -784,16 +838,68 @@ export default function AddOrderPage() {
     );
   });
 
-  // Filter products based on search
-  const filteredProducts = products.filter((product) => {
-    if (!productSearch.trim()) return true;
-    const search = productSearch.toLowerCase();
-    return (
-      product.name.toLowerCase().includes(search) ||
-      (product.sku && product.sku.toLowerCase().includes(search)) ||
-      (product.product_code && product.product_code.toLowerCase().includes(search))
+  // Filter products based on search - use backend search results when available
+  const filteredProducts =
+    productSearch.trim().length >= 1 && searchResults.length > 0
+      ? searchResults
+      : products.filter((product) => {
+          if (!productSearch.trim()) return true;
+          const search = productSearch.toLowerCase().trim();
+
+          // Helper function to safely convert to string and search
+          const safeIncludes = (field: string | null | undefined) => {
+            return field && field.toString().toLowerCase().includes(search);
+          };
+
+          // Search in multiple fields with better handling
+          const matches =
+            safeIncludes(product.name) ||
+            safeIncludes(product.product_code) ||
+            safeIncludes(product.category_name) ||
+            safeIncludes(product.supplier_name) ||
+            // Also search in product details if available
+            safeIncludes(product.details) ||
+            // Search by partial matches (split search terms)
+            search
+              .split(" ")
+              .every(
+                (term) =>
+                  term.trim() &&
+                  (safeIncludes(product.name) ||
+                    safeIncludes(product.product_code))
+              ); // Debug logging for search (only for local filtering)
+          if (search.length <= 3) {
+            console.log(
+              `Product: ${product.name}, Search: "${search}", Matches: ${matches}`
+            );
+          }
+
+          return matches;
+        });
+
+  // Helper function to highlight search terms
+  const highlightText = (text: string, search: string) => {
+    if (!search.trim()) return text;
+
+    const regex = new RegExp(
+      `(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi"
     );
-  });
+    const parts = text.split(regex);
+
+    return parts.map((part, index) =>
+      regex.test(part) ? (
+        <span
+          key={index}
+          className="bg-yellow-500/30 text-yellow-200 font-medium"
+        >
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
 
   return (
     <>
@@ -941,53 +1047,59 @@ export default function AddOrderPage() {
                         </div>
 
                         {/* Dropdown Options */}
-                        {isCustomerDropdownOpen && customerSearch.trim().length >= 2 && (
-                          <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
-                            {isLoadingCustomers ? (
-                              <div className="p-3 text-slate-400">
-                                Loading customers...
-                              </div>
-                            ) : filteredCustomers.length > 0 ? (
-                              filteredCustomers.slice(0, 10).map((customer) => (
-                                <div
-                                  key={customer.id}
-                                  onClick={() => {
-                                    handleCustomerSelection(customer.id);
-                                    setCustomerSearch(
-                                      `${customer.name} (${customer.email}) - ${customer.phone}`
-                                    );
-                                    setIsCustomerDropdownOpen(false);
-                                  }}
-                                  className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
-                                >
-                                  <div className="text-white font-medium">
-                                    {customer.name}
-                                  </div>
-                                  <div className="text-slate-400 text-sm">
-                                    {customer.email} • {customer.phone}
-                                  </div>
-                                  {customer.previous_due &&
-                                    customer.previous_due > 0 && (
-                                      <div className="text-red-400 text-xs">
-                                        Previous Due:{" "}
-                                        {formatCurrency(customer.previous_due)}
-                                      </div>
-                                    )}
+                        {isCustomerDropdownOpen &&
+                          customerSearch.trim().length >= 2 && (
+                            <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
+                              {isLoadingCustomers ? (
+                                <div className="p-3 text-slate-400">
+                                  Loading customers...
                                 </div>
-                              ))
-                            ) : (
-                              <div className="p-3 text-slate-400">
-                                No customers found
-                              </div>
-                            )}
-                            {/* Show indicator when there are more than 10 results */}
-                            {filteredCustomers.length > 10 && (
-                              <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
-                                Showing 10 of {filteredCustomers.length} results. Type more to refine search.
-                              </div>
-                            )}
-                          </div>
-                        )}
+                              ) : filteredCustomers.length > 0 ? (
+                                filteredCustomers
+                                  .slice(0, 10)
+                                  .map((customer) => (
+                                    <div
+                                      key={customer.id}
+                                      onClick={() => {
+                                        handleCustomerSelection(customer.id);
+                                        setCustomerSearch(
+                                          `${customer.name} (${customer.email}) - ${customer.phone}`
+                                        );
+                                        setIsCustomerDropdownOpen(false);
+                                      }}
+                                      className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
+                                    >
+                                      <div className="text-white font-medium">
+                                        {customer.name}
+                                      </div>
+                                      <div className="text-slate-400 text-sm">
+                                        {customer.email} • {customer.phone}
+                                      </div>
+                                      {customer.previous_due &&
+                                        customer.previous_due > 0 && (
+                                          <div className="text-red-400 text-xs">
+                                            Previous Due:{" "}
+                                            {formatCurrency(
+                                              customer.previous_due
+                                            )}
+                                          </div>
+                                        )}
+                                    </div>
+                                  ))
+                              ) : (
+                                <div className="p-3 text-slate-400">
+                                  No customers found
+                                </div>
+                              )}
+                              {/* Show indicator when there are more than 10 results */}
+                              {filteredCustomers.length > 10 && (
+                                <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
+                                  Showing 10 of {filteredCustomers.length}{" "}
+                                  results. Type more to refine search.
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                         {/* Click outside to close dropdown */}
                         {isCustomerDropdownOpen && (
@@ -1389,15 +1501,18 @@ export default function AddOrderPage() {
                         <div className="relative">
                           <input
                             type="text"
-                            placeholder="Search products by name or code (minimum 2 characters)..."
+                            placeholder="Search products by name, product code, category..."
                             value={productSearch}
                             onChange={(e) => {
                               setProductSearch(e.target.value);
-                              // Only open dropdown if user has typed at least 2 characters
-                              if (e.target.value.trim().length >= 2) {
+                              // Open dropdown if user has typed at least 1 character
+                              if (e.target.value.trim().length >= 1) {
                                 setIsProductDropdownOpen(true);
+                                // Use debounced search for backend API
+                                debouncedSearch(e.target.value.trim());
                               } else {
                                 setIsProductDropdownOpen(false);
+                                setSearchResults([]); // Clear search results
                               }
                               // Clear selected product when searching
                               if (newItem.product) {
@@ -1405,8 +1520,8 @@ export default function AddOrderPage() {
                               }
                             }}
                             onFocus={() => {
-                              // Only open dropdown on focus if user has already typed at least 2 characters
-                              if (productSearch.trim().length >= 2) {
+                              // Open dropdown on focus if user has already typed at least 1 character
+                              if (productSearch.trim().length >= 1) {
                                 setIsProductDropdownOpen(true);
                               }
                             }}
@@ -1423,9 +1538,15 @@ export default function AddOrderPage() {
                               type="button"
                               onClick={() => {
                                 setProductSearch("");
+                                setSearchResults([]); // Clear search results
                                 handleNewItemChange("product", "");
                                 handleNewItemChange("variant", "");
                                 setIsProductDropdownOpen(false);
+                                // Clear any pending search timeout
+                                if (searchTimeout) {
+                                  clearTimeout(searchTimeout);
+                                  setSearchTimeout(null);
+                                }
                               }}
                               className="absolute right-12 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
                               title="Clear search"
@@ -1449,77 +1570,113 @@ export default function AddOrderPage() {
                         </div>
 
                         {/* Product Dropdown Options */}
-                        {isProductDropdownOpen && productSearch.trim().length >= 2 && (
-                          <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl"
-                               style={{
-                                 bottom: 'auto',
-                                 top: '100%'
-                               }}>
-                            {isLoadingProducts ? (
-                              <div className="p-3 text-slate-400">
-                                Loading products...
-                              </div>
-                            ) : filteredProducts.length > 0 ? (
-                              filteredProducts.slice(0, 10).map((product) => (
-                                <div
-                                  key={product.id}
-                                  onClick={() => {
-                                    handleNewItemChange("product", product.id.toString());
-                                    setProductSearch(
-                                      `${product.name}${product.sku ? ` (${product.sku})` : ''}`
-                                    );
-                                    setIsProductDropdownOpen(false);
-                                  }}
-                                  className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
-                                >
-                                  <div className="text-white font-medium">
-                                    {product.name}
-                                  </div>
-                                  <div className="text-slate-400 text-sm flex items-center gap-2">
-                                    {product.sku && (
-                                      <span>SKU: {product.sku}</span>
-                                    )}
-                                    {product.product_code && (
-                                      <span>Code: {product.product_code}</span>
-                                    )}
-                                    <span className={`font-medium ${
-                                      (product.stock || 0) <= 0 
-                                        ? 'text-red-400' 
-                                        : (product.stock || 0) <= 10 
-                                        ? 'text-yellow-400' 
-                                        : 'text-cyan-400'
-                                    }`}>
-                                      Stock: {product.stock || 0}
-                                    </span>
-                                    <span className="text-green-400">
-                                      ${product.sell_price || 0}
-                                    </span>
-                                  </div>
-                                  {product.has_variants && (
-                                    <div className="text-xs text-blue-400 mt-1">
-                                      Has variants available
+                        {isProductDropdownOpen &&
+                          productSearch.trim().length >= 1 && (
+                            <div
+                              className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl"
+                              style={{
+                                bottom: "auto",
+                                top: "100%",
+                              }}
+                            >
+                              {isLoadingProducts || isSearchingProducts ? (
+                                <div className="p-3 text-slate-400">
+                                  {isSearchingProducts
+                                    ? "Searching products..."
+                                    : "Loading products..."}
+                                </div>
+                              ) : filteredProducts.length > 0 ? (
+                                filteredProducts.slice(0, 10).map((product) => (
+                                  <div
+                                    key={product.id}
+                                    onClick={() => {
+                                      handleNewItemChange(
+                                        "product",
+                                        product.id.toString()
+                                      );
+                                      setProductSearch(
+                                        `${product.name}${
+                                          product.product_code
+                                            ? ` (${product.product_code})`
+                                            : ""
+                                        }`
+                                      );
+                                      setIsProductDropdownOpen(false);
+                                    }}
+                                    className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
+                                  >
+                                    <div className="text-white font-medium">
+                                      {highlightText(
+                                        product.name,
+                                        productSearch.trim()
+                                      )}
                                     </div>
-                                  )}
-                                  {(!product.has_variants && (product.stock || 0) <= 0) && (
-                                    <div className="text-xs text-red-400 mt-1 font-medium">
-                                      Out of Stock
+                                    <div className="text-slate-400 text-sm flex flex-wrap items-center gap-2">
+                                      {product.product_code && (
+                                        <span className="bg-slate-700 px-2 py-0.5 rounded text-xs">
+                                          Code: {product.product_code}
+                                        </span>
+                                      )}
+                                      {product.category_name && (
+                                        <span className="bg-blue-900/50 px-2 py-0.5 rounded text-xs text-blue-300">
+                                          {product.category_name}
+                                        </span>
+                                      )}
+                                      <span
+                                        className={`font-medium px-2 py-0.5 rounded text-xs ${
+                                          (product.stock || 0) <= 0
+                                            ? "text-red-400 bg-red-900/30"
+                                            : (product.stock || 0) <= 10
+                                            ? "text-yellow-400 bg-yellow-900/30"
+                                            : "text-cyan-400 bg-cyan-900/30"
+                                        }`}
+                                      >
+                                        Stock: {product.stock || 0}
+                                      </span>
+                                      <span className="text-green-400 bg-green-900/30 px-2 py-0.5 rounded text-xs font-medium">
+                                        ${product.sell_price || 0}
+                                      </span>
+                                    </div>
+                                    {product.has_variants && (
+                                      <div className="text-xs text-blue-400 mt-1">
+                                        Has variants available
+                                      </div>
+                                    )}
+                                    {!product.has_variants &&
+                                      (product.stock || 0) <= 0 && (
+                                        <div className="text-xs text-red-400 mt-1 font-medium">
+                                          Out of Stock
+                                        </div>
+                                      )}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="p-4 text-slate-400 text-center">
+                                  <div className="text-sm">
+                                    No products found for &ldquo;{productSearch}
+                                    &rdquo;
+                                  </div>
+                                  <div className="text-xs mt-1 text-slate-500">
+                                    Try searching by product name, product code,
+                                    or category
+                                  </div>
+                                  {products.length > 0 && (
+                                    <div className="text-xs mt-1 text-slate-500">
+                                      Total products available:{" "}
+                                      {products.length}
                                     </div>
                                   )}
                                 </div>
-                              ))
-                            ) : (
-                              <div className="p-3 text-slate-400">
-                                No products found
-                              </div>
-                            )}
-                            {/* Show indicator when there are more than 10 results */}
-                            {filteredProducts.length > 10 && (
-                              <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
-                                Showing 10 of {filteredProducts.length} results. Type more to refine search.
-                              </div>
-                            )}
-                          </div>
-                        )}
+                              )}
+                              {/* Show indicator when there are more than 10 results */}
+                              {filteredProducts.length > 10 && (
+                                <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
+                                  Showing 10 of {filteredProducts.length}{" "}
+                                  results. Type more to refine search.
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                         {/* Click outside to close dropdown */}
                         {isProductDropdownOpen && (
