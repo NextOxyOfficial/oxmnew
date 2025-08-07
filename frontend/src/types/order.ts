@@ -38,6 +38,17 @@ export interface Order {
   total_sell_price?: number;
   gross_profit?: number;
   net_profit?: number;
+  // Multiple items support
+  items?: OrderItem[];
+}
+
+export interface OrderItem {
+  id?: number;
+  product_name: string;
+  variant_details?: string;
+  quantity: number;
+  unit_price: number;
+  total_price?: number;
 }
 
 export interface OrderForm {

@@ -2,7 +2,7 @@
 
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
-import { Order } from "@/types/order";
+import { Order, OrderItem } from "@/types/order";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -1073,34 +1073,73 @@ export default function OrdersPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-slate-700/30 print:border-gray-200">
-                        <td className="px-4 py-3">
-                          <div>
-                            <p className="text-sm font-medium text-slate-100 print:text-gray-900">
-                              {selectedOrder.product_name}
-                            </p>
-                            {selectedOrder.variant && (
-                              <p className="text-xs text-slate-400 print:text-gray-600 mt-0.5">
-                                {selectedOrder.variant.color &&
-                                  `Color: ${selectedOrder.variant.color}`}
-                                {selectedOrder.variant.size &&
-                                  ` | Size: ${selectedOrder.variant.size}`}
-                                {selectedOrder.variant.custom_variant &&
-                                  ` | ${selectedOrder.variant.custom_variant}`}
+                      {/* Check if order has multiple items or is a single item order */}
+                      {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                        // Multiple items - display all items
+                        selectedOrder.items.map(
+                          (item: OrderItem, index: number) => (
+                            <tr
+                              key={index}
+                              className="border-b border-slate-700/30 print:border-gray-200"
+                            >
+                              <td className="px-4 py-3">
+                                <div>
+                                  <p className="text-sm font-medium text-slate-100 print:text-gray-900">
+                                    {item.product_name}
+                                  </p>
+                                  {item.variant_details && (
+                                    <p className="text-xs text-slate-400 print:text-gray-600 mt-0.5">
+                                      {item.variant_details}
+                                    </p>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-center text-sm text-slate-200 print:text-gray-800">
+                                {item.quantity}
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm text-slate-200 print:text-gray-800">
+                                {formatCurrency(item.unit_price || 0)}
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400 print:text-gray-900">
+                                {formatCurrency(
+                                  item.total_price ||
+                                    item.quantity * item.unit_price
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        )
+                      ) : (
+                        // Single item order - display the main order data
+                        <tr className="border-b border-slate-700/30 print:border-gray-200">
+                          <td className="px-4 py-3">
+                            <div>
+                              <p className="text-sm font-medium text-slate-100 print:text-gray-900">
+                                {selectedOrder.product_name}
                               </p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-slate-200 print:text-gray-800">
-                          {selectedOrder.quantity}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-200 print:text-gray-800">
-                          {formatCurrency(selectedOrder.unit_price || 0)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400 print:text-gray-900">
-                          {formatCurrency(selectedOrder.total_amount || 0)}
-                        </td>
-                      </tr>
+                              {selectedOrder.variant && (
+                                <p className="text-xs text-slate-400 print:text-gray-600 mt-0.5">
+                                  {selectedOrder.variant.color &&
+                                    `Color: ${selectedOrder.variant.color}`}
+                                  {selectedOrder.variant.size &&
+                                    ` | Size: ${selectedOrder.variant.size}`}
+                                  {selectedOrder.variant.custom_variant &&
+                                    ` | ${selectedOrder.variant.custom_variant}`}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-slate-200 print:text-gray-800">
+                            {selectedOrder.quantity}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-slate-200 print:text-gray-800">
+                            {formatCurrency(selectedOrder.unit_price || 0)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400 print:text-gray-900">
+                            {formatCurrency(selectedOrder.total_amount || 0)}
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1112,14 +1151,36 @@ export default function OrdersPage() {
                       <div className="flex justify-between py-1 text-slate-300 print:text-gray-600 text-sm">
                         <span>Subtotal:</span>
                         <span className="font-semibold">
-                          {formatCurrency(selectedOrder.total_amount || 0)}
+                          {formatCurrency(
+                            selectedOrder.items &&
+                              selectedOrder.items.length > 0
+                              ? selectedOrder.items.reduce(
+                                  (sum, item) =>
+                                    sum +
+                                    (item.total_price ||
+                                      item.quantity * item.unit_price),
+                                  0
+                                )
+                              : selectedOrder.total_amount || 0
+                          )}
                         </span>
                       </div>
                       <div className="border-t border-slate-600/50 print:border-gray-300 pt-2">
                         <div className="flex justify-between text-base font-bold text-slate-100 print:text-gray-900">
                           <span>Total:</span>
                           <span className="text-cyan-400 print:text-gray-900">
-                            {formatCurrency(selectedOrder.total_amount || 0)}
+                            {formatCurrency(
+                              selectedOrder.items &&
+                                selectedOrder.items.length > 0
+                                ? selectedOrder.items.reduce(
+                                    (sum, item) =>
+                                      sum +
+                                      (item.total_price ||
+                                        item.quantity * item.unit_price),
+                                    0
+                                  )
+                                : selectedOrder.total_amount || 0
+                            )}
                           </span>
                         </div>
                       </div>
