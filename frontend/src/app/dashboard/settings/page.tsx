@@ -182,11 +182,15 @@ export default function SettingsPage() {
   const fetchCategories = async () => {
     try {
       const response = await ApiService.getCategories();
-      if (response.categories) {
-        setCategories(response.categories);
+      console.log("Categories response:", response);
+      if (Array.isArray(response)) {
+        setCategories(response);
+      } else {
+        setCategories([]);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
+      setCategories([]);
     }
   };
 
@@ -215,11 +219,14 @@ export default function SettingsPage() {
   const fetchGifts = async () => {
     try {
       const response = await ApiService.getGifts();
-      if (response.gifts) {
-        setGifts(response.gifts);
+      if (Array.isArray(response)) {
+        setGifts(response);
+      } else {
+        setGifts([]);
       }
     } catch (error) {
       console.error("Error fetching gifts:", error);
+      setGifts([]);
     }
   };
 
@@ -227,8 +234,8 @@ export default function SettingsPage() {
     try {
       const response = await ApiService.getAchievements();
       console.log("Achievements response:", response); // Debug log
-      if (response.achievements) {
-        setAchievements(response.achievements);
+      if (Array.isArray(response)) {
+        setAchievements(response);
       } else {
         // If no achievements property, set empty array
         setAchievements([]);
@@ -245,8 +252,8 @@ export default function SettingsPage() {
     try {
       const response = await ApiService.getLevels();
       console.log("Levels response:", response); // Debug log
-      if (response.levels) {
-        setLevels(response.levels);
+      if (Array.isArray(response)) {
+        setLevels(response);
       } else {
         // If no levels property, set empty array
         setLevels([]);
@@ -263,8 +270,8 @@ export default function SettingsPage() {
     try {
       const response = await ApiService.getBrands();
       console.log("Brands response:", response); // Debug log
-      if (response.brands) {
-        setBrands(response.brands);
+      if (Array.isArray(response)) {
+        setBrands(response);
       } else {
         // If no brands property, set empty array
         setBrands([]);
@@ -281,8 +288,8 @@ export default function SettingsPage() {
     try {
       const response = await ApiService.getPaymentMethods();
       console.log("Payment methods response:", response); // Debug log
-      if (response.paymentMethods) {
-        setPaymentMethods(response.paymentMethods);
+      if (Array.isArray(response)) {
+        setPaymentMethods(response);
       } else {
         // If no payment methods property, set empty array
         setPaymentMethods([]);
@@ -857,6 +864,7 @@ export default function SettingsPage() {
                     <h4 className="text-lg font-medium text-slate-100 mb-4">
                       Categories
                     </h4>
+
                     <div className="max-w-2xl">
                       {categories.length === 0 ? (
                         <div className="text-center py-8 text-slate-400">

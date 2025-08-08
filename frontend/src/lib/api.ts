@@ -633,9 +633,14 @@ export class ApiService {
   static async getCategories() {
     try {
       const result = await this.get("/categories/");
+      console.log("Categories result:", result);
 
+      // Handle the specific backend response format: {"categories": [...]}
+      if (result && result.categories && Array.isArray(result.categories)) {
+        return result.categories;
+      }
       // Handle paginated response
-      if (result && result.results && Array.isArray(result.results)) {
+      else if (result && result.results && Array.isArray(result.results)) {
         return result.results;
       }
       // Ensure we return an array
@@ -706,8 +711,12 @@ export class ApiService {
     try {
       const result = await this.get("/gifts/");
 
+      // Handle the specific backend response format: {"gifts": [...]}
+      if (result && result.gifts && Array.isArray(result.gifts)) {
+        return result.gifts;
+      }
       // Handle paginated response
-      if (result && result.results && Array.isArray(result.results)) {
+      else if (result && result.results && Array.isArray(result.results)) {
         return result.results;
       }
       // Ensure we return an array
@@ -752,8 +761,12 @@ export class ApiService {
     try {
       const result = await this.get("/achievements/");
 
+      // Handle the specific backend response format: {"achievements": [...]}
+      if (result && result.achievements && Array.isArray(result.achievements)) {
+        return result.achievements;
+      }
       // Handle paginated response
-      if (result && result.results && Array.isArray(result.results)) {
+      else if (result && result.results && Array.isArray(result.results)) {
         return result.results;
       }
       // Ensure we return an array
@@ -804,7 +817,30 @@ export class ApiService {
 
   // Level methods
   static async getLevels() {
-    return this.get("/levels/");
+    try {
+      const result = await this.get("/levels/");
+
+      // Handle the specific backend response format: {"levels": [...]}
+      if (result && result.levels && Array.isArray(result.levels)) {
+        return result.levels;
+      }
+      // Handle paginated response
+      else if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected levels response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching levels:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async createLevel(levelData: { name: string; is_active?: boolean }) {
@@ -831,7 +867,30 @@ export class ApiService {
 
   // Brand methods
   static async getBrands() {
-    return this.get("/brands/");
+    try {
+      const result = await this.get("/brands/");
+
+      // Handle the specific backend response format: {"brands": [...]}
+      if (result && result.brands && Array.isArray(result.brands)) {
+        return result.brands;
+      }
+      // Handle paginated response
+      else if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected brands response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async createBrand(brandData: { name: string; is_active?: boolean }) {
@@ -858,7 +917,34 @@ export class ApiService {
 
   // Payment Method methods
   static async getPaymentMethods() {
-    return this.get("/payment-methods/");
+    try {
+      const result = await this.get("/payment-methods/");
+
+      // Handle the specific backend response format: {"paymentMethods": [...]}
+      if (
+        result &&
+        result.paymentMethods &&
+        Array.isArray(result.paymentMethods)
+      ) {
+        return result.paymentMethods;
+      }
+      // Handle paginated response
+      else if (result && result.results && Array.isArray(result.results)) {
+        return result.results;
+      }
+      // Ensure we return an array
+      else if (Array.isArray(result)) {
+        return result;
+      } else if (result && Array.isArray(result.data)) {
+        return result.data;
+      } else {
+        console.warn("Unexpected payment methods response format:", result);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching payment methods:", error);
+      return []; // Return empty array instead of throwing
+    }
   }
 
   static async createPaymentMethod(paymentMethodData: {
