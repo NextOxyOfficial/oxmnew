@@ -893,41 +893,129 @@ export default function DashboardPage() {
 
                         <div className="flex flex-wrap items-center justify-between mt-2 bg-black/20 rounded-lg p-1.5">
                           <div className="flex items-center space-x-3 px-1.5">
-                            <div>
-                              <span className="text-xs text-gray-400">
-                                Unit Price
-                              </span>
-                              <span className="text-xs font-medium text-blue-400 ml-1.5">
-                                {formatCurrency(sale.unit_price)}
-                              </span>
-                            </div>
-                            <div className="h-3 w-px bg-gray-600"></div>
-                            <div>
-                              <span className="text-xs text-gray-400">Qty</span>
-                              <span className="text-xs font-medium text-gray-300 ml-1.5">
-                                {sale.quantity}
-                              </span>
-                            </div>
-                            <div className="h-3 w-px bg-gray-600"></div>
-                            <div>
-                              <span className="text-xs text-gray-400">
-                                Profit
-                              </span>
-                              <span
-                                className={`text-xs font-medium ml-1.5 ${
-                                  sale.profit >= 0
-                                    ? "text-green-400"
-                                    : "text-red-400"
-                                }`}
-                              >
-                                {formatCurrency(sale.profit)}
-                              </span>
-                            </div>
+                            {/* Show order items information */}
+                            {sale.items && sale.items.length > 1 ? (
+                              // Multiple items - show items count and total info
+                              <>
+                                <div>
+                                  <span className="text-xs text-gray-400">
+                                    Items
+                                  </span>
+                                  <span className="text-xs font-medium text-purple-400 ml-1.5">
+                                    {sale.items.length} items
+                                  </span>
+                                </div>
+                                <div className="h-3 w-px bg-gray-600"></div>
+                                <div>
+                                  <span className="text-xs text-gray-400">
+                                    Total Qty
+                                  </span>
+                                  <span className="text-xs font-medium text-gray-300 ml-1.5">
+                                    {sale.quantity}
+                                  </span>
+                                </div>
+                                <div className="h-3 w-px bg-gray-600"></div>
+                                <div>
+                                  <span className="text-xs text-gray-400">
+                                    Profit
+                                  </span>
+                                  <span
+                                    className={`text-xs font-medium ml-1.5 ${
+                                      (sale.gross_profit || sale.profit || 0) >=
+                                      0
+                                        ? "text-green-400"
+                                        : "text-red-400"
+                                    }`}
+                                  >
+                                    {formatCurrency(
+                                      sale.gross_profit || sale.profit || 0
+                                    )}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              // Single item - show unit price, quantity, and profit
+                              <>
+                                <div>
+                                  <span className="text-xs text-gray-400">
+                                    Unit Price
+                                  </span>
+                                  <span className="text-xs font-medium text-blue-400 ml-1.5">
+                                    {formatCurrency(sale.unit_price)}
+                                  </span>
+                                </div>
+                                <div className="h-3 w-px bg-gray-600"></div>
+                                <div>
+                                  <span className="text-xs text-gray-400">
+                                    Qty
+                                  </span>
+                                  <span className="text-xs font-medium text-gray-300 ml-1.5">
+                                    {sale.quantity}
+                                  </span>
+                                </div>
+                                <div className="h-3 w-px bg-gray-600"></div>
+                                <div>
+                                  <span className="text-xs text-gray-400">
+                                    Profit
+                                  </span>
+                                  <span
+                                    className={`text-xs font-medium ml-1.5 ${
+                                      (sale.gross_profit || sale.profit || 0) >=
+                                      0
+                                        ? "text-green-400"
+                                        : "text-red-400"
+                                    }`}
+                                  >
+                                    {formatCurrency(
+                                      sale.gross_profit || sale.profit || 0
+                                    )}
+                                  </span>
+                                </div>
+                              </>
+                            )}
                           </div>
                           <div className="text-xs text-gray-400 px-1.5 mt-1 sm:mt-0">
                             {date}, {time}
                           </div>
                         </div>
+
+                        {/* Show order items details if multiple items */}
+                        {sale.items && sale.items.length > 1 && (
+                          <div className="mt-2 space-y-1">
+                            <div className="text-xs text-gray-400 mb-1">
+                              Order Items:
+                            </div>
+                            {sale.items.slice(0, 3).map((item, index) => (
+                              <div
+                                key={index}
+                                className="text-xs text-gray-300 bg-black/30 rounded px-2 py-1"
+                              >
+                                <span className="font-medium">
+                                  {item.product_name}
+                                </span>
+                                {item.variant_details && (
+                                  <span className="text-gray-400">
+                                    {" "}
+                                    • {item.variant_details}
+                                  </span>
+                                )}
+                                <span className="text-gray-400">
+                                  {" "}
+                                  • Qty: {item.quantity}
+                                </span>
+                                <span className="text-gray-400">
+                                  {" "}
+                                  • {formatCurrency(item.unit_price)}
+                                </span>
+                              </div>
+                            ))}
+                            {sale.items.length > 3 && (
+                              <div className="text-xs text-gray-400 px-2">
+                                +{sale.items.length - 3} more items...
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })

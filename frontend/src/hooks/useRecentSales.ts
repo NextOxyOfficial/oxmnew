@@ -19,6 +19,23 @@ export interface Sale {
   customer_email?: string;
   notes?: string;
   sale_date: string;
+  // New fields for multiple items support
+  items?: OrderItem[];
+  gross_profit?: number;
+  net_profit?: number;
+  total_buy_price?: number;
+  total_sell_price?: number;
+}
+
+// Order item interface
+export interface OrderItem {
+  id?: number;
+  product_name: string;
+  variant_details?: string;
+  quantity: number;
+  unit_price: number;
+  buy_price: number;
+  total_price?: number;
 }
 
 // For backward compatibility
