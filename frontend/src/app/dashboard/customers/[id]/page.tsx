@@ -84,6 +84,7 @@ interface DuePayment {
   due_date: string;
   type: "due" | "advance";
   notes?: string;
+  created_at: string;
 }
 
 interface AvailableGift {
@@ -94,9 +95,7 @@ interface AvailableGift {
 interface TransactionForm {
   type: "due" | "advance";
   amount: string;
-  due_date: string;
-  note: string;
-  order_id: string; // Added order selection field
+  note?: string; // Made optional
   notifyCustomer: boolean;
 }
 
@@ -139,9 +138,6 @@ export default function CustomerDetailsPage() {
   const [transactionForm, setTransactionForm] = useState<TransactionForm>({
     type: "due",
     amount: "",
-    due_date: "",
-    note: "",
-    order_id: "",
     notifyCustomer: false,
   });
   const [mounted, setMounted] = useState(false);
@@ -254,15 +250,23 @@ export default function CustomerDetailsPage() {
             (duePaymentsData as { results?: any[]; data?: any[] }).data ||
             [];
         }
-        const formattedDuePayments = duePayments.map((payment: any) => ({
-          id: payment.id,
-          order_id: payment.order || null, // Use null instead of 0 for no order
-          order_number: payment.order_number || null,
-          amount: payment.amount,
-          due_date: payment.due_date,
-          type: payment.payment_type as "due" | "advance",
-          notes: payment.notes,
-        }));
+        const formattedDuePayments = duePayments
+          .map((payment: any) => ({
+            id: payment.id,
+            order_id: payment.order || null, // Use null instead of 0 for no order
+            order_number: payment.order_number || null,
+            amount: payment.amount,
+            due_date: payment.due_date,
+            type: payment.payment_type as "due" | "advance",
+            notes: payment.notes,
+            created_at: payment.created_at,
+          }))
+          .sort((a: any, b: any) => {
+            // Sort by created_at in descending order (newest first)
+            const dateA = new Date(a.created_at).getTime();
+            const dateB = new Date(b.created_at).getTime();
+            return dateB - dateA;
+          });
         setDuePayments(formattedDuePayments);
 
         // Fetch gifts for this customer
@@ -380,9 +384,6 @@ export default function CustomerDetailsPage() {
     setTransactionForm({
       type: "due",
       amount: "",
-      due_date: "",
-      note: "",
-      order_id: "",
       notifyCustomer: false,
     });
   };
@@ -392,9 +393,6 @@ export default function CustomerDetailsPage() {
     setTransactionForm({
       type: "due",
       amount: "",
-      due_date: "",
-      note: "",
-      order_id: "",
       notifyCustomer: false,
     });
   };
@@ -495,7 +493,7 @@ export default function CustomerDetailsPage() {
 
     try {
       // Validate required fields
-      if (!transactionForm.amount || !transactionForm.due_date) {
+      if (!transactionForm.amount) {
         alert("Please fill in all required fields.");
         return;
       }
@@ -511,11 +509,7 @@ export default function CustomerDetailsPage() {
         customer: customer.id,
         amount: transactionForm.type === "advance" ? -amount : amount, // Negative for advance
         payment_type: transactionForm.type,
-        due_date: transactionForm.due_date,
-        notes: transactionForm.note,
-        ...(transactionForm.order_id && {
-          order: parseInt(transactionForm.order_id),
-        }), // Include order if selected
+        notes: transactionForm.note || "", // Make notes optional
       };
 
       // Create due payment via API
@@ -533,11 +527,9 @@ export default function CustomerDetailsPage() {
       if (transactionForm.notifyCustomer) {
         const message = `Hello ${
           customer.name
-        }, this is a reminder about your ${
+        }, this is a notification about your ${
           transactionForm.type === "due" ? "due payment" : "advance payment"
-        } of ${formatCurrency(amount)}. Due date: ${formatDate(
-          transactionForm.due_date
-        )}.`;
+        } of ${formatCurrency(amount)}.`;
         await handleSendSMS(message);
       }
 
@@ -553,15 +545,23 @@ export default function CustomerDetailsPage() {
           (duePaymentsData as { results?: any[]; data?: any[] }).data ||
           [];
       }
-      const formattedDuePayments = duePayments.map((payment: any) => ({
-        id: payment.id,
-        order_id: payment.order || null, // Use null instead of 0 for no order
-        order_number: payment.order_number || null,
-        amount: payment.amount,
-        due_date: payment.due_date,
-        type: payment.payment_type as "due" | "advance",
-        notes: payment.notes,
-      }));
+      const formattedDuePayments = duePayments
+        .map((payment: any) => ({
+          id: payment.id,
+          order_id: payment.order || null, // Use null instead of 0 for no order
+          order_number: payment.order_number || null,
+          amount: payment.amount,
+          due_date: payment.due_date,
+          type: payment.payment_type as "due" | "advance",
+          notes: payment.notes,
+          created_at: payment.created_at,
+        }))
+        .sort((a: any, b: any) => {
+          // Sort by created_at in descending order (newest first)
+          const dateA = new Date(a.created_at).getTime();
+          const dateB = new Date(b.created_at).getTime();
+          return dateB - dateA;
+        });
       setDuePayments(formattedDuePayments);
 
       // Close modal and reset form
@@ -1211,9 +1211,8 @@ export default function CustomerDetailsPage() {
                     <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
                       {/* Table Header */}
                       <div className="px-6 py-3 bg-white/5 border-b border-white/10">
-                        <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
-                          <div className="col-span-2">Order ID</div>
-                          <div className="col-span-3">Due Date</div>
+                        <div className="grid grid-cols-8 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                          <div className="col-span-1">Serial #</div>
                           <div className="col-span-2">Type</div>
                           <div className="col-span-2">Amount</div>
                           <div className="col-span-3">Notes & Actions</div>
@@ -1222,33 +1221,15 @@ export default function CustomerDetailsPage() {
 
                       {/* Table Body */}
                       <div className="divide-y divide-white/5">
-                        {duePayments.map((payment) => (
+                        {duePayments.map((payment, index) => (
                           <div
                             key={payment.id}
                             className="px-6 py-4 hover:bg-white/5 transition-colors"
                           >
-                            <div className="grid grid-cols-12 gap-4 items-center">
-                              <div className="col-span-2">
-                                {payment.order_id ? (
-                                  <div>
-                                    <p className="text-sm font-medium text-slate-100">
-                                      #{payment.order_id}
-                                    </p>
-                                    {payment.order_number && (
-                                      <p className="text-xs text-slate-400">
-                                        {payment.order_number}
-                                      </p>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-slate-400 italic">
-                                    No Order
-                                  </p>
-                                )}
-                              </div>
-                              <div className="col-span-3">
-                                <p className="text-sm text-slate-300">
-                                  {formatDate(payment.due_date)}
+                            <div className="grid grid-cols-8 gap-4 items-center">
+                              <div className="col-span-1">
+                                <p className="text-sm font-medium text-slate-100">
+                                  #{index + 1}
                                 </p>
                               </div>
                               <div className="col-span-2">
@@ -1301,9 +1282,19 @@ export default function CustomerDetailsPage() {
                                       </button>
                                     </>
                                   ) : (
-                                    <span className="text-slate-500 text-sm">
-                                      No notes
-                                    </span>
+                                    <button
+                                      onClick={() =>
+                                        handleSendNotification(payment)
+                                      }
+                                      disabled={isSendingSMS}
+                                      className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
+                                      title="Send SMS notification"
+                                    >
+                                      <MessageSquare className="w-4 h-4" />
+                                      <span>
+                                        {isSendingSMS ? "Sending..." : "SMS"}
+                                      </span>
+                                    </button>
                                   )}
                                 </div>
                               </div>
@@ -1936,63 +1927,14 @@ export default function CustomerDetailsPage() {
                     />
                   </div>
 
-                  {/* Due Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Due Date
-                    </label>
-                    <input
-                      type="date"
-                      value={transactionForm.due_date}
-                      onChange={(e) =>
-                        setTransactionForm({
-                          ...transactionForm,
-                          due_date: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
-                      required
-                    />
-                  </div>
-
-                  {/* Order Selection (Optional) */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Related Order (Optional)
-                    </label>
-                    <select
-                      value={transactionForm.order_id}
-                      onChange={(e) =>
-                        setTransactionForm({
-                          ...transactionForm,
-                          order_id: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
-                    >
-                      <option value="">Select an order (optional)</option>
-                      {orders.map((order) => (
-                        <option key={order.id} value={order.id.toString()}>
-                          Order #{order.id} - {formatCurrency(order.total)} (
-                          {formatDate(order.date)})
-                        </option>
-                      ))}
-                    </select>
-                    {orders.length === 0 && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        No orders found for this customer
-                      </p>
-                    )}
-                  </div>
-
                   {/* Note */}
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Note
+                      Note (Optional)
                     </label>
                     <textarea
                       rows={3}
-                      value={transactionForm.note}
+                      value={transactionForm.note || ""}
                       onChange={(e) =>
                         setTransactionForm({
                           ...transactionForm,
@@ -2000,7 +1942,7 @@ export default function CustomerDetailsPage() {
                         })
                       }
                       className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
-                      placeholder="Add a note for this transaction"
+                      placeholder="Add a note for this transaction (optional)"
                     />
                   </div>
 
@@ -2037,9 +1979,7 @@ export default function CustomerDetailsPage() {
                   </button>
                   <button
                     onClick={handleSubmitTransaction}
-                    disabled={
-                      !transactionForm.amount || !transactionForm.due_date
-                    }
+                    disabled={!transactionForm.amount}
                     className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg cursor-pointer"
                   >
                     Add Due Payment
