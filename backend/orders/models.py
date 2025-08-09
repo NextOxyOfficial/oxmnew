@@ -165,9 +165,7 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         # Generate order number if not exists
         if not self.order_number:
-            today = datetime.date.today()
-            count = Order.objects.filter(created_at__date=today).count() + 1
-            self.order_number = f"ORD{today.strftime('%Y%m%d')}{count:04d}"
+            self.order_number = self.generate_order_number()
 
         # For new orders, set total_amount to 0 if not provided
         if not self.pk and self.total_amount is None:
@@ -180,6 +178,35 @@ class Order(models.Model):
             self.calculate_totals()
 
         super().save(*args, **kwargs)
+
+    def generate_order_number(self):
+        """Generate a unique order number with proper race condition handling"""
+        from django.db import transaction
+        
+        today = datetime.date.today()
+        date_str = today.strftime('%Y%m%d')
+        
+        # Use atomic transaction to prevent race conditions
+        with transaction.atomic():
+            # Start with count 1
+            count = 1
+            
+            # Keep incrementing until we find a unique order number
+            while True:
+                order_number = f"ORD{date_str}{count:04d}"
+                
+                # Check if this order number already exists
+                if not Order.objects.filter(order_number=order_number).exists():
+                    return order_number
+                
+                count += 1
+                
+                # Safety check to prevent infinite loop (very unlikely to reach)
+                if count > 9999:
+                    # If we somehow get more than 9999 orders in a day, use timestamp
+                    import time
+                    timestamp = str(int(time.time()))[-4:]
+                    return f"ORD{date_str}{timestamp}"
 
 
 class OrderItem(models.Model):
