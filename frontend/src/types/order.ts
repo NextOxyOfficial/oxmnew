@@ -38,6 +38,10 @@ export interface Order {
   total_sell_price?: number;
   gross_profit?: number;
   net_profit?: number;
+  // Payment tracking fields
+  paid_amount?: number;
+  due_amount?: number;
+  remaining_balance?: number;
   // Multiple items support
   items?: OrderItem[];
 }

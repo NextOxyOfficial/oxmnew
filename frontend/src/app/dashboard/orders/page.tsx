@@ -29,6 +29,7 @@ export default function OrdersPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSendingSms, setIsSendingSms] = useState<number | null>(null); // Track which order is sending SMS
   const [userProfile, setUserProfile] = useState<{
     user?: { email?: string };
     profile?: {
@@ -265,6 +266,127 @@ export default function OrdersPage() {
     []
   );
 
+  const handleSendSms = useCallback(
+    async (order: Order, event: React.MouseEvent) => {
+      event.stopPropagation(); // Prevent order click event
+      
+      if (!order.customer_phone) {
+        alert("No phone number available for this customer");
+        return;
+      }
+
+      if (!userProfile?.profile?.company) {
+        alert("Store name not found in profile");
+        return;
+      }
+
+      try {
+        // Set loading state for this specific order
+        setIsSendingSms(order.id);
+        
+        // Get customer financial details
+        let dueAmount = 0;
+        let advanceAmount = 0;
+        console.log("Fetching customer financial details for:", order.customer_name, order.customer_phone);
+        
+        if (order.customer_name && order.customer_phone) {
+          try {
+            // Try to get customer due amount from backend
+            const customers = await ApiService.getCustomers();
+            console.log("All customers:", customers);
+            
+            const customer = customers.find((c: any) => {
+              const nameMatch = c.name?.toLowerCase().trim() === order.customer_name?.toLowerCase().trim();
+              const phoneMatch = c.phone === order.customer_phone;
+              return nameMatch || phoneMatch;
+            });
+            
+            console.log("Found customer:", customer);
+            
+            if (customer) {
+              // Use the customer summary endpoint to get financial details
+              const response = await ApiService.get(`/customers/${customer.id}/summary/`);
+              console.log("Customer summary response:", response);
+              
+              // Check for due amounts (positive values)
+              if (response.financial_summary?.total_due) {
+                dueAmount = Math.max(0, response.financial_summary.total_due);
+              } else if (response.financial_summary?.net_amount && response.financial_summary.net_amount > 0) {
+                dueAmount = response.financial_summary.net_amount;
+              }
+              
+              // Check for advance amounts (negative values or separate advance field)
+              if (response.financial_summary?.total_advance) {
+                advanceAmount = Math.max(0, response.financial_summary.total_advance);
+              } else if (response.financial_summary?.net_amount && response.financial_summary.net_amount < 0) {
+                advanceAmount = Math.abs(response.financial_summary.net_amount);
+              }
+              
+              console.log("Customer due amount:", dueAmount);
+              console.log("Customer advance amount:", advanceAmount);
+            } else {
+              console.log("Customer not found in database");
+              
+              // Check if the order itself has due amount information
+              if (order.remaining_balance && order.remaining_balance > 0) {
+                dueAmount = order.remaining_balance;
+                console.log("Using order remaining balance as due:", dueAmount);
+              } else if (order.due_amount && order.due_amount > 0) {
+                dueAmount = order.due_amount;
+                console.log("Using order due amount:", dueAmount);
+              }
+            }
+          } catch (error) {
+            console.log("Error fetching customer financial details:", error);
+            
+            // Fallback: check order's due amount fields
+            if (order.remaining_balance && order.remaining_balance > 0) {
+              dueAmount = order.remaining_balance;
+            } else if (order.due_amount && order.due_amount > 0) {
+              dueAmount = order.due_amount;
+            }
+          }
+        }
+
+        // Format the SMS message
+        const storeName = userProfile.profile.company;
+        const amount = formatCurrency(order.total_amount);
+        
+        let message = `সম্মানিত কাস্টমার, আপনার কেনাকাটা ${amount} টাকা, ${storeName} এ কেনাকাটা করার জন্য আপনাকে ধন্যবাদ!`;
+        
+        // Add due message only if customer has due money (greater than 0)
+        console.log("Final due amount to check:", dueAmount);
+        console.log("Final advance amount to check:", advanceAmount);
+        
+        if (dueAmount > 0) {
+          const dueAmountFormatted = formatCurrency(dueAmount);
+          message += ` আমাদের খাতায় আপনার বাকি রয়েছে ${dueAmountFormatted} টাকা`;
+          console.log("Added due message to SMS");
+        } else if (advanceAmount > 0) {
+          const advanceAmountFormatted = formatCurrency(advanceAmount);
+          message += ` আমাদের খাতায় আপনার এডভান্স করা রয়েছে ${advanceAmountFormatted} টাকা`;
+          console.log("Added advance message to SMS");
+        } else {
+          console.log("No due or advance amount, sending basic message only");
+        }
+
+        console.log("Final SMS message:", message);
+
+        // Send SMS
+        await ApiService.sendSmsNotification(order.customer_phone, message);
+        alert("SMS sent successfully!");
+        
+      } catch (error) {
+        console.error("Error sending SMS:", error);
+        alert("Failed to send SMS. Please try again.");
+      } finally {
+        // Clear loading state
+        setIsSendingSms(null);
+      }
+    },
+    [formatCurrency, userProfile]
+  );
+
   // Memoized state setters
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value);
@@ -398,11 +520,13 @@ export default function OrdersPage() {
               orders={orders}
               totalItems={totalItems}
               isSearching={isSearching}
+              isSendingSms={isSendingSms}
               onOrderClick={handleOrderClick}
               onViewInvoice={handleViewInvoice}
               onPrintInvoice={handlePrintInvoice}
               onEditInvoice={handleEditInvoice}
               onDeleteOrder={handleDeleteOrder}
+              onSendSms={handleSendSms}
               onAddOrder={handleAddOrder}
             />
           </div>
