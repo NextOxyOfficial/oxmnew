@@ -42,14 +42,23 @@ interface APIKey {
 }
 
 interface APIKeyUsageStats {
-  total_requests: number;
-  requests_today: number;
-  requests_this_hour: number;
-  success_rate: number;
-  avg_response_time: number;
-  most_used_endpoints: Array<{
-    endpoint: string;
-    count: number;
+  api_key: string;
+  is_active: boolean;
+  created_at: string;
+  last_used: string | null;
+  rate_limits: {
+    requests_per_hour: number;
+    requests_per_day: number;
+  };
+  stats_last_30_days: {
+    total_requests: number;
+    successful_requests: number;
+    failed_requests: number;
+    success_rate: number;
+  };
+  daily_usage_last_7_days: Array<{
+    date: string;
+    requests: number;
   }>;
 }
 
@@ -142,6 +151,7 @@ export default function SettingsPage() {
   // API Keys state
   const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
   const [usageStats, setUsageStats] = useState<APIKeyUsageStats | null>(null);
+  const [needsApiKey, setNeedsApiKey] = useState(false);
   const [showApiKeyValue, setShowApiKeyValue] = useState<number | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [apiKeyDeleteModal, setApiKeyDeleteModal] = useState<{
@@ -167,8 +177,7 @@ export default function SettingsPage() {
     } else if (activeTab === "levels") {
       fetchLevels();
     } else if (activeTab === "api-keys") {
-      fetchApiKeys();
-      fetchUsageStats();
+      fetchApiKeys(); // This will fetch usage stats if API keys exist
     }
   }, [activeTab]);
 
@@ -331,9 +340,17 @@ export default function SettingsPage() {
       const stats = await ApiService.getAPIKeyUsageStats();
       console.log("Usage stats fetched:", stats);
       setUsageStats(stats || null);
-    } catch (error) {
+      setNeedsApiKey(false);
+    } catch (error: any) {
       console.error("Error fetching usage stats:", error);
-      setUsageStats(null);
+      // Check if the error is about missing API key
+      if (error.message && error.message.includes("No API key found")) {
+        setNeedsApiKey(true);
+        setUsageStats(null);
+      } else {
+        setNeedsApiKey(false);
+        setUsageStats(null);
+      }
     }
   };
 
