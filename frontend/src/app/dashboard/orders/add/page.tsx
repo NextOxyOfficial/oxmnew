@@ -402,15 +402,51 @@ export default function AddOrderPage() {
       console.log("Processed customers:", customers);
       console.log("Number of customers found:", customers.length);
 
-      // For each customer, we'll set previous_due to 0 initially
-      // In a real scenario, you might want to fetch due payment info from a separate endpoint
-      const customersWithDue = customers.map((customer: Customer) => ({
-        ...customer,
-        previous_due: customer.previous_due || 0, // Use existing value or default to 0
-      }));
+      // For each customer, try to get their financial summary (but don't block if it fails)
+      const customersWithDue = await Promise.all(
+        customers.map(async (customer: Customer) => {
+          try {
+            // Try to fetch financial summary for each customer
+            const summaryResponse = await ApiService.get(
+              `/customers/${customer.id}/summary/`
+            );
+            const financialSummary = summaryResponse.financial_summary || {};
+            
+            // Calculate net balance - positive means customer owes money (due)
+            let previousDue = 0;
+            if (
+              financialSummary.net_amount !== undefined &&
+              financialSummary.net_amount !== null
+            ) {
+              const netAmount = parseFloat(financialSummary.net_amount);
+              previousDue = netAmount > 0 ? netAmount : 0;
+            } else if (
+              financialSummary.total_due !== undefined &&
+              financialSummary.total_advance !== undefined
+            ) {
+              const netBalance =
+                parseFloat(financialSummary.total_due || 0) -
+                parseFloat(financialSummary.total_advance || 0);
+              previousDue = netBalance > 0 ? netBalance : 0;
+            }
+
+            return {
+              ...customer,
+              previous_due: previousDue,
+            };
+          } catch (error) {
+            console.warn(`Failed to fetch financial summary for customer ${customer.id}:`, error);
+            // Return customer with default due amount if summary fetch fails
+            return {
+              ...customer,
+              previous_due: 0,
+            };
+          }
+        })
+      );
 
       setCustomers(customersWithDue);
-      console.log("Customers set to state:", customersWithDue);
+      console.log("Customers set to state with due amounts:", customersWithDue);
       console.log("Customers state length after set:", customersWithDue.length);
     } catch (error) {
       console.error("Error fetching customers:", error);
@@ -569,7 +605,7 @@ export default function AddOrderPage() {
   };
 
   // Handle customer selection
-  const handleCustomerSelection = (customerId: number) => {
+  const handleCustomerSelection = async (customerId: number) => {
     if (customerId) {
       setCustomerType("existing");
       setSelectedCustomerId(customerId);
