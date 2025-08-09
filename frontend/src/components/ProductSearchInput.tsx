@@ -49,7 +49,7 @@ const ProductSearchInput = forwardRef<
         onChange={(e) => onChange(e.target.value)}
         onFocus={onFocus}
         disabled={isLoading || isSearching}
-        className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+        className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-24 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 truncate ${
           isLoading || isSearching ? "opacity-75 cursor-wait" : ""
         }`}
       />
@@ -58,7 +58,7 @@ const ProductSearchInput = forwardRef<
         <button
           type="button"
           onClick={onClear}
-          className="absolute right-12 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
+          className="absolute right-14 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50 whitespace-nowrap"
           title="Clear search"
         >
           Clear
