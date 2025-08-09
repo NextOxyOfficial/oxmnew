@@ -308,22 +308,40 @@ export default function OrdersPage() {
               const response = await ApiService.get(`/customers/${customer.id}/summary/`);
               console.log("Customer summary response:", response);
               
-              // Check for due amounts (positive values)
-              if (response.financial_summary?.total_due) {
-                dueAmount = Math.max(0, response.financial_summary.total_due);
-              } else if (response.financial_summary?.net_amount && response.financial_summary.net_amount > 0) {
-                dueAmount = response.financial_summary.net_amount;
+              // Get the financial summary
+              const financialSummary = response.financial_summary || {};
+              
+              // Log all financial data for debugging
+              console.log("Financial summary:", financialSummary);
+              console.log("Total due:", financialSummary.total_due);
+              console.log("Total advance:", financialSummary.total_advance);
+              console.log("Net amount:", financialSummary.net_amount);
+              
+              // Calculate net balance - positive means customer owes money (due), negative means customer has credit (advance)
+              let netBalance = 0;
+              
+              if (financialSummary.net_amount !== undefined && financialSummary.net_amount !== null) {
+                netBalance = parseFloat(financialSummary.net_amount);
+              } else if (financialSummary.total_due !== undefined && financialSummary.total_advance !== undefined) {
+                netBalance = parseFloat(financialSummary.total_due || 0) - parseFloat(financialSummary.total_advance || 0);
               }
               
-              // Check for advance amounts (negative values or separate advance field)
-              if (response.financial_summary?.total_advance) {
-                advanceAmount = Math.max(0, response.financial_summary.total_advance);
-              } else if (response.financial_summary?.net_amount && response.financial_summary.net_amount < 0) {
-                advanceAmount = Math.abs(response.financial_summary.net_amount);
-              }
+              console.log("Calculated net balance:", netBalance);
               
-              console.log("Customer due amount:", dueAmount);
-              console.log("Customer advance amount:", advanceAmount);
+              // Determine financial state based on net balance
+              if (netBalance > 0) {
+                dueAmount = netBalance;
+                advanceAmount = 0;
+                console.log("Customer has due amount:", dueAmount);
+              } else if (netBalance < 0) {
+                dueAmount = 0;
+                advanceAmount = Math.abs(netBalance);
+                console.log("Customer has advance amount:", advanceAmount);
+              } else {
+                dueAmount = 0;
+                advanceAmount = 0;
+                console.log("Customer has no due or advance amount");
+              }
             } else {
               console.log("Customer not found in database");
               
@@ -364,11 +382,10 @@ export default function OrdersPage() {
           console.log("Added due message to SMS");
         } else if (advanceAmount > 0) {
           const advanceAmountFormatted = formatCurrency(advanceAmount);
-          message += ` আমাদের খাতায় আপনার অতিরিক্ত জমা রয়েছে ${advanceAmountFormatted} টাকা`;
+          message += ` আমাদের খাতায় আপনার এডভান্স করা রয়েছে ${advanceAmountFormatted} টাকা`;
           console.log("Added advance message to SMS");
-        } else {
-          console.log("No due or advance amount, sending basic message only");
         }
+        // If neither due nor advance, send only the basic thank you message
 
         console.log("Final SMS message:", message);
 
