@@ -242,18 +242,18 @@ export default function CustomerDetailsPage() {
         const duePaymentsData = await customersAPI.getDuePayments(customerId);
         console.log("Raw due payments data:", duePaymentsData);
         // Handle both array and paginated response
-        let duePayments: unknown[] = [];
+        let duePayments: any[] = [];
         if (Array.isArray(duePaymentsData)) {
           duePayments = duePaymentsData;
         } else if (duePaymentsData && typeof duePaymentsData === "object") {
           duePayments =
-            (duePaymentsData as { results?: unknown[]; data?: unknown[] })
+            (duePaymentsData as { results?: any[]; data?: any[] })
               .results ||
-            (duePaymentsData as { results?: unknown[]; data?: unknown[] })
+            (duePaymentsData as { results?: any[]; data?: any[] })
               .data ||
             [];
         }
-        const formattedDuePayments = duePayments.map((payment) => ({
+        const formattedDuePayments = duePayments.map((payment: any) => ({
           id: payment.id,
           order_id: payment.order || 0,
           amount: payment.amount,
@@ -267,16 +267,16 @@ export default function CustomerDetailsPage() {
         const giftsData = await customersAPI.getCustomerGifts(customerId);
         console.log("Raw gifts data:", giftsData);
         // Handle both array and paginated response
-        let gifts: unknown[] = [];
+        let gifts: any[] = [];
         if (Array.isArray(giftsData)) {
           gifts = giftsData;
         } else if (giftsData && typeof giftsData === "object") {
           gifts =
-            (giftsData as { results?: unknown[]; data?: unknown[] }).results ||
-            (giftsData as { results?: unknown[]; data?: unknown[] }).data ||
+            (giftsData as { results?: any[]; data?: any[] }).results ||
+            (giftsData as { results?: any[]; data?: any[] }).data ||
             [];
         }
-        const formattedGifts = gifts.map((gift) => ({
+        const formattedGifts = gifts.map((gift: any) => ({
           id: gift.id,
           name: gift.gift_name,
           description: gift.description || "",
@@ -290,7 +290,7 @@ export default function CustomerDetailsPage() {
         const availableGiftsData = await customersAPI.getAvailableGifts();
         console.log("Raw available gifts data:", availableGiftsData);
         // Handle both array and paginated response
-        let availableGifts: unknown[] = [];
+        let availableGifts: any[] = [];
         if (Array.isArray(availableGiftsData)) {
           availableGifts = availableGiftsData;
         } else if (
@@ -298,13 +298,13 @@ export default function CustomerDetailsPage() {
           typeof availableGiftsData === "object"
         ) {
           availableGifts =
-            (availableGiftsData as { results?: unknown[]; data?: unknown[] })
+            (availableGiftsData as { results?: any[]; data?: any[] })
               .results ||
-            (availableGiftsData as { results?: unknown[]; data?: unknown[] })
+            (availableGiftsData as { results?: any[]; data?: any[] })
               .data ||
             [];
         }
-        const formattedAvailableGifts = availableGifts.map((gift) => ({
+        const formattedAvailableGifts = availableGifts.map((gift: any) => ({
           id: gift.id,
           name: gift.name,
         }));
@@ -313,7 +313,7 @@ export default function CustomerDetailsPage() {
         const availableLevelsData = await customersAPI.getAvailableLevels();
         console.log("Raw available levels data:", availableLevelsData);
         // Handle both array and paginated response
-        let availableLevels: unknown[] = [];
+        let availableLevels: any[] = [];
         if (Array.isArray(availableLevelsData)) {
           availableLevels = availableLevelsData;
         } else if (
@@ -321,13 +321,13 @@ export default function CustomerDetailsPage() {
           typeof availableLevelsData === "object"
         ) {
           availableLevels =
-            (availableLevelsData as { results?: unknown[]; data?: unknown[] })
+            (availableLevelsData as { results?: any[]; data?: any[] })
               .results ||
-            (availableLevelsData as { results?: unknown[]; data?: unknown[] })
+            (availableLevelsData as { results?: any[]; data?: any[] })
               .data ||
             [];
         }
-        const formattedLevels = availableLevels.map((level) => ({
+        const formattedLevels = availableLevels.map((level: any) => ({
           id: level.id,
           name: level.name,
           is_active: level.is_active,
@@ -433,10 +433,10 @@ export default function CustomerDetailsPage() {
       // Handle insufficient credits error specifically
       if (error && typeof error === "object" && "response" in error) {
         const errorResponse = error as {
-          response?: { status?: number; data?: unknown };
+          response?: { status?: number; data?: any };
         };
         if (errorResponse.response?.status === 402) {
-          const errorData = errorResponse.response.data;
+          const errorData = errorResponse.response.data || {};
           const errorMsg =
             errorData.message || errorData.error || "Insufficient SMS credits.";
           const confirmed = confirm(
