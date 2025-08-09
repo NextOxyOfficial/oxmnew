@@ -1101,12 +1101,6 @@ export default function AddOrderPage() {
       <div className="sm:p-6 p-1 space-y-6">
         <div className="max-w-7xl">
           {/* Page Header */}
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
-              <p className="text-red-400">{error}</p>
-            </div>
-          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Customer Info & Items */}
@@ -1681,6 +1675,13 @@ export default function AddOrderPage() {
 
                   {/* Add Item Form */}
                   <div>
+                    {/* Error Message */}
+                    {error && (
+                      <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
+                        <p className="text-red-400">{error}</p>
+                      </div>
+                    )}
+
                     <h4 className="text-sm font-medium text-slate-300 mb-3">
                       Add New Item
                     </h4>
