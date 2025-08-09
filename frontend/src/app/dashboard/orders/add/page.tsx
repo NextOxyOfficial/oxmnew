@@ -368,6 +368,7 @@ export default function AddOrderPage() {
     handleNewItemChange("product", "");
     handleNewItemChange("variant", "");
     setIsProductDropdownOpen(false);
+    setError(null); // Clear any error messages
     // Clear any pending search timeout
     if (searchTimeout) {
       clearTimeout(searchTimeout);
