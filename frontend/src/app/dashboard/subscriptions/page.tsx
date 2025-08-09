@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { ApiService } from "../../../lib/api";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
+import { ApiService } from "../../../lib/api";
 
 interface SubscriptionPlan {
   id?: number;
@@ -102,6 +102,41 @@ export default function SubscriptionsPage() {
 
   const { user, profile, refreshProfile } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Function to validate if user profile is complete for payment
+  const validateProfileForPayment = () => {
+    if (!user) {
+      alert("Please log in to continue.");
+      return false;
+    }
+
+    const requiredFields = {
+      "First Name": user.first_name,
+      Address: profile?.address,
+      City: profile?.city,
+      Phone: profile?.phone || profile?.contact_number,
+      "Post Code": profile?.post_code,
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([, value]) => !value || value.trim() === "")
+      .map(([field]) => field);
+
+    if (missingFields.length > 0) {
+      const missingFieldsList = missingFields.join(", ");
+      const confirmRedirect = confirm(
+        `Your profile is incomplete. The following fields are required for payment: ${missingFieldsList}\n\nWould you like to complete your profile now?`
+      );
+
+      if (confirmRedirect) {
+        router.push("/dashboard/profile");
+      }
+      return false;
+    }
+
+    return true;
+  };
 
   // Function to refresh subscription data
   const refreshSubscriptionData = useCallback(async () => {
@@ -412,7 +447,7 @@ export default function SubscriptionsPage() {
         }
 
         // Process plans data with additional safety checks
-        const processedPlans = Array.isArray(plansData) 
+        const processedPlans = Array.isArray(plansData)
           ? plansData.map((plan: SubscriptionPlan) => ({
               ...plan,
               cta:
@@ -483,8 +518,8 @@ export default function SubscriptionsPage() {
     try {
       setIsSmsPaymentLoading(true);
 
-      if (!user) {
-        alert("Please log in to purchase SMS packages.");
+      // Validate profile completeness before proceeding
+      if (!validateProfileForPayment()) {
         return;
       }
 
@@ -501,13 +536,13 @@ export default function SubscriptionsPage() {
       // Store the package ID for later use after payment verification
       localStorage.setItem("pending_sms_package", packageId.toString());
 
-      // Validate required fields and provide defaults if missing
-      const firstName = user.first_name || "User";
-      const lastName = user.last_name || "";
-      const address = profile?.address || "N/A";
-      const city = profile?.city || "N/A";
-      const phone = profile?.phone || profile?.contact_number || "N/A";
-      const zip = profile?.post_code || "0000";
+      // Get validated customer information from profile
+      const firstName = user!.first_name!;
+      const lastName = user!.last_name || "";
+      const address = profile!.address!;
+      const city = profile!.city!;
+      const phone = profile!.phone || profile!.contact_number!;
+      const zip = profile!.post_code!;
 
       const paymentData = {
         amount: packagePrice,
@@ -532,25 +567,27 @@ export default function SubscriptionsPage() {
         window.open(payment.checkout_url, "_blank");
       } else {
         console.error("Payment response missing checkout_url:", payment);
-        
+
         // Check if there's an error message in the response
-        const errorMessage = payment?.error || 
-                           payment?.message || 
-                           "Failed to get payment URL. Please try again later.";
-        
+        const errorMessage =
+          payment?.error ||
+          payment?.message ||
+          "Failed to get payment URL. Please try again later.";
+
         throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("=== SMS PACKAGE PAYMENT ERROR ===");
       console.error("Error details:", error);
-      
+
       // Type-safe error handling
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : typeof error === 'string' 
-        ? error 
-        : "Failed to purchase SMS package. Please try again.";
-      
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+          ? error
+          : "Failed to purchase SMS package. Please try again.";
+
       console.error("Error message:", errorMessage);
       alert(`Payment Error: ${errorMessage}`);
       localStorage.removeItem("pending_sms_package");
@@ -566,8 +603,8 @@ export default function SubscriptionsPage() {
     try {
       setIsSubscriptionPaymentLoading(true);
 
-      if (!user) {
-        alert("Please log in to upgrade your subscription.");
+      // Validate profile completeness before proceeding
+      if (!validateProfileForPayment()) {
         return;
       }
 
@@ -584,13 +621,13 @@ export default function SubscriptionsPage() {
       // Store the plan name for later use after payment verification
       localStorage.setItem("pending_subscription_plan", planName);
 
-      // Validate required fields and provide defaults if missing
-      const firstName = user.first_name || "User";
-      const lastName = user.last_name || "";
-      const address = profile?.address || "N/A";
-      const city = profile?.city || "N/A";
-      const phone = profile?.phone || profile?.contact_number || "N/A";
-      const zip = profile?.post_code || "0000";
+      // Get validated customer information from profile
+      const firstName = user!.first_name!;
+      const lastName = user!.last_name || "";
+      const address = profile!.address!;
+      const city = profile!.city!;
+      const phone = profile!.phone || profile!.contact_number!;
+      const zip = profile!.post_code!;
 
       const paymentData = {
         amount: planPrice,
@@ -615,27 +652,29 @@ export default function SubscriptionsPage() {
         window.open(payment.checkout_url, "_blank");
       } else {
         console.error("Payment response missing checkout_url:", payment);
-        
+
         // Check if there's an error message in the response
-        const errorMessage = payment?.error || 
-                           payment?.message || 
-                           "Failed to get payment URL. Please check your information and try again.";
-        
+        const errorMessage =
+          payment?.error ||
+          payment?.message ||
+          "Failed to get payment URL. Please check your information and try again.";
+
         throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("=== SUBSCRIPTION PAYMENT ERROR ===");
       console.error("Error details:", error);
-      
+
       // Type-safe error handling
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : typeof error === 'string' 
-        ? error 
-        : "Failed to process subscription payment. Please try again.";
-      
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+          ? error
+          : "Failed to process subscription payment. Please try again.";
+
       console.error("Error message:", errorMessage);
-      
+
       // Show more specific error message
       alert(`Payment Error: ${errorMessage}`);
       localStorage.removeItem("pending_subscription_plan");
