@@ -5,9 +5,11 @@ import OrdersHeader from "@/components/orders/OrdersHeader";
 import OrdersList from "@/components/orders/OrdersList";
 import OrdersStats from "@/components/orders/OrdersStats";
 import Pagination from "@/components/ui/Pagination";
+import SmsComposer from "@/components/sms/SmsComposer";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Order, OrderItem } from "@/types/order";
+import { calculateSmsSegments, formatSmsInfo } from "@/lib/utils/sms";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -30,6 +32,9 @@ export default function OrdersPage() {
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSendingSms, setIsSendingSms] = useState<number | null>(null); // Track which order is sending SMS
+  const [showSmsComposer, setShowSmsComposer] = useState(false);
+  const [smsOrder, setSmsOrder] = useState<Order | null>(null);
+  const [smsMessage, setSmsMessage] = useState("");
   const [userProfile, setUserProfile] = useState<{
     user?: { email?: string };
     profile?: {
@@ -316,9 +321,6 @@ export default function OrdersPage() {
       }
 
       try {
-        // Set loading state for this specific order
-        setIsSendingSms(order.id);
-        
         // Get customer financial details
         let dueAmount = 0;
         let advanceAmount = 0;
@@ -424,9 +426,39 @@ export default function OrdersPage() {
 
         console.log("Final SMS message:", message);
 
+        // Set the message and show composer
+        setSmsMessage(message);
+        setSmsOrder(order);
+        setShowSmsComposer(true);
+        
+      } catch (error) {
+        console.error("Error preparing SMS:", error);
+        alert("Failed to prepare SMS. Please try again.");
+      }
+    },
+    [formatCurrency, userProfile]
+  );
+
+  // Handle actual SMS sending from composer
+  const handleSendSmsFromComposer = useCallback(
+    async (message: string) => {
+      if (!smsOrder || !smsOrder.customer_phone) return;
+      
+      try {
+        // Set loading state for this specific order
+        setIsSendingSms(smsOrder.id);
+        
         // Send SMS
-        await ApiService.sendSmsNotification(order.customer_phone, message);
-        alert("SMS sent successfully!");
+        const response = await ApiService.sendSmsNotification(smsOrder.customer_phone, message);
+        
+        // Use actual credits used from backend response, fallback to frontend calculation
+        const creditsUsed = response.credits_used || calculateSmsSegments(message).segments;
+        alert(`SMS sent successfully! Used ${creditsUsed} SMS credit${creditsUsed > 1 ? 's' : ''}.`);
+        
+        // Close composer
+        setShowSmsComposer(false);
+        setSmsOrder(null);
+        setSmsMessage("");
         
       } catch (error) {
         console.error("Error sending SMS:", error);
@@ -436,8 +468,15 @@ export default function OrdersPage() {
         setIsSendingSms(null);
       }
     },
-    [formatCurrency, userProfile]
+    [smsOrder]
   );
+
+  // Handle SMS composer cancel
+  const handleCancelSms = useCallback(() => {
+    setShowSmsComposer(false);
+    setSmsOrder(null);
+    setSmsMessage("");
+  }, []);
 
   // Memoized state setters
   const handleSearchChange = useCallback((value: string) => {
@@ -879,6 +918,18 @@ export default function OrdersPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* SMS Composer Modal */}
+        {showSmsComposer && smsOrder && (
+          <SmsComposer
+            recipientName={smsOrder.customer_name}
+            recipientPhone={smsOrder.customer_phone || ""}
+            initialMessage={smsMessage}
+            onSend={handleSendSmsFromComposer}
+            onCancel={handleCancelSms}
+            isLoading={isSendingSms === smsOrder.id}
+          />
         )}
 
         {/* Delete Confirmation Modal */}
