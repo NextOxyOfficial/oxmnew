@@ -139,11 +139,9 @@ class APIKeyListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         # Only allow one API key per user
         if PublicAPIKey.objects.filter(user=self.request.user).exists():
-            return Response(
-                {
-                    "error": "You already have an API key. Please regenerate it if needed."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                {"error": "You already have an API key. Please regenerate it if needed."}
             )
         serializer.save(user=self.request.user)
 
