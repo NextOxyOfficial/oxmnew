@@ -12,6 +12,15 @@ export interface Customer {
 
 export interface Order {
   id: number;
+  order_number?: string;
+  status?:
+    | "draft"
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "completed"
+    | "cancelled"
+    | "refunded";
   product: {
     id: number;
     name: string;
@@ -32,8 +41,16 @@ export interface Order {
   customer_name?: string;
   customer_phone?: string;
   customer_email?: string;
+  customer_address?: string;
+  customer_company?: string;
   notes?: string;
   sale_date: string;
+  // Pricing and discounts
+  subtotal?: number;
+  discount_percentage?: number;
+  discount_amount?: number;
+  vat_percentage?: number;
+  vat_amount?: number;
   // New calculated fields for multiple items
   total_buy_price?: number;
   total_sell_price?: number;
@@ -48,12 +65,16 @@ export interface Order {
 }
 
 export interface OrderItem {
-  id?: number;
+  id: number;
+  product?: number;
   product_name: string;
+  variant?: number;
   variant_details?: string;
   quantity: number;
   unit_price: number;
-  total_price?: number;
+  buy_price?: number;
+  total_price: number;
+  created_at?: string;
 }
 
 export interface OrderForm {

@@ -31,6 +31,30 @@ class OrderItemSerializer(serializers.ModelSerializer):
         ]
 
 
+class OrderItemUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating order items"""
+
+    class Meta:
+        model = OrderItem
+        fields = [
+            "quantity",
+            "unit_price",
+        ]
+
+    def update(self, instance, validated_data):
+        """Update order item and recalculate total price"""
+        instance.quantity = validated_data.get("quantity", instance.quantity)
+        instance.unit_price = validated_data.get("unit_price", instance.unit_price)
+        instance.total_price = instance.quantity * instance.unit_price
+        instance.save()
+
+        # Recalculate order totals
+        instance.order.calculate_totals()
+        instance.order.save()
+
+        return instance
+
+
 class OrderPaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderPayment
@@ -423,3 +447,41 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         order.refresh_from_db()
 
         return order
+
+
+class OrderUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating orders"""
+
+    class Meta:
+        model = Order
+        fields = [
+            "customer_name",
+            "customer_phone",
+            "customer_email",
+            "customer_address",
+            "customer_company",
+            "status",
+            "discount_percentage",
+            "vat_percentage",
+            "notes",
+            "subtotal",
+            "discount_amount",
+            "vat_amount",
+            "total_amount",
+        ]
+
+    def update(self, instance, validated_data):
+        """Update order with recalculated totals"""
+        # Update the instance with validated data
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        # If discount or vat percentage changed, recalculate totals
+        if (
+            "discount_percentage" in validated_data
+            or "vat_percentage" in validated_data
+        ):
+            instance.calculate_totals()
+
+        instance.save()
+        return instance

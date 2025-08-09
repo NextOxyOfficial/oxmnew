@@ -1,15 +1,16 @@
 "use client";
 
+import EditOrderModal from "@/components/orders/EditOrderModal";
 import OrdersControls from "@/components/orders/OrdersControls";
 import OrdersHeader from "@/components/orders/OrdersHeader";
 import OrdersList from "@/components/orders/OrdersList";
 import OrdersStats from "@/components/orders/OrdersStats";
-import Pagination from "@/components/ui/Pagination";
 import SmsComposer from "@/components/sms/SmsComposer";
+import Pagination from "@/components/ui/Pagination";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
+import { calculateSmsSegments } from "@/lib/utils/sms";
 import { Order, OrderItem } from "@/types/order";
-import { calculateSmsSegments, formatSmsInfo } from "@/lib/utils/sms";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -31,6 +32,8 @@ export default function OrdersPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
   const [isSendingSms, setIsSendingSms] = useState<number | null>(null); // Track which order is sending SMS
   const [showSmsComposer, setShowSmsComposer] = useState(false);
   const [smsOrder, setSmsOrder] = useState<Order | null>(null);
@@ -238,7 +241,7 @@ export default function OrdersPage() {
   const handleCustomerClick = useCallback(
     async (order: Order, event: React.MouseEvent) => {
       event.stopPropagation(); // Prevent order click event
-      
+
       if (!order.customer_name && !order.customer_phone) {
         alert("No customer information available");
         return;
@@ -248,7 +251,9 @@ export default function OrdersPage() {
         // Look up customer by name and phone to get customer ID
         const customers = await ApiService.getCustomers();
         const customer = customers.find((c: any) => {
-          const nameMatch = c.name?.toLowerCase().trim() === order.customer_name?.toLowerCase().trim();
+          const nameMatch =
+            c.name?.toLowerCase().trim() ===
+            order.customer_name?.toLowerCase().trim();
           const phoneMatch = c.phone === order.customer_phone;
           return nameMatch || phoneMatch;
         });
@@ -273,8 +278,8 @@ export default function OrdersPage() {
   const handleEditInvoice = useCallback(
     (order: Order, event: React.MouseEvent) => {
       event.stopPropagation(); // Prevent order click event
-      // TODO: Navigate to invoice edit page or open edit modal
-      console.log("Edit invoice clicked for order:", order.id);
+      setOrderToEdit(order);
+      setShowEditModal(true);
     },
     []
   );
@@ -309,7 +314,7 @@ export default function OrdersPage() {
   const handleSendSms = useCallback(
     async (order: Order, event: React.MouseEvent) => {
       event.stopPropagation(); // Prevent order click event
-      
+
       if (!order.customer_phone) {
         alert("No phone number available for this customer");
         return;
@@ -324,47 +329,63 @@ export default function OrdersPage() {
         // Get customer financial details
         let dueAmount = 0;
         let advanceAmount = 0;
-        console.log("Fetching customer financial details for:", order.customer_name, order.customer_phone);
-        
+        console.log(
+          "Fetching customer financial details for:",
+          order.customer_name,
+          order.customer_phone
+        );
+
         if (order.customer_name && order.customer_phone) {
           try {
             // Try to get customer due amount from backend
             const customers = await ApiService.getCustomers();
             console.log("All customers:", customers);
-            
+
             const customer = customers.find((c: any) => {
-              const nameMatch = c.name?.toLowerCase().trim() === order.customer_name?.toLowerCase().trim();
+              const nameMatch =
+                c.name?.toLowerCase().trim() ===
+                order.customer_name?.toLowerCase().trim();
               const phoneMatch = c.phone === order.customer_phone;
               return nameMatch || phoneMatch;
             });
-            
+
             console.log("Found customer:", customer);
-            
+
             if (customer) {
               // Use the customer summary endpoint to get financial details
-              const response = await ApiService.get(`/customers/${customer.id}/summary/`);
+              const response = await ApiService.get(
+                `/customers/${customer.id}/summary/`
+              );
               console.log("Customer summary response:", response);
-              
+
               // Get the financial summary
               const financialSummary = response.financial_summary || {};
-              
+
               // Log all financial data for debugging
               console.log("Financial summary:", financialSummary);
               console.log("Total due:", financialSummary.total_due);
               console.log("Total advance:", financialSummary.total_advance);
               console.log("Net amount:", financialSummary.net_amount);
-              
+
               // Calculate net balance - positive means customer owes money (due), negative means customer has credit (advance)
               let netBalance = 0;
-              
-              if (financialSummary.net_amount !== undefined && financialSummary.net_amount !== null) {
+
+              if (
+                financialSummary.net_amount !== undefined &&
+                financialSummary.net_amount !== null
+              ) {
                 netBalance = parseFloat(financialSummary.net_amount);
-              } else if (financialSummary.total_due !== undefined && financialSummary.total_advance !== undefined) {
-                netBalance = parseFloat(financialSummary.total_due || 0) - parseFloat(financialSummary.total_advance || 0);
+              } else if (
+                financialSummary.total_due !== undefined &&
+                financialSummary.total_advance !== undefined
+              ) {
+                netBalance =
+                  parseFloat(financialSummary.total_due || 0) -
+                  parseFloat(financialSummary.total_advance || 0);
               }
-              
+
               console.log("Calculated net balance:", netBalance);
-              
+
               // Determine financial state based on net balance
               if (netBalance > 0) {
                 dueAmount = netBalance;
@@ -381,7 +402,7 @@ export default function OrdersPage() {
               }
             } else {
               console.log("Customer not found in database");
-              
+
               // Check if the order itself has due amount information
               if (order.remaining_balance && order.remaining_balance > 0) {
                 dueAmount = order.remaining_balance;
@@ -393,7 +414,7 @@ export default function OrdersPage() {
             }
           } catch (error) {
             console.log("Error fetching customer financial details:", error);
-            
+
             // Fallback: check order's due amount fields
             if (order.remaining_balance && order.remaining_balance > 0) {
               dueAmount = order.remaining_balance;
@@ -406,13 +427,13 @@ export default function OrdersPage() {
         // Format the SMS message
         const storeName = userProfile.profile.company;
         const amount = formatCurrency(order.total_amount);
-        
+
         let message = `সম্মানিত কাস্টমার, আপনার কেনাকাটা ${amount} টাকা, ${storeName} এ কেনাকাটা করার জন্য আপনাকে ধন্যবাদ!`;
-        
+
         // Add due message only if customer has due money (greater than 0)
         console.log("Final due amount to check:", dueAmount);
         console.log("Final advance amount to check:", advanceAmount);
-        
+
         if (dueAmount > 0) {
           const dueAmountFormatted = formatCurrency(dueAmount);
           message += ` আমাদের খাতায় আপনার বাকি রয়েছে ${dueAmountFormatted} টাকা`;
@@ -430,7 +451,6 @@ export default function OrdersPage() {
         setSmsMessage(message);
         setSmsOrder(order);
         setShowSmsComposer(true);
-        
       } catch (error) {
         console.error("Error preparing SMS:", error);
         alert("Failed to prepare SMS. Please try again.");
@@ -443,41 +463,57 @@ export default function OrdersPage() {
   const handleSendSmsFromComposer = useCallback(
     async (message: string) => {
       if (!smsOrder || !smsOrder.customer_phone) return;
-      
+
       try {
         // Set loading state for this specific order
         setIsSendingSms(smsOrder.id);
-        
+
         // Send SMS
-        console.log("Sending SMS to:", smsOrder.customer_phone, "Message:", message);
-        const response = await ApiService.sendSmsNotification(smsOrder.customer_phone, message);
+        console.log(
+          "Sending SMS to:",
+          smsOrder.customer_phone,
+          "Message:",
+          message
+        );
+        const response = await ApiService.sendSmsNotification(
+          smsOrder.customer_phone,
+          message
+        );
         console.log("SMS Response:", response);
-        
+
         // Check if the response indicates success
         if (response.success === false) {
           throw new Error(response.error || "SMS sending failed");
         }
-        
+
         // Use actual credits used from backend response, fallback to frontend calculation
-        const creditsUsed = response.credits_used || calculateSmsSegments(message).segments;
-        alert(`SMS sent successfully! Used ${creditsUsed} SMS credit${creditsUsed > 1 ? 's' : ''}.`);
-        
+        const creditsUsed =
+          response.credits_used || calculateSmsSegments(message).segments;
+        alert(
+          `SMS sent successfully! Used ${creditsUsed} SMS credit${
+            creditsUsed > 1 ? "s" : ""
+          }.`
+        );
+
         // Close composer
         setShowSmsComposer(false);
         setSmsOrder(null);
         setSmsMessage("");
-        
       } catch (error) {
         console.error("Error sending SMS:", error);
-        
+
         // Show more detailed error message
         let errorMessage = "Failed to send SMS. Please try again.";
         if (error instanceof Error) {
           errorMessage = error.message;
-        } else if (typeof error === 'object' && error !== null && 'error' in error) {
+        } else if (
+          typeof error === "object" &&
+          error !== null &&
+          "error" in error
+        ) {
           errorMessage = (error as any).error;
         }
-        
+
         alert(`SMS Error: ${errorMessage}`);
       } finally {
         // Clear loading state
@@ -537,6 +573,20 @@ export default function OrdersPage() {
     setShowInvoicePopup(false);
     setSelectedOrder(null);
   };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setOrderToEdit(null);
+  };
+
+  const handleOrderUpdated = useCallback(
+    async (updatedOrder: Order) => {
+      // Refresh the orders list to get the latest data
+      await fetchOrders();
+      closeEditModal();
+    },
+    [fetchOrders]
+  );
 
   const printInvoice = () => {
     window.print();
@@ -1061,6 +1111,16 @@ export default function OrdersPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Edit Order Modal */}
+        {showEditModal && orderToEdit && (
+          <EditOrderModal
+            order={orderToEdit}
+            isOpen={showEditModal}
+            onClose={closeEditModal}
+            onOrderUpdated={handleOrderUpdated}
+          />
         )}
       </div>
     </div>

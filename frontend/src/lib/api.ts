@@ -1367,6 +1367,14 @@ export class ApiService {
     return this.put(`/orders/${id}/`, orderData);
   }
 
+  static async updateOrderItem(
+    orderId: number,
+    itemId: number,
+    itemData: { quantity?: number; unit_price?: number }
+  ) {
+    return this.patch(`/orders/${orderId}/items/${itemId}/`, itemData);
+  }
+
   static async deleteOrder(id: number) {
     return this.delete(`/orders/${id}/`);
   }

@@ -5,7 +5,12 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 
 from .models import Order
-from .serializers import OrderCreateSerializer, OrderSerializer
+from .serializers import (
+    OrderCreateSerializer,
+    OrderItemUpdateSerializer,
+    OrderSerializer,
+    OrderUpdateSerializer,
+)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -26,6 +31,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "create":
             return OrderCreateSerializer
+        elif self.action in ["update", "partial_update"]:
+            return OrderUpdateSerializer
         return OrderSerializer
 
     def get_queryset(self):
@@ -317,4 +324,25 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         # Delete the order
         return super().destroy(request, *args, **kwargs)
-        return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=["patch"], url_path="items/(?P<item_id>[^/.]+)")
+    def update_item(self, request, pk=None, item_id=None):
+        """Update a specific order item"""
+        order = self.get_object()
+
+        try:
+            item = order.items.get(id=item_id)
+        except order.items.model.DoesNotExist:
+            return Response(
+                {"error": "Order item not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = OrderItemUpdateSerializer(item, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+
+            # Return updated order with all items
+            order_serializer = OrderSerializer(order, context={"request": request})
+            return Response(order_serializer.data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
