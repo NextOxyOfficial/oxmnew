@@ -18,7 +18,6 @@ import {
   Printer,
   ShoppingBag,
   Star,
-  StickyNote,
   Trophy,
   X,
 } from "lucide-react";
@@ -1107,11 +1106,9 @@ export default function CustomerDetailsPage() {
                     <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
                       {/* Table Header */}
                       <div className="px-6 py-3 bg-white/5 border-b border-white/10">
-                        <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                        <div className="grid grid-cols-8 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
                           <div className="col-span-2">Order ID</div>
                           <div className="col-span-2">Date</div>
-                          <div className="col-span-2">Items</div>
-                          <div className="col-span-2">Status</div>
                           <div className="col-span-2">Amount</div>
                           <div className="col-span-2">Actions</div>
                         </div>
@@ -1124,7 +1121,7 @@ export default function CustomerDetailsPage() {
                             key={order.id}
                             className="px-6 py-4 hover:bg-white/5 transition-colors"
                           >
-                            <div className="grid grid-cols-12 gap-4 items-center">
+                            <div className="grid grid-cols-8 gap-4 items-center">
                               <div className="col-span-2">
                                 <p className="text-sm font-medium text-slate-100">
                                   #{order.id}
@@ -1134,24 +1131,6 @@ export default function CustomerDetailsPage() {
                                 <p className="text-sm text-slate-300">
                                   {formatDate(order.date)}
                                 </p>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-sm text-slate-300">
-                                  {order.items} items
-                                </p>
-                              </div>
-                              <div className="col-span-2">
-                                <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    order.status === "completed"
-                                      ? "bg-green-500/20 text-green-300 border border-green-400/30"
-                                      : order.status === "pending"
-                                      ? "bg-yellow-500/20 text-yellow-300 border border-yellow-400/30"
-                                      : "bg-red-500/20 text-red-300 border border-red-400/30"
-                                  }`}
-                                >
-                                  {order.status}
-                                </span>
                               </div>
                               <div className="col-span-2">
                                 <p className="text-sm font-semibold text-green-300">
@@ -1216,92 +1195,73 @@ export default function CustomerDetailsPage() {
                           <div className="col-span-1">Serial #</div>
                           <div className="col-span-2">Type</div>
                           <div className="col-span-2">Amount</div>
-                          <div className="col-span-3">Notes & Actions</div>
+                          <div className="col-span-2">Date</div>
+                          <div className="col-span-1">Actions</div>
                         </div>
                       </div>
 
                       {/* Table Body */}
                       <div className="divide-y divide-white/5">
-                        {duePayments.map((payment, index) => (
-                          <div
-                            key={payment.id}
-                            className="px-6 py-4 hover:bg-white/5 transition-colors"
-                          >
-                            <div className="grid grid-cols-8 gap-4 items-center">
-                              <div className="col-span-1">
-                                <p className="text-sm font-medium text-slate-100">
-                                  #{index + 1}
-                                </p>
-                              </div>
-                              <div className="col-span-2">
-                                <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    payment.type === "due"
-                                      ? "bg-red-500/20 text-red-300 border border-red-400/30"
-                                      : "bg-green-500/20 text-green-300 border border-green-400/30"
-                                  }`}
-                                >
-                                  {payment.type === "due" ? "Due" : "Advance"}
-                                </span>
-                              </div>
-                              <div className="col-span-2">
-                                <p
-                                  className={`text-sm font-semibold ${
-                                    payment.type === "due"
-                                      ? "text-red-300"
-                                      : "text-green-300"
-                                  }`}
-                                >
-                                  {formatCurrency(
-                                    Math.abs(Number(payment.amount) || 0)
-                                  )}
-                                </p>
-                              </div>
-                              <div className="col-span-3">
-                                <div className="flex items-center space-x-2">
-                                  {payment.notes ? (
-                                    <>
-                                      <button
-                                        onClick={() => handleShowNotes(payment)}
-                                        className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
-                                      >
-                                        <StickyNote className="w-4 h-4" />
-                                        <span>Notes</span>
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleSendNotification(payment)
-                                        }
-                                        disabled={isSendingSMS}
-                                        className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
-                                        title="Send SMS notification"
-                                      >
-                                        <MessageSquare className="w-4 h-4" />
-                                        <span>
-                                          {isSendingSMS ? "Sending..." : "SMS"}
-                                        </span>
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      onClick={() =>
-                                        handleSendNotification(payment)
-                                      }
-                                      disabled={isSendingSMS}
-                                      className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
-                                      title="Send SMS notification"
-                                    >
-                                      <MessageSquare className="w-4 h-4" />
-                                      <span>
-                                        {isSendingSMS ? "Sending..." : "SMS"}
-                                      </span>
-                                    </button>
-                                  )}
+                        {duePayments.map((payment, index) => {
+                          return (
+                            <div
+                              key={payment.id}
+                              className="px-6 py-4 hover:bg-white/5 transition-colors"
+                            >
+                              <div className="grid grid-cols-8 gap-4 items-center">
+                                <div className="col-span-1">
+                                  <p className="text-sm font-medium text-slate-100">
+                                    #{index + 1}
+                                  </p>
+                                </div>
+                                <div className="col-span-2">
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                      payment.type === "due"
+                                        ? "bg-red-500/20 text-red-300 border border-red-400/30"
+                                        : "bg-green-500/20 text-green-300 border border-green-400/30"
+                                    }`}
+                                  >
+                                    {payment.type === "due" ? "Due" : "Advance"}
+                                  </span>
+                                </div>
+                                <div className="col-span-2">
+                                  <p
+                                    className={`text-sm font-semibold ${
+                                      payment.type === "due"
+                                        ? "text-red-300"
+                                        : "text-green-300"
+                                    }`}
+                                  >
+                                    {formatCurrency(
+                                      Math.abs(Number(payment.amount) || 0)
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="col-span-2">
+                                  <p className="text-sm text-slate-300">
+                                    {formatDate(payment.created_at)}
+                                  </p>
+                                </div>
+                                <div className="col-span-1">
+                                  <button
+                                    onClick={() =>
+                                      handleSendNotification(payment)
+                                    }
+                                    disabled={isSendingSMS}
+                                    className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
+                                    title="Send SMS notification"
+                                  >
+                                    <MessageSquare className="w-4 h-4" />
+                                    <span>
+                                      {isSendingSMS ? "Sending..." : "SMS"}
+                                    </span>
+                                  </button>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
