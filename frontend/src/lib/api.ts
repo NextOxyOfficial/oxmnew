@@ -1134,6 +1134,10 @@ export class ApiService {
     return this.get(url);
   }
 
+  static async deleteStockMovement(movementId: number) {
+    return this.delete(`/stock-movements/${movementId}/`);
+  }
+
   // CSV upload methods
   static async uploadProductsCSV(csvFile: File) {
     const formData = new FormData();

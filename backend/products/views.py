@@ -1016,8 +1016,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         )
 
 
-class ProductStockMovementViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet for viewing stock movements"""
+class ProductStockMovementViewSet(viewsets.ModelViewSet):
+    """ViewSet for viewing and managing stock movements"""
 
     serializer_class = ProductStockMovementSerializer
     permission_classes = [IsAuthenticated]
@@ -1031,3 +1031,75 @@ class ProductStockMovementViewSet(viewsets.ReadOnlyModelViewSet):
         return ProductStockMovement.objects.filter(
             user=self.request.user
         ).select_related("product", "variant")
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete a stock movement and recalculate product buy price"""
+        movement = self.get_object()
+        product = movement.product
+        variant = movement.variant
+        
+        # Store movement data before deletion
+        movement_quantity = movement.quantity
+        movement_type = movement.movement_type
+        
+        # Delete the movement first
+        self.perform_destroy(movement)
+        
+        # Reverse the stock change
+        if variant:
+            # For variant stock
+            if movement_type in ['in', 'adjustment'] and movement_quantity > 0:
+                # Was stock addition, so subtract it back
+                variant.stock = max(0, variant.stock - movement_quantity)
+            elif movement_type in ['out', 'sale'] and movement_quantity < 0:
+                # Was stock reduction, so add it back
+                variant.stock += abs(movement_quantity)
+            variant.save()
+        else:
+            # For main product stock
+            if movement_type in ['in', 'adjustment'] and movement_quantity > 0:
+                # Was stock addition, so subtract it back
+                product.stock = max(0, product.stock - movement_quantity)
+            elif movement_type in ['out', 'sale'] and movement_quantity < 0:
+                # Was stock reduction, so add it back
+                product.stock += abs(movement_quantity)
+        
+        # Recalculate the weighted average buy price from remaining movements
+        # Get all remaining stock movements for this product that added stock and had cost
+        remaining_movements = ProductStockMovement.objects.filter(
+            product=product,
+            quantity__gt=0,  # Only stock additions
+            cost_per_unit__isnull=False,
+            cost_per_unit__gt=0
+        ).order_by('created_at')
+        
+        if remaining_movements.exists():
+            # Calculate weighted average from remaining movements
+            total_cost = 0
+            total_quantity = 0
+            
+            for mov in remaining_movements:
+                cost = float(mov.cost_per_unit)
+                qty = mov.quantity
+                total_cost += cost * qty
+                total_quantity += qty
+            
+            if total_quantity > 0:
+                new_avg_price = total_cost / total_quantity
+                product.buy_price = round(new_avg_price, 2)
+            else:
+                # If no valid movements remain, keep current price
+                pass
+        else:
+            # If no remaining cost movements, you might want to:
+            # Option 1: Keep current price (safer)
+            # Option 2: Reset to 0 (commented below)
+            # product.buy_price = 0
+            pass
+        
+        product.save()
+        
+        return Response({
+            'message': 'Stock movement deleted successfully',
+            'new_buy_price': float(product.buy_price) if product.buy_price else 0
+        }, status=status.HTTP_200_OK)
