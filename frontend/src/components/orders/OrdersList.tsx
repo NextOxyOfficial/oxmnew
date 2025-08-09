@@ -10,6 +10,7 @@ interface OrdersListProps {
   isSearching: boolean;
   isSendingSms?: number | null; // ID of the order currently sending SMS
   onOrderClick: (order: Order) => void;
+  onCustomerClick: (order: Order, event: React.MouseEvent) => void; // Added customer navigation
   onViewInvoice: (order: Order, event: React.MouseEvent) => void;
   onPrintInvoice: (order: Order, event: React.MouseEvent) => void;
   onEditInvoice: (order: Order, event: React.MouseEvent) => void;
@@ -24,6 +25,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
   isSearching,
   isSendingSms,
   onOrderClick,
+  onCustomerClick,
   onViewInvoice,
   onPrintInvoice,
   onEditInvoice,
@@ -140,9 +142,12 @@ const OrdersList: React.FC<OrdersListProps> = ({
                 <p className="text-xs text-slate-400">Customer</p>
                 {order.customer_name ? (
                   <div>
-                    <p className="text-sm text-slate-100">
+                    <button
+                      onClick={(e) => onCustomerClick(order, e)}
+                      className="text-sm text-slate-100 hover:text-cyan-400 transition-colors cursor-pointer text-left"
+                    >
                       {order.customer_name}
-                    </p>
+                    </button>
                     {order.customer_phone && (
                       <p className="text-xs text-slate-400">
                         {order.customer_phone}
@@ -329,9 +334,12 @@ const OrdersList: React.FC<OrdersListProps> = ({
                     <div>
                       {order.customer_name ? (
                         <div>
-                          <p className="text-sm text-slate-100">
+                          <button
+                            onClick={(e) => onCustomerClick(order, e)}
+                            className="text-sm text-slate-100 hover:text-cyan-400 transition-colors cursor-pointer text-left"
+                          >
                             {order.customer_name}
-                          </p>
+                          </button>
                           {order.customer_phone && (
                             <p className="text-xs text-slate-400">
                               {order.customer_phone}
@@ -472,7 +480,8 @@ export default React.memo(OrdersList, (prevProps, nextProps) => {
   return (
     prevProps.orders === nextProps.orders &&
     prevProps.totalItems === nextProps.totalItems &&
-    prevProps.isSearching === nextProps.isSearching
+    prevProps.isSearching === nextProps.isSearching &&
+    prevProps.isSendingSms === nextProps.isSendingSms
     // Don't compare functions as they should be memoized with useCallback
   );
 });

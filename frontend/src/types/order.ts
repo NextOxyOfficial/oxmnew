@@ -28,6 +28,7 @@ export interface Order {
   unit_price: number;
   buy_price?: number; // Added buy_price field for profit calculation
   total_amount: number;
+  customer_id?: number; // Added customer ID for navigation
   customer_name?: string;
   customer_phone?: string;
   customer_email?: string;

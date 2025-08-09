@@ -230,6 +230,41 @@ export default function OrdersPage() {
     console.log("Order clicked:", order);
   }, []);
 
+  const handleCustomerClick = useCallback(
+    async (order: Order, event: React.MouseEvent) => {
+      event.stopPropagation(); // Prevent order click event
+      
+      if (!order.customer_name && !order.customer_phone) {
+        alert("No customer information available");
+        return;
+      }
+
+      try {
+        // Look up customer by name and phone to get customer ID
+        const customers = await ApiService.getCustomers();
+        const customer = customers.find((c: any) => {
+          const nameMatch = c.name?.toLowerCase().trim() === order.customer_name?.toLowerCase().trim();
+          const phoneMatch = c.phone === order.customer_phone;
+          return nameMatch || phoneMatch;
+        });
+
+        if (customer) {
+          // Navigate to customer details page
+          setIsNavigating(true);
+          setTimeout(() => {
+            router.push(`/dashboard/customers/${customer.id}`);
+          }, 300);
+        } else {
+          alert("Customer not found in the system");
+        }
+      } catch (error) {
+        console.error("Error finding customer:", error);
+        alert("Failed to lookup customer information");
+      }
+    },
+    [router]
+  );
+
   const handleEditInvoice = useCallback(
     (order: Order, event: React.MouseEvent) => {
       event.stopPropagation(); // Prevent order click event
@@ -539,6 +574,7 @@ export default function OrdersPage() {
               isSearching={isSearching}
               isSendingSms={isSendingSms}
               onOrderClick={handleOrderClick}
+              onCustomerClick={handleCustomerClick}
               onViewInvoice={handleViewInvoice}
               onPrintInvoice={handlePrintInvoice}
               onEditInvoice={handleEditInvoice}
