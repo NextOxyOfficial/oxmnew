@@ -110,7 +110,7 @@ export default function SmsComposer({
             {/* Text Area */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Message
+                Message (Auto-generated)
               </label>
               <textarea
                 value={message}
@@ -118,7 +118,8 @@ export default function SmsComposer({
                 placeholder="Type your message here..."
                 rows={6}
                 disabled={isLoading}
-                className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                readOnly={true}
+                className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed cursor-not-allowed"
                 autoFocus
               />
             </div>
