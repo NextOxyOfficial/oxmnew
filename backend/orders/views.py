@@ -198,7 +198,14 @@ class OrderViewSet(viewsets.ModelViewSet):
         return queryset
 
     def create(self, request, *args, **kwargs):
-        """Create a new order with items"""
+        """
+        Create a new order with items.
+        
+        For new orders, buy_price is captured from the current product/variant 
+        buy_price at the time of creation. This ensures that:
+        1. New invoices use the current market buy price
+        2. Historical invoices maintain their original buy prices
+        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
@@ -327,7 +334,14 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["patch"], url_path="items/(?P<item_id>[^/.]+)")
     def update_item(self, request, pk=None, item_id=None):
-        """Update a specific order item"""
+        """
+        Update a specific order item.
+        
+        IMPORTANT: This method only allows updating quantity and unit_price.
+        The buy_price is intentionally excluded to preserve historical pricing.
+        Buy prices are locked at the time of order creation and cannot be modified
+        for existing invoices, ensuring price consistency for completed transactions.
+        """
         order = self.get_object()
 
         try:

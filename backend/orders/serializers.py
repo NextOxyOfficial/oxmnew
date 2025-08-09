@@ -32,7 +32,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderItemUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating order items"""
+    """Serializer for updating order items - buy_price cannot be modified"""
 
     class Meta:
         model = OrderItem
@@ -40,9 +40,19 @@ class OrderItemUpdateSerializer(serializers.ModelSerializer):
             "quantity",
             "unit_price",
         ]
+        # Explicitly exclude buy_price to prevent modification of existing order items
+        
+    def validate(self, data):
+        """Ensure buy_price is not being modified"""
+        if 'buy_price' in data:
+            raise serializers.ValidationError(
+                "Cannot modify buy_price for existing order items. "
+                "Buy price is locked at the time of order creation."
+            )
+        return data
 
     def update(self, instance, validated_data):
-        """Update order item and recalculate total price"""
+        """Update order item and recalculate total price - buy_price remains unchanged"""
         instance.quantity = validated_data.get("quantity", instance.quantity)
         instance.unit_price = validated_data.get("unit_price", instance.unit_price)
         instance.total_price = instance.quantity * instance.unit_price
@@ -388,8 +398,9 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     except ProductVariant.DoesNotExist:
                         pass
 
-                # Ensure buy_price is set
+                # Ensure buy_price is set - use provided value or current product price for NEW orders only
                 if "buy_price" not in item_data or item_data["buy_price"] is None:
+                    # For new orders, capture the current product buy price at time of creation
                     if variant and variant.buy_price:
                         item_data["buy_price"] = variant.buy_price
                     else:

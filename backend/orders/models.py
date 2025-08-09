@@ -243,6 +243,9 @@ class OrderItem(models.Model):
             if self.variant:
                 self.variant_details = str(self.variant)
 
+        # Note: buy_price is intentionally NOT updated here to preserve historical pricing
+        # Buy prices are set only at order creation time and should not change for existing orders
+
         super().save(*args, **kwargs)
 
         # Update order totals after saving item
