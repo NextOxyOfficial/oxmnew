@@ -622,7 +622,9 @@ def duebook_customers(request):
                         "id": payment.id,
                         "order_id": payment.order.id if payment.order else None,
                         "amount": float(payment.amount),
-                        "due_date": payment.due_date.isoformat(),
+                        "due_date": payment.due_date.isoformat()
+                        if payment.due_date
+                        else None,
                         "notes": payment.notes,
                         "payment_type": payment.payment_type,
                     }
