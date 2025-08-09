@@ -1,5 +1,6 @@
 # subscription/views.py
 from rest_framework import generics, permissions
+from rest_framework.response import Response
 from .models import SubscriptionPlan, SMSPackage, UserSubscription, UserSMSCredit, SMSSentHistory
 from .serializers import (
     SubscriptionPlanSerializer, SMSPackageSerializer, 
@@ -46,9 +47,38 @@ class UserSMSCreditView(generics.RetrieveAPIView):
 class SMSSentHistoryListView(generics.ListAPIView):
     serializer_class = SMSSentHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    
     def get_queryset(self):
         return SMSSentHistory.objects.filter(user=self.request.user).order_by('-sent_at')
+    
+    def list(self, request, *args, **kwargs):
+        # Get page number from query params, default to 1
+        page = int(request.GET.get('page', 1))
+        page_size = 10  # 10 results per page
+        
+        queryset = self.get_queryset()
+        total_count = queryset.count()
+        
+        # Calculate pagination
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+        
+        # Get paginated results
+        paginated_queryset = queryset[start_index:end_index]
+        serializer = self.get_serializer(paginated_queryset, many=True)
+        
+        # Calculate total pages
+        total_pages = (total_count + page_size - 1) // page_size
+        
+        return Response({
+            'results': serializer.data,
+            'count': total_count,
+            'current_page': page,
+            'total_pages': total_pages,
+            'page_size': page_size,
+            'has_next': page < total_pages,
+            'has_previous': page > 1
+        })
 
 # Add credits endpoint for admin use only
 from rest_framework.decorators import api_view, permission_classes

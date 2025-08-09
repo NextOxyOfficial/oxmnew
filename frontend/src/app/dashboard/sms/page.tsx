@@ -18,11 +18,13 @@ export default function SmsPage() {
 	const [customers, setCustomers] = useState<{ id: number; name: string; phone: string }[]>([]);
 	const [employees, setEmployees] = useState<{ id: number; name: string; phone: string }[]>([]);
 	const [suppliers, setSuppliers] = useState<{ id: number; name: string; phone: string }[]>([]);
-	const [history, setHistory] = useState<any[]>([]);
+	const [historyData, setHistoryData] = useState<any>(null);
+	const [currentPage, setCurrentPage] = useState(1);
+	const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 	const [smsCredits, setSmsCredits] = useState<number | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 
-	// Fetch real data for customers, employees, suppliers, SMS credits, and SMS history
+	// Fetch real data for customers, employees, suppliers, SMS credits
 	useEffect(() => {
 		async function fetchData() {
 			setIsLoading(true);
@@ -90,24 +92,6 @@ export default function SmsPage() {
 					setSuppliers([]);
 				}
 
-				// Fetch SMS history
-				try {
-					const historyData = await ApiService.getSmsHistory();
-					console.log("Raw SMS history data:", historyData);
-					// Handle both array and paginated response
-					let history: any[] = [];
-					if (Array.isArray(historyData)) {
-						history = historyData;
-					} else if (historyData && typeof historyData === 'object') {
-						history = (historyData as any).results || (historyData as any).data || [];
-					}
-					setHistory(history);
-					console.log("SMS history loaded:", history.length);
-				} catch (histError) {
-					console.error("Failed to fetch SMS history:", histError);
-					setHistory([]);
-				}
-
 				// Fetch SMS credits
 				try {
 					const creditsData = await ApiService.getSmsCredits();
@@ -138,6 +122,34 @@ export default function SmsPage() {
 		}
 		fetchData();
 	}, []);
+
+	// Separate function to fetch SMS history with pagination
+	const fetchSmsHistory = async (page: number = 1) => {
+		setIsHistoryLoading(true);
+		try {
+			const historyData = await ApiService.getSmsHistory(page);
+			console.log("SMS history data:", historyData);
+			setHistoryData(historyData);
+			setCurrentPage(page);
+		} catch (error) {
+			console.error("Failed to fetch SMS history:", error);
+			setHistoryData(null);
+		} finally {
+			setIsHistoryLoading(false);
+		}
+	};
+
+	// Fetch SMS history when component mounts or when history tab is selected
+	useEffect(() => {
+		if (tab === "history") {
+			fetchSmsHistory(1);
+		}
+	}, [tab]);
+
+	// Handle page change
+	const handlePageChange = (page: number) => {
+		fetchSmsHistory(page);
+	};
 
 	// Populate contactsText based on tab
 	useEffect(() => {
@@ -265,6 +277,11 @@ export default function SmsPage() {
 			setStatus(`${successCount} SMS sent successfully to ${successCount} user${successCount > 1 ? 's' : ''}. ${creditsUsed} credits used.`);
 			setShowCreditError(false);
 			setTimeout(() => setStatus(null), 5000);
+			
+			// Refresh SMS history if we're on the history tab
+			if (tab === "history") {
+				fetchSmsHistory(currentPage);
+			}
 		} else if (failCount > 0 && !showCreditError) {
 			setStatus("Failed to send SMS. Please check the error details above.");
 			setShowCreditError(false);
@@ -319,7 +336,7 @@ export default function SmsPage() {
 								}
 							}}
 							disabled={isLoading}
-							className="p-1.5 rounded-md hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+							className="p-1.5 rounded-md hover:bg-emerald-500/20 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
 							title="Refresh SMS credits"
 						>
 							<svg className={`h-3.5 w-3.5 text-emerald-400 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,7 +345,7 @@ export default function SmsPage() {
 						</button>
 						<a 
 							href="/dashboard/subscriptions" 
-							className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200"
+							className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 cursor-pointer"
 						>
 							Buy Credits
 						</a>
@@ -337,8 +354,8 @@ export default function SmsPage() {
 				{contacts.length > 0 && message && (
 					<div className="mt-3 pt-3 border-t border-emerald-500/20">
 						<div className="text-xs text-emerald-400/70">
-							Estimated cost: {contacts.length * Math.max(1, Math.ceil(message.length / 160))} credits
-							({contacts.length} contacts × {Math.max(1, Math.ceil(message.length / 160))} SMS each)
+							Estimated cost: {contacts.length * calculateSmsSegments(message).segments} credits
+							({contacts.length} contacts × {calculateSmsSegments(message).segments} SMS each)
 						</div>
 					</div>
 				)}
@@ -440,7 +457,7 @@ export default function SmsPage() {
 							<div className="text-left">
 								<div className="font-semibold text-sm">History</div>
 								<div className={`text-xs ${tab === "history" ? "text-cyan-400" : "text-slate-500"}`}>
-									{isLoading ? "Loading..." : `${history.length} logs`}
+									{isLoading ? "Loading..." : historyData ? `${historyData.count || 0} total` : "0 total"}
 								</div>
 							</div>
 							{tab === "history" && (
@@ -467,7 +484,14 @@ export default function SmsPage() {
 						/>
 					</>
 				)}
-				{tab === "history" && <SmsHistory history={history} />}
+				{tab === "history" && (
+					<SmsHistory 
+						historyData={historyData} 
+						currentPage={currentPage}
+						onPageChange={handlePageChange}
+						isLoading={isHistoryLoading}
+					/>
+				)}
 				{tab !== "history" && (
 					<>
 						<label className="block text-slate-300 mb-2 font-medium">
@@ -503,7 +527,7 @@ export default function SmsPage() {
 										<span>{status}</span>
 										<a 
 											href="/dashboard/subscriptions" 
-											className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs font-medium transition-all duration-200"
+											className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs font-medium transition-all duration-200 cursor-pointer"
 										>
 											Buy Credits
 										</a>
@@ -520,7 +544,7 @@ export default function SmsPage() {
 						<button
 							className={`px-6 py-2 rounded-lg font-medium focus:outline-none focus:ring-2 transition-all duration-200 text-sm mt-2 self-end flex items-center justify-center gap-2 ${
 								contacts.length === 0 || isSending || 
-								(smsCredits !== null && smsCredits < (contacts.length * Math.max(1, Math.ceil(message.length / 160))))
+								(smsCredits !== null && smsCredits < (contacts.length * calculateSmsSegments(message).segments))
 									? "bg-gray-600 text-gray-400 cursor-not-allowed"
 									: "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:ring-cyan-500 cursor-pointer"
 							}`}
@@ -528,7 +552,7 @@ export default function SmsPage() {
 							disabled={
 								contacts.length === 0 || 
 								isSending || 
-								(smsCredits !== null && smsCredits < (contacts.length * Math.max(1, Math.ceil(message.length / 160))))
+								(smsCredits !== null && smsCredits < (contacts.length * calculateSmsSegments(message).segments))
 							}
 							style={{ minWidth: 120 }}
 						>
@@ -540,7 +564,7 @@ export default function SmsPage() {
 							)}
 							{isSending 
 								? "Sending..." 
-								: (smsCredits !== null && smsCredits < (contacts.length * Math.max(1, Math.ceil(message.length / 160))))
+								: (smsCredits !== null && smsCredits < (contacts.length * calculateSmsSegments(message).segments))
 									? "Insufficient Credits"
 									: "Send SMS"
 							}
