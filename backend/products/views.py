@@ -322,6 +322,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         quantity = request.data.get("quantity")
         reason = request.data.get("reason", "Manual adjustment")
         notes = request.data.get("notes", "")
+        buy_price = request.data.get("buy_price")
+        update_average_price = request.data.get("update_average_price", False)
+        new_average_buy_price = request.data.get("new_average_buy_price")
 
         if quantity is None:
             return Response(
@@ -334,6 +337,24 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response(
                 {"error": "Invalid quantity"}, status=status.HTTP_400_BAD_REQUEST
             )
+
+        # Parse buy_price if provided
+        if buy_price is not None:
+            try:
+                buy_price = float(buy_price)
+            except (ValueError, TypeError):
+                return Response(
+                    {"error": "Invalid buy price"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Parse new_average_buy_price if provided
+        if new_average_buy_price is not None:
+            try:
+                new_average_buy_price = float(new_average_buy_price)
+            except (ValueError, TypeError):
+                return Response(
+                    {"error": "Invalid average buy price"}, status=status.HTTP_400_BAD_REQUEST
+                )
 
         with transaction.atomic():
             if variant_id:
@@ -350,17 +371,19 @@ class ProductViewSet(viewsets.ModelViewSet):
                 variant.save()
 
                 # Record stock movement
-                ProductStockMovement.objects.create(
-                    product=product,
-                    variant=variant,
-                    user=request.user,
-                    movement_type="adjustment",
-                    quantity=quantity,
-                    previous_stock=previous_stock,
-                    new_stock=new_stock,
-                    reason=reason,
-                    notes=notes,
-                )
+                movement_data = {
+                    "product": product,
+                    "variant": variant,
+                    "user": request.user,
+                    "movement_type": "adjustment",
+                    "quantity": quantity,
+                    "previous_stock": previous_stock,
+                    "new_stock": new_stock,
+                    "reason": reason,
+                    "notes": notes,
+                }
+
+                ProductStockMovement.objects.create(**movement_data)
 
                 return Response(
                     {
@@ -374,27 +397,38 @@ class ProductViewSet(viewsets.ModelViewSet):
                 previous_stock = product.stock
                 new_stock = max(0, previous_stock + quantity)
                 product.stock = new_stock
+                
+                # Update average buy price if requested and provided
+                if update_average_price and new_average_buy_price is not None:
+                    product.buy_price = new_average_buy_price
+                
                 product.save()
 
                 # Record stock movement
-                ProductStockMovement.objects.create(
-                    product=product,
-                    user=request.user,
-                    movement_type="adjustment",
-                    quantity=quantity,
-                    previous_stock=previous_stock,
-                    new_stock=new_stock,
-                    reason=reason,
-                    notes=notes,
-                )
+                movement_data = {
+                    "product": product,
+                    "user": request.user,
+                    "movement_type": "adjustment",
+                    "quantity": quantity,
+                    "previous_stock": previous_stock,
+                    "new_stock": new_stock,
+                    "reason": reason,
+                    "notes": notes,
+                }
 
-                return Response(
-                    {
-                        "message": "Stock adjusted successfully",
-                        "previous_stock": previous_stock,
-                        "new_stock": new_stock,
-                    }
-                )
+                ProductStockMovement.objects.create(**movement_data)
+
+                response_data = {
+                    "message": "Stock adjusted successfully",
+                    "previous_stock": previous_stock,
+                    "new_stock": new_stock,
+                }
+                
+                if update_average_price and new_average_buy_price is not None:
+                    response_data["new_average_buy_price"] = new_average_buy_price
+                    response_data["buy_price_updated"] = True
+
+                return Response(response_data)
 
     def _extract_data_from_file(self, file):
         """Extract data from CSV, XLSX, or XLS file"""

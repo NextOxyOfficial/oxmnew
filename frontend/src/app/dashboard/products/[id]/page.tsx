@@ -308,22 +308,52 @@ export default function ProductDetailsPage() {
     setIsSubmittingStock(true);
 
     try {
+      const newBuyPrice = parseFloat(stockForm.buy_price);
+      const addedQuantity = parseInt(stockForm.quantity);
+      
+      // Calculate weighted average buy price
+      const currentStock = stockForm.variant_id 
+        ? product.variants?.find(v => v.id === parseInt(stockForm.variant_id))?.stock || 0
+        : getTotalStock();
+      
+      const currentBuyPrice = Number(
+        product.buy_price || 
+        product.cost || 
+        product.average_buy_price || 
+        0
+      );
+      
+      // Calculate new weighted average price
+      const totalCurrentValue = currentStock * currentBuyPrice;
+      const totalNewValue = addedQuantity * newBuyPrice;
+      const totalQuantity = currentStock + addedQuantity;
+      const newAverageBuyPrice = totalQuantity > 0 ? (totalCurrentValue + totalNewValue) / totalQuantity : newBuyPrice;
+
       const stockData = {
-        quantity: parseInt(stockForm.quantity),
+        quantity: addedQuantity,
+        buy_price: newBuyPrice, // Send the actual buy price for this stock addition
         reason: stockForm.reason,
         notes: stockForm.notes || undefined,
         variant_id: stockForm.variant_id
           ? parseInt(stockForm.variant_id)
           : undefined,
+        update_average_price: true, // Flag to indicate we want to update average price
+        new_average_buy_price: newAverageBuyPrice, // Send calculated average
       };
 
-      console.log("Adding stock:", {
+      console.log("Adding stock with average price calculation:", {
         productId: product.id,
+        currentStock,
+        currentBuyPrice,
+        newBuyPrice,
+        addedQuantity,
+        newAverageBuyPrice,
         ...stockData,
       });
 
-      // Call the actual API to adjust stock
-      await ApiService.adjustProductStock(product.id, stockData);
+      // Call the actual API to adjust stock (backend will handle average price update)
+      const response = await ApiService.adjustProductStock(product.id, stockData);
+      console.log("Stock adjustment response:", response);
 
       // Reset form
       setStockForm({
@@ -334,7 +364,7 @@ export default function ProductDetailsPage() {
         variant_id: "",
       });
 
-      // Refresh product data to show updated stock
+      // Refresh product data to show updated stock and average price
       console.log("Fetching updated product details...");
       const updatedProduct = await ApiService.getProduct(product.id);
       setProduct(updatedProduct);
@@ -342,11 +372,13 @@ export default function ProductDetailsPage() {
       // Refresh stock history
       await loadStockHistory();
 
-      // Show success message
-      showNotification(
-        "success",
-        `Successfully added ${stockData.quantity} units to stock!`
-      );
+      // Show success message with average price info
+      const baseMessage = `Successfully added ${stockData.quantity} units to stock!`;
+      const priceMessage = response?.buy_price_updated 
+        ? ` New average buy price: ${formatCurrency(newAverageBuyPrice)}`
+        : ` New average buy price: ${formatCurrency(newAverageBuyPrice)}`;
+      
+      showNotification("success", baseMessage + priceMessage);
     } catch (error) {
       console.error("Error adding stock:", error);
       // Show error message
@@ -1062,6 +1094,47 @@ export default function ProductDetailsPage() {
                               placeholder="0.00"
                             />
                           </div>
+                          
+                          {/* Average Price Preview */}
+                          {stockForm.quantity && stockForm.buy_price && (
+                            <div className="mt-2 p-2 bg-slate-800/30 border border-slate-700/30 rounded text-xs">
+                              <div className="text-slate-400 mb-1">Price Impact:</div>
+                              <div className="flex justify-between text-slate-300">
+                                <span>Current Avg:</span>
+                                <span>{formatCurrency(Number(
+                                  product.buy_price || 
+                                  product.cost || 
+                                  product.average_buy_price || 
+                                  0
+                                ))}</span>
+                              </div>
+                              <div className="flex justify-between text-cyan-400 font-medium">
+                                <span>New Avg:</span>
+                                <span>
+                                  {(() => {
+                                    const currentStock = stockForm.variant_id 
+                                      ? product.variants?.find(v => v.id === parseInt(stockForm.variant_id))?.stock || 0
+                                      : getTotalStock();
+                                    const currentBuyPrice = Number(
+                                      product.buy_price || 
+                                      product.cost || 
+                                      product.average_buy_price || 
+                                      0
+                                    );
+                                    const newBuyPrice = parseFloat(stockForm.buy_price);
+                                    const addedQuantity = parseInt(stockForm.quantity);
+                                    
+                                    const totalCurrentValue = currentStock * currentBuyPrice;
+                                    const totalNewValue = addedQuantity * newBuyPrice;
+                                    const totalQuantity = currentStock + addedQuantity;
+                                    const newAverageBuyPrice = totalQuantity > 0 ? (totalCurrentValue + totalNewValue) / totalQuantity : newBuyPrice;
+                                    
+                                    return formatCurrency(newAverageBuyPrice);
+                                  })()}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 

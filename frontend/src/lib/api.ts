@@ -1106,6 +1106,9 @@ export class ApiService {
       reason: string;
       notes?: string;
       variant_id?: number;
+      buy_price?: number;
+      update_average_price?: boolean;
+      new_average_buy_price?: number;
     }
   ) {
     return this.post(`/products/${productId}/adjust_stock/`, stockData);
