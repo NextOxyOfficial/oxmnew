@@ -1686,8 +1686,8 @@ export class ApiService {
     return this.get("/get-my-sms-credits/");
   }
 
-  static async getSmsHistory() {
-    return this.get("/my-sms-history/");
+  static async getSmsHistory(page: number = 1) {
+    return this.get(`/my-sms-history/?page=${page}`);
   }
 
   static async purchaseSmsPackage(packageId: number) {
