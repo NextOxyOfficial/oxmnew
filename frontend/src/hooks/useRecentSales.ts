@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
 import { ApiService } from "@/lib/api";
+import { useCallback, useEffect, useState } from "react";
 
 // Define the Sale interface for type safety
 export interface Sale {
@@ -43,6 +43,11 @@ interface UseRecentSalesReturn {
   isLoadingSales: boolean;
   salesError: string | null;
   refetchSales: () => void;
+  fetchSalesWithFilter: (filter: {
+    dateFilter?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => void;
 }
 
 export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
@@ -50,44 +55,76 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
   const [isLoadingSales, setIsLoadingSales] = useState(true);
   const [salesError, setSalesError] = useState<string | null>(null);
 
-  const fetchRecentSales = async () => {
-    try {
-      setIsLoadingSales(true);
-      setSalesError(null);
-      const salesData = await ApiService.getSales({
-        ordering: "-sale_date",
-        page_size: limit,
-      });
+  const fetchRecentSales = useCallback(
+    async (filters?: {
+      dateFilter?: string;
+      startDate?: string;
+      endDate?: string;
+    }) => {
+      try {
+        setIsLoadingSales(true);
+        setSalesError(null);
 
-      // Extract results from the paginated response
-      const salesResults = salesData.results || salesData;
+        const params: {
+          ordering: string;
+          page_size: number;
+          date_filter?: string;
+          start_date?: string;
+          end_date?: string;
+        } = {
+          ordering: "-sale_date",
+          page_size: limit,
+        };
 
-      // Sort by sale date (most recent first) and limit to specified number
-      const sortedSales = salesResults
-        .sort(
-          (a: Sale, b: Sale) =>
-            new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime()
-        )
-        .slice(0, limit);
+        // Add date filters if provided
+        if (filters?.dateFilter) {
+          params.date_filter = filters.dateFilter;
+        }
+        if (filters?.startDate) {
+          params.start_date = filters.startDate;
+        }
+        if (filters?.endDate) {
+          params.end_date = filters.endDate;
+        }
 
-      setRecentSales(sortedSales);
-    } catch (error) {
-      console.error("Error fetching recent sales:", error);
-      setSalesError("Failed to load recent sales");
-    } finally {
-      setIsLoadingSales(false);
-    }
-  };
+        console.log("Fetching sales with params:", params);
+        console.log("Fetching sales with params:", params);
+        const salesData = await ApiService.getSales(params);
+        console.log("Sales data received:", salesData);
+        console.log("Sales data received:", salesData);
+
+        // Extract results from the paginated response
+        const salesResults = salesData.results || salesData;
+
+        // Sort by sale date (most recent first) and limit to specified number
+        const sortedSales = salesResults
+          .sort(
+            (a: Sale, b: Sale) =>
+              new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime()
+          )
+          .slice(0, limit);
+
+        setRecentSales(sortedSales);
+      } catch (error) {
+        console.error("Error fetching recent sales:", error);
+        setSalesError("Failed to load recent sales");
+      } finally {
+        setIsLoadingSales(false);
+      }
+    },
+    [limit]
+  );
 
   useEffect(() => {
+    // Only load without filter on mount - let dashboard handle initial filter
     fetchRecentSales();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [limit]);
+  }, [fetchRecentSales]);
 
   return {
     recentSales,
     isLoadingSales,
     salesError,
-    refetchSales: fetchRecentSales,
+    refetchSales: () => fetchRecentSales(),
+    fetchSalesWithFilter: fetchRecentSales,
   };
 };

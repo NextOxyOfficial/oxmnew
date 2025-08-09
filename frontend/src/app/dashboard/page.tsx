@@ -1,5 +1,6 @@
 "use client";
 
+import FilterDropdown from "@/components/dashboard/FilterDropdown";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { useBankingOverview } from "@/hooks/useBankingOverview";
 import { useCustomerStats } from "@/hooks/useCustomerStats";
@@ -33,10 +34,17 @@ export default function DashboardPage() {
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [currentFilter, setCurrentFilter] = useState("this_week");
+  const [currentFilterLabel, setCurrentFilterLabel] = useState("This Week");
 
   // Use the custom hook for recent sales
-  const { recentSales, isLoadingSales, salesError, refetchSales } =
-    useRecentSales(5);
+  const {
+    recentSales,
+    isLoadingSales,
+    salesError,
+    refetchSales,
+    fetchSalesWithFilter,
+  } = useRecentSales(5);
 
   // Use the custom hook for low stock alerts
   const {
@@ -94,6 +102,38 @@ export default function DashboardPage() {
     startDate: new Date(),
     endDate: new Date(),
   });
+
+  // Filter handling functions
+  const handleFilterChange = (filter: string, label: string) => {
+    console.log("Dashboard: Filter changing to:", filter, label);
+    setCurrentFilter(filter);
+    setCurrentFilterLabel(label);
+
+    // Apply the filter immediately
+    console.log("Calling fetchSalesWithFilter with:", { dateFilter: filter });
+    fetchSalesWithFilter({ dateFilter: filter });
+  };
+
+  const handleCustomDateRange = () => {
+    setShowDateRangePicker(true);
+  };
+
+  const handleCustomDateRangeApply = () => {
+    const startDate = dateRange.startDate.toISOString().split("T")[0];
+    const endDate = dateRange.endDate.toISOString().split("T")[0];
+
+    fetchSalesWithFilter({
+      startDate,
+      endDate,
+    });
+
+    setCurrentFilter("custom");
+    setCurrentFilterLabel(
+      `${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`
+    );
+    setSortDropdownOpen(false);
+    setShowDateRangePicker(false);
+  };
 
   // Quick Actions handlers
   const handleNewOrder = () => {
@@ -491,77 +531,13 @@ export default function DashboardPage() {
                     </svg>
                     Create Sale
                   </button>
-                  <div className="relative flex-1">
-                    <button
-                      className="w-full px-3 py-2 text-sm bg-white/3 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center justify-center cursor-pointer"
-                      onClick={() =>
-                        setSortDropdownOpen((prevState) => !prevState)
-                      }
-                      data-dropdown-toggle="true"
-                    >
-                      <span>This Week</span>
-                      <svg
-                        className="w-4 h-4 ml-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </button>
-
-                    {/* Mobile Dropdown Menu */}
-                    {sortDropdownOpen && (
-                      <div className="absolute right-0 mt-2 w-full bg-gray-800 rounded-lg border border-gray-700 shadow-lg z-10 py-1">
-                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
-                          Today
-                        </button>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
-                          Yesterday
-                        </button>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-blue-300 bg-blue-900/50 cursor-pointer">
-                          This Week
-                        </button>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
-                          Last Week
-                        </button>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
-                          This Month
-                        </button>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
-                          Last Month
-                        </button>
-                        <button
-                          className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowDateRangePicker(true);
-                          }}
-                        >
-                          <svg
-                            className="w-3 h-3 mr-2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                          </svg>
-                          Custom Date Range
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <FilterDropdown
+                    currentFilter={currentFilter}
+                    currentFilterLabel={currentFilterLabel}
+                    onFilterChange={handleFilterChange}
+                    onCustomDateRange={handleCustomDateRange}
+                    isMobile={true}
+                  />
                 </div>
               </div>
             </div>
@@ -593,329 +569,13 @@ export default function DashboardPage() {
                   Create Sale
                 </button>
               </div>
-              <div className="relative">
-                <button
-                  className="px-4 py-2 text-sm bg-white/3 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center cursor-pointer"
-                  onClick={() => setSortDropdownOpen((prevState) => !prevState)}
-                  data-dropdown-toggle="true"
-                >
-                  <span>This Week</span>
-                  <svg
-                    className="w-4 h-4 ml-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-
-                {sortDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg border border-gray-700 shadow-lg z-10 py-1">
-                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
-                      Today
-                    </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
-                      Yesterday
-                    </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-blue-300 bg-blue-900/50 cursor-pointer">
-                      This Week
-                    </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
-                      Last Week
-                    </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
-                      This Month
-                    </button>
-                    <button className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors cursor-pointer">
-                      Last Month
-                    </button>
-                    <button
-                      className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors flex items-center cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowDateRangePicker(true);
-                      }}
-                    >
-                      <svg
-                        className="w-3 h-3 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      Custom Date Range
-                    </button>
-                  </div>
-                )}
-
-                {/* Date Range Picker Calendar */}
-                {showDateRangePicker && (
-                  <div
-                    className="absolute right-0 mt-2 bg-gray-800 rounded-lg border border-gray-700 shadow-lg z-20 p-4"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-white font-medium">
-                        Select Date Range
-                      </h4>
-                      <button
-                        className="text-gray-400 hover:text-white cursor-pointer"
-                        onClick={() => setShowDateRangePicker(false)}
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-
-                    <div className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
-                      {/* Start Date Calendar */}
-                      <div className="w-64">
-                        <div className="mb-2">
-                          <label className="block text-sm font-medium text-gray-300">
-                            Start Date
-                          </label>
-                          <div className="mt-1 relative">
-                            <input
-                              type="date"
-                              className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg block w-full p-2.5"
-                              value={
-                                dateRange.startDate.toISOString().split("T")[0]
-                              }
-                              onChange={(e) =>
-                                setDateRange({
-                                  ...dateRange,
-                                  startDate: new Date(e.target.value),
-                                })
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div className="bg-gray-700 rounded-lg p-3 calendar-container">
-                          <div className="flex justify-between items-center mb-2">
-                            <button className="text-gray-400 hover:text-white">
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 19l-7-7 7-7"
-                                />
-                              </svg>
-                            </button>
-                            <span className="text-white font-medium">
-                              June 2025
-                            </span>
-                            <button className="text-gray-400 hover:text-white">
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                          <div className="grid grid-cols-7 gap-1">
-                            {["S", "M", "T", "W", "T", "F", "S"].map(
-                              (day, i) => (
-                                <div
-                                  key={i}
-                                  className="text-center text-xs font-medium text-gray-400 py-1"
-                                >
-                                  {day}
-                                </div>
-                              )
-                            )}
-                            {/* Calendar days - just showing a sample */}
-                            {[...Array(35)].map((_, i) => {
-                              const day = i - 5; // Starting from previous month
-                              const isCurrentMonth = day > 0 && day <= 30;
-                              const isSelected = day === 25; // Current date
-                              return (
-                                <button
-                                  key={i}
-                                  className={`text-center rounded-full w-7 h-7 text-xs ${
-                                    isCurrentMonth
-                                      ? isSelected
-                                        ? "bg-blue-600 text-white"
-                                        : "text-white hover:bg-gray-600"
-                                      : "text-gray-500"
-                                  }`}
-                                >
-                                  {isCurrentMonth
-                                    ? day
-                                    : day <= 0
-                                    ? 31 + day
-                                    : day - 30}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* End Date Calendar */}
-                      <div className="w-64">
-                        <div className="mb-2">
-                          <label className="block text-sm font-medium text-gray-300">
-                            End Date
-                          </label>
-                          <div className="mt-1 relative">
-                            <input
-                              type="date"
-                              className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg block w-full p-2.5"
-                              value={
-                                dateRange.endDate.toISOString().split("T")[0]
-                              }
-                              onChange={(e) =>
-                                setDateRange({
-                                  ...dateRange,
-                                  endDate: new Date(e.target.value),
-                                })
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div className="bg-gray-700 rounded-lg p-3 calendar-container">
-                          <div className="flex justify-between items-center mb-2">
-                            <button className="text-gray-400 hover:text-white">
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 19l-7-7 7-7"
-                                />
-                              </svg>
-                            </button>
-                            <span className="text-white font-medium">
-                              June 2025
-                            </span>
-                            <button className="text-gray-400 hover:text-white">
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                          <div className="grid grid-cols-7 gap-1">
-                            {["S", "M", "T", "W", "T", "F", "S"].map(
-                              (day, i) => (
-                                <div
-                                  key={i}
-                                  className="text-center text-xs font-medium text-gray-400 py-1"
-                                >
-                                  {day}
-                                </div>
-                              )
-                            )}
-                            {/* Calendar days */}
-                            {[...Array(35)].map((_, i) => {
-                              const day = i - 5;
-                              const isCurrentMonth = day > 0 && day <= 30;
-                              const isSelected = day === 25;
-                              return (
-                                <button
-                                  key={i}
-                                  className={`text-center rounded-full w-7 h-7 text-xs ${
-                                    isCurrentMonth
-                                      ? isSelected
-                                        ? "bg-blue-600 text-white"
-                                        : "text-white hover:bg-gray-600"
-                                      : "text-gray-500"
-                                  }`}
-                                >
-                                  {isCurrentMonth
-                                    ? day
-                                    : day <= 0
-                                    ? 31 + day
-                                    : day - 30}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between mt-4 pt-4 border-t border-gray-700">
-                      <div className="text-sm text-gray-300">
-                        <div>Selected Range:</div>
-                        <div className="font-medium text-white">
-                          {dateRange.startDate.toLocaleDateString()} -{" "}
-                          {dateRange.endDate.toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          className="px-3 py-2 bg-gray-700 text-white text-sm rounded hover:bg-gray-600 cursor-pointer"
-                          onClick={() => setShowDateRangePicker(false)}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          className="px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded cursor-pointer"
-                          onClick={() => {
-                            setSortDropdownOpen(false);
-                            setShowDateRangePicker(false);
-                          }}
-                        >
-                          Apply
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <FilterDropdown
+                currentFilter={currentFilter}
+                currentFilterLabel={currentFilterLabel}
+                onFilterChange={handleFilterChange}
+                onCustomDateRange={handleCustomDateRange}
+                isMobile={false}
+              />
             </div>
 
             {/* First row: Buy Price and Sell Price (2 cards) */}
@@ -1088,7 +748,9 @@ export default function DashboardPage() {
                   Recent Order Activities
                 </h4>
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs text-gray-400">Last 7 days</span>
+                  <span className="text-xs text-gray-400">
+                    Filter: {currentFilterLabel}
+                  </span>
                   <button
                     onClick={refetchSales}
                     disabled={isLoadingSales}

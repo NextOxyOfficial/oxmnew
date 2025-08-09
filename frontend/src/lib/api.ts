@@ -1839,6 +1839,9 @@ export class ApiService {
     ordering?: string;
     page?: number;
     page_size?: number;
+    date_filter?: string;
+    start_date?: string;
+    end_date?: string;
   }) {
     let endpoint = "/sales/";
 

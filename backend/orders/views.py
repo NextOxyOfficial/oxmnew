@@ -30,12 +30,126 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Filter orders by user with optimized queries and custom filters"""
+        from datetime import datetime, timedelta
+
+        from django.utils import timezone
+
         queryset = (
             Order.objects.filter(user=self.request.user)
             .select_related("customer")
             .prefetch_related("items__product", "items__variant", "payments")
             .order_by("-created_at")
         )
+
+        # Handle date filtering
+        date_filter = self.request.query_params.get("date_filter", None)
+        start_date = self.request.query_params.get("start_date", None)
+        end_date = self.request.query_params.get("end_date", None)
+
+        if date_filter:
+            now = timezone.now()
+            today = now.date()
+
+            if date_filter == "today":
+                start_datetime = timezone.make_aware(
+                    datetime.combine(today, datetime.min.time())
+                )
+                end_datetime = timezone.make_aware(
+                    datetime.combine(today, datetime.max.time())
+                )
+                queryset = queryset.filter(
+                    created_at__range=[start_datetime, end_datetime]
+                )
+
+            elif date_filter == "yesterday":
+                yesterday = today - timedelta(days=1)
+                start_datetime = timezone.make_aware(
+                    datetime.combine(yesterday, datetime.min.time())
+                )
+                end_datetime = timezone.make_aware(
+                    datetime.combine(yesterday, datetime.max.time())
+                )
+                queryset = queryset.filter(
+                    created_at__range=[start_datetime, end_datetime]
+                )
+
+            elif date_filter == "this_week":
+                week_start = today - timedelta(days=today.weekday())
+                start_datetime = timezone.make_aware(
+                    datetime.combine(week_start, datetime.min.time())
+                )
+                end_datetime = now
+                queryset = queryset.filter(
+                    created_at__range=[start_datetime, end_datetime]
+                )
+
+            elif date_filter == "last_week":
+                week_start = today - timedelta(days=today.weekday() + 7)
+                week_end = week_start + timedelta(days=6)
+                start_datetime = timezone.make_aware(
+                    datetime.combine(week_start, datetime.min.time())
+                )
+                end_datetime = timezone.make_aware(
+                    datetime.combine(week_end, datetime.max.time())
+                )
+                queryset = queryset.filter(
+                    created_at__range=[start_datetime, end_datetime]
+                )
+
+            elif date_filter == "this_month":
+                month_start = today.replace(day=1)
+                start_datetime = timezone.make_aware(
+                    datetime.combine(month_start, datetime.min.time())
+                )
+                end_datetime = now
+                queryset = queryset.filter(
+                    created_at__range=[start_datetime, end_datetime]
+                )
+
+            elif date_filter == "last_month":
+                if today.month == 1:
+                    last_month_start = today.replace(
+                        year=today.year - 1, month=12, day=1
+                    )
+                else:
+                    last_month_start = today.replace(month=today.month - 1, day=1)
+
+                # Get last day of last month
+                if today.month == 1:
+                    last_month_end = today.replace(
+                        year=today.year - 1, month=12, day=31
+                    )
+                else:
+                    import calendar
+
+                    last_month = today.month - 1
+                    last_day = calendar.monthrange(today.year, last_month)[1]
+                    last_month_end = today.replace(month=last_month, day=last_day)
+
+                start_datetime = timezone.make_aware(
+                    datetime.combine(last_month_start, datetime.min.time())
+                )
+                end_datetime = timezone.make_aware(
+                    datetime.combine(last_month_end, datetime.max.time())
+                )
+                queryset = queryset.filter(
+                    created_at__range=[start_datetime, end_datetime]
+                )
+
+        # Handle custom date range
+        elif start_date and end_date:
+            try:
+                start_datetime = timezone.make_aware(
+                    datetime.strptime(start_date, "%Y-%m-%d")
+                )
+                end_datetime = timezone.make_aware(
+                    datetime.strptime(end_date + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+                )
+                queryset = queryset.filter(
+                    created_at__range=[start_datetime, end_datetime]
+                )
+            except ValueError:
+                pass  # Invalid date format, ignore filter
 
         # Handle custom customer filter parameter
         customer_filter = self.request.query_params.get("customer", None)
