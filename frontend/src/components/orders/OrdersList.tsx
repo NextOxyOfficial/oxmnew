@@ -202,7 +202,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  className="p-2 text-slate-400 hover:text-cyan-400 transition-colors"
+                  className="p-2 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
                   onClick={(e) => onPrintInvoice(order, e)}
                   title="Print Invoice"
                 >
@@ -221,7 +221,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
                   </svg>
                 </button>
                 <button
-                  className="p-2 text-slate-400 hover:text-cyan-400 transition-colors"
+                  className="p-2 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
                   onClick={(e) => onEditInvoice(order, e)}
                   title="Edit Invoice"
                 >
@@ -240,7 +240,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
                   </svg>
                 </button>
                 <button
-                  className="p-2 text-slate-400 hover:text-cyan-400 transition-colors disabled:opacity-50"
+                  className="p-2 text-slate-400 hover:text-cyan-400 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                   onClick={(e) => onSendSms(order, e)}
                   disabled={isSendingSms === order.id}
                   title="Send SMS"
