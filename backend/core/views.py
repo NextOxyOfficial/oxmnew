@@ -1,30 +1,31 @@
-from django.shortcuts import render
+import json
+
+import requests
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.db import IntegrityError
+from rest_framework import status
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.authtoken.models import Token
-from django.db import IntegrityError
-from django.core.mail import send_mail
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
+
 from .models import (
-    UserProfile,
-    Category,
-    UserSettings,
-    Gift,
     Achievement,
-    Level,
     Brand,
-    PaymentMethod,
+    Category,
     CustomDomain,
     DNSRecord,
+    Gift,
+    Level,
+    PaymentMethod,
+    UserProfile,
+    UserSettings,
 )
-import json
-from django.conf import settings
-import requests
 
 
 def build_absolute_url(request, relative_url):
@@ -35,11 +36,11 @@ def build_absolute_url(request, relative_url):
         return ""
     if relative_url.startswith("http"):
         return relative_url
-    
+
     # For production, use a more reliable base URL construction
-    if hasattr(settings, 'SITE_URL') and settings.SITE_URL:
+    if hasattr(settings, "SITE_URL") and settings.SITE_URL:
         # Use explicit SITE_URL if configured
-        base_url = settings.SITE_URL.rstrip('/')
+        base_url = settings.SITE_URL.rstrip("/")
         return f"{base_url}{relative_url}"
     else:
         # Fallback to request.build_absolute_uri
@@ -92,7 +93,7 @@ def register(request):
         password = request.data.get("password")
         first_name = request.data.get("first_name", "")
         last_name = request.data.get("last_name", "")
-        
+
         # Profile fields (optional)
         company = request.data.get("company", "")
         phone = request.data.get("phone", "")
@@ -132,7 +133,7 @@ def register(request):
         # Get user profile and settings (they are auto-created via signals)
         profile = UserProfile.objects.get(user=user)
         settings = UserSettings.objects.get(user=user)
-        
+
         # Update profile with provided data
         if company:
             profile.company = company
@@ -144,7 +145,7 @@ def register(request):
             profile.city = city
         if post_code:
             profile.post_code = post_code
-        
+
         # Save profile if any fields were updated
         if company or phone or address or city or post_code:
             profile.save()
@@ -182,8 +183,12 @@ def register(request):
                     "address": profile.address or "",
                     "city": profile.city or "",
                     "post_code": profile.post_code or "",
-                    "store_logo": build_absolute_url(request, profile.store_logo.url) if profile.store_logo else "",
-                    "banner_image": build_absolute_url(request, profile.banner_image.url)
+                    "store_logo": build_absolute_url(request, profile.store_logo.url)
+                    if profile.store_logo
+                    else "",
+                    "banner_image": build_absolute_url(
+                        request, profile.banner_image.url
+                    )
                     if profile.banner_image
                     else "",
                     "created_at": profile.created_at,
@@ -268,8 +273,12 @@ def login(request):
                     "phone": profile.phone or "",
                     "contact_number": profile.contact_number or "",
                     "address": profile.address or "",
-                    "store_logo": build_absolute_url(request, profile.store_logo.url) if profile.store_logo else "",
-                    "banner_image": build_absolute_url(request, profile.banner_image.url)
+                    "store_logo": build_absolute_url(request, profile.store_logo.url)
+                    if profile.store_logo
+                    else "",
+                    "banner_image": build_absolute_url(
+                        request, profile.banner_image.url
+                    )
                     if profile.banner_image
                     else "",
                     "created_at": profile.created_at,
@@ -353,8 +362,14 @@ def profile(request):
                     "phone": profile.phone or "",
                     "contact_number": profile.contact_number or "",
                     "address": profile.address or "",
-                    "store_logo": build_absolute_url(request, profile.store_logo.url) if profile.store_logo else "",
-                    "banner_image": build_absolute_url(request, profile.banner_image.url)
+                    "city": profile.city or "",
+                    "post_code": profile.post_code or "",
+                    "store_logo": build_absolute_url(request, profile.store_logo.url)
+                    if profile.store_logo
+                    else "",
+                    "banner_image": build_absolute_url(
+                        request, profile.banner_image.url
+                    )
                     if profile.banner_image
                     else "",
                     "created_at": profile.created_at,
@@ -401,6 +416,10 @@ def profile(request):
                 profile.contact_number = request.data["contact_number"]
             if "address" in request.data:
                 profile.address = request.data["address"]
+            if "city" in request.data:
+                profile.city = request.data["city"]
+            if "post_code" in request.data:
+                profile.post_code = request.data["post_code"]
 
             profile.save()
 
@@ -420,10 +439,16 @@ def profile(request):
                         "phone": profile.phone or "",
                         "contact_number": profile.contact_number or "",
                         "address": profile.address or "",
-                        "store_logo": build_absolute_url(request, profile.store_logo.url)
+                        "city": profile.city or "",
+                        "post_code": profile.post_code or "",
+                        "store_logo": build_absolute_url(
+                            request, profile.store_logo.url
+                        )
                         if profile.store_logo
                         else "",
-                        "banner_image": build_absolute_url(request, profile.banner_image.url)
+                        "banner_image": build_absolute_url(
+                            request, profile.banner_image.url
+                        )
                         if profile.banner_image
                         else "",
                     },
@@ -484,7 +509,9 @@ def upload_banner_image(request):
         return Response(
             {
                 "message": "Banner image uploaded successfully",
-                "banner_image_url": build_absolute_url(request, profile.banner_image.url),
+                "banner_image_url": build_absolute_url(
+                    request, profile.banner_image.url
+                ),
             },
             status=status.HTTP_200_OK,
         )
@@ -1607,7 +1634,7 @@ def toggle_level(request, level_id):
 @permission_classes([IsAuthenticated])
 @api_view(["POST", "GET"])
 def smsSend(request):
-    from subscription.models import UserSMSCredit, SMSSentHistory
+    from subscription.models import SMSSentHistory, UserSMSCredit
 
     data = request.data
     phone = data.get("phone", "").strip()
