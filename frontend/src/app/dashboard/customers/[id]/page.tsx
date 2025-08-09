@@ -509,6 +509,7 @@ export default function CustomerDetailsPage() {
         customer: customer.id,
         amount: transactionForm.type === "advance" ? -amount : amount, // Negative for advance
         payment_type: transactionForm.type,
+        due_date: new Date().toISOString().split('T')[0], // Today's date as default
         notes: transactionForm.note || "", // Make notes optional
       };
 
@@ -1921,7 +1922,7 @@ export default function CustomerDetailsPage() {
                           amount: e.target.value,
                         })
                       }
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm cursor-pointer"
                       placeholder="Enter amount"
                       required
                     />
@@ -1941,7 +1942,7 @@ export default function CustomerDetailsPage() {
                           note: e.target.value,
                         })
                       }
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none cursor-pointer"
                       placeholder="Add a note for this transaction (optional)"
                     />
                   </div>
