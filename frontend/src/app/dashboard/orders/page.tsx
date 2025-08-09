@@ -449,7 +449,14 @@ export default function OrdersPage() {
         setIsSendingSms(smsOrder.id);
         
         // Send SMS
+        console.log("Sending SMS to:", smsOrder.customer_phone, "Message:", message);
         const response = await ApiService.sendSmsNotification(smsOrder.customer_phone, message);
+        console.log("SMS Response:", response);
+        
+        // Check if the response indicates success
+        if (response.success === false) {
+          throw new Error(response.error || "SMS sending failed");
+        }
         
         // Use actual credits used from backend response, fallback to frontend calculation
         const creditsUsed = response.credits_used || calculateSmsSegments(message).segments;
@@ -462,7 +469,16 @@ export default function OrdersPage() {
         
       } catch (error) {
         console.error("Error sending SMS:", error);
-        alert("Failed to send SMS. Please try again.");
+        
+        // Show more detailed error message
+        let errorMessage = "Failed to send SMS. Please try again.";
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (typeof error === 'object' && error !== null && 'error' in error) {
+          errorMessage = (error as any).error;
+        }
+        
+        alert(`SMS Error: ${errorMessage}`);
       } finally {
         // Clear loading state
         setIsSendingSms(null);
