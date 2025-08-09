@@ -85,7 +85,6 @@ export default function ProductDetailsPage() {
   const [stockForm, setStockForm] = useState({
     quantity: "",
     buy_price: "",
-    sell_price: "",
     reason: "restock",
     notes: "",
     variant_id: "",
@@ -330,7 +329,6 @@ export default function ProductDetailsPage() {
       setStockForm({
         quantity: "",
         buy_price: "",
-        sell_price: "",
         reason: "restock",
         notes: "",
         variant_id: "",
@@ -1016,29 +1014,29 @@ export default function ProductDetailsPage() {
                     </div>
 
                     <form onSubmit={handleStockSubmit} className="space-y-4">
-                      {/* QTY to Add */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          QTY To Add *
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          required
-                          value={stockForm.quantity}
-                          onChange={(e) =>
-                            setStockForm({
-                              ...stockForm,
-                              quantity: e.target.value,
-                            })
-                          }
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
-                          placeholder="Enter quantity to add"
-                        />
-                      </div>
-
-                      {/* Buy and Sell Price Row */}
+                      {/* QTY to Add and Buy Price Row */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* QTY to Add */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                            QTY To Add *
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            required
+                            value={stockForm.quantity}
+                            onChange={(e) =>
+                              setStockForm({
+                                ...stockForm,
+                                quantity: e.target.value,
+                              })
+                            }
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
+                            placeholder="Enter quantity to add"
+                          />
+                        </div>
+
                         {/* Buy Price */}
                         <div>
                           <label className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -1063,60 +1061,6 @@ export default function ProductDetailsPage() {
                               className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
                               placeholder="0.00"
                             />
-                          </div>
-                        </div>
-
-                        {/* Sell Price with Profit */}
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                            Sell Price per Unit *
-                          </label>
-                          <div className="flex items-center space-x-2">
-                            <div className="relative flex-1">
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                                $
-                              </span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                required
-                                value={stockForm.sell_price}
-                                onChange={(e) =>
-                                  setStockForm({
-                                    ...stockForm,
-                                    sell_price: e.target.value,
-                                  })
-                                }
-                                className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
-                                placeholder="0.00"
-                              />
-                            </div>
-                            {/* Profit Display */}
-                            {stockForm.buy_price && stockForm.sell_price && (
-                              <div className="text-right min-w-[80px]">
-                                {(() => {
-                                  const profit =
-                                    parseFloat(stockForm.sell_price) -
-                                    parseFloat(stockForm.buy_price);
-                                  return (
-                                    <p
-                                      className={`text-sm font-bold ${
-                                        profit > 0
-                                          ? "text-green-400"
-                                          : profit < 0
-                                          ? "text-red-400"
-                                          : "text-yellow-400"
-                                      }`}
-                                    >
-                                      {profit > 0 ? "+" : profit < 0 ? "-" : ""}
-                                      ${Math.abs(profit).toFixed(2)}
-                                    </p>
-                                  );
-                                })()}
-                                <p className="text-xs text-slate-500">profit</p>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -1223,7 +1167,6 @@ export default function ProductDetailsPage() {
                             setStockForm({
                               quantity: "",
                               buy_price: "",
-                              sell_price: "",
                               reason: "restock",
                               notes: "",
                               variant_id: "",
@@ -1342,9 +1285,6 @@ export default function ProductDetailsPage() {
                                   Buy Price
                                 </th>
                                 <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
-                                  Sell Price
-                                </th>
-                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
                                   Date
                                 </th>
                                 <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
@@ -1384,19 +1324,6 @@ export default function ProductDetailsPage() {
                                       : product?.average_buy_price
                                       ? formatCurrency(
                                           Number(product.average_buy_price)
-                                        )
-                                      : "N/A"}
-                                  </td>
-                                  <td className="py-3 px-4 text-slate-400 text-sm">
-                                    {product?.sell_price
-                                      ? formatCurrency(
-                                          Number(product.sell_price)
-                                        )
-                                      : product?.price
-                                      ? formatCurrency(Number(product.price))
-                                      : product?.average_sell_price
-                                      ? formatCurrency(
-                                          Number(product.average_sell_price)
                                         )
                                       : "N/A"}
                                   </td>
