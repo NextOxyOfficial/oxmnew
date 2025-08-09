@@ -77,6 +77,10 @@ export default function ProductDetailsPage() {
   const [isSubmittingStock, setIsSubmittingStock] = useState(false);
   const [stockHistory, setStockHistory] = useState<StockEntry[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const recordsPerPage = 10;
   const [notification, setNotification] = useState<{
     isVisible: boolean;
     type: "success" | "error";
@@ -92,24 +96,40 @@ export default function ProductDetailsPage() {
 
   const formatCurrency = useCurrencyFormatter();
 
-  const loadStockHistory = async () => {
+  const loadStockHistory = async (page: number = currentPage) => {
     if (!product?.id) return;
 
     setIsLoadingHistory(true);
     try {
-      console.log(`Loading stock history for product ${product.id}...`);
-      const response = await ApiService.getProductStockMovements(product.id);
+      console.log(`Loading stock history for product ${product.id}, page ${page}...`);
+      
+      // Call API with pagination parameters
+      const response = await ApiService.getProductStockMovements(product.id, {
+        page: page,
+        page_size: recordsPerPage
+      });
       console.log("Raw movements data:", response);
 
-      // Handle both paginated and direct array responses
+      // Handle paginated response
       let movements;
-      if (Array.isArray(response)) {
+      let total = 0;
+      let totalPagesCount = 1;
+
+      if (response && typeof response === 'object' && 'results' in response) {
+        // Paginated response
+        movements = response.results || [];
+        total = response.count || 0;
+        totalPagesCount = Math.ceil(total / recordsPerPage);
+      } else if (Array.isArray(response)) {
+        // Direct array response (fallback)
         movements = response;
-      } else if (response && Array.isArray(response.results)) {
-        movements = response.results;
+        total = response.length;
+        totalPagesCount = 1;
       } else {
-        console.error("Expected array but got:", typeof response, response);
+        console.error("Expected paginated response but got:", typeof response, response);
         setStockHistory([]);
+        setTotalRecords(0);
+        setTotalPages(1);
         return;
       }
 
@@ -165,6 +185,9 @@ export default function ProductDetailsPage() {
 
       console.log("Transformed history:", transformedHistory);
       setStockHistory(transformedHistory);
+      setTotalRecords(total);
+      setTotalPages(totalPagesCount);
+      setCurrentPage(page);
     } catch (error) {
       console.error("Error loading stock history:", error);
       // Log more details about the error
@@ -176,6 +199,10 @@ export default function ProductDetailsPage() {
     } finally {
       setIsLoadingHistory(false);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    loadStockHistory(page);
   };
 
   const showNotification = (type: "success" | "error", message: string) => {
@@ -216,7 +243,7 @@ export default function ProductDetailsPage() {
   // Load product data and stock history when product changes
   useEffect(() => {
     if (product?.id) {
-      loadStockHistory();
+      loadStockHistory(1);
     }
   }, [product?.id]);
 
@@ -370,7 +397,7 @@ export default function ProductDetailsPage() {
       setProduct(updatedProduct);
 
       // Refresh stock history
-      await loadStockHistory();
+      await loadStockHistory(1);
 
       // Show success message with average price info
       const baseMessage = `Successfully added ${stockData.quantity} units to stock!`;
@@ -1018,7 +1045,7 @@ export default function ProductDetailsPage() {
                       !isLoadingHistory &&
                       product?.id
                     ) {
-                      loadStockHistory();
+                      loadStockHistory(1);
                     }
                   }}
                   className={`flex-1 py-3 px-4 text-sm font-medium transition-colors cursor-pointer ${
@@ -1243,7 +1270,7 @@ export default function ProductDetailsPage() {
                         Stock History
                       </h3>
                       <button
-                        onClick={loadStockHistory}
+                        onClick={() => loadStockHistory(currentPage)}
                         disabled={isLoadingHistory}
                         className="px-3 py-2 bg-slate-700/50 border border-slate-600/50 hover:bg-slate-600/50 text-white rounded-lg transition-colors text-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                       >
@@ -1383,7 +1410,7 @@ export default function ProductDetailsPage() {
                         <div className="p-3 border-t border-slate-700/50 bg-gradient-to-r from-slate-800/20 to-slate-700/20">
                           <div className="flex items-center justify-between text-xs text-slate-400">
                             <span>
-                              Showing {stockHistory.length} stock movements
+                              Showing {stockHistory.length} of {totalRecords} stock movements
                             </span>
                             <div className="flex items-center space-x-3">
                               <span className="text-green-400 text-xs">
@@ -1402,6 +1429,69 @@ export default function ProductDetailsPage() {
                               </span>
                             </div>
                           </div>
+                          
+                          {/* Pagination Controls */}
+                          {totalPages > 1 && (
+                            <div className="flex items-center justify-center mt-3 pt-3 border-t border-slate-700/50">
+                              <div className="flex items-center space-x-1">
+                                {/* Previous Button */}
+                                <button
+                                  onClick={() => handlePageChange(currentPage - 1)}
+                                  disabled={currentPage <= 1}
+                                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                                    currentPage > 1
+                                      ? 'bg-slate-700 text-slate-200 hover:bg-slate-600 cursor-pointer'
+                                      : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                  }`}
+                                >
+                                  Previous
+                                </button>
+                                
+                                {/* Page Numbers */}
+                                {(() => {
+                                  const pages = [];
+                                  const maxVisiblePages = 5;
+                                  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                                  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                                  
+                                  // Adjust startPage if we're near the end
+                                  if (endPage - startPage + 1 < maxVisiblePages) {
+                                    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                                  }
+                                  
+                                  for (let i = startPage; i <= endPage; i++) {
+                                    pages.push(
+                                      <button
+                                        key={i}
+                                        onClick={() => handlePageChange(i)}
+                                        className={`px-3 py-1 rounded text-sm transition-colors cursor-pointer ${
+                                          i === currentPage
+                                            ? 'bg-cyan-500 text-white'
+                                            : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                                        }`}
+                                      >
+                                        {i}
+                                      </button>
+                                    );
+                                  }
+                                  return pages;
+                                })()}
+                                
+                                {/* Next Button */}
+                                <button
+                                  onClick={() => handlePageChange(currentPage + 1)}
+                                  disabled={currentPage >= totalPages}
+                                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                                    currentPage < totalPages
+                                      ? 'bg-slate-700 text-slate-200 hover:bg-slate-600 cursor-pointer'
+                                      : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                  }`}
+                                >
+                                  Next
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
