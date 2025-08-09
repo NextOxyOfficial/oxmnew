@@ -451,7 +451,7 @@ export default function ProductDetailsPage() {
                 <h3 className="text-xl font-bold text-white mb-4">
                   {product.name}
                 </h3>
-                
+
                 {/* Pricing Information */}
                 {(!product.variants || product.variants.length === 0) && (
                   <div className="mt-4">
@@ -587,7 +587,9 @@ export default function ProductDetailsPage() {
                   </div>
                   <div>
                     <p className="text-slate-400 mb-1">Stock</p>
-                    <p className="text-cyan-400 font-bold text-lg">{getTotalStock()} units</p>
+                    <p className="text-cyan-400 font-bold text-lg">
+                      {getTotalStock()} units
+                    </p>
                   </div>
                 </div>
 
@@ -854,95 +856,95 @@ export default function ProductDetailsPage() {
                       <h5 className="text-slate-400 text-sm mb-3">
                         Base Pricing
                       </h5>
-                        <div className="bg-gradient-to-br from-slate-800/40 to-slate-700/20 border border-slate-700/50 rounded-lg p-3">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                            <div>
-                              <p className="text-slate-500 text-xs mb-1">
-                                Base Buy Price
-                              </p>
-                              <p className="text-white font-medium">
-                                {(() => {
-                                  const buyPrice =
-                                    product.buy_price ||
-                                    product.cost ||
-                                    product.average_buy_price;
-                                  return buyPrice
-                                    ? formatCurrency(Number(buyPrice))
-                                    : "N/A";
-                                })()}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-slate-500 text-xs mb-1">
-                                Base Sell Price
-                              </p>
-                              <p className="text-white font-medium">
-                                {(() => {
-                                  const sellPrice =
-                                    product.sell_price ||
-                                    product.price ||
-                                    product.average_sell_price;
-                                  return sellPrice
-                                    ? formatCurrency(Number(sellPrice))
-                                    : "N/A";
-                                })()}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-slate-500 text-xs mb-1">
-                                Base Profit
-                              </p>
-                              <p
-                                className={`font-medium text-xs ${(() => {
-                                  const buyPrice = Number(
-                                    product.buy_price ||
-                                      product.cost ||
-                                      product.average_buy_price ||
-                                      0
-                                  );
-                                  const sellPrice = Number(
-                                    product.sell_price ||
-                                      product.price ||
-                                      product.average_sell_price ||
-                                      0
-                                  );
-                                  const profit = sellPrice - buyPrice;
-                                  return profit > 0
-                                    ? "text-green-400"
-                                    : profit < 0
-                                    ? "text-red-400"
-                                    : "text-yellow-400";
-                                })()}`}
-                              >
-                                {(() => {
-                                  const buyPrice = Number(
-                                    product.buy_price ||
-                                      product.cost ||
-                                      product.average_buy_price ||
-                                      0
-                                  );
-                                  const sellPrice = Number(
-                                    product.sell_price ||
-                                      product.price ||
-                                      product.average_sell_price ||
-                                      0
-                                  );
-                                  if (buyPrice === 0 && sellPrice === 0)
-                                    return "N/A";
-                                  const profit = sellPrice - buyPrice;
-                                  return (
-                                    (profit >= 0 ? "+" : "") +
-                                    formatCurrency(Math.abs(profit))
-                                  );
-                                })()}
-                              </p>
-                            </div>
+                      <div className="bg-gradient-to-br from-slate-800/40 to-slate-700/20 border border-slate-700/50 rounded-lg p-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                          <div>
+                            <p className="text-slate-500 text-xs mb-1">
+                              Base Buy Price
+                            </p>
+                            <p className="text-white font-medium">
+                              {(() => {
+                                const buyPrice =
+                                  product.buy_price ||
+                                  product.cost ||
+                                  product.average_buy_price;
+                                return buyPrice
+                                  ? formatCurrency(Number(buyPrice))
+                                  : "N/A";
+                              })()}
+                            </p>
                           </div>
-                          <p className="text-xs text-slate-500 mt-2">
-                            * Variants may have individual pricing adjustments
-                            shown above
-                          </p>
+                          <div>
+                            <p className="text-slate-500 text-xs mb-1">
+                              Base Sell Price
+                            </p>
+                            <p className="text-white font-medium">
+                              {(() => {
+                                const sellPrice =
+                                  product.sell_price ||
+                                  product.price ||
+                                  product.average_sell_price;
+                                return sellPrice
+                                  ? formatCurrency(Number(sellPrice))
+                                  : "N/A";
+                              })()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-slate-500 text-xs mb-1">
+                              Base Profit
+                            </p>
+                            <p
+                              className={`font-medium text-xs ${(() => {
+                                const buyPrice = Number(
+                                  product.buy_price ||
+                                    product.cost ||
+                                    product.average_buy_price ||
+                                    0
+                                );
+                                const sellPrice = Number(
+                                  product.sell_price ||
+                                    product.price ||
+                                    product.average_sell_price ||
+                                    0
+                                );
+                                const profit = sellPrice - buyPrice;
+                                return profit > 0
+                                  ? "text-green-400"
+                                  : profit < 0
+                                  ? "text-red-400"
+                                  : "text-yellow-400";
+                              })()}`}
+                            >
+                              {(() => {
+                                const buyPrice = Number(
+                                  product.buy_price ||
+                                    product.cost ||
+                                    product.average_buy_price ||
+                                    0
+                                );
+                                const sellPrice = Number(
+                                  product.sell_price ||
+                                    product.price ||
+                                    product.average_sell_price ||
+                                    0
+                                );
+                                if (buyPrice === 0 && sellPrice === 0)
+                                  return "N/A";
+                                const profit = sellPrice - buyPrice;
+                                return (
+                                  (profit >= 0 ? "+" : "") +
+                                  formatCurrency(Math.abs(profit))
+                                );
+                              })()}
+                            </p>
+                          </div>
                         </div>
+                        <p className="text-xs text-slate-500 mt-2">
+                          * Variants may have individual pricing adjustments
+                          shown above
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1327,55 +1329,90 @@ export default function ProductDetailsPage() {
                           <table className="w-full">
                             <thead className="bg-slate-800/50 border-b border-slate-700/50">
                               <tr>
-                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Type</th>
-                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Quantity</th>
-                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Reason</th>
-                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Cost/Unit</th>
-                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Total Cost</th>
-                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Date</th>
-                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">By</th>
-                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">Stock Change</th>
+                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
+                                  By
+                                </th>
+                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
+                                  Quantity
+                                </th>
+                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
+                                  Reason
+                                </th>
+                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
+                                  Buy Price
+                                </th>
+                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
+                                  Sell Price
+                                </th>
+                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
+                                  Date
+                                </th>
+                                <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
+                                  Stock Change
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
                               {stockHistory.map((entry) => (
-                                <tr key={entry.id} className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors">
-                                  <td className="py-3 px-4">
-                                    <span
-                                      className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                        entry.type === "add"
-                                          ? "bg-green-500/20 text-green-400"
-                                          : "bg-red-500/20 text-red-400"
-                                      }`}
-                                    >
-                                      {entry.type === "add" ? "ADD" : "REMOVE"}
-                                    </span>
-                                  </td>
-                                  <td className={`py-3 px-4 font-semibold text-sm ${
-                                    entry.type === "add" ? "text-green-500" : "text-red-500"
-                                  }`}>
-                                    {entry.type === "add" ? "+" : "-"}
-                                    {entry.quantity}
-                                  </td>
-                                  <td className="py-3 px-4 text-white text-sm">{entry.reason}</td>
-                                  <td className="py-3 px-4 text-slate-400 text-sm">
-                                    {entry.cost_per_unit ? formatCurrency(Number(entry.cost_per_unit)) : "N/A"}
-                                  </td>
-                                  <td className="py-3 px-4 text-slate-400 text-sm">
-                                    {entry.total_cost ? formatCurrency(Number(entry.total_cost)) : "N/A"}
-                                  </td>
-                                  <td className="py-3 px-4 text-slate-400 text-sm">
-                                    {new Date(entry.created_at).toLocaleDateString()}
-                                  </td>
+                                <tr
+                                  key={entry.id}
+                                  className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors"
+                                >
                                   <td className="py-3 px-4 text-slate-400 text-sm">
                                     {entry.created_by}
                                   </td>
+                                  <td
+                                    className={`py-3 px-4 font-semibold text-sm ${
+                                      entry.type === "add"
+                                        ? "text-green-500"
+                                        : "text-red-500"
+                                    }`}
+                                  >
+                                    {entry.type === "add" ? "+" : "-"}
+                                    {entry.quantity}
+                                  </td>
+                                  <td className="py-3 px-4 text-white text-sm">
+                                    {entry.reason}
+                                  </td>
                                   <td className="py-3 px-4 text-slate-400 text-sm">
-                                    {entry.previous_stock !== undefined && entry.new_stock !== undefined && (
-                                      <span>
-                                        {entry.previous_stock} → {entry.new_stock}
-                                      </span>
-                                    )}
+                                    {product?.buy_price
+                                      ? formatCurrency(
+                                          Number(product.buy_price)
+                                        )
+                                      : product?.cost
+                                      ? formatCurrency(Number(product.cost))
+                                      : product?.average_buy_price
+                                      ? formatCurrency(
+                                          Number(product.average_buy_price)
+                                        )
+                                      : "N/A"}
+                                  </td>
+                                  <td className="py-3 px-4 text-slate-400 text-sm">
+                                    {product?.sell_price
+                                      ? formatCurrency(
+                                          Number(product.sell_price)
+                                        )
+                                      : product?.price
+                                      ? formatCurrency(Number(product.price))
+                                      : product?.average_sell_price
+                                      ? formatCurrency(
+                                          Number(product.average_sell_price)
+                                        )
+                                      : "N/A"}
+                                  </td>
+                                  <td className="py-3 px-4 text-slate-400 text-sm">
+                                    {new Date(
+                                      entry.created_at
+                                    ).toLocaleDateString()}
+                                  </td>
+                                  <td className="py-3 px-4 text-slate-400 text-sm">
+                                    {entry.previous_stock !== undefined &&
+                                      entry.new_stock !== undefined && (
+                                        <span>
+                                          {entry.previous_stock} →{" "}
+                                          {entry.new_stock}
+                                        </span>
+                                      )}
                                   </td>
                                 </tr>
                               ))}
@@ -1391,10 +1428,18 @@ export default function ProductDetailsPage() {
                             </span>
                             <div className="flex items-center space-x-3">
                               <span className="text-green-400 text-xs">
-                                +{stockHistory.filter(h => h.type === "add").reduce((sum, h) => sum + h.quantity, 0)} added
+                                +
+                                {stockHistory
+                                  .filter((h) => h.type === "add")
+                                  .reduce((sum, h) => sum + h.quantity, 0)}{" "}
+                                added
                               </span>
                               <span className="text-red-400 text-xs">
-                                -{stockHistory.filter(h => h.type === "remove").reduce((sum, h) => sum + h.quantity, 0)} removed
+                                -
+                                {stockHistory
+                                  .filter((h) => h.type === "remove")
+                                  .reduce((sum, h) => sum + h.quantity, 0)}{" "}
+                                removed
                               </span>
                             </div>
                           </div>
