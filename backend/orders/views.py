@@ -157,6 +157,9 @@ class OrderViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(customer__isnull=False)
         elif customer_filter == "without_customer":
             queryset = queryset.filter(customer__isnull=True)
+        elif customer_filter and customer_filter.isdigit():
+            # Filter by specific customer ID
+            queryset = queryset.filter(customer=int(customer_filter))
 
         # Handle custom ordering parameter
         ordering = self.request.query_params.get("ordering", None)

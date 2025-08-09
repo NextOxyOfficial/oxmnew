@@ -1,13 +1,13 @@
-import { API_BASE_URL } from "./config";
 import { AuthToken } from "../api";
+import { API_BASE_URL } from "./config";
 
 // Types
 export interface Customer {
   id: number;
   name: string;
-  email: string;
-  phone: string;
-  address?: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
   status: "active" | "inactive" | "blocked";
   notes?: string;
   total_orders: number;
@@ -205,12 +205,9 @@ export const customersAPI = {
       queryParams.append("status", params.status);
     if (params?.ordering) queryParams.append("ordering", params.ordering);
 
-    const response = await fetch(
-      `${API_BASE_URL}/customers/?${queryParams}`,
-      {
-        headers: customersAPI.getHeaders(),
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/customers/?${queryParams}`, {
+      headers: customersAPI.getHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error("Failed to fetch customers");
@@ -287,12 +284,9 @@ export const customersAPI = {
   },
 
   getCustomerSummary: async (id: number) => {
-    const response = await fetch(
-      `${API_BASE_URL}/customers/${id}/summary/`,
-      {
-        headers: customersAPI.getHeaders(),
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/customers/${id}/summary/`, {
+      headers: customersAPI.getHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error("Failed to fetch customer summary");
@@ -307,9 +301,24 @@ export const customersAPI = {
     status?: string;
     ordering?: string;
   }): Promise<Order[]> => {
+    // If customer ID is provided, use the customer-specific endpoint
+    if (params?.customer) {
+      const response = await fetch(
+        `${API_BASE_URL}/customers/${params.customer}/orders/`,
+        {
+          headers: customersAPI.getHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch customer orders");
+      }
+
+      return response.json();
+    }
+
+    // Otherwise use the general orders endpoint with query params
     const queryParams = new URLSearchParams();
-    if (params?.customer)
-      queryParams.append("customer", params.customer.toString());
     if (params?.status && params.status !== "all")
       queryParams.append("status", params.status);
     if (params?.ordering) queryParams.append("ordering", params.ordering);
@@ -518,12 +527,9 @@ export const customersAPI = {
   },
 
   getAvailableAchievements: async (): Promise<AvailableAchievement[]> => {
-    const response = await fetch(
-      `${API_BASE_URL}/available-achievements/`,
-      {
-        headers: customersAPI.getHeaders(),
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/available-achievements/`, {
+      headers: customersAPI.getHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error("Failed to fetch available achievements");

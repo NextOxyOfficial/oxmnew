@@ -1,4 +1,5 @@
 from django.urls import path
+
 from . import views
 
 app_name = "customers"
@@ -19,6 +20,11 @@ urlpatterns = [
         "customers/<int:customer_id>/summary/",
         views.customer_summary,
         name="customer-summary",
+    ),
+    path(
+        "customers/<int:customer_id>/orders/",
+        views.customer_orders,
+        name="customer-orders",
     ),
     path(
         "customers/statistics/", views.customer_statistics, name="customer-statistics"

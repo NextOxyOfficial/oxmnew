@@ -1,39 +1,37 @@
-from rest_framework import generics, status, filters
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q, Sum, Avg, Count
-from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from datetime import datetime, timedelta
+
+from core.models import Achievement, Gift, Level
+from django.db.models import Avg, Q, Sum
+from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, generics, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .models import (
     Customer,
-    CustomerGift,
     CustomerAchievement,
+    CustomerGift,
     CustomerLevel,
     DuePayment,
-    Transaction,
     SMSLog,
+    Transaction,
 )
 from .serializers import (
-    CustomerSerializer,
-    CustomerDetailSerializer,
-    CustomerCreateUpdateSerializer,
-    CustomerGiftSerializer,
-    CustomerAchievementSerializer,
-    CustomerLevelSerializer,
-    DuePaymentSerializer,
-    TransactionSerializer,
-    SMSLogSerializer,
-    GiftForCustomerSerializer,
     AchievementForCustomerSerializer,
-    LevelForCustomerSerializer,
+    CustomerAchievementSerializer,
+    CustomerCreateUpdateSerializer,
+    CustomerDetailSerializer,
+    CustomerGiftSerializer,
+    CustomerLevelSerializer,
+    CustomerSerializer,
     CustomerStatsSerializer,
-    TopCustomerSerializer,
+    DuePaymentSerializer,
+    GiftForCustomerSerializer,
+    LevelForCustomerSerializer,
+    TransactionSerializer,
 )
-from core.models import Gift, Achievement, Level
 
 
 class CustomerListCreateView(generics.ListCreateAPIView):
@@ -307,7 +305,7 @@ def redeem_points(request, customer_id):
 @permission_classes([IsAuthenticated])
 def send_sms(request, customer_id):
     """Send SMS to customer"""
-    from subscription.models import UserSMSCredit, SMSSentHistory
+    from subscription.models import SMSSentHistory, UserSMSCredit
 
     try:
         customer = Customer.objects.get(id=customer_id, user=request.user)
@@ -503,6 +501,30 @@ def customer_summary(request, customer_id):
         }
 
         return Response(data)
+
+    except Customer.DoesNotExist:
+        return Response(
+            {"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def customer_orders(request, customer_id):
+    """Get all orders for a specific customer"""
+    try:
+        customer = Customer.objects.get(id=customer_id, user=request.user)
+
+        # Get orders from orders app
+        from orders.models import Order
+        from orders.serializers import OrderSerializer
+
+        orders = Order.objects.filter(customer=customer, user=request.user).order_by(
+            "-created_at"
+        )
+
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
 
     except Customer.DoesNotExist:
         return Response(

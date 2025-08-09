@@ -33,9 +33,9 @@ if (process.env.NODE_ENV === "development") {
 interface Customer {
   id: number;
   name: string;
-  email: string;
-  phone: string;
-  address?: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
   total_orders: number;
   total_spent: number;
   last_order_date?: string;
@@ -54,8 +54,8 @@ interface Order {
   order_number?: string;
   items_details?: CustomerOrderItem[];
   customer_name?: string;
-  customer_phone?: string;
-  customer_email?: string;
+  customer_phone?: string | null;
+  customer_email?: string | null;
 }
 
 interface Gift {
@@ -78,7 +78,8 @@ interface Achievement {
 
 interface DuePayment {
   id: number;
-  order_id: number;
+  order_id: number | null;
+  order_number?: string | null;
   amount: number;
   due_date: string;
   type: "due" | "advance";
@@ -95,6 +96,7 @@ interface TransactionForm {
   amount: string;
   due_date: string;
   note: string;
+  order_id: string; // Added order selection field
   notifyCustomer: boolean;
 }
 
@@ -139,6 +141,7 @@ export default function CustomerDetailsPage() {
     amount: "",
     due_date: "",
     note: "",
+    order_id: "",
     notifyCustomer: false,
   });
   const [mounted, setMounted] = useState(false);
@@ -188,9 +191,9 @@ export default function CustomerDetailsPage() {
         const customerData = await customersAPI.getCustomer(customerId);
         setCustomer(customerData);
         setCustomerForm({
-          name: customerData.name,
-          email: customerData.email,
-          phone: customerData.phone,
+          name: customerData.name || "",
+          email: customerData.email || "",
+          phone: customerData.phone || "",
           address: customerData.address || "",
         });
 
@@ -203,7 +206,7 @@ export default function CustomerDetailsPage() {
         const ordersData = await customersAPI.getOrders({
           customer: customerId,
         });
-        console.log("Raw orders data:", ordersData);
+        console.log("Customer orders fetched:", ordersData);
         // Handle both array and paginated response
         let orders: CustomerOrder[] = [];
         if (Array.isArray(ordersData)) {
@@ -247,15 +250,14 @@ export default function CustomerDetailsPage() {
           duePayments = duePaymentsData;
         } else if (duePaymentsData && typeof duePaymentsData === "object") {
           duePayments =
-            (duePaymentsData as { results?: any[]; data?: any[] })
-              .results ||
-            (duePaymentsData as { results?: any[]; data?: any[] })
-              .data ||
+            (duePaymentsData as { results?: any[]; data?: any[] }).results ||
+            (duePaymentsData as { results?: any[]; data?: any[] }).data ||
             [];
         }
         const formattedDuePayments = duePayments.map((payment: any) => ({
           id: payment.id,
-          order_id: payment.order || 0,
+          order_id: payment.order || null, // Use null instead of 0 for no order
+          order_number: payment.order_number || null,
           amount: payment.amount,
           due_date: payment.due_date,
           type: payment.payment_type as "due" | "advance",
@@ -298,10 +300,8 @@ export default function CustomerDetailsPage() {
           typeof availableGiftsData === "object"
         ) {
           availableGifts =
-            (availableGiftsData as { results?: any[]; data?: any[] })
-              .results ||
-            (availableGiftsData as { results?: any[]; data?: any[] })
-              .data ||
+            (availableGiftsData as { results?: any[]; data?: any[] }).results ||
+            (availableGiftsData as { results?: any[]; data?: any[] }).data ||
             [];
         }
         const formattedAvailableGifts = availableGifts.map((gift: any) => ({
@@ -323,8 +323,7 @@ export default function CustomerDetailsPage() {
           availableLevels =
             (availableLevelsData as { results?: any[]; data?: any[] })
               .results ||
-            (availableLevelsData as { results?: any[]; data?: any[] })
-              .data ||
+            (availableLevelsData as { results?: any[]; data?: any[] }).data ||
             [];
         }
         const formattedLevels = availableLevels.map((level: any) => ({
@@ -383,6 +382,7 @@ export default function CustomerDetailsPage() {
       amount: "",
       due_date: "",
       note: "",
+      order_id: "",
       notifyCustomer: false,
     });
   };
@@ -394,6 +394,7 @@ export default function CustomerDetailsPage() {
       amount: "",
       due_date: "",
       note: "",
+      order_id: "",
       notifyCustomer: false,
     });
   };
@@ -512,6 +513,9 @@ export default function CustomerDetailsPage() {
         payment_type: transactionForm.type,
         due_date: transactionForm.due_date,
         notes: transactionForm.note,
+        ...(transactionForm.order_id && {
+          order: parseInt(transactionForm.order_id),
+        }), // Include order if selected
       };
 
       // Create due payment via API
@@ -539,9 +543,20 @@ export default function CustomerDetailsPage() {
 
       // Refresh due payments
       const duePaymentsData = await customersAPI.getDuePayments(customer.id);
-      const formattedDuePayments = duePaymentsData.map((payment) => ({
+      // Handle both array and paginated response
+      let duePayments: any[] = [];
+      if (Array.isArray(duePaymentsData)) {
+        duePayments = duePaymentsData;
+      } else if (duePaymentsData && typeof duePaymentsData === "object") {
+        duePayments =
+          (duePaymentsData as { results?: any[]; data?: any[] }).results ||
+          (duePaymentsData as { results?: any[]; data?: any[] }).data ||
+          [];
+      }
+      const formattedDuePayments = duePayments.map((payment: any) => ({
         id: payment.id,
-        order_id: payment.order || 0,
+        order_id: payment.order || null, // Use null instead of 0 for no order
+        order_number: payment.order_number || null,
         amount: payment.amount,
         due_date: payment.due_date,
         type: payment.payment_type as "due" | "advance",
@@ -1214,9 +1229,22 @@ export default function CustomerDetailsPage() {
                           >
                             <div className="grid grid-cols-12 gap-4 items-center">
                               <div className="col-span-2">
-                                <p className="text-sm font-medium text-slate-100">
-                                  #{payment.order_id}
-                                </p>
+                                {payment.order_id ? (
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-100">
+                                      #{payment.order_id}
+                                    </p>
+                                    {payment.order_number && (
+                                      <p className="text-xs text-slate-400">
+                                        {payment.order_number}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-slate-400 italic">
+                                    No Order
+                                  </p>
+                                )}
                               </div>
                               <div className="col-span-3">
                                 <p className="text-sm text-slate-300">
@@ -1927,6 +1955,36 @@ export default function CustomerDetailsPage() {
                     />
                   </div>
 
+                  {/* Order Selection (Optional) */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Related Order (Optional)
+                    </label>
+                    <select
+                      value={transactionForm.order_id}
+                      onChange={(e) =>
+                        setTransactionForm({
+                          ...transactionForm,
+                          order_id: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
+                    >
+                      <option value="">Select an order (optional)</option>
+                      {orders.map((order) => (
+                        <option key={order.id} value={order.id.toString()}>
+                          Order #{order.id} - {formatCurrency(order.total)} (
+                          {formatDate(order.date)})
+                        </option>
+                      ))}
+                    </select>
+                    {orders.length === 0 && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        No orders found for this customer
+                      </p>
+                    )}
+                  </div>
+
                   {/* Note */}
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -2013,9 +2071,21 @@ export default function CustomerDetailsPage() {
                 {/* Modal Body */}
                 <div className="p-6">
                   <div className="mb-4">
-                    <h3 className="text-sm font-medium text-slate-300 mb-2">
-                      Order #{selectedDuePayment.order_id}
-                    </h3>
+                    {selectedDuePayment.order_id ? (
+                      <h3 className="text-sm font-medium text-slate-300 mb-2">
+                        Order #{selectedDuePayment.order_id}
+                        {selectedDuePayment.order_number && (
+                          <span className="text-slate-400">
+                            {" "}
+                            ({selectedDuePayment.order_number})
+                          </span>
+                        )}
+                      </h3>
+                    ) : (
+                      <h3 className="text-sm font-medium text-slate-300 mb-2">
+                        General Payment (No Order)
+                      </h3>
+                    )}
                     <p className="text-sm text-slate-400">
                       {selectedDuePayment.type === "due"
                         ? "Due Payment"
