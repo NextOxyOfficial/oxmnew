@@ -1683,7 +1683,7 @@ export class ApiService {
   }
 
   static async getSmsCredits() {
-    return this.get("/my-sms-credits/");
+    return this.get("/get-my-sms-credits/");
   }
 
   static async getSmsHistory() {

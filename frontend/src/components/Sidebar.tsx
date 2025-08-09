@@ -64,7 +64,7 @@ export default function Sidebar({
     }
     async function fetchSmsCredits() {
       try {
-        const data = await ApiService.get("/my-sms-credits/");
+        const data = await ApiService.get("/get-my-sms-credits/");
         setSmsCredits(typeof data.credits === "number" ? data.credits : 0);
       } catch {
         setSmsCredits(0);

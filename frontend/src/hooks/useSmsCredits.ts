@@ -19,7 +19,7 @@ export const useSmsCredits = () => {
       const creditsData = await ApiService.getSmsCredits();
       console.log("SMS Credits response:", creditsData);
 
-      // Handle different response formats
+      // Handle the response format - should now consistently return {credits: number}
       let parsedCredits = 0;
       if (typeof creditsData === "number") {
         parsedCredits = creditsData;

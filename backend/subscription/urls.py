@@ -10,6 +10,7 @@ urlpatterns = [
         "my-subscription/", views.UserSubscriptionView.as_view(), name="my-subscription"
     ),
     path("my-sms-credits/", views.UserSMSCreditView.as_view(), name="my-sms-credits"),
+    path("get-my-sms-credits/", views.get_my_sms_credits, name="get-my-sms-credits"),
     path(
         "my-sms-history/", views.SMSSentHistoryListView.as_view(), name="my-sms-history"
     ),

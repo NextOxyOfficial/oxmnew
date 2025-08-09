@@ -36,7 +36,7 @@ class UserSubscription(models.Model):
         return f"{self.user} - {self.plan}"
 
 class UserSMSCredit(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     credits = models.PositiveIntegerField(default=0)
     last_updated = models.DateTimeField(auto_now=True)
 

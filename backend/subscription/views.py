@@ -36,13 +36,12 @@ class UserSMSCreditView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        try:
-            return UserSMSCredit.objects.get(user=self.request.user)
-        except UserSMSCredit.DoesNotExist:
-            # Return a dummy object with 0 credits if not found
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
-            return UserSMSCredit(user=self.request.user, credits=0)
+        # Get or create user SMS credit record
+        user_sms_credit, created = UserSMSCredit.objects.get_or_create(
+            user=self.request.user,
+            defaults={'credits': 0}
+        )
+        return user_sms_credit
 
 class SMSSentHistoryListView(generics.ListAPIView):
     serializer_class = SMSSentHistorySerializer
@@ -58,6 +57,18 @@ from rest_framework import status
 from rest_framework.permissions import IsAdminUser
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_my_sms_credits(request):
+    """Get current user's SMS credits count"""
+    try:
+        user_sms_credit = UserSMSCredit.objects.get(user=request.user)
+        return Response({'credits': user_sms_credit.credits}, status=status.HTTP_200_OK)
+    except UserSMSCredit.DoesNotExist:
+        # Create a new record with 0 credits if it doesn't exist
+        user_sms_credit = UserSMSCredit.objects.create(user=request.user, credits=0)
+        return Response({'credits': 0}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])  # Only admin users can add credits

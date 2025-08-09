@@ -235,9 +235,26 @@ export default function SmsPage() {
 			}
 		}
 
-		// Update local SMS credits count
-		if (creditsUsed > 0 && smsCredits !== null) {
-			setSmsCredits(smsCredits - creditsUsed);
+		// Update local SMS credits count and refresh from server
+		if (creditsUsed > 0) {
+			// Update local count immediately for better UX
+			if (smsCredits !== null) {
+				setSmsCredits(smsCredits - creditsUsed);
+			}
+			
+			// Also refresh from server to ensure accuracy
+			try {
+				const creditsData = await ApiService.getSmsCredits();
+				let credits = 0;
+				if (typeof creditsData === 'number') {
+					credits = creditsData;
+				} else if (creditsData && typeof creditsData.credits === 'number') {
+					credits = creditsData.credits;
+				}
+				setSmsCredits(credits);
+			} catch (error) {
+				console.error("Failed to refresh SMS credits after sending:", error);
+			}
 		}
 
 		if (successCount > 0) {
@@ -278,12 +295,40 @@ export default function SmsPage() {
 							</div>
 						</div>
 					</div>
-					<a 
-						href="/dashboard/subscriptions" 
-						className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200"
-					>
-						Buy Credits
-					</a>
+					<div className="flex items-center gap-2">
+						<button
+							onClick={async () => {
+								setIsLoading(true);
+								try {
+									const creditsData = await ApiService.getSmsCredits();
+									let credits = 0;
+									if (typeof creditsData === 'number') {
+										credits = creditsData;
+									} else if (creditsData && typeof creditsData.credits === 'number') {
+										credits = creditsData.credits;
+									}
+									setSmsCredits(credits);
+								} catch (error) {
+									console.error("Failed to refresh SMS credits:", error);
+								} finally {
+									setIsLoading(false);
+								}
+							}}
+							disabled={isLoading}
+							className="p-1.5 rounded-md hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+							title="Refresh SMS credits"
+						>
+							<svg className={`h-3.5 w-3.5 text-emerald-400 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+							</svg>
+						</button>
+						<a 
+							href="/dashboard/subscriptions" 
+							className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200"
+						>
+							Buy Credits
+						</a>
+					</div>
 				</div>
 				{contacts.length > 0 && message && (
 					<div className="mt-3 pt-3 border-t border-emerald-500/20">
