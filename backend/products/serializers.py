@@ -421,6 +421,8 @@ class ProductStockMovementSerializer(serializers.ModelSerializer):
             "new_stock",
             "reason",
             "notes",
+            "cost_per_unit",
+            "total_cost",
             "user",
             "user_name",
             "username",

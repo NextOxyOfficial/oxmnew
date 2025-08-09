@@ -1180,39 +1180,6 @@ export default function ProductDetailsPage() {
                         </select>
                       </div>
 
-                      {/* Reason */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Reason for Stock Addition *
-                        </label>
-                        <select
-                          value={stockForm.reason}
-                          onChange={(e) =>
-                            setStockForm({
-                              ...stockForm,
-                              reason: e.target.value,
-                            })
-                          }
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm cursor-pointer"
-                        >
-                          <option value="restock" className="bg-slate-800">
-                            Restock
-                          </option>
-                          <option value="new_shipment" className="bg-slate-800">
-                            New Shipment
-                          </option>
-                          <option value="return" className="bg-slate-800">
-                            Customer Return
-                          </option>
-                          <option value="correction" className="bg-slate-800">
-                            Stock Correction
-                          </option>
-                          <option value="other" className="bg-slate-800">
-                            Other
-                          </option>
-                        </select>
-                      </div>
-
                       {/* Notes */}
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -1388,16 +1355,8 @@ export default function ProductDetailsPage() {
                                     {entry.reason}
                                   </td>
                                   <td className="py-3 px-4 text-slate-400 text-sm">
-                                    {product?.buy_price
-                                      ? formatCurrency(
-                                          Number(product.buy_price)
-                                        )
-                                      : product?.cost
-                                      ? formatCurrency(Number(product.cost))
-                                      : product?.average_buy_price
-                                      ? formatCurrency(
-                                          Number(product.average_buy_price)
-                                        )
+                                    {entry.cost_per_unit
+                                      ? formatCurrency(Number(entry.cost_per_unit))
                                       : "N/A"}
                                   </td>
                                   <td className="py-3 px-4 text-slate-400 text-sm">

@@ -282,6 +282,14 @@ class ProductStockMovement(models.Model):
 
     reason = models.CharField(max_length=200, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
+    cost_per_unit = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Cost per unit at the time of this stock movement"
+    )
+    total_cost = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Total cost for this stock movement (quantity * cost_per_unit)"
+    )
     # Removed reference_sale field since ProductSale model is moved to orders app
 
     created_at = models.DateTimeField(auto_now_add=True)

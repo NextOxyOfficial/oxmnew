@@ -382,6 +382,11 @@ class ProductViewSet(viewsets.ModelViewSet):
                     "reason": reason,
                     "notes": notes,
                 }
+                
+                # Add cost information if buy_price is provided
+                if buy_price is not None:
+                    movement_data["cost_per_unit"] = buy_price
+                    movement_data["total_cost"] = buy_price * abs(quantity)
 
                 ProductStockMovement.objects.create(**movement_data)
 
@@ -415,6 +420,11 @@ class ProductViewSet(viewsets.ModelViewSet):
                     "reason": reason,
                     "notes": notes,
                 }
+                
+                # Add cost information if buy_price is provided
+                if buy_price is not None:
+                    movement_data["cost_per_unit"] = buy_price
+                    movement_data["total_cost"] = buy_price * abs(quantity)
 
                 ProductStockMovement.objects.create(**movement_data)
 
