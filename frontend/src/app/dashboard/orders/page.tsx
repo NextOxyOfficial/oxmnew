@@ -364,7 +364,7 @@ export default function OrdersPage() {
           console.log("Added due message to SMS");
         } else if (advanceAmount > 0) {
           const advanceAmountFormatted = formatCurrency(advanceAmount);
-          message += ` আমাদের খাতায় আপনার এডভান্স করা রয়েছে ${advanceAmountFormatted} টাকা`;
+          message += ` আমাদের খাতায় আপনার অতিরিক্ত জমা রয়েছে ${advanceAmountFormatted} টাকা`;
           console.log("Added advance message to SMS");
         } else {
           console.log("No due or advance amount, sending basic message only");
