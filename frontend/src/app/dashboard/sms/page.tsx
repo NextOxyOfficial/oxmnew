@@ -5,6 +5,7 @@ import SmsHistory from "./SmsHistory";
 import { ApiService } from "../../../lib/api";
 import { customersAPI } from "../../../lib/api/customers";
 import employeeAPI from "../../../lib/employeeAPI";
+import { calculateSmsSegments } from "../../../lib/utils/sms";
 
 export default function SmsPage() {
 	const [tab, setTab] = useState("custom");
@@ -184,13 +185,16 @@ export default function SmsPage() {
 			return;
 		}
 
-		// Calculate total SMS count needed
-		const smsPerMessage = Math.max(1, Math.ceil(message.length / 160));
+		// Calculate total SMS count needed using proper Unicode/Bengali counting
+		const smsInfo = calculateSmsSegments(message);
+		const smsPerMessage = smsInfo.segments;
 		const totalSmsNeeded = contacts.length * smsPerMessage;
+		
+		console.log(`SMS calculation: ${message.length} chars, ${smsInfo.encoding} encoding, ${smsPerMessage} segments per message, ${totalSmsNeeded} total needed`);
 		
 		// Check if user has sufficient credits
 		if (smsCredits !== null && smsCredits < totalSmsNeeded) {
-			setStatus(`You need ${totalSmsNeeded} credits but only have ${smsCredits}.`);
+			setStatus(`You need ${totalSmsNeeded} credits but only have ${smsCredits}. Each message requires ${smsPerMessage} credit${smsPerMessage > 1 ? 's' : ''} (${smsInfo.encoding} encoding).`);
 			setShowCreditError(true);
 			return;
 		}
@@ -489,7 +493,7 @@ export default function SmsPage() {
 							/>
 							<span className="absolute bottom-2 right-4 text-xs text-slate-400 select-none">
 								{message.length} chars /{" "}
-								{Math.max(1, Math.ceil(message.length / 160))} SMS
+								{calculateSmsSegments(message).segments} SMS
 							</span>
 						</div>
 						{status && (

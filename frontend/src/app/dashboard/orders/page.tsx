@@ -5,9 +5,11 @@ import OrdersHeader from "@/components/orders/OrdersHeader";
 import OrdersList from "@/components/orders/OrdersList";
 import OrdersStats from "@/components/orders/OrdersStats";
 import Pagination from "@/components/ui/Pagination";
+import SmsComposer from "@/components/sms/SmsComposer";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Order, OrderItem } from "@/types/order";
+import { calculateSmsSegments, formatSmsInfo } from "@/lib/utils/sms";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -30,6 +32,9 @@ export default function OrdersPage() {
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSendingSms, setIsSendingSms] = useState<number | null>(null); // Track which order is sending SMS
+  const [showSmsComposer, setShowSmsComposer] = useState(false);
+  const [smsOrder, setSmsOrder] = useState<Order | null>(null);
+  const [smsMessage, setSmsMessage] = useState("");
   const [userProfile, setUserProfile] = useState<{
     user?: { email?: string };
     profile?: {
@@ -316,9 +321,6 @@ export default function OrdersPage() {
       }
 
       try {
-        // Set loading state for this specific order
-        setIsSendingSms(order.id);
-        
         // Get customer financial details
         let dueAmount = 0;
         let advanceAmount = 0;
@@ -424,20 +426,73 @@ export default function OrdersPage() {
 
         console.log("Final SMS message:", message);
 
+        // Set the message and show composer
+        setSmsMessage(message);
+        setSmsOrder(order);
+        setShowSmsComposer(true);
+        
+      } catch (error) {
+        console.error("Error preparing SMS:", error);
+        alert("Failed to prepare SMS. Please try again.");
+      }
+    },
+    [formatCurrency, userProfile]
+  );
+
+  // Handle actual SMS sending from composer
+  const handleSendSmsFromComposer = useCallback(
+    async (message: string) => {
+      if (!smsOrder || !smsOrder.customer_phone) return;
+      
+      try {
+        // Set loading state for this specific order
+        setIsSendingSms(smsOrder.id);
+        
         // Send SMS
-        await ApiService.sendSmsNotification(order.customer_phone, message);
-        alert("SMS sent successfully!");
+        console.log("Sending SMS to:", smsOrder.customer_phone, "Message:", message);
+        const response = await ApiService.sendSmsNotification(smsOrder.customer_phone, message);
+        console.log("SMS Response:", response);
+        
+        // Check if the response indicates success
+        if (response.success === false) {
+          throw new Error(response.error || "SMS sending failed");
+        }
+        
+        // Use actual credits used from backend response, fallback to frontend calculation
+        const creditsUsed = response.credits_used || calculateSmsSegments(message).segments;
+        alert(`SMS sent successfully! Used ${creditsUsed} SMS credit${creditsUsed > 1 ? 's' : ''}.`);
+        
+        // Close composer
+        setShowSmsComposer(false);
+        setSmsOrder(null);
+        setSmsMessage("");
         
       } catch (error) {
         console.error("Error sending SMS:", error);
-        alert("Failed to send SMS. Please try again.");
+        
+        // Show more detailed error message
+        let errorMessage = "Failed to send SMS. Please try again.";
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (typeof error === 'object' && error !== null && 'error' in error) {
+          errorMessage = (error as any).error;
+        }
+        
+        alert(`SMS Error: ${errorMessage}`);
       } finally {
         // Clear loading state
         setIsSendingSms(null);
       }
     },
-    [formatCurrency, userProfile]
+    [smsOrder]
   );
+
+  // Handle SMS composer cancel
+  const handleCancelSms = useCallback(() => {
+    setShowSmsComposer(false);
+    setSmsOrder(null);
+    setSmsMessage("");
+  }, []);
 
   // Memoized state setters
   const handleSearchChange = useCallback((value: string) => {
@@ -881,6 +936,18 @@ export default function OrdersPage() {
           </div>
         )}
 
+        {/* SMS Composer Modal */}
+        {showSmsComposer && smsOrder && (
+          <SmsComposer
+            recipientName={smsOrder.customer_name}
+            recipientPhone={smsOrder.customer_phone || ""}
+            initialMessage={smsMessage}
+            onSend={handleSendSmsFromComposer}
+            onCancel={handleCancelSms}
+            isLoading={isSendingSms === smsOrder.id}
+          />
+        )}
+
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && orderToDelete && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -912,24 +979,6 @@ export default function OrdersPage() {
                 </p>
                 <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 mb-4">
                   <ul className="space-y-2 text-sm text-slate-300">
-                    <li className="flex items-start gap-2">
-                      <svg
-                        className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      Restore <strong>{orderToDelete.quantity}</strong> units of{" "}
-                      <strong>{orderToDelete.product_name}</strong> back to
-                      stock
-                    </li>
                     <li className="flex items-start gap-2">
                       <svg
                         className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"

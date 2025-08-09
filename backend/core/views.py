@@ -1635,6 +1635,7 @@ def toggle_level(request, level_id):
 @api_view(["POST", "GET"])
 def smsSend(request):
     from subscription.models import SMSSentHistory, UserSMSCredit
+    import re
 
     data = request.data
     phone = data.get("phone", "").strip()
@@ -1646,8 +1647,30 @@ def smsSend(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Calculate SMS count (160 characters per SMS)
-    sms_count = max(1, (len(message) + 159) // 160)
+    # Calculate SMS count properly for Unicode/Bengali text
+    length = len(message)
+    
+    # Check if message contains Unicode characters (Bengali, emojis, etc.)
+    has_unicode_chars = (
+        re.search(r'[^\x00-\x7F]', message) or
+        re.search(r'[\u0980-\u09FF]', message) or  # Bengali
+        re.search(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]', message)  # Emojis
+    )
+    
+    if has_unicode_chars:
+        # Unicode encoding - for Bengali, emojis, etc.
+        if length <= 70:
+            sms_count = 1
+        else:
+            sms_count = (length + 66) // 67  # 67 chars per segment for multi-part Unicode
+    else:
+        # GSM 7-bit encoding - for basic Latin characters
+        if length <= 160:
+            sms_count = 1
+        else:
+            sms_count = (length + 152) // 153  # 153 chars per segment for multi-part GSM
+    
+    print(f"SMS calculation: {length} chars, Unicode: {has_unicode_chars}, Segments: {sms_count}")
 
     # Check if user has sufficient SMS credits
     try:
@@ -1701,7 +1724,7 @@ def smsSend(request):
             )
 
             print(
-                f"SMS sent successfully. Deducted {sms_count} credits. Remaining: {user_sms_credit.credits}"
+                f"SMS sent successfully. Deducted {sms_count} credits ({length} chars, Unicode: {has_unicode_chars}). Remaining: {user_sms_credit.credits}"
             )
             return Response(
                 {
