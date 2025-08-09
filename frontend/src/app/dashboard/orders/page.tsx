@@ -1,6 +1,5 @@
 "use client";
 
-import EditOrderModal from "@/components/orders/EditOrderModal";
 import OrdersControls from "@/components/orders/OrdersControls";
 import OrdersHeader from "@/components/orders/OrdersHeader";
 import OrdersList from "@/components/orders/OrdersList";
@@ -11,17 +10,19 @@ import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { calculateSmsSegments } from "@/lib/utils/sms";
 import { Order, OrderItem } from "@/types/order";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 export default function OrdersPage() {
   console.log("OrdersPage main component re-rendered");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const formatCurrency = useCurrencyFormatter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(""); // For immediate UI updates
   const [searchTerm, setSearchTerm] = useState(""); // For debounced API calls
   const [filterCustomer, setFilterCustomer] = useState("all");
@@ -32,8 +33,6 @@ export default function OrdersPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
   const [isSendingSms, setIsSendingSms] = useState<number | null>(null); // Track which order is sending SMS
   const [showSmsComposer, setShowSmsComposer] = useState(false);
   const [smsOrder, setSmsOrder] = useState<Order | null>(null);
@@ -73,6 +72,25 @@ export default function OrdersPage() {
 
     return () => clearTimeout(debounceTimer);
   }, [searchInput]);
+
+  // Handle success message from edit page
+  useEffect(() => {
+    const updated = searchParams.get("updated");
+    if (updated === "true") {
+      setSuccessMessage("Order updated successfully!");
+      // Clear the URL parameter
+      const url = new URL(window.location.href);
+      url.searchParams.delete("updated");
+      window.history.replaceState({}, "", url.toString());
+
+      // Clear message after 5 seconds
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -278,10 +296,9 @@ export default function OrdersPage() {
   const handleEditInvoice = useCallback(
     (order: Order, event: React.MouseEvent) => {
       event.stopPropagation(); // Prevent order click event
-      setOrderToEdit(order);
-      setShowEditModal(true);
+      router.push(`/dashboard/orders/edit/${order.id}`);
     },
-    []
+    [router]
   );
 
   const handleViewInvoice = useCallback(
@@ -574,20 +591,6 @@ export default function OrdersPage() {
     setSelectedOrder(null);
   };
 
-  const closeEditModal = () => {
-    setShowEditModal(false);
-    setOrderToEdit(null);
-  };
-
-  const handleOrderUpdated = useCallback(
-    async (updatedOrder: Order) => {
-      // Refresh the orders list to get the latest data
-      await fetchOrders();
-      closeEditModal();
-    },
-    [fetchOrders]
-  );
-
   const printInvoice = () => {
     window.print();
   };
@@ -654,6 +657,48 @@ export default function OrdersPage() {
           overallStats={overallStats}
           isStatsLoading={isStatsLoading}
         />
+
+        {/* Success Message */}
+        {successMessage && (
+          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <svg
+                className="w-5 h-5 text-green-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              <span className="text-green-400 font-medium">
+                {successMessage}
+              </span>
+              <button
+                onClick={() => setSuccessMessage(null)}
+                className="ml-auto text-green-400 hover:text-green-300"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
         {/* Orders Table/List */}
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg flex flex-col">
           <div className="sm:p-4 p-2 flex-shrink-0 border-b border-slate-700/50">
@@ -1111,16 +1156,6 @@ export default function OrdersPage() {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Edit Order Modal */}
-        {showEditModal && orderToEdit && (
-          <EditOrderModal
-            order={orderToEdit}
-            isOpen={showEditModal}
-            onClose={closeEditModal}
-            onOrderUpdated={handleOrderUpdated}
-          />
         )}
       </div>
     </div>
