@@ -1395,7 +1395,7 @@ export default function ProductDetailsPage() {
                                   key={entry.id}
                                   className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors"
                                 >
-                                  <td className="py-3 px-4 text-slate-400 text-sm">
+                                  <td className="py-3 px-4 text-slate-400 text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]" title={entry.created_by}>
                                     {entry.created_by}
                                   </td>
                                   <td
