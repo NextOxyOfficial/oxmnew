@@ -102,6 +102,7 @@ export default function BankingPage() {
   const [newAccount, setNewAccount] = useState({
     name: "",
     balance: 0,
+    selectedPlan: "monthly", // "monthly" or "yearly"
   });
 
   // Transaction Form State
@@ -177,8 +178,10 @@ export default function BankingPage() {
         await createAccount({
           name: newAccount.name,
           balance: newAccount.balance,
+          // Note: Add plan information here if backend supports it
+          // plan: newAccount.selectedPlan,
         });
-        setNewAccount({ name: "", balance: 0 });
+        setNewAccount({ name: "", balance: 0, selectedPlan: "monthly" });
         setShowCreateAccountModal(false);
       } catch (err) {
         // Error is handled by the hook
@@ -509,12 +512,12 @@ export default function BankingPage() {
           <div className="bg-slate-900/50 border-2 border-dashed border-slate-700/50 rounded-xl p-12 text-center">
             <CreditCard className="h-12 w-12 text-slate-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-slate-300 mb-2">No accounts yet</h3>
-            <p className="text-slate-500 mb-4">Create your first account to get started</p>
+            <p className="text-slate-500 mb-4">Buy your first account to get started</p>
             <button
               onClick={() => setShowCreateAccountModal(true)}
               className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
             >
-              Create First Account
+              Buy First Account
             </button>
           </div>
         ) : (
@@ -589,7 +592,7 @@ export default function BankingPage() {
                   );
                 })}
                 
-                {/* Create Account Tab - Only show if less than 4 accounts */}
+                {/* Buy Account Tab - Only show if less than 4 accounts */}
                 {accounts.length < 4 && (
                   <button
                     onClick={() => setShowCreateAccountModal(true)}
@@ -597,7 +600,7 @@ export default function BankingPage() {
                   >
                     <Plus className="h-4 w-4" />
                     <div className="text-left">
-                      <div className="font-semibold text-sm">Create Account</div>
+                      <div className="font-semibold text-sm">Buy Account</div>
                       <div className="text-xs text-slate-500">Add new account</div>
                     </div>
                   </button>
@@ -913,9 +916,9 @@ export default function BankingPage() {
         {/* Create Account Modal */}
         {showCreateAccountModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-auto backdrop-blur-md">
-              <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
-                <h2 className="text-lg font-semibold text-white">Create New Account</h2>
+            <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-lg mx-auto backdrop-blur-md max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-4 border-b border-slate-700/50 sticky top-0 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-md rounded-t-2xl">
+                <h2 className="text-lg font-semibold text-white">Buy New Account</h2>
                 <button
                   onClick={() => setShowCreateAccountModal(false)}
                   className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 hover:bg-slate-700/50 rounded-lg"
@@ -953,6 +956,82 @@ export default function BankingPage() {
                   />
                 </div>
 
+                {/* Pricing Plans */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-3">
+                    Choose Your Plan
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Monthly Plan */}
+                    <div 
+                      onClick={() => setNewAccount({...newAccount, selectedPlan: "monthly"})}
+                      className={`relative cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 ${
+                        newAccount.selectedPlan === "monthly" 
+                          ? "border-cyan-500 bg-cyan-500/10" 
+                          : "border-slate-600/50 bg-slate-800/30 hover:border-slate-500"
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-white">Monthly</div>
+                        <div className="text-2xl font-bold text-cyan-400 mt-1">$99</div>
+                        <div className="text-xs text-slate-400 mt-1">per month</div>
+                      </div>
+                      {newAccount.selectedPlan === "monthly" && (
+                        <div className="absolute top-2 right-2">
+                          <Check className="h-4 w-4 text-cyan-400" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Yearly Plan */}
+                    <div 
+                      onClick={() => setNewAccount({...newAccount, selectedPlan: "yearly"})}
+                      className={`relative cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 ${
+                        newAccount.selectedPlan === "yearly" 
+                          ? "border-cyan-500 bg-cyan-500/10" 
+                          : "border-slate-600/50 bg-slate-800/30 hover:border-slate-500"
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-white">Yearly</div>
+                        <div className="text-2xl font-bold text-cyan-400 mt-1">$1099</div>
+                        <div className="text-xs text-slate-400 mt-1">per year</div>
+                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                          Save $89
+                        </div>
+                      </div>
+                      {newAccount.selectedPlan === "yearly" && (
+                        <div className="absolute top-2 right-2">
+                          <Check className="h-4 w-4 text-cyan-400" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Plan Benefits */}
+                  <div className="mt-3 p-3 bg-slate-800/30 rounded-lg border border-slate-700/30">
+                    <div className="text-xs text-slate-300 font-medium mb-2">Plan Includes:</div>
+                    <ul className="text-xs text-slate-400 space-y-1">
+                      <li className="flex items-center gap-2">
+                        <Check className="h-3 w-3 text-green-400" />
+                        <span>Unlimited transactions</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-3 w-3 text-green-400" />
+                        <span>Advanced reporting</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-3 w-3 text-green-400" />
+                        <span>24/7 support</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-3 w-3 text-green-400" />
+                        <span>Multi-user access</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
                 <div className="flex space-x-2 pt-2">
                   <button
                     type="button"
@@ -965,7 +1044,7 @@ export default function BankingPage() {
                     type="submit"
                     className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-3 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium cursor-pointer"
                   >
-                    Create Account
+                    Buy Account
                   </button>
                 </div>
               </form>
