@@ -239,17 +239,17 @@ export default function EditOrderPage() {
         });
 
         // Set customer type and selected customer
-        if (fetchedOrder.customer) {
+        if (fetchedOrder.customer_name) {
           setCustomerType("existing");
-          setSelectedCustomerId(fetchedOrder.customer.id);
+          setSelectedCustomerId(fetchedOrder.customer?.id || null);
           setCustomerSearch(
-            `${fetchedOrder.customer.name}${
-              fetchedOrder.customer.email
-                ? ` (${fetchedOrder.customer.email})`
+            `${fetchedOrder.customer_name}${
+              fetchedOrder.customer_email
+                ? ` (${fetchedOrder.customer_email})`
                 : ""
             }${
-              fetchedOrder.customer.phone
-                ? ` - ${fetchedOrder.customer.phone}`
+              fetchedOrder.customer_phone
+                ? ` - ${fetchedOrder.customer_phone}`
                 : ""
             }`
           );
@@ -754,7 +754,7 @@ export default function EditOrderPage() {
   if (isLoadingOrder) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="max-w-6xl px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="flex items-center gap-3 text-slate-300">
               <svg
@@ -786,7 +786,7 @@ export default function EditOrderPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="max-w-6xl  px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
@@ -797,21 +797,6 @@ export default function EditOrderPage() {
               <p className="text-slate-400 mt-1">
                 Modify order details and manage items
               </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700/50 hover:bg-slate-600 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleSubmit("pending")}
-                disabled={isSubmitting}
-                className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? "Updating..." : "Update Order"}
-              </button>
             </div>
           </div>
         </div>
@@ -1220,21 +1205,6 @@ export default function EditOrderPage() {
                             </button>
                           </div>
 
-                          {/* Unit Price */}
-                          <input
-                            type="number"
-                            value={item.unit_price}
-                            onChange={(e) =>
-                              updateItemUnitPrice(
-                                item.id,
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="w-24 bg-slate-800/50 border border-slate-700/50 text-white text-center rounded py-1 px-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                            min="0"
-                            step="0.01"
-                          />
-
                           {/* Total */}
                           <div className="text-cyan-400 font-medium w-20 text-right">
                             {formatCurrency(item.total)}
@@ -1269,73 +1239,110 @@ export default function EditOrderPage() {
                   </h4>
 
                   <div className="space-y-4">
-                    {/* Product Search */}
-                    <div className="relative">
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Search Product
-                      </label>
-                      <input
-                        type="text"
-                        value={productSearch}
-                        onChange={(e) => handleProductSearch(e.target.value)}
-                        onFocus={() => setIsProductDropdownOpen(true)}
-                        placeholder="Search products by name, code, category..."
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      />
-
-                      {/* Product Dropdown */}
-                      {isProductDropdownOpen &&
-                        (productSearch.length >= 1 ||
-                          searchResults.length > 0) && (
-                          <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                            {isSearchingProducts ? (
-                              <div className="p-3 text-slate-400">
-                                Loading...
-                              </div>
-                            ) : searchResults.length > 0 ? (
-                              searchResults.slice(0, 10).map((product) => (
-                                <div
-                                  key={product.id}
-                                  onClick={() => {
-                                    handleNewItemChange(
-                                      "product",
-                                      product.id.toString()
-                                    );
-                                    setProductSearch(
-                                      `${product.name} (${
-                                        product.product_code || "No Code"
-                                      })`
-                                    );
-                                    setIsProductDropdownOpen(false);
-                                  }}
-                                  className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
-                                >
-                                  <div className="text-white font-medium">
-                                    {product.name}
-                                  </div>
-                                  <div className="text-slate-400 text-sm">
-                                    {product.category_name} • Stock:{" "}
-                                    {product.stock}
-                                    {product.product_code &&
-                                      ` • Code: ${product.product_code}`}
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="p-3 text-slate-400">
-                                No products found
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                      {/* Click outside to close dropdown */}
-                      {isProductDropdownOpen && (
-                        <div
-                          className="fixed inset-0 z-5"
-                          onClick={() => setIsProductDropdownOpen(false)}
+                    {/* Product Search, Quantity, and Add Button in one line */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                      {/* Product Search */}
+                      <div className="md:col-span-6 relative">
+                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                          Search Product
+                        </label>
+                        <input
+                          type="text"
+                          value={productSearch}
+                          onChange={(e) => handleProductSearch(e.target.value)}
+                          onFocus={() => setIsProductDropdownOpen(true)}
+                          placeholder="Search products..."
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
                         />
-                      )}
+
+                        {/* Product Dropdown */}
+                        {isProductDropdownOpen &&
+                          (productSearch.length >= 1 ||
+                            searchResults.length > 0) && (
+                            <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                              {isSearchingProducts ? (
+                                <div className="p-3 text-slate-400">
+                                  Loading...
+                                </div>
+                              ) : searchResults.length > 0 ? (
+                                searchResults.slice(0, 10).map((product) => (
+                                  <div
+                                    key={product.id}
+                                    onClick={() => {
+                                      handleNewItemChange(
+                                        "product",
+                                        product.id.toString()
+                                      );
+                                      setProductSearch(
+                                        `${product.name} (${
+                                          product.product_code || "No Code"
+                                        })`
+                                      );
+                                      setIsProductDropdownOpen(false);
+                                    }}
+                                    className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
+                                  >
+                                    <div className="text-white font-medium">
+                                      {product.name}
+                                    </div>
+                                    <div className="text-slate-400 text-sm">
+                                      {product.category_name} • Stock:{" "}
+                                      {product.stock}
+                                      {product.product_code &&
+                                        ` • Code: ${product.product_code}`}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="p-3 text-slate-400">
+                                  No products found
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                        {/* Click outside to close dropdown */}
+                        {isProductDropdownOpen && (
+                          <div
+                            className="fixed inset-0 z-5"
+                            onClick={() => setIsProductDropdownOpen(false)}
+                          />
+                        )}
+                      </div>
+
+                      {/* Quantity */}
+                      <div className="md:col-span-3">
+                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                          Quantity
+                        </label>
+                        <input
+                          type="number"
+                          value={newItem.quantity}
+                          onChange={(e) =>
+                            handleNewItemChange(
+                              "quantity",
+                              parseInt(e.target.value) || 1
+                            )
+                          }
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                          min="1"
+                        />
+                      </div>
+
+                      {/* Add Button */}
+                      <div className="md:col-span-3">
+                        <button
+                          onClick={addItemToOrder}
+                          disabled={!selectedProduct || newItem.quantity <= 0}
+                          className={`w-full px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                            selectedProduct && newItem.quantity > 0
+                              ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
+                              : "bg-slate-700/50 text-slate-400 cursor-not-allowed"
+                          }`}
+                        >
+                          Add Item
+                        </button>
+                      </div>
                     </div>
 
                     {/* Variant Selection */}
@@ -1361,67 +1368,6 @@ export default function EditOrderPage() {
                         </select>
                       </div>
                     )}
-
-                    {/* Quantity and Price */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Quantity
-                        </label>
-                        <input
-                          type="number"
-                          value={newItem.quantity}
-                          onChange={(e) =>
-                            handleNewItemChange(
-                              "quantity",
-                              parseInt(e.target.value) || 1
-                            )
-                          }
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                          min="1"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Unit Price
-                        </label>
-                        <input
-                          type="number"
-                          value={
-                            newItem.unit_price ||
-                            (selectedProduct?.has_variants && newItem.variant
-                              ? availableVariants.find(
-                                  (v) => v.id === parseInt(newItem.variant)
-                                )?.sell_price || 0
-                              : selectedProduct?.sell_price || 0)
-                          }
-                          onChange={(e) =>
-                            handleNewItemChange(
-                              "unit_price",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-
-                      <div className="flex items-end">
-                        <button
-                          onClick={addItemToOrder}
-                          disabled={!selectedProduct || newItem.quantity <= 0}
-                          className={`w-full px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                            selectedProduct && newItem.quantity > 0
-                              ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
-                              : "bg-slate-700/50 text-slate-400 cursor-not-allowed"
-                          }`}
-                        >
-                          Add Item
-                        </button>
-                      </div>
-                    </div>
 
                     {/* Selected Product Preview */}
                     {selectedProduct && (
@@ -1493,7 +1439,103 @@ export default function EditOrderPage() {
                 />
               </div>
             </div>
-            {/* Employee Incentive Section */}
+          </div>
+
+          {/* Right Column - Continue with Bill Summary */}
+          <div className="space-y-6">
+            {/* Bill Summary */}
+            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
+              <div className="sm:p-4 p-2">
+                <h3 className="text-lg font-semibold text-slate-200 mb-4">
+                  Bill Summary
+                </h3>
+
+                <div className="space-y-3">
+                  {/* Subtotal */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Subtotal:</span>
+                    <span className="text-slate-100">
+                      {formatCurrency(orderForm.subtotal)}
+                    </span>
+                  </div>
+
+                  {/* Discount */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Discount:</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={
+                          orderForm.discount_percentage === 0
+                            ? ""
+                            : orderForm.discount_percentage
+                        }
+                        onChange={(e) =>
+                          setOrderForm((prev) => ({
+                            ...prev,
+                            discount_percentage:
+                              parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                        placeholder=""
+                        min="0"
+                        max="100"
+                        step="0.01"
+                      />
+                      <span className="text-slate-400 text-sm">%</span>
+                      <span className="text-slate-100">
+                        -{formatCurrency(orderForm.discount_amount)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* VAT */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">VAT:</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={
+                          orderForm.vat_percentage === 0
+                            ? ""
+                            : orderForm.vat_percentage
+                        }
+                        onChange={(e) =>
+                          setOrderForm((prev) => ({
+                            ...prev,
+                            vat_percentage: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                        placeholder="0"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                      />
+                      <span className="text-slate-400 text-sm">%</span>
+                      <span className="text-slate-100">
+                        {formatCurrency(orderForm.vat_amount)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Total */}
+                  <div className="border-t border-slate-700/50 pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold text-slate-200">
+                        Total:
+                      </span>
+                      <span className="text-lg font-bold text-cyan-400">
+                        {formatCurrency(orderForm.total)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sales Incentive Section */}
             <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
               <div className="sm:p-4 p-2">
                 <button
@@ -1732,101 +1774,6 @@ export default function EditOrderPage() {
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Right Column - Continue with Bill Summary */}
-          <div className="space-y-6">
-            {/* Bill Summary */}
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-              <div className="sm:p-4 p-2">
-                <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                  Bill Summary
-                </h3>
-
-                <div className="space-y-3">
-                  {/* Subtotal */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Subtotal:</span>
-                    <span className="text-slate-100">
-                      {formatCurrency(orderForm.subtotal)}
-                    </span>
-                  </div>
-
-                  {/* Discount */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Discount:</span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={
-                          orderForm.discount_percentage === 0
-                            ? ""
-                            : orderForm.discount_percentage
-                        }
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            discount_percentage:
-                              parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        placeholder=""
-                        min="0"
-                        max="100"
-                        step="0.01"
-                      />
-                      <span className="text-slate-400 text-sm">%</span>
-                      <span className="text-slate-100">
-                        -{formatCurrency(orderForm.discount_amount)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* VAT */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">VAT:</span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={
-                          orderForm.vat_percentage === 0
-                            ? ""
-                            : orderForm.vat_percentage
-                        }
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            vat_percentage: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        placeholder="0"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                      />
-                      <span className="text-slate-400 text-sm">%</span>
-                      <span className="text-slate-100">
-                        {formatCurrency(orderForm.vat_amount)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Total */}
-                  <div className="border-t border-slate-700/50 pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold text-slate-200">
-                        Total:
-                      </span>
-                      <span className="text-lg font-bold text-cyan-400">
-                        {formatCurrency(orderForm.total)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             {/* Order Status */}
             <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
@@ -1862,24 +1809,21 @@ export default function EditOrderPage() {
               </div>
             </div>
 
-            {/* Due Date */}
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-              <div className="sm:p-4 p-2">
-                <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                  Due Date
-                </h3>
-                <input
-                  type="date"
-                  value={orderForm.due_date}
-                  onChange={(e) =>
-                    setOrderForm((prev) => ({
-                      ...prev,
-                      due_date: e.target.value,
-                    }))
-                  }
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                />
-              </div>
+            {/* Order Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancel}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700/50 hover:bg-slate-600 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSubmit("pending")}
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2 text-sm font-medium bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? "Updating..." : "Update Order"}
+              </button>
             </div>
           </div>
         </div>
