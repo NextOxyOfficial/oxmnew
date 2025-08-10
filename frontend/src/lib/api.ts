@@ -2016,7 +2016,30 @@ export class ApiService {
 
   // Banking Plan methods
   static async getBankingPlans() {
-    return this.get("/banking/plans/");
+    console.log("🚀 ApiService.getBankingPlans called");
+    console.log("🌐 Making request to:", "/banking/plans/");
+    try {
+      const result = await this.get("/banking/plans/");
+      console.log("📦 Raw API response:", result);
+
+      // Handle paginated response - extract results array
+      if (result && typeof result === "object" && "results" in result) {
+        console.log("📋 Extracted plans from results:", result.results);
+        return result.results;
+      }
+
+      // If it's already an array, return as is
+      if (Array.isArray(result)) {
+        console.log("📋 Plans already in array format:", result);
+        return result;
+      }
+
+      console.warn("⚠️ Unexpected response format, returning empty array");
+      return [];
+    } catch (error) {
+      console.error("💥 getBankingPlans API error:", error);
+      throw error;
+    }
   }
 
   static async getUserBankingPlan() {

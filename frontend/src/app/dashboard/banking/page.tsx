@@ -140,10 +140,12 @@ export default function BankingPage() {
                 try {
                   // Get banking plans to find the plan ID
                   const bankingPlans = await ApiService.getBankingPlans();
-                  const plan = bankingPlans.find(
-                    (p: { period: string; id: number }) =>
-                      p.period === pendingPlan
-                  );
+                  const plan = Array.isArray(bankingPlans)
+                    ? bankingPlans.find(
+                        (p: { period: string; id: number }) =>
+                          p.period === pendingPlan
+                      )
+                    : null;
 
                   if (plan) {
                     const activationResponse =
@@ -327,23 +329,31 @@ export default function BankingPage() {
     loadEmployees();
   }, [loadEmployees]);
 
-  // Load banking plans when payment modal opens
+  // Load banking plans when payment modal or create account modal opens
   useEffect(() => {
-    if (showPaymentModal) {
+    if (showPaymentModal || showCreateAccountModal) {
       const fetchBankingPlans = async () => {
         setIsLoadingPlans(true);
         try {
+          console.log("📞 Fetching banking plans...");
           const plans = await ApiService.getBankingPlans();
-          setBankingPlans(plans);
+          console.log("✅ Received banking plans:", plans);
+          console.log("🔍 Plans type:", typeof plans);
+          console.log("🔍 Plans isArray:", Array.isArray(plans));
+          console.log("🔍 Plans length:", plans?.length);
+
+          // Ensure we always set an array
+          setBankingPlans(Array.isArray(plans) ? plans : []);
         } catch (error) {
-          console.error("Error loading banking plans:", error);
+          console.error("❌ Error loading banking plans:", error);
+          setBankingPlans([]); // Set empty array on error
         } finally {
           setIsLoadingPlans(false);
         }
       };
       fetchBankingPlans();
     }
-  }, [showPaymentModal]);
+  }, [showPaymentModal, showCreateAccountModal]);
 
   // Debug info - temporary
   console.log("Banking Debug Info:", debugInfo, { accounts, error });
@@ -469,8 +479,16 @@ export default function BankingPage() {
         JSON.stringify(accountData)
       );
 
-      // Initiate payment
-      const planPrice = newAccount.selectedPlan === "yearly" ? 1099 : 99;
+      // Initiate payment - get price from loaded banking plans
+      let planPrice = 99; // default fallback
+      if (Array.isArray(bankingPlans) && bankingPlans.length > 0) {
+        const selectedPlan = bankingPlans.find(
+          (plan) => plan.period === newAccount.selectedPlan
+        );
+        if (selectedPlan) {
+          planPrice = selectedPlan.price;
+        }
+      }
       const orderId = `BANK-${Date.now()}-${newAccount.selectedPlan}`;
 
       const paymentData = {
@@ -1655,7 +1673,17 @@ export default function BankingPage() {
                           Monthly
                         </div>
                         <div className="text-2xl font-bold text-cyan-400 mt-1">
-                          $99
+                          {isLoadingPlans ? (
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                          ) : (
+                            `$${
+                              Array.isArray(bankingPlans)
+                                ? bankingPlans.find(
+                                    (p) => p.period === "monthly"
+                                  )?.price || 99
+                                : 99
+                            }`
+                          )}
                         </div>
                         <div className="text-xs text-slate-400 mt-1">
                           per month
@@ -1684,13 +1712,38 @@ export default function BankingPage() {
                           Yearly
                         </div>
                         <div className="text-2xl font-bold text-cyan-400 mt-1">
-                          $1099
+                          {isLoadingPlans ? (
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                          ) : (
+                            `$${
+                              Array.isArray(bankingPlans)
+                                ? bankingPlans.find(
+                                    (p) => p.period === "yearly"
+                                  )?.price || 1099
+                                : 1099
+                            }`
+                          )}
                         </div>
                         <div className="text-xs text-slate-400 mt-1">
                           per year
                         </div>
                         <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-2 py-1 rounded-full font-medium">
-                          Save $89
+                          {(() => {
+                            if (isLoadingPlans) return "Loading...";
+                            if (!Array.isArray(bankingPlans)) return "Save $89";
+                            const monthlyPlan = bankingPlans.find(
+                              (p) => p.period === "monthly"
+                            );
+                            const yearlyPlan = bankingPlans.find(
+                              (p) => p.period === "yearly"
+                            );
+                            if (monthlyPlan && yearlyPlan) {
+                              const savings =
+                                monthlyPlan.price * 12 - yearlyPlan.price;
+                              return `Save $${savings}`;
+                            }
+                            return "Save $89";
+                          })()}
                         </div>
                       </div>
                       {newAccount.selectedPlan === "yearly" && (
@@ -1794,7 +1847,16 @@ export default function BankingPage() {
                         Monthly
                       </div>
                       <div className="text-2xl font-bold text-cyan-400 mt-1">
-                        $99
+                        {isLoadingPlans ? (
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                        ) : (
+                          `$${
+                            Array.isArray(bankingPlans)
+                              ? bankingPlans.find((p) => p.period === "monthly")
+                                  ?.price || 99
+                              : 99
+                          }`
+                        )}
                       </div>
                       <div className="text-xs text-slate-400 mt-1">
                         per month
@@ -1821,13 +1883,38 @@ export default function BankingPage() {
                     <div className="text-center">
                       <div className="text-lg font-bold text-white">Yearly</div>
                       <div className="text-2xl font-bold text-cyan-400 mt-1">
-                        $1,099
+                        {isLoadingPlans ? (
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                        ) : (
+                          `$${
+                            Array.isArray(bankingPlans)
+                              ? bankingPlans
+                                  .find((p) => p.period === "yearly")
+                                  ?.price?.toLocaleString() || "1,099"
+                              : "1,099"
+                          }`
+                        )}
                       </div>
                       <div className="text-xs text-slate-400 mt-1">
                         per year
                       </div>
                       <div className="text-xs text-green-400 mt-1 font-medium">
-                        Save $89!
+                        {(() => {
+                          if (isLoadingPlans) return "Loading...";
+                          if (!Array.isArray(bankingPlans)) return "Save $89!";
+                          const monthlyPlan = bankingPlans.find(
+                            (p) => p.period === "monthly"
+                          );
+                          const yearlyPlan = bankingPlans.find(
+                            (p) => p.period === "yearly"
+                          );
+                          if (monthlyPlan && yearlyPlan) {
+                            const savings =
+                              monthlyPlan.price * 12 - yearlyPlan.price;
+                            return `Save $${savings}!`;
+                          }
+                          return "Save $89!";
+                        })()}
                       </div>
                     </div>
                     {selectedPaymentPeriod === "yearly" && (
@@ -1876,9 +1963,19 @@ export default function BankingPage() {
                   <button
                     onClick={async () => {
                       try {
-                        // Redirect to payment
-                        const planPrice =
-                          selectedPaymentPeriod === "yearly" ? 1099 : 99;
+                        // Redirect to payment - get price from loaded banking plans
+                        let planPrice = 99; // default fallback
+                        if (
+                          Array.isArray(bankingPlans) &&
+                          bankingPlans.length > 0
+                        ) {
+                          const selectedPlan = bankingPlans.find(
+                            (plan) => plan.period === selectedPaymentPeriod
+                          );
+                          if (selectedPlan) {
+                            planPrice = selectedPlan.price;
+                          }
+                        }
                         const orderId = `BANK-${Date.now()}-${selectedPaymentPeriod}`;
 
                         // Store pending plan data
