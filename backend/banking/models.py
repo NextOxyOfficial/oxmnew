@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
 from django.db import models
 from employees.models import Employee
 
@@ -95,3 +96,71 @@ class Transaction(models.Model):
             is_new or (old_status and old_status != "verified")
         ):
             self.account.update_balance(self.amount, self.type)
+
+
+class BankingPlan(models.Model):
+    """Banking account plans (monthly/yearly)"""
+
+    PERIOD_CHOICES = [
+        ("monthly", "Monthly"),
+        ("yearly", "Yearly"),
+    ]
+
+    name = models.CharField(max_length=50)
+    period = models.CharField(max_length=20, choices=PERIOD_CHOICES)
+    price = models.DecimalField(
+        max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))]
+    )
+    description = models.TextField(blank=True)
+    features = models.JSONField(default=list)
+    is_popular = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("name", "period")
+        ordering = ["price"]
+
+    def __str__(self):
+        return f"{self.name} - {self.get_period_display()}"
+
+
+class UserBankingPlan(models.Model):
+    """Track user banking plan subscriptions"""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    plan = models.ForeignKey(BankingPlan, on_delete=models.CASCADE)
+    account = models.ForeignKey(BankAccount, on_delete=models.CASCADE)
+
+    activated_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    # Payment tracking
+    payment_order_id = models.CharField(max_length=200, blank=True)
+    payment_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    payment_status = models.CharField(max_length=50, default="pending")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.plan} - {self.account.name}"
+
+    def is_plan_active(self):
+        """Check if the plan is currently active"""
+        if not self.is_active:
+            return False
+
+        if self.expires_at:
+            from django.utils import timezone
+
+            return timezone.now() <= self.expires_at
+
+        return True

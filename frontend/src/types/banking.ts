@@ -100,3 +100,30 @@ export interface CreateAccountData {
 export interface UpdateAccountData {
   name: string;
 }
+
+// Banking Plan Types
+export interface BankingPlan {
+  id: number;
+  name: string;
+  period: "monthly" | "yearly";
+  price: number;
+  description: string;
+  features: string[];
+  is_popular: boolean;
+  is_active: boolean;
+}
+
+export interface UserBankingPlan {
+  id: number;
+  user: number;
+  user_name: string;
+  plan: BankingPlan;
+  account: string;
+  account_name: string;
+  activated_at: string;
+  expires_at?: string;
+  is_active: boolean;
+  payment_order_id: string;
+  payment_amount: number;
+  payment_status: string;
+}

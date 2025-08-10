@@ -1114,23 +1114,27 @@ export class ApiService {
     return this.post(`/products/${productId}/adjust_stock/`, stockData);
   }
 
-  static async getProductStockMovements(productId?: number, params?: { page?: number; page_size?: number }) {
+  static async getProductStockMovements(
+    productId?: number,
+    params?: { page?: number; page_size?: number }
+  ) {
     let url = productId
       ? `/stock-movements/?product=${productId}`
       : "/stock-movements/";
-    
+
     // Add pagination parameters if provided
     if (params) {
       const searchParams = new URLSearchParams();
-      if (params.page) searchParams.append('page', params.page.toString());
-      if (params.page_size) searchParams.append('page_size', params.page_size.toString());
-      
+      if (params.page) searchParams.append("page", params.page.toString());
+      if (params.page_size)
+        searchParams.append("page_size", params.page_size.toString());
+
       const paramString = searchParams.toString();
       if (paramString) {
-        url += (url.includes('?') ? '&' : '?') + paramString;
+        url += (url.includes("?") ? "&" : "?") + paramString;
       }
     }
-    
+
     return this.get(url);
   }
 
@@ -1991,5 +1995,23 @@ export class ApiService {
     }
 
     return this.get(endpoint);
+  }
+
+  // Banking Plan methods
+  static async getBankingPlans() {
+    return this.get("/banking/plans/");
+  }
+
+  static async getUserBankingPlan() {
+    return this.get("/banking/user-plan/");
+  }
+
+  static async activateBankingPlan(data: {
+    account_id: string;
+    plan_id: number;
+    payment_order_id: string;
+    payment_amount: number;
+  }) {
+    return this.post("/banking/activate-plan/", data);
   }
 }

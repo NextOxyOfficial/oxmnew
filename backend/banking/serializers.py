@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from employees.models import Employee
 from rest_framework import serializers
 
-from .models import BankAccount, Transaction
+from .models import BankAccount, BankingPlan, Transaction, UserBankingPlan
 
 
 class BankAccountSerializer(serializers.ModelSerializer):
@@ -112,3 +112,42 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         # Allow negative balances - no balance check required
         return data
+
+
+class BankingPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BankingPlan
+        fields = [
+            "id",
+            "name",
+            "period",
+            "price",
+            "description",
+            "features",
+            "is_popular",
+            "is_active",
+        ]
+
+
+class UserBankingPlanSerializer(serializers.ModelSerializer):
+    plan = BankingPlanSerializer(read_only=True)
+    account_name = serializers.CharField(source="account.name", read_only=True)
+    user_name = serializers.CharField(source="user.get_full_name", read_only=True)
+
+    class Meta:
+        model = UserBankingPlan
+        fields = [
+            "id",
+            "user",
+            "user_name",
+            "plan",
+            "account",
+            "account_name",
+            "activated_at",
+            "expires_at",
+            "is_active",
+            "payment_order_id",
+            "payment_amount",
+            "payment_status",
+        ]
+        read_only_fields = ["id", "activated_at", "created_at", "updated_at"]

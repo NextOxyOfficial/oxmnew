@@ -1,17 +1,30 @@
+from datetime import timedelta
+
 from django.db.models import Q
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from employees.models import Employee
-from rest_framework import filters, status, viewsets
-from rest_framework.decorators import action
+from rest_framework import filters, generics, status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import BankAccount, Transaction
+from .models import BankAccount, BankingPlan, Transaction, UserBankingPlan
 from .serializers import (
     BankAccountSerializer,
+    BankingPlanSerializer,
     TransactionCreateSerializer,
     TransactionSerializer,
 )
+
+
+def has_active_banking_plan(user):
+    """Check if user has an active banking plan"""
+    try:
+        user_plan = UserBankingPlan.objects.get(user=user)
+        return user_plan.is_active()
+    except UserBankingPlan.DoesNotExist:
+        return False
 
 
 class BankAccountViewSet(viewsets.ModelViewSet):
@@ -54,8 +67,22 @@ class BankAccountViewSet(viewsets.ModelViewSet):
             )
 
     def perform_create(self, serializer):
-        """Set the current user as the account owner"""
-        serializer.save(owner=self.request.user)
+        """Set the current user as the account owner and check for active banking plan"""
+        user = self.request.user
+
+        # Allow creation of Main account even without banking plan
+        account_name = serializer.validated_data.get("name", "")
+        if account_name != "Main":
+            # For all other accounts, check if user has active banking plan
+            if not has_active_banking_plan(user):
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied(
+                    "You need an active banking plan to create additional accounts. "
+                    "Please purchase a banking plan first."
+                )
+
+        serializer.save(owner=user)
 
     @action(detail=False, methods=["get"])
     def my_accounts(self, request):
@@ -336,3 +363,119 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 "net_amount": total_credits - total_debits,
             }
         )
+
+
+class BankingPlanListView(generics.ListAPIView):
+    """List all active banking plans"""
+
+    queryset = BankingPlan.objects.filter(is_active=True)
+    serializer_class = BankingPlanSerializer
+    permission_classes = [IsAuthenticated]
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def activate_banking_plan(request):
+    """Activate a banking plan for a user's account after successful payment"""
+    account_id = request.data.get("account_id")
+    plan_id = request.data.get("plan_id")
+    payment_order_id = request.data.get("payment_order_id")
+    payment_amount = request.data.get("payment_amount")
+
+    if not all([account_id, plan_id, payment_order_id]):
+        return Response(
+            {
+                "success": False,
+                "message": "Account ID, Plan ID, and Payment Order ID are required",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        # Get the account and plan
+        account = BankAccount.objects.get(id=account_id, owner=request.user)
+        plan = BankingPlan.objects.get(id=plan_id, is_active=True)
+
+        # Calculate expiry date based on plan period
+        activated_at = timezone.now()
+        if plan.period == "monthly":
+            expires_at = activated_at + timedelta(days=30)
+        elif plan.period == "yearly":
+            expires_at = activated_at + timedelta(days=365)
+        else:
+            expires_at = None
+
+        # Create or update user banking plan
+        user_plan, created = UserBankingPlan.objects.get_or_create(
+            user=request.user,
+            account=account,
+            defaults={
+                "plan": plan,
+                "activated_at": activated_at,
+                "expires_at": expires_at,
+                "payment_order_id": payment_order_id,
+                "payment_amount": payment_amount,
+                "payment_status": "completed",
+                "is_active": True,
+            },
+        )
+
+        if not created:
+            # Update existing plan
+            user_plan.plan = plan
+            user_plan.activated_at = activated_at
+            user_plan.expires_at = expires_at
+            user_plan.payment_order_id = payment_order_id
+            user_plan.payment_amount = payment_amount
+            user_plan.payment_status = "completed"
+            user_plan.is_active = True
+            user_plan.save()
+
+        return Response(
+            {
+                "success": True,
+                "message": f"Successfully activated {plan.name} {plan.period} plan for account {account.name}",
+                "plan": BankingPlanSerializer(plan).data,
+                "expires_at": expires_at,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    except BankAccount.DoesNotExist:
+        return Response(
+            {
+                "success": False,
+                "message": "Bank account not found or you do not have permission to access it",
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    except BankingPlan.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Banking plan not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    except Exception as e:
+        return Response(
+            {"success": False, "message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+class UserBankingPlanView(generics.RetrieveAPIView):
+    """
+    Get current user's banking plan
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user_plan = UserBankingPlan.objects.get(user=request.user)
+            from .serializers import UserBankingPlanSerializer
+
+            return Response(UserBankingPlanSerializer(user_plan).data)
+        except UserBankingPlan.DoesNotExist:
+            return Response(
+                {"message": "No active banking plan found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )

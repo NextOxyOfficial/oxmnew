@@ -212,4 +212,68 @@ export const bankingAPI = {
       throw new Error("Failed to delete bank account");
     }
   },
+
+  // Get banking plans
+  getBankingPlans: async () => {
+    const response = await fetch(`${API_BASE_URL}/banking/plans/`, {
+      headers: bankingAPI.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch banking plans");
+    }
+
+    return response.json();
+  },
+
+  // Get user's current banking plan
+  getUserBankingPlan: async () => {
+    const response = await fetch(`${API_BASE_URL}/banking/user-plan/`, {
+      headers: bankingAPI.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch user banking plan");
+    }
+
+    return response.json();
+  },
+
+  // Activate banking plan
+  activateBankingPlan: async (data: {
+    account_id: string;
+    plan_id: number;
+    payment_order_id: string;
+    payment_amount: number;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/banking/activate-plan/`, {
+      method: "POST",
+      headers: bankingAPI.getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to activate banking plan");
+    }
+
+    return response.json();
+  },
+
+  // Verify payment
+  verifyPayment: async (orderId: string) => {
+    const response = await fetch(
+      `${API_BASE_URL}/subscription/verify-payment/`,
+      {
+        method: "POST",
+        headers: bankingAPI.getHeaders(),
+        body: JSON.stringify({ order_id: orderId }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to verify payment");
+    }
+
+    return response.json();
+  },
 };
