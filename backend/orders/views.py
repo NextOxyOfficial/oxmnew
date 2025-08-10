@@ -200,8 +200,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """
         Create a new order with items.
-        
-        For new orders, buy_price is captured from the current product/variant 
+
+        For new orders, buy_price is captured from the current product/variant
         buy_price at the time of creation. This ensures that:
         1. New invoices use the current market buy price
         2. Historical invoices maintain their original buy prices
@@ -336,7 +336,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     def update_item(self, request, pk=None, item_id=None):
         """
         Update a specific order item.
-        
+
         IMPORTANT: This method only allows updating quantity and unit_price.
         The buy_price is intentionally excluded to preserve historical pricing.
         Buy prices are locked at the time of order creation and cannot be modified
@@ -360,3 +360,118 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response(order_serializer.data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"], url_path="items")
+    def add_item(self, request, pk=None):
+        """
+        Add a new item to an existing order.
+        """
+        order = self.get_object()
+
+        # Prevent adding items to completed or cancelled orders
+        if order.status in ["completed", "cancelled"]:
+            return Response(
+                {"error": f"Cannot add items to {order.status} orders"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Create the item data with the order reference
+        item_data = request.data.copy()
+        item_data["order"] = order.id
+
+        from .serializers import OrderItemCreateSerializer
+
+        serializer = OrderItemCreateSerializer(
+            data=item_data, context={"request": request}
+        )
+
+        if serializer.is_valid():
+            # Check stock availability before creating the item
+            from products.models import Product
+
+            product_id = item_data.get("product")
+            variant_id = item_data.get("variant")
+            quantity = int(item_data.get("quantity", 0))
+
+            try:
+                product = Product.objects.get(id=product_id, user=request.user)
+
+                # Check stock
+                if product.has_variants and variant_id:
+                    variant = product.variants.get(id=variant_id)
+                    if variant.stock < quantity:
+                        return Response(
+                            {
+                                "error": f"Insufficient stock. Available: {variant.stock}, Requested: {quantity}"
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                else:
+                    if product.stock < quantity:
+                        return Response(
+                            {
+                                "error": f"Insufficient stock. Available: {product.stock}, Requested: {quantity}"
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
+                # Create the item
+                item = serializer.save()
+
+                # Update stock
+                if product.has_variants and variant_id:
+                    variant.stock -= quantity
+                    variant.save()
+                else:
+                    product.stock -= quantity
+                    product.save()
+
+                # Return updated order with all items
+                order_serializer = OrderSerializer(order, context={"request": request})
+                return Response(order_serializer.data, status=status.HTTP_201_CREATED)
+
+            except Product.DoesNotExist:
+                return Response(
+                    {"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["delete"], url_path="items/(?P<item_id>[^/.]+)")
+    def remove_item(self, request, pk=None, item_id=None):
+        """
+        Remove an item from an existing order.
+        """
+        order = self.get_object()
+
+        # Prevent removing items from completed or cancelled orders
+        if order.status in ["completed", "cancelled"]:
+            return Response(
+                {"error": f"Cannot remove items from {order.status} orders"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            item = order.items.get(id=item_id)
+
+            # Restore stock before deleting
+            if item.variant:
+                item.variant.stock += item.quantity
+                item.variant.save()
+            else:
+                item.product.stock += item.quantity
+                item.product.save()
+
+            # Delete the item
+            item.delete()
+
+            # Return updated order with all items
+            order_serializer = OrderSerializer(order, context={"request": request})
+            return Response(order_serializer.data)
+
+        except order.items.model.DoesNotExist:
+            return Response(
+                {"error": "Order item not found"}, status=status.HTTP_404_NOT_FOUND
+            )

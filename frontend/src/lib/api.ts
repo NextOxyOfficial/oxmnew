@@ -1399,6 +1399,23 @@ export class ApiService {
     return this.patch(`/orders/${orderId}/items/${itemId}/`, itemData);
   }
 
+  static async addOrderItem(
+    orderId: number,
+    itemData: {
+      product: number;
+      variant?: number;
+      quantity: number;
+      unit_price: number;
+      buy_price?: number;
+    }
+  ) {
+    return this.post(`/orders/${orderId}/items/`, itemData);
+  }
+
+  static async removeOrderItem(orderId: number, itemId: number) {
+    return this.delete(`/orders/${orderId}/items/${itemId}/`);
+  }
+
   static async deleteOrder(id: number) {
     return this.delete(`/orders/${id}/`);
   }
