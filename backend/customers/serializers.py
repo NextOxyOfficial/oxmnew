@@ -1,14 +1,15 @@
+from core.models import Achievement, Gift, Level
 from rest_framework import serializers
+
 from .models import (
     Customer,
-    CustomerGift,
     CustomerAchievement,
+    CustomerGift,
     CustomerLevel,
     DuePayment,
-    Transaction,
     SMSLog,
+    Transaction,
 )
-from core.models import Gift, Achievement, Level
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -74,7 +75,6 @@ class CustomerGiftSerializer(serializers.ModelSerializer):
             "description",
             "expiry_date",
             "used_date",
-            "used_in_order",
             "created_at",
             "updated_at",
         ]
