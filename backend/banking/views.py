@@ -377,12 +377,18 @@ class BankingPlanListView(generics.ListAPIView):
 @permission_classes([IsAuthenticated])
 def activate_banking_plan(request):
     """Activate a banking plan for a user's account after successful payment"""
+    print("=== ACTIVATE BANKING PLAN CALLED ===")
+    print(f"Request method: {request.method}")
+    print(f"Request user: {request.user}")
+    print(f"Request data: {request.data}")
+
     account_id = request.data.get("account_id")
     plan_id = request.data.get("plan_id")
     payment_order_id = request.data.get("payment_order_id")
     payment_amount = request.data.get("payment_amount")
 
     if not all([account_id, plan_id, payment_order_id]):
+        print("=== MISSING REQUIRED PARAMETERS ===")
         return Response(
             {
                 "success": False,
@@ -391,10 +397,40 @@ def activate_banking_plan(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    print("=== ALL PARAMETERS PRESENT ===")
+    print(
+        f"account_id: {account_id}, plan_id: {plan_id}, payment_order_id: {payment_order_id}"
+    )
+
     try:
-        # Get the account and plan
-        account = BankAccount.objects.get(id=account_id, owner=request.user)
+        print("=== TRYING TO GET ACCOUNT AND PLAN ===")
+
+        # First get the banking plan
         plan = BankingPlan.objects.get(id=plan_id, is_active=True)
+        print(f"Found plan: {plan}")
+
+        # Try to get the specific account first
+        account = None
+        try:
+            account = BankAccount.objects.get(id=account_id, owner=request.user)
+            print(f"Found existing account: {account}")
+        except BankAccount.DoesNotExist:
+            print(f"Account with ID {account_id} not found. Creating new account...")
+
+            # Check if user has any existing accounts
+            user_accounts = BankAccount.objects.filter(owner=request.user)
+            if user_accounts.exists():
+                # Use the first available account
+                account = user_accounts.first()
+                print(f"Using existing user account: {account}")
+            else:
+                # Create a new account for banking plan activation
+                # Use a proper default name
+                account_name = f"{request.user.first_name or request.user.username}'s Banking Account"
+                account = BankAccount.objects.create(
+                    owner=request.user, name=account_name, balance=0.00
+                )
+                print(f"Created new account: {account}")
 
         # Calculate expiry date based on plan period
         activated_at = timezone.now()
@@ -404,6 +440,8 @@ def activate_banking_plan(request):
             expires_at = activated_at + timedelta(days=365)
         else:
             expires_at = None
+
+        print(f"Calculated dates: activated_at={activated_at}, expires_at={expires_at}")
 
         # Create or update user banking plan
         user_plan, created = UserBankingPlan.objects.get_or_create(
@@ -431,17 +469,22 @@ def activate_banking_plan(request):
             user_plan.is_active = True
             user_plan.save()
 
+        print("=== ABOUT TO RETURN SUCCESS RESPONSE ===")
+        response_data = {
+            "success": True,
+            "message": f"Successfully activated {plan.name} {plan.period} plan for account {account.name}",
+            "plan": BankingPlanSerializer(plan).data,
+            "expires_at": expires_at,
+        }
+        print(f"Response data: {response_data}")
+
         return Response(
-            {
-                "success": True,
-                "message": f"Successfully activated {plan.name} {plan.period} plan for account {account.name}",
-                "plan": BankingPlanSerializer(plan).data,
-                "expires_at": expires_at,
-            },
+            response_data,
             status=status.HTTP_200_OK,
         )
 
     except BankAccount.DoesNotExist:
+        print("=== BANK ACCOUNT NOT FOUND ===")
         return Response(
             {
                 "success": False,
@@ -450,11 +493,17 @@ def activate_banking_plan(request):
             status=status.HTTP_404_NOT_FOUND,
         )
     except BankingPlan.DoesNotExist:
+        print("=== BANKING PLAN NOT FOUND ===")
         return Response(
             {"success": False, "message": "Banking plan not found"},
             status=status.HTTP_404_NOT_FOUND,
         )
     except Exception as e:
+        print(f"=== UNEXPECTED EXCEPTION: {str(e)} ===")
+        print(f"Exception type: {type(e)}")
+        import traceback
+
+        traceback.print_exc()
         return Response(
             {"success": False, "message": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -479,3 +528,32 @@ class UserBankingPlanView(generics.RetrieveAPIView):
                 {"message": "No active banking plan found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def test_banking_endpoint(request):
+    """Simple test endpoint to verify URL routing is working"""
+    return Response(
+        {
+            "message": "Banking test endpoint is working",
+            "method": request.method,
+            "user": str(request.user),
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def activate_banking_plan_v2(request):
+    """Alternative activate banking plan function for testing"""
+    print("=== ACTIVATE BANKING PLAN V2 CALLED ===")
+    return Response(
+        {
+            "success": True,
+            "message": "Banking plan activation endpoint is working (v2)",
+            "data": request.data,
+        },
+        status=status.HTTP_200_OK,
+    )

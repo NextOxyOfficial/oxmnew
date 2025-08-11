@@ -51,6 +51,7 @@ export default function BankingPage() {
     updateAccount,
     createTransaction,
     loadTransactions,
+    refreshData,
     debugInfo,
   } = useBanking();
 
@@ -328,6 +329,32 @@ export default function BankingPage() {
   useEffect(() => {
     loadEmployees();
   }, [loadEmployees]);
+
+  // Refresh banking data when page becomes visible (e.g., returning from payment)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isAuthenticated) {
+        console.log("🔄 Page became visible, refreshing banking data...");
+        refreshData();
+      }
+    };
+
+    const handleFocus = () => {
+      if (isAuthenticated) {
+        console.log("🔄 Window focused, refreshing banking data...");
+        refreshData();
+      }
+    };
+
+    // Listen for page visibility changes
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [isAuthenticated, refreshData]);
 
   // Load banking plans when payment modal or create account modal opens
   useEffect(() => {
@@ -973,13 +1000,40 @@ export default function BankingPage() {
     <div className="sm:p-6 p-1 space-y-6">
       <div className="max-w-7xl">
         {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-            Banking
-          </h1>
-          <p className="text-gray-400 text-sm sm:text-base mt-2">
-            Manage your accounts and track financial transactions
-          </p>
+        <div className="mb-6 flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Banking
+            </h1>
+            <p className="text-gray-400 text-sm sm:text-base mt-2">
+              Manage your accounts and track financial transactions
+            </p>
+          </div>
+          <button
+            onClick={refreshData}
+            disabled={loading}
+            className="px-3 py-2 bg-slate-700/50 hover:bg-slate-600/50 text-gray-300 hover:text-white text-sm font-medium rounded-lg border border-slate-600/50 hover:border-slate-500/50 transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh banking data"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            )}
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </div>
 
         {/* Error Display */}

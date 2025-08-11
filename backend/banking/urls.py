@@ -8,16 +8,26 @@ router.register(r"accounts", views.BankAccountViewSet, basename="bankaccount")
 router.register(r"transactions", views.TransactionViewSet, basename="transaction")
 
 urlpatterns = [
+    path(
+        "banking/activate-plan/",
+        views.activate_banking_plan,
+        name="activate-banking-plan",
+    ),
+    path(
+        "banking/activate-plan-v2/",
+        views.activate_banking_plan_v2,
+        name="activate-banking-plan-v2",
+    ),
+    path(
+        "banking/test/",
+        views.test_banking_endpoint,
+        name="test-banking-endpoint",
+    ),
     path("banking/", include(router.urls)),
     path("banking/plans/", views.BankingPlanListView.as_view(), name="banking-plans"),
     path(
         "banking/user-plan/",
         views.UserBankingPlanView.as_view(),
         name="user-banking-plan",
-    ),
-    path(
-        "banking/activate-plan/",
-        views.activate_banking_plan,
-        name="activate-banking-plan",
     ),
 ]

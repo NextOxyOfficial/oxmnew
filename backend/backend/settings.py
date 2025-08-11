@@ -217,7 +217,20 @@ if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
     # Add cache control for static files
     WHITENOISE_MAX_AGE = 31536000  # 1 year
-    WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz', 'br']
+    WHITENOISE_SKIP_COMPRESS_EXTENSIONS = [
+        "jpg",
+        "jpeg",
+        "png",
+        "gif",
+        "webp",
+        "zip",
+        "gz",
+        "tgz",
+        "bz2",
+        "tbz",
+        "xz",
+        "br",
+    ]
 else:
     STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
@@ -232,6 +245,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SP_USERNAME = "lyriczsoft"
 SP_PASSWORD = "lyrikskdzprvz&ud"
 SP_ENDPOINT = "https://engine.shurjopayment.com"
-SP_RETURN = "http://oxymanager.com/dashboard/subscriptions"
+# for live
+SP_RETURN = "http://oxymanager.com/dashboard/verify-payment"
 SP_CANCEL = "http://oxymanager.com/dashboard/subscriptions"
+# for development
+# SP_RETURN = "http://localhost:3000/dashboard/verify-payment"
+# SP_CANCEL = "http://localhost:3000/dashboard/subscriptions"
 SP_PREFIX = "OXMPAY_"
