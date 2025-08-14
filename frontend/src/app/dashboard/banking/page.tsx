@@ -473,7 +473,7 @@ export default function BankingPage() {
         Phone: profile?.phone || profile?.contact_number,
         Address: profile?.address,
         City: profile?.city,
-        "Post Code": profile?.post_code || profile?.zip_code,
+        "Post Code": profile?.post_code,
       };
 
       console.log("Required fields check:", requiredFields);
@@ -526,7 +526,7 @@ export default function BankingPage() {
         customer_address: profile?.address || "",
         customer_phone: profile?.phone || profile?.contact_number || "",
         customer_city: profile?.city || "",
-        customer_post_code: profile?.post_code || profile?.zip_code || "",
+        customer_post_code: profile?.post_code || "",
       };
 
       console.log("Banking payment data:", paymentData);
