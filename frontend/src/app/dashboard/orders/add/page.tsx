@@ -166,14 +166,6 @@ export default function AddOrderPage() {
     gross_profit: 0,
   });
 
-  // State for adding new items
-  const [newItem, setNewItem] = useState({
-    product: "",
-    variant: "",
-    quantity: 1,
-    unit_price: 0,
-  });
-
   useEffect(() => {
     fetchProducts();
     fetchCustomers();
@@ -220,23 +212,6 @@ export default function AddOrderPage() {
     productSearch,
     isSearchingProducts,
   ]);
-
-  // Handle new item form changes - defined early to avoid initialization issues
-  const handleNewItemChange = useCallback(
-    (field: string, value: string | number) => {
-      setNewItem((prev) => {
-        const updated = { ...prev, [field]: value };
-
-        // Reset variant when product changes
-        if (field === "product") {
-          updated.variant = "";
-        }
-
-        return updated;
-      });
-    },
-    []
-  );
 
   const fetchProducts = async () => {
     try {
@@ -346,12 +321,8 @@ export default function AddOrderPage() {
         setSearchResults([]); // Clear search results
         isActivelyTypingRef.current = false; // No longer actively typing
       }
-      // Clear selected product when searching
-      if (newItem.product) {
-        handleNewItemChange("product", "");
-      }
     },
-    [newItem.product, debouncedSearch, handleNewItemChange]
+    [debouncedSearch]
   );
 
   const handleSearchFocus = useCallback(() => {
@@ -365,8 +336,6 @@ export default function AddOrderPage() {
     isActivelyTypingRef.current = false; // User cleared, no longer actively typing
     setProductSearch("");
     setSearchResults([]); // Clear search results
-    handleNewItemChange("product", "");
-    handleNewItemChange("variant", "");
     setIsProductDropdownOpen(false);
     setError(null); // Clear any error messages
     // Clear any pending search timeout
@@ -374,16 +343,125 @@ export default function AddOrderPage() {
       clearTimeout(searchTimeout);
       setSearchTimeout(null);
     }
-  }, [searchTimeout, handleNewItemChange]);
+  }, [searchTimeout]);
 
   const handleProductSelect = useCallback(
     (productId: string, displayText: string) => {
       isActivelyTypingRef.current = false; // User selected, no longer actively typing
-      handleNewItemChange("product", productId);
-      setProductSearch(displayText);
+      
+      // Automatically add the product to the order
+      const productToAdd = products.find((p) => p.id === parseInt(productId));
+      if (!productToAdd) {
+        setError("Product not found");
+        return;
+      }
+
+      // Check stock availability
+      let availableStock = 0;
+      const requestedQuantity = 1; // Default quantity when clicking on product
+
+      if (productToAdd.has_variants) {
+        // For products with variants, we'll use the first available variant
+        const firstVariant = productToAdd.variants?.[0];
+        if (firstVariant) {
+          availableStock = firstVariant.stock || 0;
+        }
+      } else {
+        availableStock = productToAdd.stock || 0;
+      }
+
+      if (availableStock <= 0) {
+        setError("Product is out of stock");
+        setProductSearch("");
+        setIsProductDropdownOpen(false);
+        return;
+      }
+
+      // Check if the same product already exists in the order
+      const existingItemIndex = orderForm.items.findIndex(
+        (item) => item.product === parseInt(productId) && 
+        (!productToAdd.has_variants || item.variant === productToAdd.variants?.[0]?.id)
+      );
+
+      if (existingItemIndex >= 0) {
+        // Update existing item quantity
+        const existingItem = orderForm.items[existingItemIndex];
+        const newQuantity = existingItem.quantity + requestedQuantity;
+
+        if (newQuantity > availableStock) {
+          setError(
+            `Cannot add more. Maximum available: ${
+              availableStock - existingItem.quantity
+            }`
+          );
+          setProductSearch("");
+          setIsProductDropdownOpen(false);
+          return;
+        }
+
+        setOrderForm((prev) => {
+          const updatedItems = prev.items.map((item, index) =>
+            index === existingItemIndex
+              ? {
+                  ...item,
+                  quantity: newQuantity,
+                  total: newQuantity * item.unit_price,
+                }
+              : item
+          );
+          return {
+            ...prev,
+            items: updatedItems,
+          };
+        });
+      } else {
+        // Add new item
+        let unitPrice = 0;
+        let buyPrice = 0;
+        let selectedVariant = null;
+
+        if (productToAdd.has_variants && productToAdd.variants?.[0]) {
+          selectedVariant = productToAdd.variants[0];
+          unitPrice = selectedVariant.sell_price || 0;
+          buyPrice = selectedVariant.buy_price || 0;
+        } else {
+          unitPrice = productToAdd.sell_price || 0;
+          buyPrice = productToAdd.buy_price || 0;
+        }
+
+        const item: OrderItem = {
+          id: Date.now().toString(),
+          product: parseInt(productId),
+          variant: selectedVariant?.id,
+          quantity: requestedQuantity,
+          unit_price: unitPrice,
+          buy_price: buyPrice,
+          total: requestedQuantity * unitPrice,
+          product_name: productToAdd.name,
+          variant_details: selectedVariant
+            ? `${selectedVariant.color} - ${selectedVariant.size}${
+                selectedVariant.custom_variant
+                  ? ` - ${selectedVariant.custom_variant}`
+                  : ""
+              }`
+            : undefined,
+        };
+
+        setOrderForm((prev) => {
+          const newItems = [...prev.items, item];
+          return {
+            ...prev,
+            items: newItems,
+          };
+        });
+      }
+
+      // Clear search and close dropdown
+      setProductSearch("");
       setIsProductDropdownOpen(false);
+      setError(null);
     },
-    [handleNewItemChange]
+    [products, orderForm.items]
   );
 
   const handleDropdownClose = useCallback(() => {
@@ -661,146 +739,6 @@ export default function AddOrderPage() {
     }));
   };
 
-  // Add item to order
-  const addItemToOrder = () => {
-    if (!newItem.product) {
-      setError("Please select a product");
-      return;
-    }
-
-    // Use the same logic as selectedProduct calculation
-    const productToAdd = newItem.product
-      ? products.find(
-          (p) =>
-            p.id === parseInt(newItem.product) ||
-            p.id.toString() === newItem.product
-        ) ||
-        searchResults.find(
-          (p) =>
-            p.id === parseInt(newItem.product) ||
-            p.id.toString() === newItem.product
-        )
-      : null;
-
-    if (!productToAdd) {
-      setError("Selected product not found");
-      return;
-    }
-    const selectedVariant = productToAdd.variants?.find(
-      (v) => v.id === parseInt(newItem.variant)
-    );
-
-    // Check if product requires variant selection
-    if (productToAdd.has_variants && !selectedVariant) {
-      setError("Please select a variant for this product");
-      return;
-    }
-
-    // Check stock availability before adding
-    let availableStock = 0;
-    const requestedQuantity = newItem.quantity || 1;
-
-    if (productToAdd.has_variants && selectedVariant) {
-      availableStock = selectedVariant.stock || 0;
-    } else {
-      availableStock = productToAdd.stock || 0;
-    }
-
-    if (availableStock <= 0) {
-      setError("Product is out of stock");
-      return;
-    }
-
-    if (requestedQuantity > availableStock) {
-      setError(`Only ${availableStock} items available in stock`);
-      return;
-    }
-
-    // Check if the same product-variant combination already exists in the order
-    const existingItemIndex = orderForm.items.findIndex(
-      (item) =>
-        item.product === parseInt(newItem.product) &&
-        item.variant ===
-          (newItem.variant ? parseInt(newItem.variant) : undefined)
-    );
-
-    if (existingItemIndex >= 0) {
-      // Update existing item quantity
-      const existingItem = orderForm.items[existingItemIndex];
-      const newQuantity = existingItem.quantity + requestedQuantity;
-
-      if (newQuantity > availableStock) {
-        setError(
-          `Cannot add ${requestedQuantity} more. Maximum available: ${
-            availableStock - existingItem.quantity
-          }`
-        );
-        return;
-      }
-
-      setOrderForm((prev) => {
-        const updatedItems = prev.items.map((item, index) =>
-          index === existingItemIndex
-            ? {
-                ...item,
-                quantity: newQuantity,
-                total: newQuantity * item.unit_price,
-              }
-            : item
-        );
-        return {
-          ...prev,
-          items: updatedItems,
-        };
-      });
-    } else {
-      // Add new item
-      const unitPrice = selectedVariant
-        ? selectedVariant.sell_price || 0
-        : productToAdd.sell_price || 0;
-      const buyPrice = selectedVariant
-        ? selectedVariant.buy_price || 0
-        : productToAdd.buy_price || 0;
-
-      const item: OrderItem = {
-        id: Date.now().toString(),
-        product: parseInt(newItem.product),
-        variant: newItem.variant ? parseInt(newItem.variant) : undefined,
-        quantity: requestedQuantity,
-        unit_price: unitPrice,
-        buy_price: buyPrice,
-        total: requestedQuantity * unitPrice,
-        product_name: productToAdd.name,
-        variant_details: selectedVariant
-          ? `${selectedVariant.color} - ${selectedVariant.size}${
-              selectedVariant.custom_variant
-                ? ` - ${selectedVariant.custom_variant}`
-                : ""
-            }`
-          : undefined,
-      };
-
-      setOrderForm((prev) => {
-        const newItems = [...prev.items, item];
-        return {
-          ...prev,
-          items: newItems,
-        };
-      });
-    }
-
-    // Reset new item form and clear search
-    setNewItem({
-      product: "",
-      variant: "",
-      quantity: 1,
-      unit_price: 0,
-    });
-    setProductSearch(""); // Clear the search input
-    setIsProductDropdownOpen(false); // Close the dropdown
-    setError(null);
-  };
-
   // Remove item from order
   const removeItem = (itemId: string) => {
     setOrderForm((prev) => ({
@@ -1020,28 +958,6 @@ export default function AddOrderPage() {
       setIsSubmitting(false);
     }
   };
-
-  // Get selected product for new item - check both products and searchResults
-  const selectedProduct = newItem.product
-    ? products.find(
-        (p) =>
-          p.id === parseInt(newItem.product) ||
-          p.id.toString() === newItem.product
-      ) ||
-      searchResults.find(
-        (p) =>
-          p.id === parseInt(newItem.product) ||
-          p.id.toString() === newItem.product
-      )
-    : null;
-  const availableVariants = selectedProduct?.has_variants
-    ? selectedProduct.variants || []
-    : [];
-
-  // Check if button should be enabled
-  const isAddItemEnabled = Boolean(
-    selectedProduct && (!selectedProduct.has_variants || newItem.variant)
-  );
 
   // Filter customers based on search
   const filteredCustomers = customers.filter((customer) => {
@@ -1722,12 +1638,13 @@ export default function AddOrderPage() {
                     <h4 className="text-sm font-medium text-slate-300 mb-3">
                       Add New Item
                     </h4>
+                    
                     <div className="space-y-4">
                       {/* Product Search Row */}
                       <div className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1 md:flex-[2] relative">
                           <label className="block text-xs font-medium text-slate-400 mb-1">
-                            Product Search
+                            Product Search (Click product name to add to order)
                           </label>
                           <ProductSearchInput
                             ref={productSearchInputRef}
@@ -1750,161 +1667,7 @@ export default function AddOrderPage() {
                             highlightText={highlightText}
                           />
                         </div>
-
-                        {selectedProduct?.has_variants && (
-                          <div className="flex-1">
-                            <label className="block text-xs font-medium text-slate-400 mb-1">
-                              Variant
-                            </label>
-                            <select
-                              value={newItem.variant}
-                              onChange={(e) =>
-                                handleNewItemChange("variant", e.target.value)
-                              }
-                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                            >
-                              <option value="" className="bg-slate-800">
-                                Select variant
-                              </option>
-                              {availableVariants.map((variant) => (
-                                <option
-                                  key={variant.id}
-                                  value={variant.id}
-                                  className="bg-slate-800"
-                                >
-                                  {variant.color} - {variant.size}
-                                  {variant.custom_variant &&
-                                    ` - ${variant.custom_variant}`}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        <div className="flex-shrink-0">
-                          <label className="block text-xs font-medium text-slate-400 mb-1">
-                            Qty
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => {
-                                const currentQty = newItem.quantity || 1;
-                                if (currentQty > 1) {
-                                  handleNewItemChange(
-                                    "quantity",
-                                    currentQty - 1
-                                  );
-                                }
-                              }}
-                              className="w-8 h-8 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-sm"
-                            >
-                              −
-                            </button>
-                            <input
-                              type="number"
-                              value={newItem.quantity}
-                              onChange={(e) =>
-                                handleNewItemChange(
-                                  "quantity",
-                                  parseInt(e.target.value) || 1
-                                )
-                              }
-                              className="w-16 bg-slate-800/50 border border-slate-700/50 text-white text-center rounded py-2 px-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              min="1"
-                            />
-                            <button
-                              onClick={() => {
-                                const currentQty = newItem.quantity || 1;
-                                // Check stock availability
-                                if (selectedProduct) {
-                                  let availableStock = 0;
-                                  if (
-                                    selectedProduct.has_variants &&
-                                    newItem.variant
-                                  ) {
-                                    const variant = availableVariants.find(
-                                      (v) => v.id === parseInt(newItem.variant)
-                                    );
-                                    availableStock = variant?.stock || 0;
-                                  } else {
-                                    availableStock = selectedProduct.stock || 0;
-                                  }
-                                  if (currentQty < availableStock) {
-                                    handleNewItemChange(
-                                      "quantity",
-                                      currentQty + 1
-                                    );
-                                  }
-                                }
-                              }}
-                              className="w-8 h-8 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-sm"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="flex-shrink-0">
-                          <button
-                            onClick={addItemToOrder}
-                            disabled={!isAddItemEnabled}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shadow-lg whitespace-nowrap ${
-                              isAddItemEnabled
-                                ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
-                                : "bg-slate-700/50 text-slate-400 cursor-not-allowed"
-                            }`}
-                          >
-                            Add Item
-                          </button>
-                        </div>
                       </div>
-
-                      {/* Selected Product Info */}
-                      {selectedProduct && (
-                        <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/30">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h5 className="text-sm font-medium text-slate-200">
-                                {selectedProduct.name}
-                              </h5>
-                              <p className="text-xs text-slate-400">
-                                {selectedProduct.category_name} • Stock:{" "}
-                                {selectedProduct.has_variants && newItem.variant
-                                  ? availableVariants.find(
-                                      (v) => v.id === parseInt(newItem.variant)
-                                    )?.stock || 0
-                                  : selectedProduct.stock}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-medium text-cyan-400">
-                                {formatCurrency(
-                                  selectedProduct.has_variants &&
-                                    newItem.variant
-                                    ? availableVariants.find(
-                                        (v) =>
-                                          v.id === parseInt(newItem.variant)
-                                      )?.sell_price || 0
-                                    : selectedProduct.sell_price || 0
-                                )}
-                              </div>
-                              <div className="text-xs text-slate-400">
-                                Total:{" "}
-                                {formatCurrency(
-                                  (selectedProduct.has_variants &&
-                                  newItem.variant
-                                    ? availableVariants.find(
-                                        (v) =>
-                                          v.id === parseInt(newItem.variant)
-                                      )?.sell_price || 0
-                                    : selectedProduct.sell_price || 0) *
-                                    newItem.quantity
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
