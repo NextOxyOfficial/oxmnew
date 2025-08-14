@@ -190,21 +190,30 @@ export default function AddOrderPage() {
 
   // Focus management effect - restore focus when search results change
   useEffect(() => {
-    if (isSearchingProducts || searchResults.length === 0) return;
+    // Skip if still searching - let user continue typing
+    if (isSearchingProducts) return;
 
-    // Only restore focus if the dropdown is open, user is actively searching, and was actively typing
+    // Only restore focus after search completes, don't disrupt ongoing typing
     if (
       isProductDropdownOpen &&
       productSearch.trim().length >= 1 &&
+      !isSearchingProducts &&
       isActivelyTypingRef.current
     ) {
-      const timer = requestAnimationFrame(() => {
+      // Use a small delay to ensure DOM updates are complete
+      const timer = setTimeout(() => {
         if (productSearchInputRef.current) {
-          productSearchInputRef.current.focus();
+          try {
+            productSearchInputRef.current.focus();
+            // DON'T reset the actively typing flag - let user continue typing
+          } catch (error) {
+            // Silently handle focus errors (component might be unmounted)
+            console.log("Focus restoration skipped - component not available");
+          }
         }
-      });
+      }, 10); // Reduced delay for better responsiveness
 
-      return () => cancelAnimationFrame(timer);
+      return () => clearTimeout(timer);
     }
   }, [
     searchResults,
@@ -285,6 +294,7 @@ export default function AddOrderPage() {
         setSearchResults(localResults);
       } finally {
         setIsSearchingProducts(false);
+        // Mark that search is complete, keep actively typing flag for focus restoration
       }
     },
     [products]
@@ -298,7 +308,10 @@ export default function AddOrderPage() {
       }
 
       const timeout = setTimeout(() => {
-        searchProducts(query);
+        // Only search if user is still actively typing and has content
+        if (query.trim().length >= 1 && isActivelyTypingRef.current) {
+          searchProducts(query);
+        }
       }, 300); // 300ms delay
 
       setSearchTimeout(timeout);
@@ -309,17 +322,19 @@ export default function AddOrderPage() {
   // Callbacks for the search input component
   const handleSearchChange = useCallback(
     (value: string) => {
-      isActivelyTypingRef.current = true; // Mark that user is actively typing
       setProductSearch(value);
-      // Open dropdown if user has typed at least 1 character
+      
+      // Keep user actively typing while they're entering content
       if (value.trim().length >= 1) {
+        isActivelyTypingRef.current = true; // Keep this true while typing
         setIsProductDropdownOpen(true);
         // Use debounced search for backend API
         debouncedSearch(value.trim());
       } else {
+        // Only reset when completely empty
+        isActivelyTypingRef.current = false;
         setIsProductDropdownOpen(false);
         setSearchResults([]); // Clear search results
-        isActivelyTypingRef.current = false; // No longer actively typing
       }
     },
     [debouncedSearch]
@@ -329,6 +344,8 @@ export default function AddOrderPage() {
     // Open dropdown on focus if user has already typed at least 1 character
     if (productSearch.trim().length >= 1) {
       setIsProductDropdownOpen(true);
+      // Mark as actively typing when focusing with existing content
+      isActivelyTypingRef.current = true;
     }
   }, [productSearch]);
 
@@ -343,11 +360,26 @@ export default function AddOrderPage() {
       clearTimeout(searchTimeout);
       setSearchTimeout(null);
     }
+    // Keep focus on the input after clearing
+    setTimeout(() => {
+      if (productSearchInputRef.current) {
+        try {
+          productSearchInputRef.current.focus();
+          // Reset typing flag after focusing for fresh start
+          isActivelyTypingRef.current = false;
+        } catch (error) {
+          // Silently handle focus errors
+          console.log("Focus restoration after clear skipped");
+        }
+      }
+    }, 10);
   }, [searchTimeout]);
 
   const handleProductSelect = useCallback(
     (productId: string, displayText: string) => {
-      isActivelyTypingRef.current = false; // User selected, no longer actively typing
+      // Temporarily stop tracking typing while processing selection
+      const wasTyping = isActivelyTypingRef.current;
+      isActivelyTypingRef.current = false;
       
       // Automatically add the product to the order
       const productToAdd = products.find((p) => p.id === parseInt(productId));
@@ -460,11 +492,26 @@ export default function AddOrderPage() {
       setProductSearch("");
       setIsProductDropdownOpen(false);
       setError(null);
+      
+      // Refocus the search input immediately and restore typing state for continued use
+      setTimeout(() => {
+        if (productSearchInputRef.current) {
+          try {
+            productSearchInputRef.current.focus();
+            // Ready for more typing
+            isActivelyTypingRef.current = false; // Fresh start for next search
+          } catch (error) {
+            // Silently handle focus errors
+            console.log("Focus restoration after selection skipped");
+          }
+        }
+      }, 10); // Immediate focus restore
     },
     [products, orderForm.items]
   );
 
   const handleDropdownClose = useCallback(() => {
+    isActivelyTypingRef.current = false; // User closed dropdown, stop tracking
     setIsProductDropdownOpen(false);
   }, []);
 
@@ -1050,6 +1097,25 @@ export default function AddOrderPage() {
         .dropdown-scroll::-webkit-scrollbar-thumb:hover {
           background-color: rgba(148, 163, 184, 0.5);
         }
+        /* Cursor styles for better UX */
+        input, textarea, select {
+          cursor: text !important;
+        }
+        button, .clickable, [role="button"] {
+          cursor: pointer !important;
+        }
+        input[type="checkbox"], input[type="radio"] {
+          cursor: pointer !important;
+        }
+        .dropdown-item, .dropdown-option {
+          cursor: pointer !important;
+        }
+        input:disabled, textarea:disabled, select:disabled {
+          cursor: not-allowed !important;
+        }
+        button:disabled {
+          cursor: not-allowed !important;
+        }
       `}</style>
       <div className="sm:p-6 p-1 space-y-6">
         <div className="max-w-7xl">
@@ -1117,7 +1183,7 @@ export default function AddOrderPage() {
                             className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
                               customerType === "guest"
                                 ? "opacity-50 cursor-not-allowed"
-                                : ""
+                                : "cursor-text"
                             }`}
                           />
                           {/* Clear button */}
@@ -1266,7 +1332,7 @@ export default function AddOrderPage() {
                                 }));
                               }
                             }}
-                            className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2 rounded"
+                            className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2 rounded cursor-pointer"
                           />
                           <span className="text-slate-300">New Customer</span>
                         </label>
@@ -1318,7 +1384,7 @@ export default function AddOrderPage() {
                             onChange={(e) =>
                               handleCustomerChange("name", e.target.value)
                             }
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                             placeholder="Enter customer name"
                           />
                         </div>
@@ -1332,7 +1398,7 @@ export default function AddOrderPage() {
                             onChange={(e) =>
                               handleCustomerChange("company", e.target.value)
                             }
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                             placeholder="Company name (optional)"
                           />
                         </div>
@@ -1346,7 +1412,7 @@ export default function AddOrderPage() {
                             onChange={(e) =>
                               handleCustomerChange("email", e.target.value)
                             }
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                             placeholder="customer@email.com (optional)"
                           />
                         </div>
@@ -1360,7 +1426,7 @@ export default function AddOrderPage() {
                             onChange={(e) =>
                               handleCustomerChange("phone", e.target.value)
                             }
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                             placeholder="Phone number (optional)"
                           />
                         </div>
@@ -1374,7 +1440,7 @@ export default function AddOrderPage() {
                               handleCustomerChange("address", e.target.value)
                             }
                             rows={2}
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                             placeholder="Customer address (optional)"
                           />
                         </div>
