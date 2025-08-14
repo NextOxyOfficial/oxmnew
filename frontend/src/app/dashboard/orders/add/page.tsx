@@ -66,7 +66,9 @@ interface OrderForm {
   customer: CustomerInfo;
   items: OrderItem[];
   subtotal: number;
+  discount_type: "percentage" | "flat"; // New field for discount type
   discount_percentage: number;
+  discount_flat_amount: number; // New field for flat discount amount
   discount_amount: number;
   vat_percentage: number;
   vat_amount: number;
@@ -141,7 +143,9 @@ export default function AddOrderPage() {
     },
     items: [],
     subtotal: 0,
+    discount_type: "percentage",
     discount_percentage: 0,
+    discount_flat_amount: 0,
     discount_amount: 0,
     vat_percentage: 0,
     vat_amount: 0,
@@ -599,7 +603,9 @@ export default function AddOrderPage() {
   // Calculate totals
   const calculateTotals = (
     items: OrderItem[],
+    discountType: "percentage" | "flat",
     discountPercentage: number,
+    discountFlatAmount: number,
     vatPercentage: number,
     dueAmount: number,
     applyDueToTotal: boolean,
@@ -614,7 +620,12 @@ export default function AddOrderPage() {
       0
     );
     const totalSellPrice = subtotal; // Sell price is the same as subtotal before discounts
-    const discountAmount = (subtotal * discountPercentage) / 100;
+    
+    // Calculate discount amount based on type
+    const discountAmount = discountType === "percentage" 
+      ? (subtotal * discountPercentage) / 100
+      : discountFlatAmount;
+    
     const afterDiscount = subtotal - discountAmount;
     const vatAmount = (afterDiscount * vatPercentage) / 100;
     // Only subtract due amount if checkbox is checked, only add previous due if checkbox is checked
@@ -660,7 +671,9 @@ export default function AddOrderPage() {
       remainingBalance,
     } = calculateTotals(
       orderForm.items,
+      orderForm.discount_type,
       orderForm.discount_percentage,
+      orderForm.discount_flat_amount,
       orderForm.vat_percentage,
       orderForm.due_amount,
       orderForm.apply_due_to_total,
@@ -685,7 +698,9 @@ export default function AddOrderPage() {
     }));
   }, [
     orderForm.items,
+    orderForm.discount_type,
     orderForm.discount_percentage,
+    orderForm.discount_flat_amount,
     orderForm.vat_percentage,
     orderForm.due_amount,
     orderForm.apply_due_to_total,
@@ -962,7 +977,9 @@ export default function AddOrderPage() {
 
         // Order details
         status,
+        discount_type: orderForm.discount_type,
         discount_percentage: orderForm.discount_percentage,
+        discount_flat_amount: orderForm.discount_flat_amount,
         vat_percentage: orderForm.vat_percentage,
         due_amount: orderForm.due_amount,
         previous_due: orderForm.previous_due,
@@ -1762,27 +1779,89 @@ export default function AddOrderPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400">Discount:</span>
                       <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={
-                            orderForm.discount_percentage === 0
-                              ? ""
-                              : orderForm.discount_percentage
-                          }
-                          onChange={(e) =>
-                            setOrderForm((prev) => ({
-                              ...prev,
-                              discount_percentage:
-                                parseFloat(e.target.value) || 0,
-                            }))
-                          }
-                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          placeholder=""
-                          min="0"
-                          max="100"
-                          step="0.01"
-                        />
-                        <span className="text-slate-400 text-sm">%</span>
+                        {/* Discount Type Toggle */}
+                        <div className="flex items-center gap-1 mr-2">
+                          <button
+                            type="button"
+                            onClick={() => setOrderForm(prev => ({ 
+                              ...prev, 
+                              discount_type: "percentage",
+                              discount_flat_amount: 0 // Reset flat amount when switching
+                            }))}
+                            className={`px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
+                              orderForm.discount_type === "percentage"
+                                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                : "bg-slate-700/50 text-slate-400 border border-slate-600/50 hover:bg-slate-600/50"
+                            }`}
+                          >
+                            %
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOrderForm(prev => ({ 
+                              ...prev, 
+                              discount_type: "flat",
+                              discount_percentage: 0 // Reset percentage when switching
+                            }))}
+                            className={`px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
+                              orderForm.discount_type === "flat"
+                                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                : "bg-slate-700/50 text-slate-400 border border-slate-600/50 hover:bg-slate-600/50"
+                            }`}
+                          >
+                            $
+                          </button>
+                        </div>
+
+                        {orderForm.discount_type === "percentage" ? (
+                          <>
+                            <input
+                              type="number"
+                              value={
+                                orderForm.discount_percentage === 0
+                                  ? ""
+                                  : orderForm.discount_percentage
+                              }
+                              onChange={(e) =>
+                                setOrderForm((prev) => ({
+                                  ...prev,
+                                  discount_percentage:
+                                    parseFloat(e.target.value) || 0,
+                                }))
+                              }
+                              className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              placeholder=""
+                              min="0"
+                              max="100"
+                              step="0.01"
+                            />
+                            <span className="text-slate-400 text-sm">%</span>
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="number"
+                              value={
+                                orderForm.discount_flat_amount === 0
+                                  ? ""
+                                  : orderForm.discount_flat_amount
+                              }
+                              onChange={(e) =>
+                                setOrderForm((prev) => ({
+                                  ...prev,
+                                  discount_flat_amount:
+                                    parseFloat(e.target.value) || 0,
+                                }))
+                              }
+                              className="w-20 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              placeholder="0"
+                              min="0"
+                              step="0.01"
+                            />
+                            <span className="text-slate-400 text-sm">$</span>
+                          </>
+                        )}
+                        
                         <span className="text-slate-100">
                           -{formatCurrency(orderForm.discount_amount)}
                         </span>
