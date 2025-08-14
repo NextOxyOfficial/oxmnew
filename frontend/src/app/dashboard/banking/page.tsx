@@ -451,8 +451,17 @@ export default function BankingPage() {
           setShowCreateAccountModal(false);
           return;
         }
-      } catch (error) {
+      } catch (error: any) {
         // No active plan found, need to purchase
+        console.log("No active banking plan found, will need to purchase:", error);
+        
+        // If it's a 404 error (no plan found), continue to payment process
+        // If it's another error, show it to the user
+        if (error?.response?.status !== 404) {
+          console.error("Error checking banking plan:", error);
+          alert("Error checking banking plan. Please try again.");
+          return;
+        }
       }
 
       // User doesn't have active plan, initiate payment process
