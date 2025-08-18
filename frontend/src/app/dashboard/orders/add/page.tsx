@@ -386,7 +386,8 @@ export default function AddOrderPage() {
       isActivelyTypingRef.current = false;
       
       // Automatically add the product to the order
-      const productToAdd = products.find((p) => p.id === parseInt(productId));
+      const productToAdd = products.find((p) => p.id === parseInt(productId)) ||
+                          searchResults.find((p) => p.id === parseInt(productId));
       if (!productToAdd) {
         setError("Product not found");
         return;
