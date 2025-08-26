@@ -385,11 +385,19 @@ export default function AddOrderPage() {
       const wasTyping = isActivelyTypingRef.current;
       isActivelyTypingRef.current = false;
       
+      console.log("=== PRODUCT SELECTION DEBUG ===");
+      console.log("Selected product ID:", productId);
+      console.log("Products array length:", products.length);
+      console.log("Search results length:", searchResults.length);
+      
       // Automatically add the product to the order
       const productToAdd = products.find((p) => p.id === parseInt(productId)) ||
                           searchResults.find((p) => p.id === parseInt(productId));
       if (!productToAdd) {
-        setError("Product not found");
+        console.log("ERROR: Product not found - refreshing products list");
+        // Refresh the products list
+        fetchProducts();
+        setError("Product not found. Products list refreshed - please try again.");
         return;
       }
 
