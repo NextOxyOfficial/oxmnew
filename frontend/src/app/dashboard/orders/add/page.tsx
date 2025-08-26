@@ -255,7 +255,6 @@ export default function AddOrderPage() {
       try {
         setIsSearchingProducts(true);
         const response = await ApiService.searchProducts(query.trim());
-        console.log("Search API response:", response);
         const results = Array.isArray(response)
           ? response
           : response?.results || [];
@@ -380,25 +379,40 @@ export default function AddOrderPage() {
   }, [searchTimeout]);
 
   const handleProductSelect = useCallback(
-    (productId: string, displayText: string) => {
+    async (productId: string, displayText: string) => {
       // Temporarily stop tracking typing while processing selection
       const wasTyping = isActivelyTypingRef.current;
       isActivelyTypingRef.current = false;
       
-      console.log("=== PRODUCT SELECTION DEBUG ===");
-      console.log("Selected product ID:", productId);
-      console.log("Products array length:", products.length);
-      console.log("Search results length:", searchResults.length);
+      // Try to find the product in both arrays
+      let productFromMain = products.find((p) => p.id === parseInt(productId));
+      let productFromSearch = searchResults.find((p) => p.id === parseInt(productId));
       
-      // Automatically add the product to the order
-      const productToAdd = products.find((p) => p.id === parseInt(productId)) ||
-                          searchResults.find((p) => p.id === parseInt(productId));
+      let productToAdd = productFromMain || productFromSearch;
+      
+      // If not found in either array, try to fetch it directly from the backend
       if (!productToAdd) {
-        console.log("ERROR: Product not found - refreshing products list");
-        // Refresh the products list
-        fetchProducts();
-        setError("Product not found. Products list refreshed - please try again.");
+        try {
+          const fetchedProduct = await ApiService.getProduct(parseInt(productId));
+          if (fetchedProduct) {
+            productToAdd = fetchedProduct;
+            // Add it to the main products array for future reference
+            setProducts(prev => [...prev, fetchedProduct]);
+          }
+        } catch (error) {
+          console.error("Failed to fetch product:", error);
+        }
+      }
+      
+      if (!productToAdd) {
+        setError("Product not found. Please try searching again.");
         return;
+      }
+      
+      // If product was found in search results but not in main products array,
+      // add it to the main products array for future reference
+      if (!productFromMain && productFromSearch) {
+        setProducts(prev => [...prev, productFromSearch]);
       }
 
       // Check stock availability
@@ -520,7 +534,7 @@ export default function AddOrderPage() {
         }
       }, 10); // Immediate focus restore
     },
-    [products, orderForm.items]
+    [products, searchResults, orderForm.items]
   );
 
   const handleDropdownClose = useCallback(() => {
