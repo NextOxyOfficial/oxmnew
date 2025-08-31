@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurrency, useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { useBanking } from "@/hooks/useBanking";
 import { ApiService } from "@/lib/api";
 import type {
@@ -31,6 +32,8 @@ import { useCallback, useEffect, useState } from "react";
 
 export default function BankingPage() {
   const { isAuthenticated, loading: authLoading, user, profile } = useAuth();
+  const { currency } = useCurrency();
+  const formatCurrency = useCurrencyFormatter();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -414,14 +417,6 @@ export default function BankingPage() {
     );
   }
 
-  const formatCurrency = (amount: number) => {
-    const safeAmount = Number(amount) || 0;
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(safeAmount);
-  };
-
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAccount.name) return;
@@ -530,7 +525,7 @@ export default function BankingPage() {
       const paymentData = {
         amount: planPrice,
         order_id: orderId,
-        currency: "BDT",
+        currency: currency,
         customer_name: `${user.first_name} ${user.last_name || ""}`.trim(),
         customer_address: profile?.address || "",
         customer_phone: profile?.phone || profile?.contact_number || "",
@@ -626,7 +621,7 @@ export default function BankingPage() {
       const paymentData = {
         amount: planPrice,
         order_id: uniqueOrderId,
-        currency: "BDT",
+        currency: currency,
         customer_name: `${firstName} ${lastName}`.trim(),
         customer_address: address,
         customer_phone: phone,
