@@ -1142,14 +1142,23 @@ export default function AddOrderPage() {
         button:disabled {
           cursor: not-allowed !important;
         }
+        /* Ensure body and html have dark background */
+        body {
+          background-color: rgb(15, 23, 42) !important; /* slate-900 equivalent */
+        }
+        /* When dropdown is open, ensure page height is adequate */
+        .dropdown-page {
+          min-height: calc(100vh + 400px);
+        }
       `}</style>
-      <div className="sm:p-6 p-1 space-y-6">
-        <div className="max-w-7xl">
-          {/* Page Header */}
+      <div className={`min-h-screen bg-slate-900 ${isProductDropdownOpen ? 'dropdown-page' : ''}`}>
+        <div className="sm:p-6 p-1 space-y-6">
+          <div className="max-w-7xl">
+            {/* Page Header */}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Customer Info & Items */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-6 overflow-visible">
               {/* Customer Information */}
               <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
                 <div className="sm:p-4 p-2">
@@ -1477,7 +1486,7 @@ export default function AddOrderPage() {
               </div>
 
               {/* Order Items */}
-              <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
+              <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-visible">
                 <div className="sm:p-4 p-2">
                   <h3 className="text-lg font-semibold text-slate-200 mb-4">
                     Order Items
@@ -1731,7 +1740,7 @@ export default function AddOrderPage() {
                       Add New Item
                     </h4>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-4 pb-20">
                       {/* Product Search Row */}
                       <div className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1 md:flex-[2] relative">
@@ -2450,6 +2459,7 @@ export default function AddOrderPage() {
           </div>
         </div>
       </div>
+    </div>
     </>
   );
 }
