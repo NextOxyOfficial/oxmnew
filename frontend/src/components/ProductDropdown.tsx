@@ -42,10 +42,12 @@ const ProductDropdown = memo<ProductDropdownProps>(
     return (
       <>
         <div
-          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl"
+          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-80 overflow-hidden"
           style={{
             bottom: "auto",
             top: "100%",
+            backgroundColor: "rgb(30 41 59)", // Explicit slate-800 background
+            borderColor: "rgb(51 65 85)", // Explicit slate-700 border
           }}
         >
           {isLoading || isSearching ? (
@@ -158,8 +160,12 @@ const ProductDropdown = memo<ProductDropdownProps>(
           )}
         </div>
 
-        {/* Click outside to close dropdown */}
-        <div className="fixed inset-0 z-5" onClick={onClose} />
+        {/* Click outside to close dropdown - transparent backdrop */}
+        <div 
+          className="fixed inset-0 z-40 bg-black bg-opacity-0" 
+          onClick={onClose} 
+          style={{ backgroundColor: 'transparent' }}
+        />
       </>
     );
   },

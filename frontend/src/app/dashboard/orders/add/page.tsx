@@ -8,7 +8,7 @@ import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Product } from "@/types/product";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 
 // Customer interface
 interface Customer {
@@ -192,39 +192,25 @@ export default function AddOrderPage() {
     };
   }, [searchTimeout]);
 
-  // Focus management effect - restore focus when search results change
+  // Simplified focus management - only restore focus when necessary
   useEffect(() => {
-    // Skip if still searching - let user continue typing
-    if (isSearchingProducts) return;
-
-    // Only restore focus after search completes, don't disrupt ongoing typing
-    if (
-      isProductDropdownOpen &&
-      productSearch.trim().length >= 1 &&
-      !isSearchingProducts &&
-      isActivelyTypingRef.current
-    ) {
-      // Use a small delay to ensure DOM updates are complete
+    // Only restore focus if the dropdown just opened and input should have focus
+    if (isProductDropdownOpen && productSearch.trim().length >= 1 && !isSearchingProducts) {
+      // Use a minimal delay to ensure smooth typing experience
       const timer = setTimeout(() => {
         if (productSearchInputRef.current) {
           try {
             productSearchInputRef.current.focus();
-            // DON'T reset the actively typing flag - let user continue typing
           } catch (error) {
-            // Silently handle focus errors (component might be unmounted)
+            // Silently handle focus errors
             console.log("Focus restoration skipped - component not available");
           }
         }
-      }, 10); // Reduced delay for better responsiveness
+      }, 50); // Minimal delay
 
       return () => clearTimeout(timer);
     }
-  }, [
-    searchResults,
-    isProductDropdownOpen,
-    productSearch,
-    isSearchingProducts,
-  ]);
+  }, [isProductDropdownOpen, productSearch]);
 
   const fetchProducts = async () => {
     try {
@@ -311,11 +297,11 @@ export default function AddOrderPage() {
       }
 
       const timeout = setTimeout(() => {
-        // Only search if user is still actively typing and has content
-        if (query.trim().length >= 1 && isActivelyTypingRef.current) {
+        // Search if query has content (removed the actively typing check to make it more responsive)
+        if (query.trim().length >= 1) {
           searchProducts(query);
         }
-      }, 300); // 300ms delay
+      }, 250); // Reduced delay from 300ms to 250ms for better responsiveness
 
       setSearchTimeout(timeout);
     },

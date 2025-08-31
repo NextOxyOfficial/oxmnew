@@ -48,9 +48,9 @@ const ProductSearchInput = forwardRef<
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={onFocus}
-        disabled={isLoading || isSearching}
+        disabled={isLoading} // Only disable when loading initial data, not during search
         className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-24 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 truncate ${
-          isLoading || isSearching ? "opacity-75 cursor-wait" : ""
+          isLoading ? "opacity-75 cursor-wait" : isSearching ? "opacity-90" : ""
         }`}
       />
       {/* Clear button */}
