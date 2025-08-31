@@ -19,7 +19,7 @@ import React, { useEffect, useState } from "react";
 interface Product {
   id: number;
   name: string;
-  sku: string;
+  product_code?: string;
   category: string;
   stock: number;
   price: number;
@@ -249,6 +249,7 @@ export default function ProductDetailsPage() {
         console.log("Fetching product details for ID:", productId);
         const productData = await ApiService.getProduct(parseInt(productId));
         console.log("Product response:", productData);
+        console.log("Product product_code:", productData?.product_code);
         console.log("Product variants:", productData?.variants);
 
         setProduct(productData);
@@ -532,9 +533,14 @@ export default function ProductDetailsPage() {
             <div className="w-full lg:w-2/5 p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-slate-700/50 bg-slate-800/10">
               {/* Product Name */}
               <div className="mb-6">
-                <h3 className="text-xl font-bold text-white mb-4">
+                <h3 className="text-xl font-bold text-white mb-2">
                   {product.name}
                 </h3>
+                {product.product_code && (
+                  <p className="text-cyan-400 text-sm font-medium mb-4">
+                    {product.product_code}
+                  </p>
+                )}
 
                 {/* Pricing Information */}
                 {(!product.variants || product.variants.length === 0) && (
@@ -667,7 +673,7 @@ export default function ProductDetailsPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-slate-400 mb-1">SKU</p>
-                    <p className="text-white font-medium">{product.sku}</p>
+                    <p className="text-white font-medium">{product.product_code || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-slate-400 mb-1">Stock</p>
@@ -926,7 +932,7 @@ export default function ProductDetailsPage() {
                               </div>
                               {variant.sku_suffix && (
                                 <div className="text-xs text-slate-500">
-                                  {product.sku}-{variant.sku_suffix}
+                                  {product.product_code}-{variant.sku_suffix}
                                 </div>
                               )}
                             </div>
