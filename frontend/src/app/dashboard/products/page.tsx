@@ -4,11 +4,12 @@ import Pagination from "@/components/ui/Pagination";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Product, ProductVariant } from "@/types/product";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const formatCurrency = useCurrencyFormatter();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -37,11 +38,23 @@ export default function ProductsPage() {
     message: string;
   }>({ isVisible: false, type: "success", message: "" });
 
-  // Pagination state
+  // Pagination state - initialize from URL parameters
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+
+  // Initialize pagination from URL on first load
+  useEffect(() => {
+    const pageParam = searchParams.get('page');
+    const sizeParam = searchParams.get('pageSize');
+    
+    const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
+    const urlPageSize = sizeParam ? parseInt(sizeParam, 10) : 10;
+    
+    setCurrentPage(urlPage);
+    setPageSize(urlPageSize);
+  }, []); // Only run once on mount
 
   // Overall statistics (not affected by search/filter)
   const [overallStats, setOverallStats] = useState({
@@ -57,6 +70,33 @@ export default function ProductsPage() {
     setTimeout(() => {
       setNotification({ isVisible: false, type: "success", message: "" });
     }, 5000);
+  };
+
+  // Function to update URL parameters
+  const updateUrlParams = (updates: { page?: number; pageSize?: number }) => {
+    const current = new URLSearchParams(searchParams);
+    
+    if (updates.page !== undefined) {
+      if (updates.page === 1) {
+        current.delete('page'); // Remove page=1 to keep URLs clean
+      } else {
+        current.set('page', updates.page.toString());
+      }
+    }
+    
+    if (updates.pageSize !== undefined) {
+      if (updates.pageSize === 10) {
+        current.delete('pageSize'); // Remove default page size to keep URLs clean
+      } else {
+        current.set('pageSize', updates.pageSize.toString());
+      }
+    }
+
+    const search = current.toString();
+    const query = search ? `?${search}` : '';
+    
+    // Use replace to avoid adding to browser history for every page change
+    router.replace(`/dashboard/products${query}`, { scroll: false });
   };
 
   // Debounce search input to prevent excessive API calls
@@ -366,16 +406,39 @@ export default function ProductsPage() {
   // Pagination handlers
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+    updateUrlParams({ page });
   };
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentPage(1); // Reset to first page when changing page size
+    updateUrlParams({ page: 1, pageSize: newPageSize });
   };
 
-  // Reset to first page when search or filter changes
+  // Handle URL parameter changes (browser back/forward navigation and page reloads)
   useEffect(() => {
-    setCurrentPage(1);
+    const pageParam = searchParams.get('page');
+    const sizeParam = searchParams.get('pageSize');
+    
+    const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
+    const urlPageSize = sizeParam ? parseInt(sizeParam, 10) : 10;
+    
+    // Only update state if it's different from URL to avoid loops
+    if (urlPage !== currentPage) {
+      setCurrentPage(urlPage);
+    }
+    
+    if (urlPageSize !== pageSize) {
+      setPageSize(urlPageSize);
+    }
+  }, [searchParams.toString()]); // Use toString() to avoid reference issues
+
+  // Reset to first page when search or filter changes (but don't update URL here to avoid conflicts)
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      updateUrlParams({ page: 1 });
+    }
   }, [searchTerm, filterCategory, sortBy]);
 
   // Products are already filtered and sorted by the backend, so we use them directly
@@ -1670,5 +1733,40 @@ export default function ProductsPage() {
         </div>
       </div>
     </>
+  );
+}
+
+// Loading component for Suspense fallback
+function ProductsPageLoading() {
+  return (
+    <div className="sm:p-6 p-1 space-y-6">
+      <div className="max-w-7xl">
+        {/* Loading skeleton */}
+        <div className="animate-pulse">
+          <div className="h-8 bg-slate-700 rounded w-48 mb-6"></div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4"
+              >
+                <div className="h-4 bg-slate-700 rounded mb-2"></div>
+                <div className="h-8 bg-slate-700 rounded mb-2"></div>
+                <div className="h-3 bg-slate-700 rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main component wrapped with Suspense
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<ProductsPageLoading />}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }
