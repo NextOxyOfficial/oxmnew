@@ -48,7 +48,7 @@ def create_dummy_products(email):
     if created:
         print("Created default supplier: Default Supplier")
 
-    # Product templates
+    # Product templates - expanded to 50 products
     products_data = [
         "Wireless Headphones",
         "Smart LED Bulb", 
@@ -79,7 +79,27 @@ def create_dummy_products(email):
         "Lip Balm",
         "Puzzle Game",
         "Phone Mount",
-        "Protein Powder"
+        "Protein Powder",
+        "Bluetooth Speaker",
+        "Smart Watch",
+        "Gaming Keyboard",
+        "Desk Organizer",
+        "Plant Pot",
+        "Moisturizer",
+        "Hair Conditioner",
+        "Cookbook",
+        "Frying Pan",
+        "Garden Gloves",
+        "Remote Control Car",
+        "Lego Set",
+        "Car Phone Charger",
+        "Brake Fluid",
+        "Calcium Supplements",
+        "Face Mask",
+        "Sticky Notes",
+        "Wireless Charger",
+        "Screen Protector",
+        "Baseball Cap"
     ]
 
     created_count = 0
@@ -119,4 +139,4 @@ def create_dummy_products(email):
     print(f"Total products in account: {total_products}")
 
 if __name__ == "__main__":
-    create_dummy_products("alimulislam510@gmail.com")
+    create_dummy_products("johndd44@gmail.com")

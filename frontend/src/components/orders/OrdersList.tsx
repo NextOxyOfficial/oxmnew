@@ -3,6 +3,7 @@
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { Order } from "@/types/order";
 import React from "react";
+import { useRouter } from "next/navigation";
 
 interface OrdersListProps {
   orders: Order[];
@@ -34,7 +35,21 @@ const OrdersList: React.FC<OrdersListProps> = ({
   onAddOrder,
 }) => {
   const formatCurrency = useCurrencyFormatter();
+  const router = useRouter();
   console.log("OrdersList re-rendered");
+
+  // Navigate to invoice page
+  const handleViewInvoice = (order: Order, e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/dashboard/orders/invoice/${order.id}`);
+  };
+
+  // Print invoice by navigating to invoice page
+  const handlePrintInvoice = (order: Order, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Open invoice page in new tab for printing
+    window.open(`/dashboard/orders/invoice/${order.id}`, '_blank');
+  };
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -179,7 +194,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
             <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
               <div
                 className="flex items-center gap-2 cursor-pointer hover:text-cyan-400 transition-colors"
-                onClick={(e) => onViewInvoice(order, e)}
+                onClick={(e) => handleViewInvoice(order, e)}
                 title="View Invoice"
               >
                 <svg
@@ -203,7 +218,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   className="p-2 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
-                  onClick={(e) => onPrintInvoice(order, e)}
+                  onClick={(e) => handlePrintInvoice(order, e)}
                   title="Print Invoice"
                 >
                   <svg
@@ -366,7 +381,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
                     <div className="flex items-center gap-2">
                       <button
                         className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
-                        onClick={(e) => onViewInvoice(order, e)}
+                        onClick={(e) => handleViewInvoice(order, e)}
                         title="View Invoice"
                       >
                         <svg
