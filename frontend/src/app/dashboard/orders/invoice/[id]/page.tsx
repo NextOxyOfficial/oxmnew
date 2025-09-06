@@ -228,7 +228,23 @@ export default function InvoicePage() {
   };
 
   const subtotal = calculateSubtotal();
-  const discountAmount = Number(order.discount_amount) || 0;
+  
+  // Calculate discount amount dynamically
+  let discountAmount = 0;
+  if (order.discount_amount && Number(order.discount_amount) > 0) {
+    // Use explicit discount amount from backend
+    discountAmount = Number(order.discount_amount);
+    console.log("Using order.discount_amount:", discountAmount);
+  } else if (order.discount_percentage && Number(order.discount_percentage) > 0) {
+    // Calculate discount from percentage
+    discountAmount = (subtotal * Number(order.discount_percentage)) / 100;
+    console.log("Calculated discount from percentage:", {
+      subtotal,
+      discount_percentage: order.discount_percentage,
+      calculated_discount: discountAmount
+    });
+  }
+  
   const vatRate = Number(order.vat_percentage) || 0;
   const vatAmount = Number(order.vat_amount) || (subtotal * (vatRate / 100));
   
