@@ -413,12 +413,52 @@ function ProductsPageContent() {
         downloadingExcel: true,
       }));
 
-      // Fetch all products without pagination
-      const allProductsData = await ApiService.getProducts({
-        page_size: 10000, // Large number to get all products
-      });
+      // Fetch all products with pagination to ensure we get everything
+      let allProducts: Product[] = [];
+      let currentPage = 1;
+      let hasMoreData = true;
+      const pageSize = 100; // Use larger page size for efficiency
 
-      const allProducts = allProductsData.results || allProductsData || [];
+      while (hasMoreData) {
+        try {
+          const productsData = await ApiService.getProducts({
+            page: currentPage,
+            page_size: pageSize,
+          });
+
+          if (productsData.results) {
+            // Paginated response
+            allProducts = [...allProducts, ...productsData.results];
+            hasMoreData = productsData.next !== null; // Check if there's a next page
+            currentPage++;
+          } else {
+            // Non-paginated response (fallback)
+            const productsList = Array.isArray(productsData) ? productsData : [];
+            allProducts = [...allProducts, ...productsList];
+            hasMoreData = false;
+          }
+
+          // Safety check to prevent infinite loops
+          if (currentPage > 1000) {
+            console.warn('Reached maximum page limit (1000) while fetching products');
+            break;
+          }
+        } catch (pageError) {
+          console.error(`Error fetching page ${currentPage}:`, pageError);
+          // If we have some products already, continue with those
+          if (allProducts.length > 0) {
+            console.warn(`Continuing with ${allProducts.length} products fetched so far`);
+            break;
+          } else {
+            throw pageError; // Re-throw if we have no products at all
+          }
+        }
+      }
+
+      if (allProducts.length === 0) {
+        showNotification('error', 'No products found to download');
+        return;
+      }
 
       // Prepare data for Excel
       const excelData = allProducts.map((product: Product) => {
@@ -438,6 +478,9 @@ function ProductsPageContent() {
           'Has Variants': product.has_variants ? 'Yes' : 'No',
           'Status': product.is_active ? 'Active' : 'Inactive',
           'Description': product.details || '',
+          'Supplier': product.supplier_name || '',
+          'Location': product.location || '',
+          'Created Date': product.created_at ? new Date(product.created_at).toLocaleDateString() : '',
         };
       });
 
@@ -459,23 +502,26 @@ function ProductsPageContent() {
         { wch: 12 }, // Has Variants
         { wch: 10 }, // Status
         { wch: 30 }, // Description
+        { wch: 20 }, // Supplier
+        { wch: 15 }, // Location
+        { wch: 12 }, // Created Date
       ];
       worksheet['!cols'] = columnWidths;
 
       // Add worksheet to workbook
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
 
-      // Generate filename with current date
+      // Generate filename with current date and total count
       const currentDate = new Date().toISOString().split('T')[0];
-      const filename = `products_${currentDate}.xlsx`;
+      const filename = `products_${allProducts.length}_items_${currentDate}.xlsx`;
 
       // Download the file
       XLSX.writeFile(workbook, filename);
 
-      showNotification('success', `Products list downloaded successfully as ${filename}`);
+      showNotification('success', `Successfully downloaded ${allProducts.length} products as ${filename}`);
     } catch (error) {
       console.error('Error downloading Excel file:', error);
-      showNotification('error', 'Failed to download products list');
+      showNotification('error', 'Failed to download products list. Please try again.');
     } finally {
       setLoadingStates((prev) => ({
         ...prev,
