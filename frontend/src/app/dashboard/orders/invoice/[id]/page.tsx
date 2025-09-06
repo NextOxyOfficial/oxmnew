@@ -63,27 +63,43 @@ export default function InvoicePage() {
         let userProfile = undefined;
         try {
           const profileData = await ApiService.getProfile();
-          console.log("Profile data received:", profileData); // Debug log
+          console.log("Full profile data received:", JSON.stringify(profileData, null, 2)); // Debug log
           
           userProfile = {
-            store_logo: profileData.profile.store_logo || ""
+            store_logo: profileData.profile?.store_logo || ""
           };
           
           // Update company data from backend profile if available
           if (profileData.profile) {
             const profile = profileData.profile;
-            console.log("Profile fields:", Object.keys(profile)); // Debug log
+            console.log("Profile fields available:", Object.keys(profile)); // Debug log
+            console.log("Company name fields:", {
+              company_name: profile.company_name,
+              store_name: profile.store_name,
+              name: profile.name,
+              first_name: profile.first_name,
+              last_name: profile.last_name
+            }); // Debug log
+            
+            // Try multiple possible company name fields
+            const possibleName = profileData.profile.company || 
+                                profile.store_name || 
+                                profile.business_name ||
+                                profile.name || 
+                                (profile.first_name && profile.last_name ? `${profile.first_name} ${profile.last_name}` : null) ||
+                                profile.first_name ||
+                                companyData.name;
             
             companyData = {
-              name: profile.company_name || profile.store_name || profile.name || companyData.name,
-              address: profile.company_address || profile.address || companyData.address,
-              city: profile.company_city || profile.city || companyData.city,
-              phone: profile.company_phone || profile.phone || companyData.phone,
-              email: profile.company_email || profile.email || companyData.email,
-              website: profile.company_website || profile.website || companyData.website
+              name: possibleName,
+              address: profile.company_address || profile.business_address || profile.address || companyData.address,
+              city: profile.company_city || profile.business_city || profile.city || companyData.city,
+              phone: profile.company_phone || profile.business_phone || profile.phone || companyData.phone,
+              email: profile.company_email || profile.business_email || profile.email || companyData.email,
+              website: profile.company_website || profile.business_website || profile.website || companyData.website
             };
             
-            console.log("Updated company data:", companyData); // Debug log
+            console.log("Final company data:", companyData); // Debug log
           }
         } catch (error) {
           console.error("Error loading user profile:", error);
@@ -163,21 +179,42 @@ export default function InvoicePage() {
   // Calculate totals dynamically based on order data
   const calculateSubtotal = () => {
     if (order.items && order.items.length > 0) {
+      // Multi-item order: sum all item totals
       return order.items.reduce((sum, item) => {
-        return sum + (item.total_price || (item.quantity * item.unit_price));
+        const itemTotal = item.total_price || (item.quantity * item.unit_price) || 0;
+        return sum + itemTotal;
       }, 0);
     }
-    // Fallback to single product order
+    // Single product order: use order total or calculate from order fields
     return order.total_amount || (order.quantity * order.unit_price) || 0;
   };
 
   const subtotal = calculateSubtotal();
+  console.log("Calculation debug:", {
+    orderHasItems: !!(order.items && order.items.length > 0),
+    itemsCount: order.items?.length || 0,
+    orderTotalAmount: order.total_amount,
+    orderQuantity: order.quantity,
+    orderUnitPrice: order.unit_price,
+    calculatedSubtotal: subtotal
+  });
+
   const discountAmount = order.discount_amount || 0;
   const vatRate = order.vat_percentage || 0; // VAT percentage from order
   const vatAmount = order.vat_amount || (subtotal * (vatRate / 100));
   const total = subtotal + vatAmount - discountAmount;
   const paidAmount = order.paid_amount || 0;
   const dueAmount = Math.max(0, total - paidAmount);
+
+  console.log("Final totals:", {
+    subtotal,
+    discountAmount,
+    vatRate,
+    vatAmount,
+    total,
+    paidAmount,
+    dueAmount
+  });
 
   return (
     <>
@@ -434,9 +471,9 @@ export default function InvoicePage() {
           {/* Bottom Section */}
           <div className="px-8 py-4 print:px-6 print:py-2">
             <div className="flex justify-between">
-              {/* Footer Text */}
+              {/* Thank you message on the left */}
               <div className="w-1/2">
-                <div className="text-sm mt-4 text-gray-600 print:text-black space-y-2">
+                <div className="text-sm mt-4 text-gray-600 print:text-black">
                   <p>
                     Thank you for choosing our services!
                   </p>
