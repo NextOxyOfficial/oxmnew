@@ -342,7 +342,7 @@ export default function InvoicePage() {
               <div className="text-center">
                 <span className="text-sm font-medium text-gray-800 print:text-black">Invoice # </span>
                 <span className="text-sm text-gray-600 print:text-black">
-                  {order.order_number || order.id}
+                  {order.id}
                 </span>
               </div>
 
