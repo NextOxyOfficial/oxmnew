@@ -164,18 +164,18 @@ export default function SuppliersPage() {
   useEffect(() => {
     const fetchData = async () => {
       if (!user) {
-        console.log("No user found, skipping data fetch");
+        console.log("SuppliersPage: No user found, skipping data fetch");
         return;
       }
 
       try {
         setLoading(true);
-        console.log("Fetching data for user:", user.username);
+        console.log("SuppliersPage: Fetching data for user:", user.username, "User ID:", user.id);
 
         // Fetch suppliers first
         try {
           const suppliersResponse = await ApiService.getSuppliers();
-          console.log("Suppliers fetched successfully:", suppliersResponse);
+          console.log("SuppliersPage: Suppliers fetched successfully:", suppliersResponse);
 
           // Handle different response formats (array vs paginated response)
           let suppliersData = suppliersResponse;

@@ -976,7 +976,12 @@ export class ApiService {
   static async getSuppliers(page?: number) {
     try {
       const url = page ? `/suppliers/?page=${page}` : "/suppliers/";
+      console.log('API: Making suppliers request to:', url);
+      console.log('API: Auth token:', AuthToken.get() ? 'Present' : 'Missing');
+      
       const result = await this.get(url);
+      
+      console.log('API: Suppliers response received:', result);
 
       // Handle paginated response
       if (result && result.results && Array.isArray(result.results)) {
@@ -1056,7 +1061,11 @@ export class ApiService {
       endpoint += `?${searchParams.toString()}`;
     }
 
-    return this.get(endpoint);
+    console.log('API: Making products request to:', endpoint);
+    const result = await this.get(endpoint);
+    console.log('API: Products response received:', result);
+    
+    return result;
   }
 
   static async searchProducts(query: string) {

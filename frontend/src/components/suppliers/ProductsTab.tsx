@@ -45,18 +45,26 @@ export default function ProductsTab({
         setIsLoading(true);
         setError(null);
         
+        console.log('ProductsTab: Fetching suppliers and products...');
+        
         const [productsData, suppliersData] = await Promise.all([
           ApiService.getProducts(),
           ApiService.getSuppliers()
         ]);
         
+        console.log('ProductsTab: Raw suppliers response:', suppliersData);
+        console.log('ProductsTab: Raw products response:', productsData);
+        
         const productsList = Array.isArray(productsData) ? productsData : productsData?.results || [];
         const suppliersList = Array.isArray(suppliersData) ? suppliersData : suppliersData?.results || [];
+        
+        console.log('ProductsTab: Processed suppliers list:', suppliersList);
+        console.log('ProductsTab: Processed products list:', productsList);
         
         setProducts(productsList);
         setSuppliers(suppliersList);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("ProductsTab: Error fetching data:", error);
         setError(error instanceof Error ? error.message : "Failed to load data");
       } finally {
         setIsLoading(false);
@@ -92,9 +100,10 @@ export default function ProductsTab({
     return stock * Number(price);
   };
 
-  const filteredSuppliers = getUniqueSuppliersFromProducts().filter((supplier: string) =>
-    supplier.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Use all suppliers from the suppliers list instead of just those with products
+  const filteredSuppliers = suppliers
+    .filter(supplier => supplier.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .map(supplier => supplier.name);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
