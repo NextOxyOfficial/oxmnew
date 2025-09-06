@@ -46,7 +46,9 @@ export default function InvoicePage() {
     const fetchInvoiceData = async () => {
       try {
         const orderId = params.id as string;
+        // Use the correct getOrder method for orders endpoint
         const orderData = await ApiService.getOrder(parseInt(orderId));
+        console.log("Raw order data from API:", orderData); // Debug log
         
         // Load company data from localStorage (or use defaults)
         // Get company data from user profile first, with fallback to localStorage
@@ -178,42 +180,77 @@ export default function InvoicePage() {
 
   // Calculate totals dynamically based on order data
   const calculateSubtotal = () => {
+    console.log("Order object:", order);
+    console.log("Order fields:", Object.keys(order));
+    
+    // First try: Use subtotal from order (this is calculated by backend)
+    if (order.subtotal && order.subtotal > 0) {
+      console.log("Using order.subtotal:", order.subtotal);
+      return Number(order.subtotal);
+    }
+    
+    // Second try: Multi-item order with items array
     if (order.items && order.items.length > 0) {
-      // Multi-item order: sum all item totals
-      return order.items.reduce((sum, item) => {
-        const itemTotal = item.total_price || (item.quantity * item.unit_price) || 0;
+      console.log("Multi-item order detected, items:", order.items);
+      const calculatedSubtotal = order.items.reduce((sum, item) => {
+        const itemTotal = Number(item.total_price) || (Number(item.quantity) * Number(item.unit_price)) || 0;
+        console.log(`Item: ${item.product_name}, quantity: ${item.quantity}, unit_price: ${item.unit_price}, total_price: ${item.total_price}, calculated: ${itemTotal}`);
         return sum + itemTotal;
       }, 0);
+      console.log("Calculated subtotal from items:", calculatedSubtotal);
+      return calculatedSubtotal;
     }
-    // Single product order: use order total or calculate from order fields
-    return order.total_amount || (order.quantity * order.unit_price) || 0;
+    
+    // Third try: Use total_amount directly
+    if (order.total_amount && Number(order.total_amount) > 0) {
+      console.log("Using order.total_amount:", order.total_amount);
+      return Number(order.total_amount);
+    }
+    
+    // Fourth try: Calculate from single order fields (legacy support)
+    if (order.quantity && order.unit_price) {
+      const calculated = Number(order.quantity) * Number(order.unit_price);
+      console.log("Calculated from order quantity/unit_price:", calculated);
+      return calculated;
+    }
+    
+    // Log all available fields for debugging
+    console.log("No subtotal found, order fields:", {
+      subtotal: order.subtotal,
+      total_amount: order.total_amount,
+      quantity: order.quantity,
+      unit_price: order.unit_price,
+      items: order.items,
+      vat_amount: order.vat_amount,
+      discount_amount: order.discount_amount
+    });
+    return 0;
   };
 
   const subtotal = calculateSubtotal();
-  console.log("Calculation debug:", {
-    orderHasItems: !!(order.items && order.items.length > 0),
-    itemsCount: order.items?.length || 0,
-    orderTotalAmount: order.total_amount,
-    orderQuantity: order.quantity,
-    orderUnitPrice: order.unit_price,
-    calculatedSubtotal: subtotal
-  });
-
-  const discountAmount = order.discount_amount || 0;
-  const vatRate = order.vat_percentage || 0; // VAT percentage from order
-  const vatAmount = order.vat_amount || (subtotal * (vatRate / 100));
-  const total = subtotal + vatAmount - discountAmount;
-  const paidAmount = order.paid_amount || 0;
+  const discountAmount = Number(order.discount_amount) || 0;
+  const vatRate = Number(order.vat_percentage) || 0;
+  const vatAmount = Number(order.vat_amount) || (subtotal * (vatRate / 100));
+  
+  // For the total, try multiple sources in order of preference
+  let total = Number(order.total_amount) || 0;
+  if (total === 0 && subtotal > 0) {
+    // Calculate total if not available from backend
+    total = subtotal + vatAmount - discountAmount;
+  }
+  
+  const paidAmount = Number(order.paid_amount) || 0;
   const dueAmount = Math.max(0, total - paidAmount);
 
-  console.log("Final totals:", {
+  console.log("Final calculation results:", {
     subtotal,
     discountAmount,
     vatRate,
     vatAmount,
     total,
     paidAmount,
-    dueAmount
+    dueAmount,
+    orderTotalAmount: order.total_amount
   });
 
   return (
