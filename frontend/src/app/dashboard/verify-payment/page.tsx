@@ -114,50 +114,42 @@ export default function VerifyPaymentPage() {
         );
 
         // Handle banking plan activation
-        const pendingBankingPlan = localStorage.getItem("pendingBankingPlan");
-        console.log(
-          "Pending banking plan data from localStorage:",
-          pendingBankingPlan
-        );
+        const pendingBankingPlan = localStorage.getItem("pending_banking_plan");
+        const pendingBankingAccount = localStorage.getItem("pending_banking_account");
+        const pendingBankingPrice = localStorage.getItem("pending_banking_price");
+        
+        console.log("Pending banking plan data from localStorage:", {
+          plan: pendingBankingPlan,
+          account: pendingBankingAccount,
+          price: pendingBankingPrice
+        });
 
-        if (pendingBankingPlan) {
-          const bankData: PaymentData = JSON.parse(pendingBankingPlan);
-          console.log("Parsed banking plan data:", bankData);
+        if (pendingBankingPlan && pendingBankingAccount && pendingBankingPrice) {
+          // Determine plan ID based on plan type
+          const planId = pendingBankingPlan === "monthly" ? 1 : 2;
+          const accountId = pendingBankingAccount;
+          const paymentAmount = parseFloat(pendingBankingPrice);
 
-          // Extract account ID from the order ID if accountName is not numeric
-          let accountId = bankData.accountName || "";
-          if (accountId && isNaN(Number(accountId))) {
-            // If accountName is not numeric, try to extract from order ID
-            const orderIdParts = actualOrderId.split("-");
-            if (orderIdParts.length >= 3 && orderIdParts[0] === "BANK") {
-              accountId = orderIdParts[1]; // The numeric account ID
-              console.log("Extracted account ID from order ID:", accountId);
-            }
-          }
-
-          if (!accountId) {
-            console.error("No valid account ID found");
-            activationResult = {
-              success: false,
-              message: "No valid account ID found",
-            };
-            localStorage.removeItem("pendingBankingPlan");
-            return;
-          }
+          console.log("Processed banking plan data:", {
+            planType: pendingBankingPlan,
+            planId: planId,
+            accountId: accountId,
+            paymentAmount: paymentAmount
+          });
 
           console.log("About to call activateBankingPlan with:", {
             account_id: accountId,
-            plan_id: bankData.planId!,
+            plan_id: planId,
             payment_order_id: actualOrderId,
-            payment_amount: bankData.initialBalance!,
+            payment_amount: paymentAmount,
           });
 
           try {
             activationResult = await ApiService.activateBankingPlan({
               account_id: accountId,
-              plan_id: bankData.planId!,
+              plan_id: planId,
               payment_order_id: actualOrderId,
-              payment_amount: bankData.initialBalance!,
+              payment_amount: paymentAmount,
             });
             console.log("Banking plan activation result:", activationResult);
           } catch (error) {
@@ -168,7 +160,9 @@ export default function VerifyPaymentPage() {
             };
           }
 
-          localStorage.removeItem("pendingBankingPlan");
+          localStorage.removeItem("pending_banking_plan");
+          localStorage.removeItem("pending_banking_account");
+          localStorage.removeItem("pending_banking_price");
         } else {
           console.log("No pending banking plan data found in localStorage");
           // For banking payments, we should still try to activate even without localStorage data
@@ -312,7 +306,13 @@ export default function VerifyPaymentPage() {
   }, [user, verifyPayment]);
 
   const handleReturnToDashboard = () => {
-    router.push("/dashboard");
+    // Check if it's a banking payment based on the order ID or result
+    const orderId = searchParams.get("order_id");
+    if (orderId?.startsWith("BANK-") || result?.paymentType === "banking_plan") {
+      router.push("/dashboard/banking");
+    } else {
+      router.push("/dashboard");
+    }
   };
 
   const handleRetry = () => {
@@ -396,7 +396,9 @@ export default function VerifyPaymentPage() {
                 onClick={handleReturnToDashboard}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
-                Return to Dashboard
+                {searchParams.get("order_id")?.startsWith("BANK-") 
+                  ? "Return to Banking" 
+                  : "Return to Dashboard"}
               </button>
               {!result.success && (
                 <button
@@ -417,7 +419,9 @@ export default function VerifyPaymentPage() {
               onClick={handleReturnToDashboard}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
-              Return to Dashboard
+              {searchParams.get("order_id")?.startsWith("BANK-") 
+                ? "Return to Banking" 
+                : "Return to Dashboard"}
             </button>
           </div>
         )}
