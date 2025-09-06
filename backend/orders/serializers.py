@@ -421,8 +421,9 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     else None,
                 )
 
-                # Update stock
+                # Update stock - only for products that require stock tracking
                 if variant:
+                    # For variants, always track stock (variants don't have individual no_stock_required setting)
                     if variant.stock >= item_data["quantity"]:
                         variant.stock -= item_data["quantity"]
                         variant.save()
@@ -431,13 +432,16 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                             f"Insufficient stock for {product.name} - {variant}"
                         )
                 else:
-                    if product.stock >= item_data["quantity"]:
-                        product.stock -= item_data["quantity"]
-                        product.save()
-                    else:
-                        raise serializers.ValidationError(
-                            f"Insufficient stock for {product.name}"
-                        )
+                    # For main products, check if stock tracking is required
+                    if not getattr(product, 'no_stock_required', False):
+                        if product.stock >= item_data["quantity"]:
+                            product.stock -= item_data["quantity"]
+                            product.save()
+                        else:
+                            raise serializers.ValidationError(
+                                f"Insufficient stock for {product.name}"
+                            )
+                    # If no_stock_required=True, skip stock validation and updates
 
             except Product.DoesNotExist:
                 raise serializers.ValidationError(

@@ -122,6 +122,11 @@ class ProductViewSet(viewsets.ModelViewSet):
             data["has_variants"] = data["has_variants"] in ["true", "True", True]
             print("Converted has_variants:", data["has_variants"])
 
+        # Convert no_stock_required boolean value
+        if "no_stock_required" in data:
+            data["no_stock_required"] = data["no_stock_required"] in ["true", "True", True]
+            print("Converted no_stock_required:", data["no_stock_required"])
+
         # Convert numeric fields - handle both snake_case and camelCase
         numeric_fields = ["buyPrice", "sellPrice", "stock", "buy_price", "sell_price"]
         for field in numeric_fields:
@@ -173,6 +178,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             "sell_price": "sellPrice",
             "product_code": "productCode",
             "has_variants": "hasVariants",
+            "no_stock_required": "noStockRequired",
         }
 
         serializer_data = {}

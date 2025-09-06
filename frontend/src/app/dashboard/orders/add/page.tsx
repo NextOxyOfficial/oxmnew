@@ -401,7 +401,7 @@ export default function AddOrderPage() {
         setProducts(prev => [...prev, productFromSearch]);
       }
 
-      // Check stock availability
+      // Check stock availability - skip for products that don't require stock tracking
       let availableStock = 0;
       const requestedQuantity = 1; // Default quantity when clicking on product
 
@@ -415,7 +415,9 @@ export default function AddOrderPage() {
         availableStock = productToAdd.stock || 0;
       }
 
-      if (availableStock <= 0) {
+      // Only check stock if the product requires stock tracking
+      const requiresStockTracking = !productToAdd.no_stock_required;
+      if (requiresStockTracking && availableStock <= 0) {
         setError("Product is out of stock");
         setProductSearch("");
         setIsProductDropdownOpen(false);
@@ -433,7 +435,8 @@ export default function AddOrderPage() {
         const existingItem = orderForm.items[existingItemIndex];
         const newQuantity = existingItem.quantity + requestedQuantity;
 
-        if (newQuantity > availableStock) {
+        // Only check stock limits if the product requires stock tracking
+        if (requiresStockTracking && newQuantity > availableStock) {
           setError(
             `Cannot add more. Maximum available: ${
               availableStock - existingItem.quantity
@@ -830,22 +833,25 @@ export default function AddOrderPage() {
     const product = products.find((p) => p.id === currentItem.product);
     if (!product) return;
 
-    let availableStock = 0;
+    // Skip stock validation for products that don't require stock tracking
+    if (!product.no_stock_required) {
+      let availableStock = 0;
 
-    if (product.has_variants && currentItem.variant) {
-      // For products with variants, check variant stock
-      const variant = product.variants?.find(
-        (v) => v.id === currentItem.variant
-      );
-      availableStock = variant?.stock || 0;
-    } else {
-      // For products without variants, check product stock
-      availableStock = product.stock || 0;
-    }
+      if (product.has_variants && currentItem.variant) {
+        // For products with variants, check variant stock
+        const variant = product.variants?.find(
+          (v) => v.id === currentItem.variant
+        );
+        availableStock = variant?.stock || 0;
+      } else {
+        // For products without variants, check product stock
+        availableStock = product.stock || 0;
+      }
 
-    // Don't allow quantity to exceed available stock
-    if (quantity > availableStock) {
-      return;
+      // Don't allow quantity to exceed available stock
+      if (quantity > availableStock) {
+        return;
+      }
     }
 
     setOrderForm((prev) => ({
@@ -862,6 +868,9 @@ export default function AddOrderPage() {
   const canIncreaseQuantity = (item: OrderItem) => {
     const product = products.find((p) => p.id === item.product);
     if (!product) return false;
+
+    // Products that don't require stock tracking can always increase quantity
+    if (product.no_stock_required) return true;
 
     let availableStock = 0;
 

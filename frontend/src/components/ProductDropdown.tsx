@@ -11,6 +11,7 @@ interface Product {
   stock?: number;
   sell_price?: number;
   has_variants?: boolean;
+  no_stock_required?: boolean;
 }
 
 interface ProductDropdownProps {
@@ -84,32 +85,39 @@ const ProductDropdown = memo<ProductDropdownProps>(
                         {product.category_name}
                       </span>
                     )}
-                    <span
-                      className={`font-medium px-2 py-0.5 rounded text-xs flex items-center gap-1 ${
-                        (product.stock || 0) <= 0
-                          ? "text-red-400 bg-red-900/30"
-                          : (product.stock || 0) <= 10
-                          ? "text-yellow-400 bg-yellow-900/30"
-                          : "text-cyan-400 bg-cyan-900/30"
-                      }`}
-                    >
-                      {(product.stock || 0) <= 0 && (
-                        <svg
-                          className="w-3 h-3 text-red-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
-                          />
-                        </svg>
-                      )}
-                      Stock: {product.stock || 0}
-                    </span>
+                    {!product.no_stock_required && (
+                      <span
+                        className={`font-medium px-2 py-0.5 rounded text-xs flex items-center gap-1 ${
+                          (product.stock || 0) <= 0
+                            ? "text-red-400 bg-red-900/30"
+                            : (product.stock || 0) <= 10
+                            ? "text-yellow-400 bg-yellow-900/30"
+                            : "text-cyan-400 bg-cyan-900/30"
+                        }`}
+                      >
+                        {(product.stock || 0) <= 0 && (
+                          <svg
+                            className="w-3 h-3 text-red-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
+                            />
+                          </svg>
+                        )}
+                        Stock: {product.stock || 0}
+                      </span>
+                    )}
+                    {product.no_stock_required && (
+                      <span className="text-cyan-400 bg-cyan-900/30 px-2 py-0.5 rounded text-xs font-medium">
+                        Service/Digital
+                      </span>
+                    )}
                     <span className="text-green-400 bg-green-900/30 px-2 py-0.5 rounded text-xs font-medium">
                       ${product.sell_price || 0}
                     </span>
@@ -119,7 +127,7 @@ const ProductDropdown = memo<ProductDropdownProps>(
                       Has variants available
                     </div>
                   )}
-                  {!product.has_variants && (product.stock || 0) <= 0 && (
+                  {!product.has_variants && (product.stock || 0) <= 0 && !product.no_stock_required && (
                     <div className="text-xs text-red-400 mt-1 font-medium flex items-center gap-1">
                       <svg
                         className="w-3 h-3 text-red-400"

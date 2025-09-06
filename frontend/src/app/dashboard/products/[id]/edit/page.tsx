@@ -56,6 +56,7 @@ interface ProductFormData {
   sellPrice: number;
   stock: number;
   is_active: boolean;
+  no_stock_required: boolean;
 }
 
 export default function EditProductPage() {
@@ -74,6 +75,7 @@ export default function EditProductPage() {
     sellPrice: 0,
     stock: 0,
     is_active: true,
+    no_stock_required: false,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -136,6 +138,7 @@ export default function EditProductPage() {
           sellPrice: productData.sell_price || productData.price || 0,
           stock: productData.stock || 0,
           is_active: productData.is_active,
+          no_stock_required: productData.no_stock_required || false,
         });
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -169,6 +172,8 @@ export default function EditProductPage() {
       setFormData((prev) => ({
         ...prev,
         [name]: checked,
+        // If enabling no stock required, reset stock to 0
+        ...(name === "no_stock_required" && checked ? { stock: 0 } : {}),
       }));
     } else if (
       name === "buyPrice" ||
@@ -202,21 +207,31 @@ export default function EditProductPage() {
     // Location is now optional, so no validation needed
 
     if (!product?.has_variants) {
-      if (formData.buyPrice <= 0) {
-        newErrors.buyPrice = "Buy price must be greater than 0";
-      }
+      // Only validate prices if stock is required, or if prices are provided
+      if (!formData.no_stock_required) {
+        if (formData.buyPrice <= 0) {
+          newErrors.buyPrice = "Buy price must be greater than 0";
+        }
 
-      if (formData.sellPrice <= 0) {
-        newErrors.sellPrice = "Sell price must be greater than 0";
-      }
+        if (formData.sellPrice <= 0) {
+          newErrors.sellPrice = "Sell price must be greater than 0";
+        }
 
-      if (formData.sellPrice < formData.buyPrice) {
-        newErrors.sellPrice =
-          "Sell price must be greater than or equal to buy price";
-      }
+        if (formData.sellPrice < formData.buyPrice) {
+          newErrors.sellPrice =
+            "Sell price must be greater than or equal to buy price";
+        }
 
-      if (formData.stock <= 0) {
-        newErrors.stock = "Stock quantity must be greater than 0";
+        // Only validate stock if stock tracking is required
+        if (formData.stock <= 0) {
+          newErrors.stock = "Stock quantity must be greater than 0";
+        }
+      } else {
+        // For no-stock products, only validate if prices are provided and non-zero
+        if (formData.buyPrice > 0 && formData.sellPrice > 0 && formData.sellPrice < formData.buyPrice) {
+          newErrors.sellPrice =
+            "Sell price must be greater than or equal to buy price";
+        }
       }
     }
 
@@ -245,6 +260,7 @@ export default function EditProductPage() {
         location: formData.location.trim() || undefined,
         details: formData.details,
         is_active: formData.is_active,
+        no_stock_required: formData.no_stock_required,
       };
 
       // Only include pricing data for non-variant products
@@ -252,7 +268,7 @@ export default function EditProductPage() {
         Object.assign(updateData, {
           buy_price: formData.buyPrice,
           sell_price: formData.sellPrice,
-          stock: formData.stock,
+          stock: formData.no_stock_required ? 0 : formData.stock,
         });
       }
 
@@ -555,13 +571,32 @@ export default function EditProductPage() {
 
             {/* Pricing and Stock (only for non-variant products) */}
             {!product.has_variants && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <>
+                {/* No Stock Required Checkbox - moved here */}
+                <div className="flex items-center p-3 bg-slate-800/30 border border-slate-700/50 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="no_stock_required"
+                    name="no_stock_required"
+                    checked={formData.no_stock_required}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-slate-600 rounded bg-slate-800 transition-all duration-200"
+                  />
+                  <label
+                    htmlFor="no_stock_required"
+                    className="ml-3 block text-sm text-slate-300"
+                  >
+                    This product has no stock (for services, digital products, etc.)
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label
                     htmlFor="buyPrice"
                     className="block text-slate-300 mb-2 font-medium text-sm"
                   >
-                    Buy Price *
+                    Buy Price {!formData.no_stock_required && "*"}
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
@@ -594,7 +629,7 @@ export default function EditProductPage() {
                     htmlFor="sellPrice"
                     className="block text-slate-300 mb-2 font-medium text-sm"
                   >
-                    Sell Price *
+                    Sell Price {!formData.no_stock_required && "*"}
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
@@ -627,26 +662,31 @@ export default function EditProductPage() {
                     htmlFor="stock"
                     className="block text-slate-300 mb-2 font-medium text-sm"
                   >
-                    Stock Quantity
+                    Stock Quantity {!formData.no_stock_required && "*"}
                   </label>
+                  
                   <input
                     type="number"
                     id="stock"
                     name="stock"
                     value={formData.stock}
                     onChange={handleInputChange}
-                    min="0"
+                    min={formData.no_stock_required ? "0" : "0"}
                     step="1"
+                    disabled={formData.no_stock_required}
                     className={`w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-200 border transition-all duration-200 text-sm ${
                       errors.stock ? "border-red-500" : "border-slate-700"
-                    } focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500`}
-                    placeholder="0"
+                    } focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 ${
+                      formData.no_stock_required ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    placeholder={formData.no_stock_required ? "N/A" : "0"}
                   />
                   {errors.stock && (
                     <p className="text-red-400 text-xs mt-1">{errors.stock}</p>
                   )}
                 </div>
               </div>
+              </>
             )}
 
             {/* Profit Display (only for non-variant products) */}

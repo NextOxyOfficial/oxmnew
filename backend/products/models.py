@@ -43,6 +43,12 @@ class Product(models.Model):
     has_variants = models.BooleanField(
         default=False, help_text="True if product has color/size variants"
     )
+    
+    # Stock tracking mode
+    no_stock_required = models.BooleanField(
+        default=False, 
+        help_text="True if product doesn't require stock tracking (e.g., services, digital products)"
+    )
 
     # Single pricing (used when has_variants=False)
     buy_price = models.DecimalField(

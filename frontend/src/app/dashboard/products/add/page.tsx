@@ -61,6 +61,7 @@ interface ProductFormData {
   details: string;
   photos: File[];
   hasVariants: boolean;
+  noStockRequired: boolean;
   colorSizeVariants: ColorSize[];
 }
 
@@ -81,6 +82,7 @@ export default function AddProductPage() {
     details: "",
     photos: [],
     hasVariants: false,
+    noStockRequired: false,
     colorSizeVariants: [],
   });
 
@@ -262,14 +264,22 @@ export default function AddProductPage() {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
 
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
 
-    if (name === "buyPrice" || name === "sellPrice" || name === "stock") {
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => ({
+        ...prev,
+        [name]: checked,
+        // If enabling no stock required, reset stock to 0
+        ...(name === "noStockRequired" && checked ? { stock: 0 } : {}),
+      }));
+    } else if (name === "buyPrice" || name === "sellPrice" || name === "stock") {
       setFormData((prev) => ({
         ...prev,
         [name]: parseFloat(value) || 0,
@@ -608,20 +618,29 @@ export default function AddProductPage() {
 
     // Validate pricing based on variant mode
     if (!formData.hasVariants) {
-      if (formData.buyPrice <= 0) {
-        newErrors.buyPrice = "Buy price must be greater than 0";
-      }
+      // Only validate prices if stock is required, or if prices are provided
+      if (!formData.noStockRequired) {
+        if (formData.buyPrice <= 0) {
+          newErrors.buyPrice = "Buy price must be greater than 0";
+        }
 
-      if (formData.sellPrice <= 0) {
-        newErrors.sellPrice = "Sell price must be greater than 0";
-      }
+        if (formData.sellPrice <= 0) {
+          newErrors.sellPrice = "Sell price must be greater than 0";
+        }
 
-      if (formData.sellPrice < formData.buyPrice) {
-        newErrors.sellPrice = "Sell price should be higher than buy price";
-      }
+        if (formData.sellPrice < formData.buyPrice) {
+          newErrors.sellPrice = "Sell price should be higher than buy price";
+        }
 
-      if (formData.stock <= 0) {
-        newErrors.stock = "Stock quantity must be greater than 0";
+        // Only validate stock if stock tracking is required
+        if (formData.stock <= 0) {
+          newErrors.stock = "Stock quantity must be greater than 0";
+        }
+      } else {
+        // For no-stock products, only validate if prices are provided and non-zero
+        if (formData.buyPrice > 0 && formData.sellPrice > 0 && formData.sellPrice < formData.buyPrice) {
+          newErrors.sellPrice = "Sell price should be higher than buy price";
+        }
       }
     } else {
       if (formData.colorSizeVariants.length === 0) {
@@ -667,9 +686,10 @@ export default function AddProductPage() {
         location: formData.location.trim() || undefined,
         details: formData.details,
         has_variants: formData.hasVariants,
+        no_stock_required: formData.noStockRequired,
         buy_price: formData.hasVariants ? 0 : formData.buyPrice,
         sell_price: formData.hasVariants ? 0 : formData.sellPrice,
-        stock: formData.hasVariants ? 0 : formData.stock,
+        stock: formData.hasVariants ? 0 : (formData.noStockRequired ? 0 : formData.stock),
         variants: formData.hasVariants
           ? formData.colorSizeVariants.map((variant) => ({
               color: variant.color,
@@ -1412,6 +1432,24 @@ export default function AddProductPage() {
                     Pricing Information
                   </h3>
 
+                  {/* No Stock Required Checkbox - moved here */}
+                  <div className="flex items-center p-3 bg-slate-800/30 border border-slate-700/50 rounded-lg">
+                    <input
+                      type="checkbox"
+                      id="noStockRequired"
+                      name="noStockRequired"
+                      checked={formData.noStockRequired}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-slate-600 rounded bg-slate-800 transition-all duration-200"
+                    />
+                    <label
+                      htmlFor="noStockRequired"
+                      className="ml-3 block text-sm text-slate-300"
+                    >
+                      This product has no stock (for services, digital products, etc.)
+                    </label>
+                  </div>
+
                   {!formData.hasVariants ? (
                     /* Single Pricing */
                     <>
@@ -1422,7 +1460,7 @@ export default function AddProductPage() {
                             htmlFor="buyPrice"
                             className="block text-sm font-medium text-slate-300 mb-1.5"
                           >
-                            Buy Price *
+                            Buy Price {!formData.noStockRequired && "*"}
                           </label>
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -1459,7 +1497,7 @@ export default function AddProductPage() {
                             htmlFor="sellPrice"
                             className="block text-sm font-medium text-slate-300 mb-1.5"
                           >
-                            Sell Price *
+                            Sell Price {!formData.noStockRequired && "*"}
                           </label>
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -1496,22 +1534,26 @@ export default function AddProductPage() {
                             htmlFor="stock"
                             className="block text-sm font-medium text-slate-300 mb-1.5"
                           >
-                            Stock Quantity *
+                            Stock Quantity {!formData.noStockRequired && "*"}
                           </label>
+                          
                           <input
                             type="number"
                             id="stock"
                             name="stock"
                             value={formData.stock || ""}
                             onChange={handleInputChange}
-                            min="1"
+                            min={formData.noStockRequired ? "0" : "1"}
                             step="1"
+                            disabled={formData.noStockRequired}
                             className={`w-full bg-slate-800/50 border ${
                               errors.stock
                                 ? "border-red-500"
                                 : "border-slate-700/50"
-                            } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200`}
-                            placeholder="1"
+                            } text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                              formData.noStockRequired ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                            placeholder={formData.noStockRequired ? "N/A" : "1"}
                           />
                           {errors.stock && (
                             <p className="text-red-400 text-sm mt-1">

@@ -22,6 +22,7 @@ export interface Product {
   variants?: ProductVariant[];
   photos?: ProductPhoto[];
   is_active: boolean;
+  no_stock_required?: boolean;
   created_at: string;
   updated_at: string;
 
