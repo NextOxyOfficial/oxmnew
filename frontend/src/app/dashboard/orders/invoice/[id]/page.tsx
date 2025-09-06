@@ -29,6 +29,18 @@ export default function InvoicePage() {
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(true);
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    router.back();
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      closeModal();
+    }
+  };
 
   useEffect(() => {
     const fetchInvoiceData = async () => {
@@ -37,34 +49,63 @@ export default function InvoicePage() {
         const orderData = await ApiService.getOrder(parseInt(orderId));
         
         // Load company data from localStorage (or use defaults)
+        // Get company data from user profile first, with fallback to localStorage
         let companyData = {
-          name: "Your Company Name",
-          address: "123 Business Street",
-          city: "City, State 12345",
-          phone: "(555) 123-4567",
-          email: "info@yourcompany.com",
-          website: "www.yourcompany.com"
+          name: "Company Name",
+          address: "Company Address",
+          city: "City, State",
+          phone: "Phone Number",
+          email: "company@email.com",
+          website: "www.company.com"
         };
 
+        // Fetch user profile to get store logo and company information
+        let userProfile = undefined;
+        try {
+          const profileData = await ApiService.getProfile();
+          console.log("Profile data received:", profileData); // Debug log
+          
+          userProfile = {
+            store_logo: profileData.profile.store_logo || ""
+          };
+          
+          // Update company data from backend profile if available
+          if (profileData.profile) {
+            const profile = profileData.profile;
+            console.log("Profile fields:", Object.keys(profile)); // Debug log
+            
+            companyData = {
+              name: profile.company_name || profile.store_name || profile.name || companyData.name,
+              address: profile.company_address || profile.address || companyData.address,
+              city: profile.company_city || profile.city || companyData.city,
+              phone: profile.company_phone || profile.phone || companyData.phone,
+              email: profile.company_email || profile.email || companyData.email,
+              website: profile.company_website || profile.website || companyData.website
+            };
+            
+            console.log("Updated company data:", companyData); // Debug log
+          }
+        } catch (error) {
+          console.error("Error loading user profile:", error);
+        }
+
+        // Fallback to localStorage if backend data is incomplete
         try {
           const savedSettings = localStorage.getItem("companySettings");
           if (savedSettings) {
             const parsedSettings = JSON.parse(savedSettings);
-            companyData = { ...companyData, ...parsedSettings };
+            // Only use localStorage for missing fields
+            companyData = { 
+              name: companyData.name === "Your Company Name" ? parsedSettings.name || companyData.name : companyData.name,
+              address: companyData.address === "123 Business Street" ? parsedSettings.address || companyData.address : companyData.address,
+              city: companyData.city === "City, State 12345" ? parsedSettings.city || companyData.city : companyData.city,
+              phone: companyData.phone === "(555) 123-4567" ? parsedSettings.phone || companyData.phone : companyData.phone,
+              email: companyData.email === "info@yourcompany.com" ? parsedSettings.email || companyData.email : companyData.email,
+              website: companyData.website === "www.yourcompany.com" ? parsedSettings.website || companyData.website : companyData.website
+            };
           }
         } catch (error) {
           console.error("Error loading company settings:", error);
-        }
-
-        // Fetch user profile to get store logo
-        let userProfile = undefined;
-        try {
-          const profileData = await ApiService.getProfile();
-          userProfile = {
-            store_logo: profileData.profile.store_logo || ""
-          };
-        } catch (error) {
-          console.error("Error loading user profile:", error);
         }
 
         setInvoiceData({
@@ -119,66 +160,118 @@ export default function InvoicePage() {
 
   const { order, company, userProfile } = invoiceData;
 
-  // Calculate totals
-  const subtotal = order.items?.reduce((sum, item) => sum + (item.total_price || 0), 0) || order.total_amount || 0;
+  // Calculate totals dynamically based on order data
+  const calculateSubtotal = () => {
+    if (order.items && order.items.length > 0) {
+      return order.items.reduce((sum, item) => {
+        return sum + (item.total_price || (item.quantity * item.unit_price));
+      }, 0);
+    }
+    // Fallback to single product order
+    return order.total_amount || (order.quantity * order.unit_price) || 0;
+  };
+
+  const subtotal = calculateSubtotal();
   const discountAmount = order.discount_amount || 0;
-  const vatAmount = order.vat_amount || 0;
-  const total = subtotal - discountAmount + vatAmount;
+  const vatRate = order.vat_percentage || 0; // VAT percentage from order
+  const vatAmount = order.vat_amount || (subtotal * (vatRate / 100));
+  const total = subtotal + vatAmount - discountAmount;
   const paidAmount = order.paid_amount || 0;
-  const dueAmount = total - paidAmount;
+  const dueAmount = Math.max(0, total - paidAmount);
 
   return (
     <>
       {/* Print Styles */}
-      <style jsx>{`
+      <style jsx global>{`
         @media print {
-          body { -webkit-print-color-adjust: exact; }
-          .print\\:hidden { display: none !important; }
+          /* Hide everything first */
+          * {
+            visibility: hidden;
+          }
+          
+          /* Only show invoice content */
+          .invoice-content, .invoice-content * {
+            visibility: visible;
+          }
+          
+          /* Position invoice content to fill page */
+          .invoice-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          
+          /* Hide browser chrome and website elements */
+          header, nav, footer, .header, .nav, .footer, 
+          [role="banner"], [role="navigation"], [role="contentinfo"],
+          .print\\:hidden,
+          /* Additional selectors for common website elements */
+          .navbar, .nav-bar, .navigation, .site-header, .site-footer,
+          .page-header, .page-footer, .main-nav, .main-navigation,
+          .top-bar, .bottom-bar, .sidebar, .menu {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          
+          /* Reset html and body for clean print */
+          html, body { 
+            -webkit-print-color-adjust: exact;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          
+          /* Print-specific utilities */
           .print\\:block { display: block !important; }
           .print\\:text-black { color: black !important; }
           .print\\:bg-white { background-color: white !important; }
           .print\\:border-black { border-color: black !important; }
+          .print\\:bg-transparent { background-color: transparent !important; }
+          .print\\:shadow-none { box-shadow: none !important; }
+          .print\\:max-w-none { max-width: none !important; }
+          .print\\:mx-0 { margin-left: 0 !important; margin-right: 0 !important; }
+          .print\\:min-h-0 { min-height: 0 !important; }
+          
+          /* Page settings */
+          @page { 
+            margin: 0.5in;
+            size: A4;
+          }
+          
           .page-break { page-break-after: always; }
-          @page { margin: 0.5in; }
         }
       `}</style>
 
-      <div className="min-h-screen bg-gray-100 print:bg-white">
-        {/* Navigation - Hidden in print */}
-        <div className="print:hidden bg-white border-b p-4">
-          <div className="max-w-4xl mx-auto flex justify-between items-center">
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Orders
-            </button>
-            
-            <div className="flex gap-2">
-              <button
-                onClick={handleDownloadPDF}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-              >
-                <Download className="w-4 h-4" />
-                Download PDF
-              </button>
-              <button
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600"
-              >
-                <Printer className="w-4 h-4" />
-                Print Invoice
-              </button>
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-100 print:bg-white print:min-h-0">
+        {/* Modal Backdrop */}
+        {isModalOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+            onClick={handleBackdropClick}
+          >
+            {/* Modal Content */}
+            <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+              {/* Modal Header */}
+              <div className="print:hidden bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-800">Invoice #{order.id}</h2>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
 
-        {/* Invoice Content */}
-        <div className="max-w-4xl mx-auto bg-white shadow-lg print:shadow-none print:max-w-none">
-          {/* Header Section */}
-          <div className="px-8 py-6 print:px-6 print:py-4">
-            <div className="flex justify-between items-start mb-5">
+              {/* Modal Body - Scrollable */}
+              <div className="overflow-auto max-h-[calc(90vh-200px)]">
+                {/* Invoice Content */}
+                <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0">
+                  {/* Header Section */}
+                  <div className="px-8 py-2 print:px-6 print:py-2">
+            <div className="flex justify-between items-start mb-6">
               {/* Company Logo */}
               <div className="flex items-start gap-4">
                 {userProfile?.store_logo ? (
@@ -212,7 +305,7 @@ export default function InvoicePage() {
               <div className="text-center">
                 <span className="text-sm font-medium text-gray-800 print:text-black">Invoice # </span>
                 <span className="text-sm text-gray-600 print:text-black">
-                  {order.order_number || order.id || "250092"}
+                  {order.order_number || order.id}
                 </span>
               </div>
 
@@ -230,7 +323,7 @@ export default function InvoicePage() {
             </div>
 
             {/* Company and Customer Info */}
-            <div className="flex justify-between">
+            <div className="flex justify-between px-2">
               {/* Company Details */}
               <div>
                 <div className="text-sm text-gray-600 print:text-black space-y-1">
@@ -250,7 +343,9 @@ export default function InvoicePage() {
                   <p className="font-medium">
                     {order.customer_name || "Mr. Guest Customer"}
                   </p>
-                  <p>{order.customer_address || "A Dummy Street Area, Location,"}</p>
+                  {order.customer_address && order.customer_address !== "A Dummy Street Area, Location," && (
+                    <p>{order.customer_address}</p>
+                  )}
                   <p>
                     {order.customer_phone && order.customer_email
                       ? `${order.customer_phone}, ${order.customer_email}`
@@ -263,23 +358,23 @@ export default function InvoicePage() {
 
           {/* Invoice Table */}
           <div className="px-8 print:px-6">
-            <div className="border border-gray-300 print:border-black">
+            <div className="">
               {/* Table Header */}
-              <div className="bg-gray-800 print:bg-transparent text-white print:text-black border-b print:border-black">
+              <div className="bg-gray-800 print:bg-gray-300 text-white print:text-black border border-gray-300 print:border-black">
                 <div className="grid grid-cols-12 gap-0 text-sm font-medium">
-                  <div className="col-span-1 p-3 border-r border-gray-600 print:border-black">
+                  <div className="col-span-1 py-1.5 text-center border-r border-gray-600 print:border-black">
                     No.
                   </div>
-                  <div className="col-span-6 p-3 border-r border-gray-600 print:border-black">
+                  <div className="col-span-6 px-1.5 py-1.5 border-r border-gray-600 print:border-black">
                     Item Description
                   </div>
-                  <div className="col-span-2 p-3 text-center border-r border-gray-600 print:border-black">
+                  <div className="col-span-1 py-1.5 text-center border-r border-gray-600 print:border-black">
                     Qty
                   </div>
-                  <div className="col-span-2 p-3 text-center border-r border-gray-600 print:border-black">
+                  <div className="col-span-2 px-1.5 py-1.5 text-center border-r border-gray-600 print:border-black">
                     Price
                   </div>
-                  <div className="col-span-1 p-3 text-right">
+                  <div className="col-span-2 px-1.5 py-1.5 text-right">
                     Total
                   </div>
                 </div>
@@ -290,45 +385,45 @@ export default function InvoicePage() {
                 order.items.map((item, index) => (
                   <div
                     key={item.id}
-                    className="grid grid-cols-12 gap-0 border-b border-gray-300 print:border-black min-h-[50px]"
+                    className="grid grid-cols-12 gap-0 border-l border-r border-b border-gray-300 print:border-black"
                   >
-                    <div className="col-span-1 p-3 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black flex items-center">
+                    <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black flex items-center justify-center">
                       {index + 1}
                     </div>
-                    <div className="col-span-6 p-3 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black">
-                      <div className="font-medium">{item.product_name}</div>
+                    <div className="col-span-6 px-1.5 py-1.5 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black">
+                      <div className="font-medium break-words">{item.product_name}</div>
                       {item.variant_details && (
-                        <div className="text-xs text-gray-500 print:text-gray-700 mt-1">
+                        <div className="text-xs text-gray-500 print:text-gray-700 mt-1 break-words">
                           {item.variant_details}
                         </div>
                       )}
                     </div>
-                    <div className="col-span-2 p-3 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black flex items-center justify-center">
+                    <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black flex items-center justify-center break-all">
                       {item.quantity}
                     </div>
-                    <div className="col-span-2 p-3 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black flex items-center justify-center">
+                    <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black flex items-center justify-center break-all">
                       {formatCurrency(item.unit_price)}
                     </div>
-                    <div className="col-span-1 p-3 text-sm text-gray-600 print:text-black text-right flex items-center justify-end">
+                    <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-black text-right flex items-center justify-end break-all">
                       {formatCurrency(item.total_price || (item.quantity * item.unit_price))}
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="grid grid-cols-12 gap-0 border-b border-gray-300 print:border-black min-h-[50px]">
-                  <div className="col-span-1 p-3 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black">
+                <div className="grid grid-cols-12 gap-0 border-l border-r border-b border-gray-300 print:border-black">
+                  <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black flex items-center justify-center">
                     1
                   </div>
-                  <div className="col-span-6 p-3 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black">
-                    {order.product_name || "Product"}
+                  <div className="col-span-6 px-1.5 py-1.5 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black">
+                    <div className="font-medium break-words">{order.product_name || "Product"}</div>
                   </div>
-                  <div className="col-span-2 p-3 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black">
+                  <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black flex items-center justify-center break-all">
                     {order.quantity || 1}
                   </div>
-                  <div className="col-span-2 p-3 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black">
+                  <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black flex items-center justify-center break-all">
                     {formatCurrency(order.unit_price || 0)}
                   </div>
-                  <div className="col-span-1 p-3 text-sm text-gray-600 print:text-black text-right">
+                  <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-black text-right flex items-center justify-end break-all">
                     {formatCurrency(order.total_amount || 0)}
                   </div>
                 </div>
@@ -337,38 +432,42 @@ export default function InvoicePage() {
           </div>
 
           {/* Bottom Section */}
-          <div className="p-8 pt-2">
+          <div className="px-8 py-4 print:px-6 print:py-2">
             <div className="flex justify-between">
-              {/* Payment Info */}
+              {/* Footer Text */}
               <div className="w-1/2">
-                <div className="text-sm text-gray-600 print:text-black space-y-1"></div>
+                <div className="text-sm mt-4 text-gray-600 print:text-black space-y-2">
+                  <p>
+                    Thank you for choosing our services!
+                  </p>
+                </div>
               </div>
 
               {/* Totals */}
               <div className="w-1/3">
-                <div className="space-y-1">
-                  <div className="flex justify-between py-2 px-3 border border-gray-300 print:border-black rounded">
-                    <span className="text-sm text-gray-600 print:text-black">VAT</span>
+                <div className="">
+                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-t border-b border-gray-300 print:border-black">
+                    <span className="text-sm text-gray-600 print:text-black">VAT {vatRate > 0 ? `(${vatRate}%)` : ''}</span>
                     <span className="text-sm text-gray-600 print:text-black">
                       {formatCurrency(vatAmount)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between py-2 px-3 border border-gray-300 print:border-black rounded">
+                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-black">
                     <span className="text-sm text-gray-600 print:text-black">Discount</span>
                     <span className="text-sm text-gray-600 print:text-black">
-                      {formatCurrency(discountAmount)}
+                      -{formatCurrency(discountAmount)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between py-2 px-3 border border-gray-300 print:border-black rounded">
+                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-black">
                     <span className="text-sm text-gray-600 print:text-black">Due</span>
                     <span className="text-sm text-gray-600 print:text-black">
                       {formatCurrency(dueAmount)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between py-2 px-3 border-2 border-gray-800 print:border-black rounded font-semibold bg-gray-800 text-white print:bg-transparent print:text-black">
+                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-black bg-gray-800 text-white print:bg-gray-300 print:text-black font-semibold">
                     <span className="text-sm font-bold">TOTAL</span>
                     <span className="text-sm font-bold">
                       {formatCurrency(total)}
@@ -377,20 +476,30 @@ export default function InvoicePage() {
                 </div>
               </div>
             </div>
+          </div>
+                </div>
+              </div>
 
-            {/* Footer */}
-            <div className="mt-8 pt-6 border-t border-gray-200 print:border-black">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 print:text-black">
-                  Thank you for your business! We appreciate your trust in our services.
-                </p>
-                <p className="text-xs text-gray-500 print:text-gray-700 mt-2">
-                  For any questions regarding this invoice, please contact us at {company.email}
-                </p>
+              {/* Modal Footer - Action Buttons */}
+              <div className="print:hidden bg-gray-50 px-6 py-4 border-t flex justify-center gap-4">
+                <button
+                  onClick={handleDownloadPDF}
+                  className="flex items-center gap-2 px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="flex items-center gap-2 px-6 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Invoice
+                </button>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   );
