@@ -35,46 +35,106 @@ export default function ProductsTab({
   const [products, setProducts] = useState<BackendProduct[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch data from backend
+  // Pagination state for server-side pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const productsPerPage = 10;
+
+  // Fetch suppliers on component mount
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchSuppliers = async () => {
       try {
         setIsLoading(true);
         setError(null);
         
-        console.log('ProductsTab: Fetching suppliers and products...');
+        console.log('ProductsTab: Fetching suppliers...');
         
-        const [productsData, suppliersData] = await Promise.all([
-          ApiService.getProducts(),
-          ApiService.getSuppliers()
-        ]);
+        const suppliersData = await ApiService.getSuppliers();
         
         console.log('ProductsTab: Raw suppliers response:', suppliersData);
-        console.log('ProductsTab: Raw products response:', productsData);
         
-        const productsList = Array.isArray(productsData) ? productsData : productsData?.results || [];
         const suppliersList = Array.isArray(suppliersData) ? suppliersData : suppliersData?.results || [];
         
         console.log('ProductsTab: Processed suppliers list:', suppliersList);
-        console.log('ProductsTab: Processed products list:', productsList);
         
-        setProducts(productsList);
         setSuppliers(suppliersList);
       } catch (error) {
-        console.error("ProductsTab: Error fetching data:", error);
-        setError(error instanceof Error ? error.message : "Failed to load data");
+        console.error("ProductsTab: Error fetching suppliers:", error);
+        setError(error instanceof Error ? error.message : "Failed to load suppliers");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
+    fetchSuppliers();
   }, []);
 
-  // Get unique suppliers from products that have suppliers
+  // Fetch products when supplier or page changes
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (selectedProductSupplier === 'all') {
+        setProducts([]);
+        setTotalProducts(0);
+        setTotalPages(0);
+        return;
+      }
+
+      try {
+        setIsLoadingProducts(true);
+        setError(null);
+        
+        console.log('ProductsTab: Fetching products for supplier:', selectedProductSupplier, 'page:', currentPage);
+        
+        // Find supplier by name to get supplier ID
+        const supplier = suppliers.find(s => s.name === selectedProductSupplier);
+        if (!supplier) {
+          console.error('Supplier not found:', selectedProductSupplier);
+          return;
+        }
+        
+        const productsData = await ApiService.getProducts({
+          page: currentPage,
+          page_size: productsPerPage,
+          supplier: supplier.id.toString()
+        });
+        
+        console.log('ProductsTab: Raw products response:', productsData);
+        
+        // Handle paginated response
+        if (productsData && productsData.results) {
+          setProducts(productsData.results);
+          setTotalProducts(productsData.count || 0);
+          setTotalPages(Math.ceil((productsData.count || 0) / productsPerPage));
+        } else if (Array.isArray(productsData)) {
+          // Fallback for non-paginated response
+          setProducts(productsData);
+          setTotalProducts(productsData.length);
+          setTotalPages(Math.ceil(productsData.length / productsPerPage));
+        } else {
+          setProducts([]);
+          setTotalProducts(0);
+          setTotalPages(0);
+        }
+        
+      } catch (error) {
+        console.error("ProductsTab: Error fetching products:", error);
+        setError(error instanceof Error ? error.message : "Failed to load products");
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    if (selectedProductSupplier !== 'all' && suppliers.length > 0) {
+      fetchProducts();
+    }
+  }, [selectedProductSupplier, currentPage, suppliers]);
+
+  // Get unique suppliers from products that have suppliers (legacy - not used with server pagination)
   const getUniqueSuppliersFromProducts = (): string[] => {
     const supplierNames = products
       .filter(product => product.supplier_name)
@@ -83,12 +143,9 @@ export default function ProductsTab({
     return [...new Set(supplierNames)];
   };
 
-  // Filter products by selected supplier
-  const getFilteredProducts = (): BackendProduct[] => {
-    if (selectedProductSupplier === 'all') {
-      return [];
-    }
-    return products.filter(product => product.supplier_name === selectedProductSupplier);
+  // Get current page products (server-side pagination - products are already filtered)
+  const getCurrentPageProducts = (): BackendProduct[] => {
+    return products; // Products are already paginated from server
   };
 
   // Calculate total value for a product based on stock and price
@@ -119,6 +176,7 @@ export default function ProductsTab({
 
   const handleSupplierSelect = (supplier: string) => {
     setSelectedProductSupplier(supplier);
+    setCurrentPage(1); // Reset to first page when supplier changes
     setIsDropdownOpen(false);
     setSearchTerm('');
   };
@@ -199,11 +257,18 @@ export default function ProductsTab({
           {/* Results Summary - Under the filter row when supplier is selected */}
           {selectedProductSupplier !== 'all' && (
             <div className="text-sm text-slate-400 border-t border-slate-700/30 pt-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <span>Showing {getFilteredProducts().length} products for {selectedProductSupplier}</span>
-                <span className="text-cyan-400">
-                  Total Value: {formatCurrency(getFilteredProducts().reduce((sum, product) => sum + calculateProductValue(product), 0))}
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <span>Showing {totalProducts} products for {selectedProductSupplier}</span>
+                  <span className="text-cyan-400">
+                    Total Value: {formatCurrency(products.reduce((sum: number, product: BackendProduct) => sum + calculateProductValue(product), 0))}
+                  </span>
+                </div>
+                {totalPages > 1 && (
+                  <span className="text-xs">
+                    Page {currentPage} of {totalPages} ({products.length} shown)
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -225,6 +290,11 @@ export default function ProductsTab({
             {isLoading ? (
               <div className="text-center py-8">
                 <div className="animate-spin w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-slate-400">Loading suppliers...</p>
+              </div>
+            ) : isLoadingProducts ? (
+              <div className="text-center py-8">
+                <div className="animate-spin w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full mx-auto mb-4"></div>
                 <p className="text-slate-400">Loading products...</p>
               </div>
             ) : error ? (
@@ -244,7 +314,7 @@ export default function ProductsTab({
               </div>
             ) : (
               <div className="space-y-3">
-                {getFilteredProducts().map((product) => (
+                {getCurrentPageProducts().map((product) => (
                   <div key={product.id} className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/50 transition-colors duration-200">
                     <div className="flex items-center justify-between">
                       {/* Left side - Product Info */}
@@ -299,8 +369,79 @@ export default function ProductsTab({
                   </div>
                 ))}
 
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between border-t border-slate-700/30 pt-4 mt-6">
+                    <div className="text-sm text-slate-400">
+                      Showing {((currentPage - 1) * productsPerPage) + 1} to {Math.min(currentPage * productsPerPage, totalProducts)} of {totalProducts} products
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {/* Previous Button */}
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1 || isLoadingProducts}
+                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                          currentPage === 1 || isLoadingProducts
+                            ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed'
+                            : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:text-white'
+                        }`}
+                      >
+                        Previous
+                      </button>
+
+                      {/* Page Numbers */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                          // Show first page, last page, current page, and pages around current
+                          const showPage = page === 1 || 
+                                         page === totalPages || 
+                                         Math.abs(page - currentPage) <= 1;
+                          
+                          if (!showPage) {
+                            // Show ellipsis for gaps
+                            if (page === 2 && currentPage > 4) return <span key={page} className="text-slate-500 px-2">...</span>;
+                            if (page === totalPages - 1 && currentPage < totalPages - 3) return <span key={page} className="text-slate-500 px-2">...</span>;
+                            return null;
+                          }
+
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => setCurrentPage(page)}
+                              disabled={isLoadingProducts}
+                              className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                                currentPage === page
+                                  ? 'bg-cyan-600 text-white'
+                                  : isLoadingProducts
+                                  ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed'
+                                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:text-white'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Next Button */}
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages || isLoadingProducts}
+                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                          currentPage === totalPages || isLoadingProducts
+                            ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed'
+                            : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:text-white'
+                        }`}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Empty State for when supplier is selected but no products found */}
-                {getFilteredProducts().length === 0 && (
+                {products.length === 0 && !isLoadingProducts && (
                   <div className="text-center py-8">
                     <div className="text-slate-400 mb-2">
                       <svg className="w-8 h-8 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
