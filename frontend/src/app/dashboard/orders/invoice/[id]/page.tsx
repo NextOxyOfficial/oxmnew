@@ -17,6 +17,9 @@ interface InvoiceData {
     email: string;
     website?: string;
   };
+  userProfile?: {
+    store_logo: string;
+  };
 }
 
 export default function InvoicePage() {
@@ -53,9 +56,21 @@ export default function InvoicePage() {
           console.error("Error loading company settings:", error);
         }
 
+        // Fetch user profile to get store logo
+        let userProfile = undefined;
+        try {
+          const profileData = await ApiService.getProfile();
+          userProfile = {
+            store_logo: profileData.profile.store_logo || ""
+          };
+        } catch (error) {
+          console.error("Error loading user profile:", error);
+        }
+
         setInvoiceData({
           order: orderData,
-          company: companyData
+          company: companyData,
+          userProfile
         });
       } catch (error) {
         console.error("Error fetching invoice data:", error);
@@ -102,7 +117,7 @@ export default function InvoicePage() {
     );
   }
 
-  const { order, company } = invoiceData;
+  const { order, company, userProfile } = invoiceData;
 
   // Calculate totals
   const subtotal = order.items?.reduce((sum, item) => sum + (item.total_price || 0), 0) || order.total_amount || 0;
@@ -163,20 +178,34 @@ export default function InvoicePage() {
         <div className="max-w-4xl mx-auto bg-white shadow-lg print:shadow-none print:max-w-none">
           {/* Header Section */}
           <div className="px-8 py-6 print:px-6 print:py-4">
-            <div className="flex justify-between items-start mb-8">
-              {/* Company Info */}
+            <div className="flex justify-between items-start mb-5">
+              {/* Company Logo */}
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gray-800 rounded flex items-center justify-center print:bg-black">
-                  <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-800 print:text-black">
-                    {company.name}
-                  </h1>
-                  <p className="text-sm text-gray-500 print:text-gray-700">
-                    INVOICE
-                  </p>
-                </div>
+                {userProfile?.store_logo ? (
+                  <div className="w-36 flex items-center justify-center">
+                    <img
+                      src={userProfile.store_logo}
+                      alt="Company Logo"
+                      className="max-w-full max-h-full object-contain"
+                      onError={(e) => {
+                        // Fallback to placeholder if logo fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = target.parentElement?.querySelector('.fallback-logo');
+                        if (fallback) {
+                          fallback.classList.remove('hidden');
+                        }
+                      }}
+                    />
+                    <div className="fallback-logo w-12 h-12 bg-gray-800 rounded hidden items-center justify-center print:bg-black">
+                      <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 bg-gray-800 rounded flex items-center justify-center print:bg-black">
+                    <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
+                  </div>
+                )}
               </div>
 
               {/* Invoice Number and Date */}
@@ -308,7 +337,7 @@ export default function InvoicePage() {
           </div>
 
           {/* Bottom Section */}
-          <div className="p-8 pt-6">
+          <div className="p-8 pt-2">
             <div className="flex justify-between">
               {/* Payment Info */}
               <div className="w-1/2">
@@ -317,7 +346,7 @@ export default function InvoicePage() {
 
               {/* Totals */}
               <div className="w-1/3">
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <div className="flex justify-between py-2 px-3 border border-gray-300 print:border-black rounded">
                     <span className="text-sm text-gray-600 print:text-black">VAT</span>
                     <span className="text-sm text-gray-600 print:text-black">
@@ -339,9 +368,9 @@ export default function InvoicePage() {
                     </span>
                   </div>
 
-                  <div className="flex justify-between py-2 px-3 border-2 border-gray-800 print:border-black rounded font-semibold bg-gray-50 print:bg-transparent">
-                    <span className="text-sm">TOTAL</span>
-                    <span className="text-sm">
+                  <div className="flex justify-between py-2 px-3 border-2 border-gray-800 print:border-black rounded font-semibold bg-gray-800 text-white print:bg-transparent print:text-black">
+                    <span className="text-sm font-bold">TOTAL</span>
+                    <span className="text-sm font-bold">
                       {formatCurrency(total)}
                     </span>
                   </div>
