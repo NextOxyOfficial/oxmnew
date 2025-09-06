@@ -240,7 +240,17 @@ export default function InvoicePage() {
   }
   
   const paidAmount = Number(order.paid_amount) || 0;
-  const dueAmount = Math.max(0, total - paidAmount);
+  
+  // Due amount calculation - this should be dynamic
+  // Due amount from backend takes priority, otherwise calculate as total - paid
+  let dueAmount = 0;
+  if (order.due_amount !== undefined && order.due_amount !== null) {
+    // Use backend calculated due amount
+    dueAmount = Number(order.due_amount);
+  } else {
+    // Calculate due amount as remaining balance
+    dueAmount = Math.max(0, total - paidAmount);
+  }
 
   console.log("Final calculation results:", {
     subtotal,
@@ -250,7 +260,9 @@ export default function InvoicePage() {
     total,
     paidAmount,
     dueAmount,
-    orderTotalAmount: order.total_amount
+    orderTotalAmount: order.total_amount,
+    orderDueAmount: order.due_amount,
+    orderDiscountAmount: order.discount_amount
   });
 
   return (
