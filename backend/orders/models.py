@@ -151,8 +151,8 @@ class Order(models.Model):
         # Calculate final total
         self.total_amount = after_discount + self.vat_amount
 
-        # Subtract due amount (this is like an advance payment or credit applied)
-        self.total_amount -= self.due_amount
+        # Due amount is just a note and not subtracted from total
+        # It's tracked separately in DuePayment model
 
         # Add previous due if applicable (this is debt from previous orders)
         if self.apply_previous_due_to_total:

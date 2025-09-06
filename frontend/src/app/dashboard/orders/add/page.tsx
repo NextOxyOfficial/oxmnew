@@ -4,7 +4,7 @@ import ProductDropdown from "@/components/ProductDropdown";
 import ProductSearchInput, {
   ProductSearchInputRef,
 } from "@/components/ProductSearchInput";
-import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { useCurrencyFormatter, useCurrency } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Product } from "@/types/product";
 import { useRouter } from "next/navigation";
@@ -73,7 +73,6 @@ interface OrderForm {
   vat_percentage: number;
   vat_amount: number;
   due_amount: number;
-  apply_due_to_total: boolean; // Whether to subtract due amount from total
   previous_due: number; // Customer's existing debt
   apply_previous_due_to_total: boolean; // Whether to add previous due amount to total
   total: number;
@@ -96,6 +95,7 @@ interface OrderForm {
 export default function AddOrderPage() {
   const router = useRouter();
   const formatCurrency = useCurrencyFormatter();
+  const { currencySymbol } = useCurrency();
   const [products, setProducts] = useState<Product[]>([]);
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -119,6 +119,8 @@ export default function AddOrderPage() {
   const [customerValidationError, setCustomerValidationError] = useState<
     string | null
   >(null);
+  const [matchedCustomer, setMatchedCustomer] = useState<Customer | null>(null);
+  const [duplicateField, setDuplicateField] = useState<'email' | 'phone' | null>(null);
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
@@ -150,7 +152,6 @@ export default function AddOrderPage() {
     vat_percentage: 0,
     vat_amount: 0,
     due_amount: 0,
-    apply_due_to_total: true, // Default to true - include due in total calculation
     previous_due: 0,
     apply_previous_due_to_total: true, // Default to true - include previous due in total calculation
     total: 0,
@@ -620,7 +621,6 @@ export default function AddOrderPage() {
     discountFlatAmount: number,
     vatPercentage: number,
     dueAmount: number,
-    applyDueToTotal: boolean,
     previousDue: number,
     applyPreviousDueToTotal: boolean,
     incentiveAmount: number,
@@ -640,11 +640,11 @@ export default function AddOrderPage() {
     
     const afterDiscount = subtotal - discountAmount;
     const vatAmount = (afterDiscount * vatPercentage) / 100;
-    // Only subtract due amount if checkbox is checked, only add previous due if checkbox is checked
+    // Due amount is just a note and should not affect total calculation
+    // Only add previous due if checkbox is checked (this is existing debt)
     const total =
       afterDiscount +
-      vatAmount -
-      (applyDueToTotal ? dueAmount : 0) +
+      vatAmount +
       (applyPreviousDueToTotal ? previousDue : 0);
     const grossProfit = totalSellPrice - totalBuyPrice;
     const netProfit = grossProfit - incentiveAmount; // Net Profit = Gross Profit - Incentive
@@ -688,7 +688,6 @@ export default function AddOrderPage() {
       orderForm.discount_flat_amount,
       orderForm.vat_percentage,
       orderForm.due_amount,
-      orderForm.apply_due_to_total,
       orderForm.previous_due,
       orderForm.apply_previous_due_to_total,
       orderForm.incentive_amount,
@@ -715,7 +714,6 @@ export default function AddOrderPage() {
     orderForm.discount_flat_amount,
     orderForm.vat_percentage,
     orderForm.due_amount,
-    orderForm.apply_due_to_total,
     orderForm.previous_due,
     orderForm.apply_previous_due_to_total,
     orderForm.incentive_amount,
@@ -735,6 +733,8 @@ export default function AddOrderPage() {
     // Clear validation error when user starts typing
     if (customerValidationError) {
       setCustomerValidationError(null);
+      setMatchedCustomer(null);
+      setDuplicateField(null);
     }
 
     // Check for existing customer if email or phone is being changed
@@ -749,10 +749,31 @@ export default function AddOrderPage() {
       );
 
       if (existingCustomer) {
+        setMatchedCustomer(existingCustomer);
+        setDuplicateField(field as 'email' | 'phone');
         setCustomerValidationError(
           `A customer with this ${field} already exists: ${existingCustomer.name}. You may want to select them from existing customers instead, or use a different ${field}.`
         );
       }
+    }
+  };
+
+  // Handle clicking on matched customer name in validation message
+  const handleSelectMatchedCustomer = () => {
+    if (matchedCustomer) {
+      handleCustomerSelection(matchedCustomer.id);
+      setCustomerValidationError(null);
+      setMatchedCustomer(null);
+      setDuplicateField(null);
+      // Format the customer search display the same way as normal selection
+      setCustomerSearch(
+        `${matchedCustomer.name}${
+          matchedCustomer.email ? ` (${matchedCustomer.email})` : ""
+        }${
+          matchedCustomer.phone ? ` - ${matchedCustomer.phone}` : ""
+        }`
+      );
+      setIsCustomerDropdownOpen(false);
     }
   };
 
@@ -1224,7 +1245,7 @@ export default function AddOrderPage() {
                               }
                             }}
                             disabled={customerType === "guest"}
-                            className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                            className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
                               customerType === "guest"
                                 ? "opacity-50 cursor-not-allowed"
                                 : "cursor-text"
@@ -1378,7 +1399,7 @@ export default function AddOrderPage() {
                             }}
                             className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2 rounded cursor-pointer"
                           />
-                          <span className="text-slate-300">New Customer</span>
+                          <span className="text-sm text-slate-300">New Customer</span>
                         </label>
                       </div>
                     </div>
@@ -1409,7 +1430,15 @@ export default function AddOrderPage() {
                                 Note:
                               </p>
                               <p className="text-amber-300 text-sm">
-                                {customerValidationError} You can still proceed
+                                A customer with this {duplicateField || 'field'} already exists: {' '}
+                                <button
+                                  type="button"
+                                  onClick={handleSelectMatchedCustomer}
+                                  className="text-cyan-400 hover:text-cyan-300 underline font-medium transition-colors duration-200"
+                                >
+                                  {matchedCustomer?.name}
+                                </button>
+                                . You may want to select them from existing customers instead, or use a different {duplicateField || 'field'}. You can still proceed
                                 with creating this order.
                               </p>
                             </div>
@@ -1428,7 +1457,7 @@ export default function AddOrderPage() {
                             onChange={(e) =>
                               handleCustomerChange("name", e.target.value)
                             }
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                             placeholder="Enter customer name"
                           />
                         </div>
@@ -1442,7 +1471,7 @@ export default function AddOrderPage() {
                             onChange={(e) =>
                               handleCustomerChange("company", e.target.value)
                             }
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                             placeholder="Company name (optional)"
                           />
                         </div>
@@ -1456,7 +1485,7 @@ export default function AddOrderPage() {
                             onChange={(e) =>
                               handleCustomerChange("email", e.target.value)
                             }
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                             placeholder="customer@email.com (optional)"
                           />
                         </div>
@@ -1470,7 +1499,7 @@ export default function AddOrderPage() {
                             onChange={(e) =>
                               handleCustomerChange("phone", e.target.value)
                             }
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                             placeholder="Phone number (optional)"
                           />
                         </div>
@@ -1484,7 +1513,7 @@ export default function AddOrderPage() {
                               handleCustomerChange("address", e.target.value)
                             }
                             rows={2}
-                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
+                            className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                             placeholder="Customer address (optional)"
                           />
                         </div>
@@ -1797,7 +1826,7 @@ export default function AddOrderPage() {
                     {/* Subtotal */}
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400">Subtotal:</span>
-                      <span className="text-slate-100">
+                      <span className="text-slate-100 text-sm">
                         {formatCurrency(orderForm.subtotal)}
                       </span>
                     </div>
@@ -1836,7 +1865,7 @@ export default function AddOrderPage() {
                                 : "bg-slate-700/50 text-slate-400 border border-slate-600/50 hover:bg-slate-600/50"
                             }`}
                           >
-                            $
+                            {currencySymbol}
                           </button>
                         </div>
 
@@ -1856,7 +1885,7 @@ export default function AddOrderPage() {
                                     parseFloat(e.target.value) || 0,
                                 }))
                               }
-                              className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               placeholder=""
                               min="0"
                               max="100"
@@ -1880,16 +1909,16 @@ export default function AddOrderPage() {
                                     parseFloat(e.target.value) || 0,
                                 }))
                               }
-                              className="w-20 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              className="w-20 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               placeholder="0"
                               min="0"
                               step="0.01"
                             />
-                            <span className="text-slate-400 text-sm">$</span>
+                            <span className="text-slate-400 text-sm">{currencySymbol}</span>
                           </>
                         )}
                         
-                        <span className="text-slate-100">
+                        <span className="text-slate-100 text-sm">
                           -{formatCurrency(orderForm.discount_amount)}
                         </span>
                       </div>
@@ -1912,14 +1941,14 @@ export default function AddOrderPage() {
                               vat_percentage: parseFloat(e.target.value) || 0,
                             }))
                           }
-                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           placeholder="0"
                           min="0"
                           max="100"
                           step="0.01"
                         />
                         <span className="text-slate-400 text-sm">%</span>
-                        <span className="text-slate-100">
+                        <span className="text-slate-100 text-sm">
                           {formatCurrency(orderForm.vat_amount)}
                         </span>
                       </div>
@@ -1942,15 +1971,12 @@ export default function AddOrderPage() {
                               due_amount: parseFloat(e.target.value) || 0,
                             }))
                           }
-                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           placeholder="0"
                           min="0"
                           step="0.01"
                         />
-                        <span className="text-slate-400 text-sm">$</span>
-                        <span className="text-slate-100">
-                          -{formatCurrency(orderForm.due_amount)}
-                        </span>
+                        <span className="text-slate-400 text-sm">{currencySymbol}</span>
                       </div>
                     </div>
 
@@ -2061,7 +2087,7 @@ export default function AddOrderPage() {
                                     parseFloat(e.target.value) || 0
                                   )
                                 }
-                                className="flex-1 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                className="flex-1 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 placeholder="0.00"
                                 min="0"
                                 step="0.01"
@@ -2108,7 +2134,7 @@ export default function AddOrderPage() {
 
                           {orderForm.remaining_balance !== 0 && (
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-300 font-medium">
+                              <span className="text-slate-300 text-sm">
                                 Remaining Balance:
                               </span>
                               <span
@@ -2197,7 +2223,7 @@ export default function AddOrderPage() {
                                   setIsEmployeeDropdownOpen(true);
                                 }}
                                 onFocus={() => setIsEmployeeDropdownOpen(true)}
-                                className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                                className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 text-sm transition-all duration-200"
                               />
                               {/* Clear button */}
                               {employeeSearch && (
@@ -2320,7 +2346,7 @@ export default function AddOrderPage() {
                                     parseFloat(e.target.value) || 0,
                                 }))
                               }
-                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 text-sm transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               placeholder="0.00"
                               min="0"
                               step="0.01"
@@ -2418,7 +2444,7 @@ export default function AddOrderPage() {
                                 </span>
                               </div>
                               <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
-                                <span className="text-sm font-medium text-slate-300">
+                                <span className="text-sm text-slate-300">
                                   {orderForm.net_profit < 0
                                     ? "Net Loss:"
                                     : "Net Profit:"}

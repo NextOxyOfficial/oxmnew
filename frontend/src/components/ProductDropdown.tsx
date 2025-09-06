@@ -1,6 +1,7 @@
 "use client";
 
 import React, { memo } from "react";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface Product {
   id: number;
@@ -36,6 +37,8 @@ const ProductDropdown = memo<ProductDropdownProps>(
     onClose,
     highlightText,
   }) => {
+    const { currencySymbol } = useCurrency();
+    
     if (!isOpen || searchQuery.trim().length < 1) {
       return null;
     }
@@ -119,7 +122,7 @@ const ProductDropdown = memo<ProductDropdownProps>(
                       </span>
                     )}
                     <span className="text-green-400 bg-green-900/30 px-2 py-0.5 rounded text-xs font-medium">
-                      ${product.sell_price || 0}
+                      {currencySymbol}{product.sell_price || 0}
                     </span>
                   </div>
                   {product.has_variants && (

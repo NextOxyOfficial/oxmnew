@@ -454,6 +454,64 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                 order=order, user=self.context["request"].user, **payment_data
             )
 
+        # Create due payment record if order has due amount
+        if validated_data.get("due_amount", 0) > 0:
+            from customers.models import DuePayment
+            
+            # Find or create customer for due payment
+            if order.customer:
+                customer = order.customer
+            elif order.customer_name and (order.customer_email or order.customer_phone):
+                # Try to find existing customer or create new one
+                from customers.models import Customer
+                customer = None
+                
+                # Try to find by email first
+                if order.customer_email:
+                    try:
+                        customer = Customer.objects.get(
+                            email=order.customer_email, 
+                            user=self.context["request"].user
+                        )
+                    except Customer.DoesNotExist:
+                        pass
+                
+                # Try to find by phone if not found by email
+                if not customer and order.customer_phone:
+                    try:
+                        customer = Customer.objects.get(
+                            phone=order.customer_phone, 
+                            user=self.context["request"].user
+                        )
+                    except Customer.DoesNotExist:
+                        pass
+                
+                # Create new customer if not found
+                if not customer:
+                    customer = Customer.objects.create(
+                        name=order.customer_name,
+                        email=order.customer_email,
+                        phone=order.customer_phone,
+                        address=order.customer_address,
+                        user=self.context["request"].user,
+                    )
+                    order.customer = customer
+                    order.save()
+            else:
+                customer = None
+            
+            # Create due payment record if we have a customer
+            if customer:
+                DuePayment.objects.create(
+                    customer=customer,
+                    order=order,
+                    amount=validated_data["due_amount"],
+                    payment_type="due",
+                    due_date=validated_data.get("due_date"),
+                    notes=f"Due amount from order #{order.order_number}",
+                    user=self.context["request"].user,
+                )
+
         # Calculate and update totals
         order.calculate_totals()
         order.save()
