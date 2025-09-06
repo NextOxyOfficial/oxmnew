@@ -400,6 +400,8 @@ export class ApiService {
     phone?: string;
     contact_number?: string;
     address?: string;
+    city?: string;
+    post_code?: string;
   }) {
     return this.put("/auth/profile/", profileData);
   }

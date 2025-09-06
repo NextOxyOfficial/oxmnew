@@ -97,6 +97,15 @@ export default function BankingPage() {
     selectedPlan: "monthly", // "monthly" or "yearly"
   });
 
+  // Address form state for payment
+  const [addressForm, setAddressForm] = useState({
+    phone: "",
+    address: "",
+    city: "",
+    post_code: "",
+  });
+  const [addressErrors, setAddressErrors] = useState<Record<string, string>>({});
+
   // Transaction Form State
   const [newTransaction, setNewTransaction] = useState({
     type: "debit" as "debit" | "credit",
@@ -385,6 +394,18 @@ export default function BankingPage() {
     }
   }, [showPaymentModal, showCreateAccountModal]);
 
+  // Initialize address form with profile data when create account modal opens
+  useEffect(() => {
+    if (showCreateAccountModal && profile) {
+      setAddressForm({
+        phone: profile?.phone || profile?.contact_number || "",
+        address: profile?.address || "",
+        city: profile?.city || "",
+        post_code: profile?.post_code || "",
+      });
+    }
+  }, [showCreateAccountModal, profile]);
+
   // Debug info - temporary
   console.log("Banking Debug Info:", debugInfo, { accounts, error });
 
@@ -450,13 +471,21 @@ export default function BankingPage() {
         // No active plan found, need to purchase
         console.log("No active banking plan found, will need to purchase:", error);
         
-        // If it's a 404 error (no plan found), continue to payment process
-        // If it's another error, show it to the user
-        if (error?.response?.status !== 404) {
+        // Check if it's a 404 error (no plan found) or a network/other error
+        const errorMessage = error?.message || "";
+        const isNoPlanFound = 
+          errorMessage.includes("404") ||
+          errorMessage.includes("No active banking plan found") ||
+          errorMessage.includes("not found");
+        
+        if (!isNoPlanFound) {
           console.error("Error checking banking plan:", error);
           alert("Error checking banking plan. Please try again.");
           return;
         }
+        
+        // Continue to payment process for 404/no plan found
+        console.log("Proceeding to payment process - no active plan found");
       }
 
       // User doesn't have active plan, initiate payment process
@@ -467,38 +496,51 @@ export default function BankingPage() {
         return;
       }
 
-      // Validate profile completeness
-      console.log("Current user data:", user);
-      console.log("Current profile data:", profile);
-
-      const requiredFields = {
-        "First Name": user.first_name,
-        "Last Name": user.last_name,
-        Phone: profile?.phone || profile?.contact_number,
-        Address: profile?.address,
-        City: profile?.city,
-        "Post Code": profile?.post_code,
-      };
-
-      console.log("Required fields check:", requiredFields);
-
-      const missingFields = Object.entries(requiredFields)
-        .filter(([, value]) => !value || value.toString().trim() === "")
-        .map(([field]) => field);
-
-      console.log("Missing fields:", missingFields);
-
-      if (missingFields.length > 0) {
-        const missingFieldsList = missingFields.join(", ");
-        const confirmRedirect = confirm(
-          `The following profile fields are required for payment: ${missingFieldsList}\n\nWould you like to complete your profile now?`
-        );
-        if (confirmRedirect) {
-          router.push("/dashboard/profile");
-        }
+      // Validate billing address form
+      const errors: Record<string, string> = {};
+      
+      if (!addressForm.phone.trim()) errors.phone = "Phone is required";
+      if (!addressForm.address.trim()) errors.address = "Address is required";
+      if (!addressForm.city.trim()) errors.city = "City is required";
+      if (!addressForm.post_code.trim()) errors.post_code = "Post code is required";
+      
+      if (Object.keys(errors).length > 0) {
+        setAddressErrors(errors);
         return;
       }
 
+      // Clear any previous errors
+      setAddressErrors({});
+
+      // Update profile with address information before payment
+      try {
+        const profileData = {
+          phone: addressForm.phone,
+          address: addressForm.address,
+          city: addressForm.city,
+          post_code: addressForm.post_code,
+        };
+        
+        console.log("Updating profile with billing data:", profileData);
+        await ApiService.updateProfile(profileData);
+      } catch (error: any) {
+        console.error("Error updating profile:", error);
+        setAddressErrors({ general: "Failed to update profile. Please try again." });
+        return;
+      }
+
+      // Profile is complete, proceed with payment
+      await proceedWithPayment();
+
+    } catch (error: any) {
+      console.error("Banking plan payment error:", error);
+      alert(error.message || "Failed to initiate payment. Please try again.");
+    }
+  };
+
+  // Function to proceed with payment after profile is complete
+  const proceedWithPayment = async () => {
+    try {
       // Store account details for creation after payment
       const accountData = {
         name: newAccount.name,
@@ -526,11 +568,11 @@ export default function BankingPage() {
         amount: planPrice,
         order_id: orderId,
         currency: currency,
-        customer_name: `${user.first_name} ${user.last_name || ""}`.trim(),
-        customer_address: profile?.address || "",
-        customer_phone: profile?.phone || profile?.contact_number || "",
-        customer_city: profile?.city || "",
-        customer_post_code: profile?.post_code || "",
+        customer_name: `${user?.first_name || ""} ${user?.last_name || ""}`.trim(),
+        customer_address: addressForm.address,
+        customer_phone: addressForm.phone,
+        customer_city: addressForm.city,
+        customer_post_code: addressForm.post_code,
       };
 
       console.log("Banking payment data:", paymentData);
@@ -1253,7 +1295,7 @@ export default function BankingPage() {
                           >
                             {selectedAccount
                               ? formatCurrency(selectedAccount.balance)
-                              : "$0.00"}
+                              : formatCurrency(0)}
                           </p>
                         </div>
                       </div>
@@ -1646,11 +1688,12 @@ export default function BankingPage() {
 
         {/* Create Account Modal */}
         {showCreateAccountModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-lg mx-auto backdrop-blur-md max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between p-4 border-b border-slate-700/50 sticky top-0 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-md rounded-t-2xl">
-                <h2 className="text-lg font-semibold text-white">
-                  Buy New Account
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-full p-4">
+              <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-lg mx-auto backdrop-blur-md">
+                <div className="flex items-center justify-between p-4 border-b border-slate-700/50 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-md rounded-t-2xl">
+                  <h2 className="text-lg font-semibold text-white">
+                    Buy New Account
                 </h2>
                 <button
                   onClick={() => {
@@ -1659,6 +1702,13 @@ export default function BankingPage() {
                       name: "",
                       balance: "",
                       selectedPlan: "monthly",
+                    });
+                    setAddressErrors({});
+                    setAddressForm({
+                      phone: "",
+                      address: "",
+                      city: "",
+                      post_code: "",
                     });
                   }}
                   className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 hover:bg-slate-700/50 rounded-lg"
@@ -1734,17 +1784,17 @@ export default function BankingPage() {
                           {isLoadingPlans ? (
                             <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                           ) : (
-                            `$${
+                            formatCurrency(
                               Array.isArray(bankingPlans)
                                 ? bankingPlans.find(
                                     (p) => p.period === "monthly"
-                                  )?.price || 99
-                                : 99
-                            }`
+                                  )?.price || 1
+                                : 1
+                            )
                           )}
                         </div>
                         <div className="text-xs text-slate-400 mt-1">
-                          per month
+                          Per month
                         </div>
                       </div>
                       {newAccount.selectedPlan === "monthly" && (
@@ -1773,22 +1823,22 @@ export default function BankingPage() {
                           {isLoadingPlans ? (
                             <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                           ) : (
-                            `$${
+                            formatCurrency(
                               Array.isArray(bankingPlans)
                                 ? bankingPlans.find(
                                     (p) => p.period === "yearly"
-                                  )?.price || 1099
-                                : 1099
-                            }`
+                                  )?.price || 1000
+                                : 1000
+                            )
                           )}
                         </div>
                         <div className="text-xs text-slate-400 mt-1">
-                          per year
+                          Per year
                         </div>
                         <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-2 py-1 rounded-full font-medium">
                           {(() => {
                             if (isLoadingPlans) return "Loading...";
-                            if (!Array.isArray(bankingPlans)) return "Save $89";
+                            if (!Array.isArray(bankingPlans)) return `Save ${formatCurrency(89)}`;
                             const monthlyPlan = bankingPlans.find(
                               (p) => p.period === "monthly"
                             );
@@ -1798,9 +1848,9 @@ export default function BankingPage() {
                             if (monthlyPlan && yearlyPlan) {
                               const savings =
                                 monthlyPlan.price * 12 - yearlyPlan.price;
-                              return `Save $${savings}`;
+                              return `Save ${formatCurrency(savings)}`;
                             }
-                            return "Save $89";
+                            return `Save ${formatCurrency(89)}`;
                           })()}
                         </div>
                       </div>
@@ -1811,6 +1861,7 @@ export default function BankingPage() {
                       )}
                     </div>
                   </div>
+
 
                   {/* Plan Benefits */}
                   <div className="mt-3 p-3 bg-slate-800/30 rounded-lg border border-slate-700/30">
@@ -1836,8 +1887,122 @@ export default function BankingPage() {
                       </li>
                     </ul>
                   </div>
+
+                  {/* Billing Address Section - Always shown for payment */}
+                  <div className="mt-4 p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
+                    <div className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Billing Address (Required)
+                    </div>
+                    <div className="text-xs text-slate-400 mb-3">
+                      Please provide your billing information for payment processing:
+                    </div>
+                    
+                    {addressErrors.general && (
+                      <div className="mb-3 p-2 bg-red-900/20 border border-red-700/50 rounded text-sm text-red-400">
+                        {addressErrors.general}
+                      </div>
+                    )}
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Phone Number *
+                        </label>
+                        <input
+                          type="tel"
+                          value={addressForm.phone}
+                          onChange={(e) => {
+                            setAddressForm({ ...addressForm, phone: e.target.value });
+                            if (addressErrors.phone) {
+                              setAddressErrors({ ...addressErrors, phone: "" });
+                            }
+                          }}
+                          className={`w-full bg-slate-800/50 border text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
+                            addressErrors.phone ? 'border-red-500' : 'border-slate-700/50'
+                          }`}
+                          placeholder="Enter your phone number"
+                        />
+                        {addressErrors.phone && (
+                          <div className="text-xs text-red-400 mt-1">{addressErrors.phone}</div>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                          Street Address *
+                        </label>
+                        <input
+                          type="text"
+                          value={addressForm.address}
+                          onChange={(e) => {
+                            setAddressForm({ ...addressForm, address: e.target.value });
+                            if (addressErrors.address) {
+                              setAddressErrors({ ...addressErrors, address: "" });
+                            }
+                          }}
+                          className={`w-full bg-slate-800/50 border text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
+                            addressErrors.address ? 'border-red-500' : 'border-slate-700/50'
+                          }`}
+                          placeholder="Enter your street address"
+                        />
+                        {addressErrors.address && (
+                          <div className="text-xs text-red-400 mt-1">{addressErrors.address}</div>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-300 mb-1">
+                            City *
+                          </label>
+                          <input
+                            type="text"
+                            value={addressForm.city}
+                            onChange={(e) => {
+                              setAddressForm({ ...addressForm, city: e.target.value });
+                              if (addressErrors.city) {
+                                setAddressErrors({ ...addressErrors, city: "" });
+                              }
+                            }}
+                            className={`w-full bg-slate-800/50 border text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
+                              addressErrors.city ? 'border-red-500' : 'border-slate-700/50'
+                            }`}
+                            placeholder="City"
+                          />
+                          {addressErrors.city && (
+                            <div className="text-xs text-red-400 mt-1">{addressErrors.city}</div>
+                          )}
+                        </div>
+                        
+                        <div>
+                          <label className="block text-xs font-medium text-slate-300 mb-1">
+                            Post Code *
+                          </label>
+                          <input
+                            type="text"
+                            value={addressForm.post_code}
+                            onChange={(e) => {
+                              setAddressForm({ ...addressForm, post_code: e.target.value });
+                              if (addressErrors.post_code) {
+                                setAddressErrors({ ...addressErrors, post_code: "" });
+                              }
+                            }}
+                            className={`w-full bg-slate-800/50 border text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
+                              addressErrors.post_code ? 'border-red-500' : 'border-slate-700/50'
+                            }`}
+                            placeholder="Post code"
+                          />
+                          {addressErrors.post_code && (
+                            <div className="text-xs text-red-400 mt-1">{addressErrors.post_code}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
+                {/* Main form buttons */}
                 <div className="flex space-x-2 pt-2">
                   <button
                     type="button"
@@ -1850,6 +2015,13 @@ export default function BankingPage() {
                         selectedPlan: "monthly",
                       });
                       setShowCreateAccountModal(false);
+                      setAddressErrors({});
+                      setAddressForm({
+                        phone: "",
+                        address: "",
+                        city: "",
+                        post_code: "",
+                      });
                     }}
                     className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-3 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
                   >
@@ -1863,18 +2035,20 @@ export default function BankingPage() {
                   </button>
                 </div>
               </form>
+              </div>
             </div>
           </div>
         )}
 
         {/* Banking Plan Payment Modal */}
         {showPaymentModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-auto backdrop-blur-md">
-              <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
-                <h2 className="text-lg font-semibold text-white">
-                  Purchase Banking Plan
-                </h2>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-full p-4">
+              <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-auto backdrop-blur-md">
+                <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+                  <h2 className="text-lg font-semibold text-white">
+                    Purchase Banking Plan
+                  </h2>
                 <button
                   onClick={() => setShowPaymentModal(false)}
                   className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 hover:bg-slate-700/50 rounded-lg"
@@ -1908,12 +2082,12 @@ export default function BankingPage() {
                         {isLoadingPlans ? (
                           <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                         ) : (
-                          `$${
+                          formatCurrency(
                             Array.isArray(bankingPlans)
                               ? bankingPlans.find((p) => p.period === "monthly")
                                   ?.price || 99
                               : 99
-                          }`
+                          )
                         )}
                       </div>
                       <div className="text-xs text-slate-400 mt-1">
@@ -1944,13 +2118,13 @@ export default function BankingPage() {
                         {isLoadingPlans ? (
                           <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                         ) : (
-                          `$${
+                          formatCurrency(
                             Array.isArray(bankingPlans)
                               ? bankingPlans
                                   .find((p) => p.period === "yearly")
-                                  ?.price?.toLocaleString() || "1,099"
-                              : "1,099"
-                          }`
+                                  ?.price || 1099
+                              : 1099
+                          )
                         )}
                       </div>
                       <div className="text-xs text-slate-400 mt-1">
@@ -1959,7 +2133,7 @@ export default function BankingPage() {
                       <div className="text-xs text-green-400 mt-1 font-medium">
                         {(() => {
                           if (isLoadingPlans) return "Loading...";
-                          if (!Array.isArray(bankingPlans)) return "Save $89!";
+                          if (!Array.isArray(bankingPlans)) return `Save ${formatCurrency(89)}!`;
                           const monthlyPlan = bankingPlans.find(
                             (p) => p.period === "monthly"
                           );
@@ -1969,9 +2143,9 @@ export default function BankingPage() {
                           if (monthlyPlan && yearlyPlan) {
                             const savings =
                               monthlyPlan.price * 12 - yearlyPlan.price;
-                            return `Save $${savings}!`;
+                            return `Save ${formatCurrency(savings)}!`;
                           }
-                          return "Save $89!";
+                          return `Save ${formatCurrency(89)}!`;
                         })()}
                       </div>
                     </div>
@@ -2063,21 +2237,23 @@ export default function BankingPage() {
                   </button>
                 </div>
               </div>
+              </div>
             </div>
           </div>
         )}
 
         {/* Add Transaction Modal */}
         {showTransactionModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-auto backdrop-blur-md">
-              <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
-                <h2 className="text-lg font-semibold text-white">
-                  Add Transaction
-                </h2>
-                <button
-                  onClick={() => setShowTransactionModal(false)}
-                  className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 hover:bg-slate-700/50 rounded-lg"
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-full p-4">
+              <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-auto backdrop-blur-md">
+                <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+                  <h2 className="text-lg font-semibold text-white">
+                    Add Transaction
+                  </h2>
+                  <button
+                    onClick={() => setShowTransactionModal(false)}
+                    className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 hover:bg-slate-700/50 rounded-lg"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -2214,6 +2390,7 @@ export default function BankingPage() {
                 </div>
               </form>
             </div>
+          </div>
           </div>
         )}
 
