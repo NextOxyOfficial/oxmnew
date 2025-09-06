@@ -6,6 +6,7 @@ import { ApiService } from "@/lib/api";
 import { Product, ProductVariant } from "@/types/product";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
+import * as XLSX from 'xlsx';
 
 function ProductsPageContent() {
   const router = useRouter();
@@ -25,10 +26,12 @@ function ProductsPageContent() {
     deleting: { [key: string]: boolean };
     navigating: { [key: string]: boolean };
     addProduct: boolean;
+    downloadingExcel: boolean;
   }>({
     deleting: {},
     navigating: {},
     addProduct: false,
+    downloadingExcel: false,
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -403,6 +406,84 @@ function ProductsPageContent() {
     }, 300);
   };
 
+  const handleDownloadExcel = async () => {
+    try {
+      setLoadingStates((prev) => ({
+        ...prev,
+        downloadingExcel: true,
+      }));
+
+      // Fetch all products without pagination
+      const allProductsData = await ApiService.getProducts({
+        page_size: 10000, // Large number to get all products
+      });
+
+      const allProducts = allProductsData.results || allProductsData || [];
+
+      // Prepare data for Excel
+      const excelData = allProducts.map((product: Product) => {
+        const totals = getProductTotals(product);
+        const displayPrices = getDisplayPrices(product);
+        
+        return {
+          'Product Name': product.name || '',
+          'Product Code': product.product_code || '',
+          'Category': product.category_name || '',
+          'Stock': getDisplayStock(product),
+          'Buy Price': displayPrices.buyPrice,
+          'Sell Price': displayPrices.sellPrice,
+          'Total Buy Value': totals.totalBuyPrice,
+          'Total Sell Value': totals.totalSellPrice,
+          'Expected Profit': totals.totalProfit,
+          'Has Variants': product.has_variants ? 'Yes' : 'No',
+          'Status': product.is_active ? 'Active' : 'Inactive',
+          'Description': product.details || '',
+        };
+      });
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Set column widths for better readability
+      const columnWidths = [
+        { wch: 25 }, // Product Name
+        { wch: 15 }, // Product Code
+        { wch: 15 }, // Category
+        { wch: 10 }, // Stock
+        { wch: 12 }, // Buy Price
+        { wch: 12 }, // Sell Price
+        { wch: 15 }, // Total Buy Value
+        { wch: 15 }, // Total Sell Value
+        { wch: 15 }, // Expected Profit
+        { wch: 12 }, // Has Variants
+        { wch: 10 }, // Status
+        { wch: 30 }, // Description
+      ];
+      worksheet['!cols'] = columnWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
+
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split('T')[0];
+      const filename = `products_${currentDate}.xlsx`;
+
+      // Download the file
+      XLSX.writeFile(workbook, filename);
+
+      showNotification('success', `Products list downloaded successfully as ${filename}`);
+    } catch (error) {
+      console.error('Error downloading Excel file:', error);
+      showNotification('error', 'Failed to download products list');
+    } finally {
+      setLoadingStates((prev) => ({
+        ...prev,
+        downloadingExcel: false,
+      }));
+    }
+  };
+
   // Pagination handlers
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -772,58 +853,114 @@ function ProductsPageContent() {
 
                 {/* Controls */}
                 <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
-                  {/* Add Product Button */}
-                  <button
-                    onClick={handleAddProduct}
-                    disabled={loadingStates.addProduct}
-                    className={`px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 flex-shrink-0 ${
-                      loadingStates.addProduct
-                        ? "opacity-50 cursor-not-allowed"
-                        : "cursor-pointer"
-                    }`}
-                  >
-                    {loadingStates.addProduct ? (
-                      <>
-                        <svg
-                          className="animate-spin h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 flex-shrink-0">
+                    {/* Add Product Button */}
+                    <button
+                      onClick={handleAddProduct}
+                      disabled={loadingStates.addProduct}
+                      className={`px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 ${
+                        loadingStates.addProduct
+                          ? "opacity-50 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }`}
+                    >
+                      {loadingStates.addProduct ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
                             stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                          />
-                        </svg>
-                        Add Product
-                      </>
-                    )}
-                  </button>
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                            />
+                          </svg>
+                          Add Product
+                        </>
+                      )}
+                    </button>
+
+                    {/* Download Excel Button */}
+                    <button
+                      onClick={handleDownloadExcel}
+                      disabled={loadingStates.downloadingExcel}
+                      className={`px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 ${
+                        loadingStates.downloadingExcel
+                          ? "opacity-50 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }`}
+                    >
+                      {loadingStates.downloadingExcel ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                          Download Excel
+                        </>
+                      )}
+                    </button>
+                  </div>
 
                   {/* Search */}
                   <div className="relative flex-1 min-w-0">
