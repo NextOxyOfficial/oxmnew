@@ -502,14 +502,7 @@ export default function SuppliersPage() {
         throw new Error("No supplier selected");
       }
 
-      // Handle file upload if present
-      let proofDocumentUrl = "";
-      if (purchaseForm.proofFile) {
-        // In a real app, you would upload the file to a server here
-        // For now, we'll create a local URL
-        proofDocumentUrl = URL.createObjectURL(purchaseForm.proofFile);
-      }
-
+      // Pass the actual file to the API service, not a local URL
       const newPurchase = await ApiService.createPurchase({
         supplier: selectedSupplierForAction.id,
         date: purchaseForm.date,
@@ -517,7 +510,7 @@ export default function SuppliersPage() {
         status: purchaseForm.status,
         products: purchaseForm.products,
         notes: purchaseForm.notes || undefined,
-        proof_document: proofDocumentUrl || undefined,
+        proof_document: purchaseForm.proofFile || undefined,
       });
 
       // Add the new purchase to the state
@@ -562,14 +555,7 @@ export default function SuppliersPage() {
         throw new Error("No supplier selected");
       }
 
-      // Handle file upload if present
-      let proofDocumentUrl = "";
-      if (paymentForm.proofFile) {
-        // In a real app, you would upload the file to a server here
-        // For now, we'll create a local URL
-        proofDocumentUrl = URL.createObjectURL(paymentForm.proofFile);
-      }
-
+      // Pass the actual file to the API service, not a local URL
       const newPayment = await ApiService.createPayment({
         supplier: selectedSupplierForAction.id,
         date: paymentForm.date,
@@ -578,7 +564,7 @@ export default function SuppliersPage() {
         status: paymentForm.status,
         reference: paymentForm.reference || "",
         notes: paymentForm.notes || undefined,
-        proof_document: proofDocumentUrl || undefined,
+        proof_document: paymentForm.proofFile || undefined,
       });
 
       // Add the new payment to the state

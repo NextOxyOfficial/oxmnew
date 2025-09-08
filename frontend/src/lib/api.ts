@@ -1565,8 +1565,13 @@ export class ApiService {
       price: number;
     }>;
   }) {
+    console.log('createPurchase called with:', purchaseData);
+    console.log('proof_document type:', typeof purchaseData.proof_document);
+    console.log('proof_document instanceof File:', purchaseData.proof_document instanceof File);
+    
     // If we have a file, use FormData for file upload
     if (purchaseData.proof_document instanceof File) {
+      console.log('Using FormData for file upload');
       const formData = new FormData();
       formData.append('supplier', purchaseData.supplier.toString());
       if (purchaseData.date) formData.append('date', purchaseData.date);
@@ -1577,8 +1582,14 @@ export class ApiService {
       formData.append('proof_document', purchaseData.proof_document);
       if (purchaseData.items) formData.append('items', JSON.stringify(purchaseData.items));
 
+      console.log('FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+
       return this.postFormData("/purchases/", formData);
     } else {
+      console.log('Using regular JSON request');
       // Regular JSON request without file
       return this.post("/purchases/", purchaseData);
     }
@@ -1655,8 +1666,13 @@ export class ApiService {
     notes?: string;
     proof_document?: File | string;
   }) {
+    console.log('createPayment called with:', paymentData);
+    console.log('proof_document type:', typeof paymentData.proof_document);
+    console.log('proof_document instanceof File:', paymentData.proof_document instanceof File);
+    
     // If we have a file, use FormData for file upload
     if (paymentData.proof_document instanceof File) {
+      console.log('Using FormData for file upload');
       const formData = new FormData();
       if (paymentData.supplier) formData.append('supplier', paymentData.supplier.toString());
       if (paymentData.type) formData.append('type', paymentData.type);
@@ -1669,8 +1685,14 @@ export class ApiService {
       if (paymentData.notes) formData.append('notes', paymentData.notes);
       formData.append('proof_document', paymentData.proof_document);
 
+      console.log('FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+
       return this.postFormData("/payments/", formData);
     } else {
+      console.log('Using regular JSON request');
       // Regular JSON request without file
       return this.post("/payments/", paymentData);
     }

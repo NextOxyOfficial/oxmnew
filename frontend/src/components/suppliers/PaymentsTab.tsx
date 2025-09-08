@@ -267,7 +267,7 @@ export default function PaymentsTab({
                   <div className="max-h-48 overflow-y-auto">
                     <button
                       onClick={() => handleSupplierSelect('all')}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors ${
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer ${
                         selectedPaymentSupplier === 'all' ? 'bg-slate-700/50 text-cyan-400' : 'text-slate-300'
                       }`}
                     >
@@ -277,7 +277,7 @@ export default function PaymentsTab({
                       <button
                         key={supplier}
                         onClick={() => handleSupplierSelect(supplier)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors ${
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer ${
                           selectedPaymentSupplier === supplier ? 'bg-slate-700/50 text-cyan-400' : 'text-slate-300'
                         }`}
                       >
@@ -353,7 +353,7 @@ export default function PaymentsTab({
                           value={payment.status}
                           onChange={(e) => handleStatusUpdate(payment.id, e.target.value as 'pending' | 'completed' | 'failed')}
                           disabled={updating}
-                          className="px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50"
+                          className="px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50 cursor-pointer"
                         >
                           <option value="pending">Pending</option>
                           <option value="completed">Completed</option>
@@ -362,7 +362,7 @@ export default function PaymentsTab({
                         <button
                           onClick={() => setEditingPaymentId(null)}
                           disabled={updating}
-                          className="p-1 text-slate-400 hover:text-slate-300 disabled:opacity-50"
+                          className="p-1 text-slate-400 hover:text-slate-300 disabled:opacity-50 cursor-pointer"
                           title="Cancel"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -379,7 +379,7 @@ export default function PaymentsTab({
                           {onUpdatePayment && (
                             <button
                               onClick={() => setEditingPaymentId(payment.id)}
-                              className="p-1 text-slate-400 hover:text-cyan-400 transition-colors"
+                              className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
                               title="Edit status"
                             >
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -390,7 +390,7 @@ export default function PaymentsTab({
                           {onDeletePayment && (
                             <button
                               onClick={() => handleDelete(payment.id)}
-                              className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                              className="p-1 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
                               title="Delete payment"
                             >
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

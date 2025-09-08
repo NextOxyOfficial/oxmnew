@@ -325,7 +325,7 @@ export default function PurchaseHistoryTab({
                   <div className="max-h-48 overflow-y-auto">
                     <button
                       onClick={() => handleSupplierSelect("all")}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors ${
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer ${
                         selectedSupplier === "all"
                           ? "bg-slate-700/50 text-cyan-400"
                           : "text-slate-300"
@@ -337,7 +337,7 @@ export default function PurchaseHistoryTab({
                       <button
                         key={supplier}
                         onClick={() => handleSupplierSelect(supplier)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors ${
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer ${
                           selectedSupplier === supplier
                             ? "bg-slate-700/50 text-cyan-400"
                             : "text-slate-300"
@@ -444,7 +444,7 @@ export default function PurchaseHistoryTab({
                             )
                           }
                           disabled={updating}
-                          className="px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50"
+                          className="px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50 cursor-pointer"
                         >
                           <option value="pending">Pending</option>
                           <option value="completed">Completed</option>
@@ -453,7 +453,7 @@ export default function PurchaseHistoryTab({
                         <button
                           onClick={() => setEditingPurchaseId(null)}
                           disabled={updating}
-                          className="p-1 text-slate-400 hover:text-slate-300 disabled:opacity-50"
+                          className="p-1 text-slate-400 hover:text-slate-300 disabled:opacity-50 cursor-pointer"
                           title="Cancel"
                         >
                           <svg
@@ -484,7 +484,7 @@ export default function PurchaseHistoryTab({
                           {onUpdatePurchase && (
                             <button
                               onClick={() => setEditingPurchaseId(purchase.id)}
-                              className="p-1 text-slate-400 hover:text-cyan-400 transition-colors"
+                              className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
                               title="Edit status"
                             >
                               <svg
@@ -505,7 +505,7 @@ export default function PurchaseHistoryTab({
                           {onDeletePurchase && (
                             <button
                               onClick={() => handleDelete(purchase.id)}
-                              className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                              className="p-1 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
                               title="Delete purchase"
                             >
                               <svg
