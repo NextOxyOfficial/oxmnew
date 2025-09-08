@@ -2268,7 +2268,7 @@ export default function EditOrderPage() {
                   {/* Payment Section */}
                   <div className="space-y-3 pt-3 border-t border-slate-700/30 mt-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-300 font-medium">Payment Information</span>
+                      <span className="text-slate-300 font-medium text-sm">Payment Information</span>
                       <button
                         onClick={addPayment}
                         className="text-cyan-400 hover:text-cyan-300 text-sm font-medium flex items-center gap-1"
@@ -2284,19 +2284,19 @@ export default function EditOrderPage() {
                     {orderForm.payments.length > 0 && (
                       <div className="space-y-2">
                         {orderForm.payments.map((payment, index) => (
-                          <div key={payment.id} className="flex items-center gap-2 p-2 bg-slate-800/30 rounded-lg">
+                          <div key={payment.id} className="flex items-center gap-2">
                             <select
                               value={payment.method}
                               onChange={(e) =>
                                 updatePayment(payment.id, "method", e.target.value as PaymentEntry["method"])
                               }
-                              className="flex-1 bg-slate-800 border border-slate-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                              className="bg-slate-800/50 border border-slate-700/50 text-white text-sm rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
                             >
-                              <option value="Cash">Cash</option>
-                              <option value="Cheque">Cheque</option>
-                              <option value="Bkash">Bkash</option>
-                              <option value="Nagad">Nagad</option>
-                              <option value="Bank">Bank</option>
+                              <option value="Cash" className="bg-slate-800">Cash</option>
+                              <option value="Cheque" className="bg-slate-800">Cheque</option>
+                              <option value="Bkash" className="bg-slate-800">Bkash</option>
+                              <option value="Nagad" className="bg-slate-800">Nagad</option>
+                              <option value="Bank" className="bg-slate-800">Bank</option>
                             </select>
                             <input
                               type="number"
@@ -2304,19 +2304,22 @@ export default function EditOrderPage() {
                               onChange={(e) =>
                                 updatePayment(payment.id, "amount", parseFloat(e.target.value) || 0)
                               }
-                              className="w-20 bg-slate-800 border border-slate-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              placeholder="0"
+                              className="flex-1 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded py-1 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              placeholder="0.00"
                               min="0"
                               step="0.01"
                             />
-                            <button
-                              onClick={() => removePayment(payment.id)}
-                              className="text-red-400 hover:text-red-300 p-1"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
+                            {orderForm.payments.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removePayment(payment.id)}
+                                className="text-red-400 hover:text-red-300 transition-colors p-1 rounded hover:bg-red-900/20"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -2390,7 +2393,7 @@ export default function EditOrderPage() {
                             setIsEmployeeDropdownOpen(true);
                           }}
                           onFocus={() => setIsEmployeeDropdownOpen(true)}
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
                         />
 
                         {/* Clear button */}
@@ -2405,7 +2408,7 @@ export default function EditOrderPage() {
                               }));
                               setIsEmployeeDropdownOpen(false);
                             }}
-                            className="absolute right-12 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
+                            className="absolute right-12 top-1/2 transform -translate-y-1/2 text-sm text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
                             title="Clear search"
                           >
                             Clear
@@ -2430,7 +2433,7 @@ export default function EditOrderPage() {
                         {isEmployeeDropdownOpen && (
                           <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
                             {isLoadingEmployees ? (
-                              <div className="p-3 text-slate-400">
+                              <div className="p-3 text-slate-400 text-sm">
                                 Loading employees...
                               </div>
                             ) : employees.filter(
@@ -2458,7 +2461,7 @@ export default function EditOrderPage() {
                                     setEmployeeSearch("");
                                     setIsEmployeeDropdownOpen(false);
                                   }}
-                                  className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 text-slate-400"
+                                  className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 text-slate-400 text-sm"
                                 >
                                   No employee selected
                                 </div>
@@ -2501,7 +2504,7 @@ export default function EditOrderPage() {
                                       }}
                                       className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
                                     >
-                                      <div className="text-white font-medium">
+                                      <div className="text-white font-medium text-sm">
                                         {employee.name}
                                       </div>
                                       <div className="text-slate-400 text-sm">
@@ -2512,7 +2515,7 @@ export default function EditOrderPage() {
                                   ))}
                               </>
                             ) : (
-                              <div className="p-3 text-slate-400">
+                              <div className="p-3 text-slate-400 text-sm">
                                 No employees found
                               </div>
                             )}
@@ -2546,7 +2549,7 @@ export default function EditOrderPage() {
                             incentive_amount: parseFloat(e.target.value) || 0,
                           }))
                         }
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
                         placeholder="0.00"
                         min="0"
                         step="0.01"
@@ -2642,17 +2645,18 @@ export default function EditOrderPage() {
             {/* Order Actions */}
             <div className="flex gap-3">
               <button
-                onClick={handleCancel}
-                className="flex-1 px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700/50 hover:bg-slate-600 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
                 onClick={() => handleSubmit("pending")}
                 disabled={isSubmitting}
-                className="flex-1 px-4 py-2 text-sm font-medium bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
               >
                 {isSubmitting ? "Updating..." : "Update Order"}
+              </button>
+
+              <button
+                onClick={handleCancel}
+                className="flex-1 px-6 py-3 bg-slate-600 text-slate-100 text-sm font-medium rounded-lg hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 transition-all duration-200"
+              >
+                Cancel
               </button>
             </div>
           </div>
