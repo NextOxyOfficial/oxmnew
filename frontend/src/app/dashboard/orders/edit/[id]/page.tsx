@@ -482,7 +482,11 @@ export default function EditOrderPage() {
 
       const orderId = params.id as string;
 
-      const updateData = {
+      // Helper function to round monetary values to 2 decimal places
+      const roundToTwoDecimals = (value: number) => Math.round(value * 100) / 100;
+
+      // Update only the main order details (items are managed separately via individual API calls)
+      const orderUpdateData = {
         customer: selectedCustomerId || undefined,
         customer_name: orderForm.customer.name,
         customer_phone: orderForm.customer.phone?.trim() || undefined,
@@ -490,28 +494,20 @@ export default function EditOrderPage() {
         customer_address: orderForm.customer.address?.trim() || undefined,
         customer_company: orderForm.customer.company?.trim() || undefined,
         status,
-        discount_type: orderForm.discount_type,
-        discount_percentage: orderForm.discount_percentage,
-        discount_flat_amount: orderForm.discount_flat_amount,
-        vat_percentage: orderForm.vat_percentage,
-        due_amount: orderForm.due_amount,
-        previous_due: orderForm.previous_due,
-        apply_previous_due_to_total: orderForm.apply_previous_due_to_total,
-        due_date: orderForm.due_date || undefined,
+        discount_percentage: roundToTwoDecimals(orderForm.discount_percentage),
+        vat_percentage: roundToTwoDecimals(orderForm.vat_percentage),
         notes: orderForm.notes || undefined,
-        subtotal: orderForm.subtotal,
-        discount_amount: orderForm.discount_amount,
-        vat_amount: orderForm.vat_amount,
-        total_amount: orderForm.total,
-        employee: orderForm.employee_id || undefined,
-        incentive_amount: orderForm.incentive_amount,
-        total_buy_price: orderForm.total_buy_price,
-        total_sell_price: orderForm.total_sell_price,
-        gross_profit: orderForm.gross_profit,
-        net_profit: orderForm.net_profit,
+        due_date: orderForm.due_date || undefined,
+        // Let the backend recalculate these based on current items
+        subtotal: roundToTwoDecimals(orderForm.subtotal),
+        discount_amount: roundToTwoDecimals(orderForm.discount_amount),
+        vat_amount: roundToTwoDecimals(orderForm.vat_amount),
+        total_amount: roundToTwoDecimals(orderForm.total),
       };
 
-      await ApiService.updateOrder(parseInt(orderId), updateData);
+      // Update the order
+      await ApiService.updateOrder(parseInt(orderId), orderUpdateData);
+
       router.push("/dashboard/orders?updated=true");
     } catch (error) {
       console.error("Error updating order:", error);
@@ -1959,7 +1955,7 @@ export default function EditOrderPage() {
                   {/* Subtotal */}
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400">Subtotal:</span>
-                    <span className="text-slate-100">
+                    <span className="text-slate-100 text-sm">
                       {formatCurrency(orderForm.subtotal)}
                     </span>
                   </div>
@@ -1968,28 +1964,90 @@ export default function EditOrderPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400">Discount:</span>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={
-                          orderForm.discount_percentage === 0
-                            ? ""
-                            : orderForm.discount_percentage
-                        }
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            discount_percentage:
-                              parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        placeholder=""
-                        min="0"
-                        max="100"
-                        step="0.01"
-                      />
-                      <span className="text-slate-400 text-sm">%</span>
-                      <span className="text-slate-100">
+                      {/* Discount Type Toggle */}
+                      <div className="flex items-center gap-1 mr-2">
+                        <button
+                          type="button"
+                          onClick={() => setOrderForm(prev => ({ 
+                            ...prev, 
+                            discount_type: "percentage",
+                            discount_flat_amount: 0 // Reset flat amount when switching
+                          }))}
+                          className={`px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
+                            orderForm.discount_type === "percentage"
+                              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                              : "bg-slate-700/50 text-slate-400 border border-slate-600/50 hover:bg-slate-600/50"
+                          }`}
+                        >
+                          %
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOrderForm(prev => ({ 
+                            ...prev, 
+                            discount_type: "flat",
+                            discount_percentage: 0 // Reset percentage when switching
+                          }))}
+                          className={`px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
+                            orderForm.discount_type === "flat"
+                              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                              : "bg-slate-700/50 text-slate-400 border border-slate-600/50 hover:bg-slate-600/50"
+                          }`}
+                        >
+                          {currencySymbol}
+                        </button>
+                      </div>
+
+                      {orderForm.discount_type === "percentage" ? (
+                        <>
+                          <input
+                            type="number"
+                            value={
+                              orderForm.discount_percentage === 0
+                                ? ""
+                                : orderForm.discount_percentage
+                            }
+                            onChange={(e) =>
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                discount_percentage:
+                                  parseFloat(e.target.value) || 0,
+                              }))
+                            }
+                            className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            placeholder=""
+                            min="0"
+                            max="100"
+                            step="0.01"
+                          />
+                          <span className="text-slate-400 text-sm">%</span>
+                        </>
+                      ) : (
+                        <>
+                          <input
+                            type="number"
+                            value={
+                              orderForm.discount_flat_amount === 0
+                                ? ""
+                                : orderForm.discount_flat_amount
+                            }
+                            onChange={(e) =>
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                discount_flat_amount:
+                                  parseFloat(e.target.value) || 0,
+                              }))
+                            }
+                            className="w-20 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            placeholder="0"
+                            min="0"
+                            step="0.01"
+                          />
+                          <span className="text-slate-400 text-sm">{currencySymbol}</span>
+                        </>
+                      )}
+                      
+                      <span className="text-slate-100 text-sm">
                         -{formatCurrency(orderForm.discount_amount)}
                       </span>
                     </div>
@@ -2012,29 +2070,27 @@ export default function EditOrderPage() {
                             vat_percentage: parseFloat(e.target.value) || 0,
                           }))
                         }
-                        className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                        className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         placeholder="0"
                         min="0"
                         max="100"
                         step="0.01"
                       />
                       <span className="text-slate-400 text-sm">%</span>
-                      <span className="text-slate-100">
+                      <span className="text-slate-100 text-sm">
                         {formatCurrency(orderForm.vat_amount)}
                       </span>
                     </div>
                   </div>
 
                   {/* Total */}
-                  <div className="border-t border-slate-700/50 pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold text-slate-200">
-                        Total:
-                      </span>
-                      <span className="text-lg font-bold text-cyan-400">
-                        {formatCurrency(orderForm.total)}
-                      </span>
-                    </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
+                    <span className="text-slate-100 font-semibold">
+                      Total:
+                    </span>
+                    <span className="text-cyan-400 font-semibold text-lg">
+                      {formatCurrency(orderForm.total)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -2277,40 +2333,6 @@ export default function EditOrderPage() {
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Order Status */}
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-              <div className="sm:p-4 p-2">
-                <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                  Order Status
-                </h3>
-                <select
-                  value={orderForm.status}
-                  onChange={(e) =>
-                    setOrderForm((prev) => ({
-                      ...prev,
-                      status: e.target.value as
-                        | "pending"
-                        | "processing"
-                        | "shipped"
-                        | "delivered"
-                        | "completed"
-                        | "cancelled"
-                        | "refunded",
-                    }))
-                  }
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                  <option value="refunded">Refunded</option>
-                </select>
               </div>
             </div>
 
