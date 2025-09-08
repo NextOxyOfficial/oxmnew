@@ -1,11 +1,14 @@
 "use client";
 
+import SmsComposer from "@/components/sms/SmsComposer";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { ApiService } from "@/lib/api";
 import {
   Order as CustomerOrder,
   OrderItem as CustomerOrderItem,
   customersAPI,
 } from "@/lib/api/customers";
+import { calculateSmsSegments } from "@/lib/utils/sms";
 import {
   ArrowLeft,
   DollarSign,
@@ -149,6 +152,24 @@ export default function CustomerDetailsPage() {
     new Set()
   );
   const [isSendingSMS, setIsSendingSMS] = useState(false);
+  
+  // SMS Composer state
+  const [showSmsComposer, setShowSmsComposer] = useState(false);
+  const [smsOrder, setSmsOrder] = useState<Order | null>(null);
+  const [smsMessage, setSmsMessage] = useState("");
+  const [isSendingSms, setIsSendingSms] = useState(false);
+  
+  // Due Payment SMS Composer state
+  const [showDuePaymentSmsComposer, setShowDuePaymentSmsComposer] = useState(false);
+  const [smsPayment, setSmsPayment] = useState<DuePayment | null>(null);
+  const [duePaymentSmsMessage, setDuePaymentSmsMessage] = useState("");
+  const [isSendingDuePaymentSms, setIsSendingDuePaymentSms] = useState(false);
+  
+  // Total Due SMS state
+  const [isSendingTotalDueSms, setIsSendingTotalDueSms] = useState(false);
+  const [showTotalDueSmsComposer, setShowTotalDueSmsComposer] = useState(false);
+  const [totalDueSmsMessage, setTotalDueSmsMessage] = useState("");
+  
   const [redeemAmount, setRedeemAmount] = useState("");
   const [isRedeeming, setIsRedeeming] = useState(false);
 
@@ -160,6 +181,18 @@ export default function CustomerDetailsPage() {
   const [selectedLevel, setSelectedLevel] = useState("");
   const [isAssigningLevel, setIsAssigningLevel] = useState(false);
   const [levelNotes, setLevelNotes] = useState("");
+  
+  // User profile state for store name
+  const [userProfile, setUserProfile] = useState<{
+    user?: { email?: string };
+    profile?: {
+      company?: string;
+      company_address?: string;
+      phone?: string;
+      contact_number?: string;
+      store_logo?: string;
+    };
+  } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -168,6 +201,16 @@ export default function CustomerDetailsPage() {
   const formatDate = (dateString: string) => {
     if (!mounted) return dateString;
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      const profile = await ApiService.getProfile();
+      console.log("User profile data:", profile);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
   };
 
   useEffect(() => {
@@ -364,6 +407,7 @@ export default function CustomerDetailsPage() {
     };
 
     fetchCustomerData();
+    fetchUserProfile(); // Fetch user profile for store name
   }, [params.id]);
 
   const handleViewInvoice = (order: Order) => {
@@ -457,27 +501,421 @@ export default function CustomerDetailsPage() {
   };
 
   const handleSendNotification = async (payment: DuePayment) => {
-    const message = `Hello ${customer?.name}, this is a reminder about your ${
-      payment.type === "due" ? "due payment" : "advance payment"
-    } of ${formatCurrency(Math.abs(Number(payment.amount) || 0))} for order #${
-      payment.order_id
-    }. Due date: ${formatDate(payment.due_date)}.`;
-    await handleSendSMS(message);
+    if (!customer?.phone) {
+      alert("No phone number available for this customer");
+      return;
+    }
+
+    try {
+      // Get customer financial details
+      let dueAmount = 0;
+      let advanceAmount = 0;
+
+      try {
+        // Use the customer summary endpoint to get financial details
+        const response = await ApiService.get(
+          `/customers/${customer.id}/summary/`
+        );
+        console.log("Customer summary response:", response);
+
+        // Get the financial summary
+        const financialSummary = response.financial_summary || {};
+
+        // Calculate net balance - positive means customer owes money (due), negative means customer has credit (advance)
+        let netBalance = 0;
+
+        if (
+          financialSummary.net_amount !== undefined &&
+          financialSummary.net_amount !== null
+        ) {
+          netBalance = parseFloat(financialSummary.net_amount);
+        } else if (
+          financialSummary.total_due !== undefined &&
+          financialSummary.total_advance !== undefined
+        ) {
+          netBalance =
+            parseFloat(financialSummary.total_due || 0) -
+            parseFloat(financialSummary.total_advance || 0);
+        }
+
+        // Determine financial state based on net balance
+        if (netBalance > 0) {
+          dueAmount = netBalance;
+          advanceAmount = 0;
+        } else if (netBalance < 0) {
+          dueAmount = 0;
+          advanceAmount = Math.abs(netBalance);
+        } else {
+          dueAmount = 0;
+          advanceAmount = 0;
+        }
+      } catch (error) {
+        console.log("Error fetching customer financial details:", error);
+        // Use customer summary API data for financial info
+      }
+
+      // Format the SMS message using your specified format
+      const storeName = userProfile?.profile?.company || "Your Store"; // Get actual store name
+      const totalDueAmount = Math.max(0, dueAmount); // Only show if positive (customer owes money)
+
+      let message = `সম্মানিত কাস্টমার, আমাদের খাতায় আপনার ${formatCurrency(totalDueAmount)} টাকা বাকি রয়েছে, দয়া করে পরিশোধ করুন ${storeName}`;
+
+      console.log("Final SMS message:", message);
+
+      // Set the message and show composer
+      setDuePaymentSmsMessage(message);
+      setSmsPayment(payment);
+      setShowDuePaymentSmsComposer(true);
+    } catch (error) {
+      console.error("Error preparing SMS:", error);
+      alert("Failed to prepare SMS. Please try again.");
+    }
   };
 
-  const handleSendOrderNotification = async (order: Order) => {
-    const statusMessage =
-      order.status === "completed"
-        ? "completed"
-        : order.status === "pending"
-        ? "is pending"
-        : "was cancelled";
-    const message = `Hello ${customer?.name}, your order #${
-      order.id
-    } ${statusMessage}. Order total: ${formatCurrency(
-      order.total
-    )}. Order date: ${formatDate(order.date)}. Thank you for your business!`;
-    await handleSendSMS(message);
+  // Handle actual SMS sending from due payment composer
+  const handleSendSmsFromDuePaymentComposer = async (message: string) => {
+    if (!smsPayment || !customer?.phone) return;
+
+    try {
+      setIsSendingDuePaymentSms(true);
+
+      // Send SMS
+      console.log(
+        "Sending Due Payment SMS to:",
+        customer.phone,
+        "Message:",
+        message
+      );
+      
+      const response = await ApiService.sendSmsNotification(
+        customer.phone,
+        message
+      );
+      console.log("SMS Response:", response);
+
+      // Check if the response indicates success
+      if (response.success === false) {
+        throw new Error(response.error || "SMS sending failed");
+      }
+
+      // Use actual credits used from backend response, fallback to frontend calculation
+      const creditsUsed =
+        response.credits_used || calculateSmsSegments(message).segments;
+      alert(
+        `SMS sent successfully! Used ${creditsUsed} SMS credit${
+          creditsUsed > 1 ? "s" : ""
+        }.`
+      );
+
+      // Close composer
+      setShowDuePaymentSmsComposer(false);
+      setSmsPayment(null);
+      setDuePaymentSmsMessage("");
+    } catch (error) {
+      console.error("Error sending SMS:", error);
+
+      // Show more detailed error message
+      let errorMessage = "Failed to send SMS. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (
+        typeof error === "object" &&
+        error !== null &&
+        "error" in error
+      ) {
+        errorMessage = (error as any).error;
+      }
+
+      alert(`SMS Error: ${errorMessage}`);
+    } finally {
+      setIsSendingDuePaymentSms(false);
+    }
+  };
+
+  // Handle due payment SMS composer cancel
+  const handleCancelDuePaymentSms = () => {
+    setShowDuePaymentSmsComposer(false);
+    setSmsPayment(null);
+    setDuePaymentSmsMessage("");
+  };
+
+  // Handle total due SMS sending
+  const handleSendTotalDueSms = async () => {
+    if (!customer?.phone) {
+      alert("No phone number available for this customer");
+      return;
+    }
+
+    const totalDueAmount = Math.max(0, netAmount); // Only positive amounts (customer owes money)
+    
+    if (totalDueAmount <= 0) {
+      alert("No due amount to send SMS for");
+      return;
+    }
+
+    try {
+      // Format the SMS message using your specified format
+      const storeName = userProfile?.profile?.company || "Your Store";
+      const message = `সম্মানিত কাস্টমার, আমাদের খাতায় আপনার ${formatCurrency(totalDueAmount)} টাকা বাকি রয়েছে, দয়া করে পরিশোধ করুন ${storeName}`;
+
+      console.log("Preparing Total Due SMS:", message);
+
+      // Set the message and show composer modal
+      setTotalDueSmsMessage(message);
+      setShowTotalDueSmsComposer(true);
+    } catch (error) {
+      console.error("Error preparing SMS:", error);
+      alert("Failed to prepare SMS. Please try again.");
+    }
+  };
+
+  // Handle actual SMS sending from total due composer
+  const handleSendSmsFromTotalDueComposer = async (message: string) => {
+    if (!customer?.phone) return;
+
+    try {
+      setIsSendingTotalDueSms(true);
+
+      // Send SMS
+      console.log("Sending Total Due SMS to:", customer.phone, "Message:", message);
+      
+      const response = await ApiService.sendSmsNotification(
+        customer.phone,
+        message
+      );
+      console.log("SMS Response:", response);
+
+      // Check if the response indicates success
+      if (response.success === false) {
+        throw new Error(response.error || "SMS sending failed");
+      }
+
+      // Use actual credits used from backend response, fallback to frontend calculation
+      const creditsUsed =
+        response.credits_used || calculateSmsSegments(message).segments;
+      alert(
+        `SMS sent successfully! Used ${creditsUsed} SMS credit${
+          creditsUsed > 1 ? "s" : ""
+        }.`
+      );
+
+      // Close composer
+      setShowTotalDueSmsComposer(false);
+      setTotalDueSmsMessage("");
+    } catch (error) {
+      console.error("Error sending SMS:", error);
+
+      // Show more detailed error message
+      let errorMessage = "Failed to send SMS. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (
+        typeof error === "object" &&
+        error !== null &&
+        "error" in error
+      ) {
+        errorMessage = (error as any).error;
+      }
+
+      alert(`SMS Error: ${errorMessage}`);
+    } finally {
+      setIsSendingTotalDueSms(false);
+    }
+  };
+
+  // Handle total due SMS composer cancel
+  const handleCancelTotalDueSms = () => {
+    setShowTotalDueSmsComposer(false);
+    setTotalDueSmsMessage("");
+  };
+
+  const handleSendSms = async (order: Order) => {
+    if (!order.customer_phone) {
+      alert("No phone number available for this customer");
+      return;
+    }
+
+    if (!customer) {
+      alert("Customer information not available");
+      return;
+    }
+
+    console.log("=== SMS DEBUG INFO ===");
+    console.log("Customer phone from order:", order.customer_phone);
+    console.log("Customer phone from customer data:", customer.phone);
+    console.log("Order details:", order);
+    console.log("Customer details:", customer);
+
+    try {
+      // Get customer financial details
+      let dueAmount = 0;
+      let advanceAmount = 0;
+      console.log(
+        "Fetching customer financial details for:",
+        order.customer_name,
+        order.customer_phone
+      );
+
+      if (order.customer_name && order.customer_phone) {
+        try {
+          // Use the customer summary endpoint to get financial details
+          const response = await ApiService.get(
+            `/customers/${customer.id}/summary/`
+          );
+          console.log("Customer summary response:", response);
+
+          // Get the financial summary
+          const financialSummary = response.financial_summary || {};
+
+          // Log all financial data for debugging
+          console.log("Financial summary:", financialSummary);
+          console.log("Total due:", financialSummary.total_due);
+          console.log("Total advance:", financialSummary.total_advance);
+          console.log("Net amount:", financialSummary.net_amount);
+
+          // Calculate net balance - positive means customer owes money (due), negative means customer has credit (advance)
+          let netBalance = 0;
+
+          if (
+            financialSummary.net_amount !== undefined &&
+            financialSummary.net_amount !== null
+          ) {
+            netBalance = parseFloat(financialSummary.net_amount);
+          } else if (
+            financialSummary.total_due !== undefined &&
+            financialSummary.total_advance !== undefined
+          ) {
+            netBalance =
+              parseFloat(financialSummary.total_due || 0) -
+              parseFloat(financialSummary.total_advance || 0);
+          }
+
+          console.log("Calculated net balance:", netBalance);
+
+          // Determine financial state based on net balance
+          if (netBalance > 0) {
+            dueAmount = netBalance;
+            advanceAmount = 0;
+            console.log("Customer has due amount:", dueAmount);
+          } else if (netBalance < 0) {
+            dueAmount = 0;
+            advanceAmount = Math.abs(netBalance);
+            console.log("Customer has advance amount:", advanceAmount);
+          } else {
+            dueAmount = 0;
+            advanceAmount = 0;
+            console.log("Customer has no due or advance amount");
+          }
+        } catch (error) {
+          console.log("Error fetching customer financial details:", error);
+          // Use customer summary API data for financial info
+        }
+      }
+
+      // Format the SMS message
+      const storeName = userProfile?.profile?.company || "Your Store"; // Get actual store name
+      const amount = formatCurrency(order.total);
+
+      let message = `সম্মানিত কাস্টমার, আপনার কেনাকাটা ${amount} টাকা, ${storeName} এ কেনাকাটা করার জন্য আপনাকে ধন্যবাদ!`;
+
+      // Add due message only if customer has due money (greater than 0)
+      console.log("Final due amount to check:", dueAmount);
+      console.log("Final advance amount to check:", advanceAmount);
+
+      if (dueAmount > 0) {
+        const dueAmountFormatted = formatCurrency(dueAmount);
+        message += ` আমাদের খাতায় আপনার বাকি রয়েছে ${dueAmountFormatted} টাকা`;
+        console.log("Added due message to SMS");
+      } else if (advanceAmount > 0) {
+        const advanceAmountFormatted = formatCurrency(advanceAmount);
+        message += ` আমাদের খাতায় আপনার এডভান্স করা রয়েছে ${advanceAmountFormatted} টাকা`;
+        console.log("Added advance message to SMS");
+      }
+      // If neither due nor advance, send only the basic thank you message
+
+      console.log("Final SMS message:", message);
+
+      // Set the message and show composer
+      setSmsMessage(message);
+      setSmsOrder(order);
+      setShowSmsComposer(true);
+    } catch (error) {
+      console.error("Error preparing SMS:", error);
+      alert("Failed to prepare SMS. Please try again.");
+    }
+  };
+
+  // Handle actual SMS sending from composer
+  const handleSendSmsFromComposer = async (message: string) => {
+    if (!smsOrder || !smsOrder.customer_phone) return;
+
+    try {
+      // Set loading state for this specific order
+      setIsSendingSms(true);
+
+      // Send SMS
+      console.log(
+        "Sending SMS to:",
+        smsOrder.customer_phone,
+        "Message:",
+        message
+      );
+      console.log("=== FINAL SMS SEND ===");
+      console.log("Phone number:", smsOrder.customer_phone);
+      console.log("Message length:", message.length);
+      console.log("Message content:", message);
+      
+      const response = await ApiService.sendSmsNotification(
+        smsOrder.customer_phone,
+        message
+      );
+      console.log("SMS Response:", response);
+
+      // Check if the response indicates success
+      if (response.success === false) {
+        throw new Error(response.error || "SMS sending failed");
+      }
+
+      // Use actual credits used from backend response, fallback to frontend calculation
+      const creditsUsed =
+        response.credits_used || calculateSmsSegments(message).segments;
+      alert(
+        `SMS sent successfully! Used ${creditsUsed} SMS credit${
+          creditsUsed > 1 ? "s" : ""
+        }.`
+      );
+
+      // Close composer
+      setShowSmsComposer(false);
+      setSmsOrder(null);
+      setSmsMessage("");
+    } catch (error) {
+      console.error("Error sending SMS:", error);
+
+      // Show more detailed error message
+      let errorMessage = "Failed to send SMS. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (
+        typeof error === "object" &&
+        error !== null &&
+        "error" in error
+      ) {
+        errorMessage = (error as any).error;
+      }
+
+      alert(`SMS Error: ${errorMessage}`);
+    } finally {
+      // Clear loading state
+      setIsSendingSms(false);
+    }
+  };
+
+  // Handle SMS composer cancel
+  const handleCancelSms = () => {
+    setShowSmsComposer(false);
+    setSmsOrder(null);
+    setSmsMessage("");
   };
 
   const handleSubmitTransaction = async () => {
@@ -1140,16 +1578,14 @@ export default function CustomerDetailsPage() {
                                     <span>Invoice</span>
                                   </button>
                                   <button
-                                    onClick={() =>
-                                      handleSendOrderNotification(order)
-                                    }
-                                    disabled={isSendingSMS}
+                                    onClick={() => handleSendSms(order)}
+                                    disabled={isSendingSms}
                                     className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
                                     title="Send SMS notification"
                                   >
                                     <MessageSquare className="w-4 h-4" />
                                     <span>
-                                      {isSendingSMS ? "Sending..." : "SMS"}
+                                      {isSendingSms ? "Sending..." : "SMS"}
                                     </span>
                                   </button>
                                 </div>
@@ -1169,9 +1605,27 @@ export default function CustomerDetailsPage() {
               <div className="space-y-6">
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-medium text-slate-100">
-                      Due Payments
-                    </h4>
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <h4 className="text-lg font-medium text-slate-100">
+                          Due Payments
+                        </h4>
+                        <p className="text-sm text-red-300 mt-1">
+                          Total Due: {formatCurrency(isNaN(netAmount) ? 0 : Math.max(0, netAmount))}
+                        </p>
+                      </div>
+                      {/* SMS Button for Total Due */}
+                      {netAmount > 0 && (
+                        <button
+                          onClick={handleSendTotalDueSms}
+                          disabled={isSendingTotalDueSms}
+                          className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg cursor-pointer disabled:opacity-50"
+                          title="Send SMS for total due amount"
+                        >
+                          <MessageSquare className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
                     <button
                       onClick={handleShowTransaction}
                       className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
@@ -1241,13 +1695,13 @@ export default function CustomerDetailsPage() {
                                     onClick={() =>
                                       handleSendNotification(payment)
                                     }
-                                    disabled={isSendingSMS}
+                                    disabled={isSendingDuePaymentSms}
                                     className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
                                     title="Send SMS notification"
                                   >
                                     <MessageSquare className="w-4 h-4" />
                                     <span>
-                                      {isSendingSMS ? "Sending..." : "SMS"}
+                                      {isSendingDuePaymentSms ? "Sending..." : "SMS"}
                                     </span>
                                   </button>
                                 </div>
@@ -1816,6 +2270,42 @@ export default function CustomerDetailsPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* SMS Composer Modal */}
+        {showSmsComposer && smsOrder && (
+          <SmsComposer
+            recipientName={customer?.name || ""}
+            recipientPhone={customer?.phone || ""}
+            initialMessage={smsMessage}
+            onSend={handleSendSmsFromComposer}
+            onCancel={handleCancelSms}
+            isLoading={isSendingSms}
+          />
+        )}
+
+        {/* Due Payment SMS Composer Modal */}
+        {showDuePaymentSmsComposer && smsPayment && (
+          <SmsComposer
+            recipientName={customer?.name || ""}
+            recipientPhone={customer?.phone || ""}
+            initialMessage={duePaymentSmsMessage}
+            onSend={handleSendSmsFromDuePaymentComposer}
+            onCancel={handleCancelDuePaymentSms}
+            isLoading={isSendingDuePaymentSms}
+          />
+        )}
+
+        {/* Total Due SMS Composer Modal */}
+        {showTotalDueSmsComposer && (
+          <SmsComposer
+            recipientName={customer?.name || ""}
+            recipientPhone={customer?.phone || ""}
+            initialMessage={totalDueSmsMessage}
+            onSend={handleSendSmsFromTotalDueComposer}
+            onCancel={handleCancelTotalDueSms}
+            isLoading={isSendingTotalDueSms}
+          />
         )}
       </div>
     </div>
