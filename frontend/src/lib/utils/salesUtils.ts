@@ -54,7 +54,7 @@ export const generateOrderId = (saleId: number) => {
 export const getOrderStatus = (sale: Sale) => {
   // Since we don't have explicit order status, we'll use some logic
   // Orders within last 24 hours could be "draft", others "completed"
-  const saleDate = new Date(sale.created_at);
+  const saleDate = new Date(sale.sale_date);
   const now = new Date();
   const diffHours = (now.getTime() - saleDate.getTime()) / (1000 * 60 * 60);
 
