@@ -1255,19 +1255,7 @@ export default function EditOrderPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="max-w-6xl  px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-cyan-200">
-                Edit Order
-              </h1>
-              <p className="text-slate-400 mt-1">
-                Modify order details and manage items
-              </p>
-            </div>
-          </div>
-        </div>
+        
 
         {/* Error Display */}
         {error && (
@@ -1960,28 +1948,6 @@ export default function EditOrderPage() {
 
           {/* Right Column */}
           <div className="space-y-6">
-            {/* Notes */}
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-              <div className="sm:p-4 p-2">
-                <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                  Order Notes
-                </h3>
-                <textarea
-                  value={orderForm.notes}
-                  onChange={(e) =>
-                    setOrderForm((prev) => ({ ...prev, notes: e.target.value }))
-                  }
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                  placeholder="Add any notes about this order..."
-                  rows={4}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            <div>Test</div>
             {/* Bill Summary */}
             <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
               <div className="sm:p-4 p-2">
