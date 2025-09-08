@@ -1,6 +1,10 @@
 "use client";
 
+import SmsComposer from "@/components/sms/SmsComposer";
+import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { ApiService } from "@/lib/api";
 import { customersAPI, DueCustomer } from "@/lib/api/customers";
+import { calculateSmsSegments } from "@/lib/utils/sms";
 import {
   DollarSign,
   Download,
@@ -40,6 +44,24 @@ export default function DueBookPage() {
   const [customDateTo, setCustomDateTo] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [totalDueAmount, setTotalDueAmount] = useState(0);
+
+  // SMS Composer state
+  const [showSmsComposer, setShowSmsComposer] = useState(false);
+  const [smsCustomer, setSmsCustomer] = useState<DueCustomer | null>(null);
+  const [smsMessage, setSmsMessage] = useState("");
+  const [isSendingSms, setIsSendingSms] = useState(false);
+
+  // User profile state for store name
+  const [userProfile, setUserProfile] = useState<{
+    user?: { email?: string };
+    profile?: {
+      company?: string;
+      company_address?: string;
+      phone?: string;
+      contact_number?: string;
+      store_logo?: string;
+    };
+  } | null>(null);
 
   // Component mount check
   useEffect(() => {
@@ -131,6 +153,16 @@ export default function DueBookPage() {
     [dateFilterType, getDateRange]
   );
 
+  // Fetch user profile
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const data = await ApiService.get("/accounts/profile/");
+      setUserProfile(data);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  }, []);
+
   // Fetch due customers from API (only handles API calls)
   const fetchDueCustomers = useCallback(async () => {
     try {
@@ -155,9 +187,10 @@ export default function DueBookPage() {
   // Initial load
   useEffect(() => {
     if (isMounted) {
+      fetchUserProfile();
       fetchDueCustomers();
     }
-  }, [isMounted, fetchDueCustomers]);
+  }, [isMounted, fetchUserProfile, fetchDueCustomers]);
 
   // Apply filters whenever data or filter criteria change (with small debounce for smoother UX)
   useEffect(() => {
@@ -192,11 +225,10 @@ export default function DueBookPage() {
     }
   }, [searchTerm, isMounted, fetchDueCustomers]);
 
+  const formatCurrencyDynamic = useCurrencyFormatter();
+
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
+    return formatCurrencyDynamic(amount);
   };
 
   const formatDate = (dateString: string) => {
@@ -212,7 +244,56 @@ export default function DueBookPage() {
   };
 
   const handleSendSMS = (customer: DueCustomer) => {
-    alert(`SMS notification sent to ${customer.name} (${customer.phone})`);
+    const storeName = userProfile?.profile?.company;
+    const dueAmount = customer.total_due || 0;
+    
+    // Debug logging
+    console.log("User Profile:", userProfile);
+    console.log("Store Name:", storeName);
+    
+    const defaultMessage = `সম্মানিত কাস্টমার, আমাদের খাতায় আপনার ${dueAmount} টাকা বাকি রয়েছে, দয়া করে পরিশোধ করুন${storeName ? ` (${storeName})` : ''}`;
+    
+    console.log("SMS Message:", defaultMessage);
+    
+    setSmsCustomer(customer);
+    setSmsMessage(defaultMessage);
+    setShowSmsComposer(true);
+  };
+
+  const handleSendSmsFromComposer = async (message: string) => {
+    if (!smsCustomer) return;
+    
+    setIsSendingSms(true);
+    try {
+      console.log("Sending SMS to:", smsCustomer.phone);
+      console.log("Message:", message);
+      
+      const response = await ApiService.sendSmsNotification(smsCustomer.phone, message);
+      
+      console.log("SMS Response:", response);
+      
+      if (response.success) {
+        alert("SMS sent successfully!");
+        setShowSmsComposer(false);
+      } else {
+        alert(`SMS Error: ${response.error || "Failed to send SMS"}`);
+      }
+    } catch (error: any) {
+      console.error("Error sending SMS:", error);
+      console.error("Error response:", error.response?.data);
+      
+      // Show more specific error message
+      const errorMessage = error.response?.data?.error || error.message || "Failed to send SMS. Please try again.";
+      alert(`SMS Error: ${errorMessage}`);
+    } finally {
+      setIsSendingSms(false);
+    }
+  };
+
+  const handleCancelSms = () => {
+    setShowSmsComposer(false);
+    setSmsCustomer(null);
+    setSmsMessage("");
   };
 
   const exportToCSV = () => {
@@ -604,7 +685,7 @@ export default function DueBookPage() {
                           <button
                             onClick={() => handleSendSMS(customer)}
                             className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer"
-                            title="Send SMS notification"
+                            title="Send Due Payment SMS"
                           >
                             <MessageSquare className="w-4 h-4" />
                             <span>SMS</span>
@@ -629,6 +710,18 @@ export default function DueBookPage() {
           )}
         </div>
       </div>
+
+      {/* SMS Composer Modal */}
+      {showSmsComposer && smsCustomer && (
+        <SmsComposer
+          recipientPhone={smsCustomer.phone || ""}
+          recipientName={smsCustomer.name}
+          initialMessage={smsMessage}
+          onSend={handleSendSmsFromComposer}
+          onCancel={handleCancelSms}
+          isLoading={isSendingSms}
+        />
+      )}
     </div>
   );
 }
