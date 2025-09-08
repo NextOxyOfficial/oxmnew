@@ -818,15 +818,7 @@ export default function BankingPage() {
           </div>
         )}
 
-        {/* Loading Indicator */}
-        {loading && (
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-8 text-center mb-6">
-            <Loader2 className="h-8 w-8 text-cyan-400 mx-auto mb-3 animate-spin" />
-            <p className="text-slate-400">Loading banking data...</p>
-          </div>
-        )}
-
-        {/* Main Content */}
+                {/* Main Content */}
         {accounts.length === 0 ? (
           /* No Accounts State */
           <div className="bg-slate-900/50 border-2 border-dashed border-slate-700/50 rounded-xl p-12 text-center">
