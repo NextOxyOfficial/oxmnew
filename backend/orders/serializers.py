@@ -181,7 +181,6 @@ class OrderItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = [
-            "order",
             "product",
             "variant",
             "quantity",
