@@ -2,8 +2,10 @@
 
 import Pagination from "@/components/ui/Pagination";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { useSubscription } from "@/hooks/useSubscription";
 import { ApiService } from "@/lib/api";
 import { Product, ProductVariant } from "@/types/product";
+import { Crown, AlertTriangle, TrendingUp } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import * as XLSX from 'xlsx';
@@ -12,6 +14,7 @@ function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const formatCurrency = useCurrencyFormatter();
+  const { subscriptionStatus, isPro, isLoading: subscriptionLoading } = useSubscription();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,6 +25,7 @@ function ProductsPageContent() {
   const [searchTerm, setSearchTerm] = useState(""); // For debounced API calls
   const [filterCategory, setFilterCategory] = useState("all");
   const [sortBy, setSortBy] = useState("name");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [loadingStates, setLoadingStates] = useState<{
     deleting: { [key: string]: boolean };
     navigating: { [key: string]: boolean };
@@ -73,6 +77,24 @@ function ProductsPageContent() {
     setTimeout(() => {
       setNotification({ isVisible: false, type: "success", message: "" });
     }, 5000);
+  };
+
+  // Product limit constants and functions
+  const FREE_PLAN_PRODUCT_LIMIT = 25;
+  
+  const canAddMoreProducts = () => {
+    if (isPro) return true;
+    return totalItems < FREE_PLAN_PRODUCT_LIMIT;
+  };
+
+  const getProductUsagePercentage = () => {
+    if (isPro) return 0; // No limit for pro users
+    return Math.min((totalItems / FREE_PLAN_PRODUCT_LIMIT) * 100, 100);
+  };
+
+  const getRemainingProducts = () => {
+    if (isPro) return Infinity;
+    return Math.max(FREE_PLAN_PRODUCT_LIMIT - totalItems, 0);
   };
 
   // Function to update URL parameters
@@ -397,6 +419,12 @@ function ProductsPageContent() {
   };
 
   const handleAddProduct = () => {
+    // Check if user can add more products
+    if (!canAddMoreProducts()) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setLoadingStates((prev) => ({
       ...prev,
       addProduct: true,
@@ -888,6 +916,52 @@ function ProductsPageContent() {
             </div>
           </div>
 
+          {/* Product Usage Indicator for Free Users */}
+          {!isPro && !subscriptionLoading && (
+            <div className="bg-amber-500/10 border border-amber-500/20 mb-2 rounded-xl p-4 shadow-lg">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-amber-400" />
+                    <span className="text-base font-medium text-amber-200">
+                      Product Usage
+                    </span>
+                  </div>
+                  <span className="text-sm text-amber-300">
+                    {totalItems}/{FREE_PLAN_PRODUCT_LIMIT} products used
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-32 bg-slate-700 rounded-full h-0.5">
+                    <div
+                      className={`h-0.5 rounded-full transition-all duration-300 ${
+                        getProductUsagePercentage() >= 80
+                          ? 'bg-red-500'
+                          : getProductUsagePercentage() >= 60
+                          ? 'bg-amber-500'
+                          : 'bg-green-500'
+                      }`}
+                      style={{ width: `${getProductUsagePercentage()}%` }}
+                    ></div>
+                  </div>
+                  {getRemainingProducts() <= 5 && getRemainingProducts() > 0 ? (
+                    <span className="text-sm text-amber-300 font-medium">
+                      {getRemainingProducts()} left
+                    </span>
+                  ) : getRemainingProducts() === 0 ? (
+                    <span className="text-sm text-red-300 font-medium">
+                      Limit reached
+                    </span>
+                  ) : (
+                    <span className="text-sm text-green-300 opacity-75">
+                      {Math.round(getProductUsagePercentage())}% used
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Products Table/List */}
           <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg flex flex-col">
             {/* Header and filters - Fixed at top */}
@@ -900,12 +974,16 @@ function ProductsPageContent() {
                 {/* Controls */}
                 <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
                   {/* Action Buttons */}
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex gap-2 flex-shrink-0 w-full lg:w-auto">
                     {/* Add Product Button */}
                     <button
                       onClick={handleAddProduct}
                       disabled={loadingStates.addProduct}
-                      className={`px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 ${
+                      className={`px-4 py-2 text-white text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 flex-1 lg:flex-initial justify-center ${
+                        !canAddMoreProducts() && !isPro
+                          ? "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 focus:ring-red-500 cursor-pointer"
+                          : "bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 focus:ring-cyan-500"
+                      } ${
                         loadingStates.addProduct
                           ? "opacity-50 cursor-not-allowed"
                           : "cursor-pointer"
@@ -934,6 +1012,11 @@ function ProductsPageContent() {
                           </svg>
                           Loading...
                         </>
+                      ) : !canAddMoreProducts() && !isPro ? (
+                        <>
+                          <Crown className="w-4 h-4" />
+                          Upgrade
+                        </>
                       ) : (
                         <>
                           <svg
@@ -958,7 +1041,7 @@ function ProductsPageContent() {
                     <button
                       onClick={handleDownloadExcel}
                       disabled={loadingStates.downloadingExcel}
-                      className={`px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 ${
+                      className={`px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center gap-2 flex-1 lg:flex-initial justify-center ${
                         loadingStates.downloadingExcel
                           ? "opacity-50 cursor-not-allowed"
                           : "cursor-pointer"
@@ -1002,14 +1085,14 @@ function ProductsPageContent() {
                               d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                             />
                           </svg>
-                          Download Excel
+                          Excel
                         </>
                       )}
                     </button>
                   </div>
 
                   {/* Search */}
-                  <div className="relative flex-1 min-w-0">
+                  <div className="relative w-full lg:flex-1 lg:min-w-0">
                     <input
                       type="text"
                       placeholder="Search products by name or code..."
@@ -1060,7 +1143,7 @@ function ProductsPageContent() {
                   <select
                     value={filterCategory}
                     onChange={(e) => setFilterCategory(e.target.value)}
-                    className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[160px] cursor-pointer"
+                    className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm w-full lg:min-w-[160px] lg:w-auto cursor-pointer"
                   >
                     <option value="all" className="bg-slate-800">
                       All Categories
@@ -1080,7 +1163,7 @@ function ProductsPageContent() {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[180px] cursor-pointer"
+                    className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm w-full lg:min-w-[180px] lg:w-auto cursor-pointer"
                   >
                     <option value="name" className="bg-slate-800">
                       Sort by Name
@@ -1908,6 +1991,52 @@ function ProductsPageContent() {
                     loadingStates.deleting[productToDelete.id]
                       ? "Deleting..."
                       : "Delete"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Upgrade Modal */}
+          {showUpgradeModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700">
+                <div className="text-center">
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-amber-500/20 border border-amber-500/30 mb-4">
+                    <Crown className="h-6 w-6 text-amber-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">
+                    Product Limit Reached
+                  </h3>
+                  <p className="text-slate-300 mb-4">
+                    You&apos;ve reached the limit of {FREE_PLAN_PRODUCT_LIMIT} products for free users. 
+                    Upgrade to PRO to add unlimited products and unlock all features.
+                  </p>
+                  <div className="bg-slate-700/50 rounded-lg p-3 mb-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-400">Current usage:</span>
+                      <span className="text-white font-medium">
+                        {totalItems}/{FREE_PLAN_PRODUCT_LIMIT} products
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setShowUpgradeModal(false)}
+                    className="flex-1 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer"
+                  >
+                    Maybe Later
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowUpgradeModal(false);
+                      router.push("/dashboard/subscriptions");
+                    }}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Crown className="w-4 h-4" />
+                    Upgrade Now
                   </button>
                 </div>
               </div>
