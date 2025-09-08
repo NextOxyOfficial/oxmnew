@@ -2143,6 +2143,66 @@ export default function EditOrderPage() {
                     </div>
                   </div>
 
+                  {/* Due */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Due:</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={
+                          orderForm.due_amount === 0
+                            ? ""
+                            : orderForm.due_amount
+                        }
+                        onChange={(e) =>
+                          setOrderForm((prev) => ({
+                            ...prev,
+                            due_amount: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="0"
+                        min="0"
+                        step="0.01"
+                      />
+                      <span className="text-slate-100 text-sm">
+                        {formatCurrency(orderForm.due_amount)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Previous Due - Only show if customer has previous due */}
+                  {orderForm.previous_due > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Previous Due:</span>
+                        <span className="text-amber-400 text-sm">
+                          {formatCurrency(orderForm.previous_due)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="applyPreviousDue"
+                          checked={orderForm.apply_previous_due_to_total}
+                          onChange={(e) =>
+                            setOrderForm((prev) => ({
+                              ...prev,
+                              apply_previous_due_to_total: e.target.checked,
+                            }))
+                          }
+                          className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2 rounded"
+                        />
+                        <label
+                          htmlFor="applyPreviousDue"
+                          className="text-xs text-slate-400"
+                        >
+                          Add to total (include previous due in this order)
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Total */}
                   <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
                     <span className="text-slate-100 font-semibold">
@@ -2151,6 +2211,87 @@ export default function EditOrderPage() {
                     <span className="text-cyan-400 font-semibold text-lg">
                       {formatCurrency(orderForm.total)}
                     </span>
+                  </div>
+
+                  {/* Payment Section */}
+                  <div className="space-y-3 pt-3 border-t border-slate-700/30 mt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300 font-medium">Payment Information</span>
+                      <button
+                        onClick={addPayment}
+                        className="text-cyan-400 hover:text-cyan-300 text-sm font-medium flex items-center gap-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Payment
+                      </button>
+                    </div>
+
+                    {/* Payment Entries */}
+                    {orderForm.payments.length > 0 && (
+                      <div className="space-y-2">
+                        {orderForm.payments.map((payment, index) => (
+                          <div key={payment.id} className="flex items-center gap-2 p-2 bg-slate-800/30 rounded-lg">
+                            <select
+                              value={payment.method}
+                              onChange={(e) =>
+                                updatePayment(payment.id, "method", e.target.value as PaymentEntry["method"])
+                              }
+                              className="flex-1 bg-slate-800 border border-slate-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            >
+                              <option value="Cash">Cash</option>
+                              <option value="Cheque">Cheque</option>
+                              <option value="Bkash">Bkash</option>
+                              <option value="Nagad">Nagad</option>
+                              <option value="Bank">Bank</option>
+                            </select>
+                            <input
+                              type="number"
+                              value={payment.amount === 0 ? "" : payment.amount}
+                              onChange={(e) =>
+                                updatePayment(payment.id, "amount", parseFloat(e.target.value) || 0)
+                              }
+                              className="w-20 bg-slate-800 border border-slate-600 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              placeholder="0"
+                              min="0"
+                              step="0.01"
+                            />
+                            <button
+                              onClick={() => removePayment(payment.id)}
+                              className="text-red-400 hover:text-red-300 p-1"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Payment Summary */}
+                    {orderForm.payments.length > 0 && (
+                      <div className="space-y-1 pt-2 border-t border-slate-700/50">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">Total Received:</span>
+                          <span className="text-green-400">{formatCurrency(orderForm.total_payment_received)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">Remaining Balance:</span>
+                          <span className={orderForm.remaining_balance <= 0 ? "text-green-400" : "text-amber-400"}>
+                            {formatCurrency(orderForm.remaining_balance)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No Payments Message */}
+                    {orderForm.payments.length === 0 && (
+                      <div className="text-center py-3 text-slate-400 text-sm">
+                        No payments added yet. Click "Add Payment" to record a payment.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2391,6 +2532,56 @@ export default function EditOrderPage() {
                           </div>
                         )}
                     </div>
+
+                    {/* Employee selected but no incentive message */}
+                    {orderForm.employee_id && orderForm.incentive_amount === 0 && (
+                      <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className="w-4 h-4 text-amber-400 flex-shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+                            />
+                          </svg>
+                          <p className="text-amber-400 text-sm">
+                            Employee selected but no incentive amount set. Enter an amount above to create an incentive.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Profit Breakdown - Show when employee is selected */}
+                    {orderForm.employee_id && (
+                      <div className="mt-4 pt-4 border-t border-slate-700/50 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-sm">Total Buy Price:</span>
+                          <span className="text-slate-200 text-sm">{formatCurrency(orderForm.total_buy_price)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-sm">Total Sell Price:</span>
+                          <span className="text-slate-200 text-sm">{formatCurrency(orderForm.total_sell_price)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-sm">Gross Profit:</span>
+                          <span className="text-slate-200 text-sm">{formatCurrency(orderForm.gross_profit)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-sm">Incentive:</span>
+                          <span className="text-red-400 text-sm">-{formatCurrency(orderForm.incentive_amount)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
+                          <span className="text-slate-200 text-sm font-medium">Net Profit:</span>
+                          <span className="text-green-400 text-sm font-medium">{formatCurrency(orderForm.net_profit)}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
