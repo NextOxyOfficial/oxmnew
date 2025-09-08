@@ -485,7 +485,47 @@ export default function EditOrderPage() {
       // Helper function to round monetary values to 2 decimal places
       const roundToTwoDecimals = (value: number) => Math.round(value * 100) / 100;
 
-      // Update only the main order details (items are managed separately via individual API calls)
+      // First, sync the order items with the database
+      console.log("Syncing order items with database...");
+      
+      // Get current items from the database
+      const currentOrder = await ApiService.getOrder(parseInt(orderId));
+      const existingItems = currentOrder.items || [];
+      
+      // Remove all existing items from the database
+      for (const existingItem of existingItems) {
+        try {
+          await ApiService.removeOrderItem(parseInt(orderId), existingItem.id);
+        } catch (error) {
+          console.warn("Error removing existing item:", error);
+        }
+      }
+      
+      // Add all current local items to the database
+      for (const item of orderForm.items) {
+        try {
+          const itemData: any = {
+            product: item.product,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            buy_price: item.buy_price,
+          };
+
+          // Handle variant field
+          if (item.variant !== undefined) {
+            itemData.variant = item.variant;
+          } else {
+            itemData.variant = null;
+          }
+
+          await ApiService.addOrderItem(parseInt(orderId), itemData);
+        } catch (error) {
+          console.error("Error adding item to database:", error);
+          throw new Error(`Failed to add item "${item.product_name}" to order`);
+        }
+      }
+
+      // Update the main order details
       const orderUpdateData = {
         customer: selectedCustomerId || undefined,
         customer_name: orderForm.customer.name,
@@ -617,7 +657,7 @@ export default function EditOrderPage() {
 
   const availableVariants = selectedProduct?.variants || [];
 
-  // Add item to order
+  // Add item to order (local state only, not saved to database until Update Order is clicked)
   const addItemToOrder = async () => {
     if (!selectedProduct) return;
 
@@ -639,147 +679,79 @@ export default function EditOrderPage() {
       buyPrice = selectedProduct.buy_price || 0;
     }
 
-    try {
-      const orderId = params.id as string;
+    // Create new item for local state only
+    const newOrderItem: OrderItem = {
+      id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // More unique temporary ID
+      product: selectedProduct.id,
+      variant: newItem.variant ? parseInt(newItem.variant) : undefined,
+      quantity: newItem.quantity,
+      unit_price: newItem.unit_price || unitPrice,
+      buy_price: buyPrice,
+      total: (newItem.unit_price || unitPrice) * newItem.quantity,
+      product_name: selectedProduct.name,
+      variant_details: variantDetails,
+    };
 
-      // Add item via API
-      const itemData: any = {
-        product: selectedProduct.id,
-        quantity: newItem.quantity,
-        unit_price: newItem.unit_price || unitPrice,
-        buy_price: buyPrice,
-      };
+    setOrderForm((prev) => ({
+      ...prev,
+      items: [...prev.items, newOrderItem],
+    }));
 
-      // Always include variant field - set to null for products without variants
-      if (selectedProduct.has_variants) {
-        // For products with variants, include the selected variant or null
-        if (newItem.variant && parseInt(newItem.variant)) {
-          itemData.variant = parseInt(newItem.variant);
-        } else {
-          itemData.variant = null;
-        }
-      } else {
-        // For products without variants, explicitly set variant to null
-        itemData.variant = null;
-      }
+    // Reset new item form
+    setNewItem({
+      product: "",
+      variant: "",
+      quantity: 1,
+      unit_price: 0,
+    });
 
-      console.log("Adding item with data:", itemData);
-      console.log("Product has_variants:", selectedProduct.has_variants);
-      console.log("New item variant:", newItem.variant);
-      
-      await ApiService.addOrderItem(parseInt(orderId), itemData);
-
-      // Add to local state
-      const newOrderItem: OrderItem = {
-        id: Date.now().toString(),
-        product: selectedProduct.id,
-        variant: newItem.variant ? parseInt(newItem.variant) : undefined,
-        quantity: newItem.quantity,
-        unit_price: newItem.unit_price || unitPrice,
-        buy_price: buyPrice,
-        total: (newItem.unit_price || unitPrice) * newItem.quantity,
-        product_name: selectedProduct.name,
-        variant_details: variantDetails,
-      };
-
-      setOrderForm((prev) => ({
-        ...prev,
-        items: [...prev.items, newOrderItem],
-      }));
-
-      // Reset new item form
-      setNewItem({
-        product: "",
-        variant: "",
-        quantity: 1,
-        unit_price: 0,
-      });
-
-      setProductSearch("");
-      setSearchResults([]);
-      setIsProductDropdownOpen(false);
-      setError(null);
-    } catch (error) {
-      console.error("Error adding item:", error);
-      setError("Failed to add item. Please try again.");
-    }
+    setProductSearch("");
+    setSearchResults([]);
+    setIsProductDropdownOpen(false);
+    setError(null);
   };
 
-  // Remove item from order
+  // Remove item from order (local state only)
   const removeItem = async (itemId: string) => {
-    try {
-      const orderId = params.id as string;
-
-      // Remove from API
-      await ApiService.removeOrderItem(parseInt(orderId), parseInt(itemId));
-
-      // Remove from local state
-      setOrderForm((prev) => ({
-        ...prev,
-        items: prev.items.filter((item) => item.id !== itemId),
-      }));
-    } catch (error) {
-      console.error("Error removing item:", error);
-      setError("Failed to remove item. Please try again.");
-    }
+    // Remove from local state only
+    setOrderForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((item) => item.id !== itemId),
+    }));
   };
 
-  // Update item quantity
+  // Update item quantity (local state only)
   const updateItemQuantity = async (itemId: string, quantity: number) => {
     if (quantity <= 0) return;
 
-    try {
-      const orderId = params.id as string;
-
-      // Update via API
-      await ApiService.updateOrderItem(parseInt(orderId), parseInt(itemId), {
-        quantity: quantity,
-      });
-
-      // Update local state
-      setOrderForm((prev) => ({
-        ...prev,
-        items: prev.items.map((item) =>
-          item.id === itemId
-            ? { ...item, quantity, total: quantity * item.unit_price }
-            : item
-        ),
-      }));
-    } catch (error) {
-      console.error("Error updating item quantity:", error);
-      setError("Failed to update item quantity. Please try again.");
-    }
+    // Update local state only
+    setOrderForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item) =>
+        item.id === itemId
+          ? { ...item, quantity, total: quantity * item.unit_price }
+          : item
+      ),
+    }));
   };
 
-  // Update item unit price
+  // Update item unit price (local state only)
   const updateItemUnitPrice = async (itemId: string, unitPrice: number) => {
     if (unitPrice < 0) return;
 
-    try {
-      const orderId = params.id as string;
-
-      // Update via API
-      await ApiService.updateOrderItem(parseInt(orderId), parseInt(itemId), {
-        unit_price: unitPrice,
-      });
-
-      // Update local state
-      setOrderForm((prev) => ({
-        ...prev,
-        items: prev.items.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                unit_price: unitPrice,
-                total: item.quantity * unitPrice,
-              }
-            : item
-        ),
-      }));
-    } catch (error) {
-      console.error("Error updating item price:", error);
-      setError("Failed to update item price. Please try again.");
-    }
+    // Update local state only
+    setOrderForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              unit_price: unitPrice,
+              total: item.quantity * unitPrice,
+            }
+          : item
+      ),
+    }));
   };
 
   // Cleanup effect for search timeout
@@ -936,7 +908,7 @@ export default function EditOrderPage() {
       );
 
       if (existingItemIndex >= 0) {
-        // Update existing item quantity
+        // Update existing item quantity in local state only
         const existingItem = orderForm.items[existingItemIndex];
         const newQuantity = existingItem.quantity + requestedQuantity;
 
@@ -948,29 +920,17 @@ export default function EditOrderPage() {
           return;
         }
 
-        // Update via API
-        try {
-          const orderId = params.id as string;
-          await ApiService.updateOrderItem(parseInt(orderId), parseInt(existingItem.id), {
-            quantity: newQuantity,
-          });
-
-          // Update local state
-          setOrderForm((prev) => ({
-            ...prev,
-            items: prev.items.map((item, index) =>
-              index === existingItemIndex
-                ? { ...item, quantity: newQuantity, total: newQuantity * item.unit_price }
-                : item
-            ),
-          }));
-        } catch (error) {
-          console.error("Error updating item quantity:", error);
-          setError("Failed to update item quantity. Please try again.");
-          return;
-        }
+        // Update local state only
+        setOrderForm((prev) => ({
+          ...prev,
+          items: prev.items.map((item, index) =>
+            index === existingItemIndex
+              ? { ...item, quantity: newQuantity, total: newQuantity * item.unit_price }
+              : item
+          ),
+        }));
       } else {
-        // Add new item
+        // Add new item to local state only
         let unitPrice = 0;
         let buyPrice = 0;
         let selectedVariant = null;
@@ -988,82 +948,23 @@ export default function EditOrderPage() {
           buyPrice = productToAdd.buy_price || 0;
         }
 
-        try {
-          const orderId = params.id as string;
+        // Add to local state using temporary ID
+        const newOrderItem: OrderItem = {
+          id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // More unique temporary ID
+          product: productToAdd.id,
+          variant: selectedVariant?.id,
+          quantity: requestedQuantity,
+          unit_price: unitPrice,
+          buy_price: buyPrice,
+          total: requestedQuantity * unitPrice,
+          product_name: productToAdd.name,
+          variant_details: variantDetails,
+        };
 
-          // Add item via API
-          const itemData: any = {
-            product: productToAdd.id,
-            quantity: requestedQuantity,
-            unit_price: unitPrice,
-            buy_price: buyPrice,
-          };
-
-          // Always include variant field - set to appropriate value based on product type
-          if (productToAdd.has_variants) {
-            // For products with variants, include the selected variant
-            if (selectedVariant?.id) {
-              itemData.variant = selectedVariant.id;
-            } else {
-              itemData.variant = null;
-            }
-          } else {
-            // For products without variants, explicitly set variant to null
-            itemData.variant = null;
-          }
-
-          console.log("Adding item with data:", itemData);
-          console.log("Product has_variants:", productToAdd.has_variants);
-          console.log("Selected variant:", selectedVariant);
-          const apiResponse = await ApiService.addOrderItem(parseInt(orderId), itemData);
-          console.log("API response:", apiResponse);
-
-          // Add to local state using the response from API if available, otherwise use generated data
-          const newOrderItem: OrderItem = {
-            id: apiResponse?.id ? apiResponse.id.toString() : Date.now().toString(),
-            product: productToAdd.id,
-            variant: selectedVariant?.id,
-            quantity: requestedQuantity,
-            unit_price: unitPrice,
-            buy_price: buyPrice,
-            total: requestedQuantity * unitPrice,
-            product_name: productToAdd.name,
-            variant_details: variantDetails,
-          };
-
-          setOrderForm((prev) => ({
-            ...prev,
-            items: [...prev.items, newOrderItem],
-          }));
-        } catch (error) {
-          console.error("Error adding item:", error);
-          
-          // Try to extract more detailed error information
-          let errorMessage = "Failed to add item. Please try again.";
-          if (error && typeof error === 'object') {
-            if ('response' in error && error.response) {
-              const response = error.response as any;
-              if (response.data) {
-                if (typeof response.data === 'string') {
-                  errorMessage = response.data;
-                } else if (response.data.error) {
-                  errorMessage = response.data.error;
-                } else if (response.data.detail) {
-                  errorMessage = response.data.detail;
-                } else {
-                  errorMessage = JSON.stringify(response.data);
-                }
-              } else if (response.statusText) {
-                errorMessage = response.statusText;
-              }
-            } else if ('message' in error) {
-              errorMessage = (error as any).message;
-            }
-          }
-          
-          setError(errorMessage);
-          return;
-        }
+        setOrderForm((prev) => ({
+          ...prev,
+          items: [...prev.items, newOrderItem],
+        }));
       }
 
       // Clear search and close dropdown
