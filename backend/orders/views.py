@@ -366,6 +366,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         Add a new item to an existing order.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"Adding item to order {pk}")
+        logger.info(f"Request data: {request.data}")
+        
         order = self.get_object()
 
         # Prevent adding items to completed or cancelled orders
@@ -379,6 +385,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         item_data = request.data.copy()
         item_data["order"] = order.id
 
+        logger.info(f"Item data with order: {item_data}")
+
         from .serializers import OrderItemCreateSerializer
 
         serializer = OrderItemCreateSerializer(
@@ -386,6 +394,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         )
 
         if serializer.is_valid():
+            logger.info("Serializer is valid, proceeding to stock check")
             # Check stock availability before creating the item
             from products.models import Product
 
@@ -435,8 +444,10 @@ class OrderViewSet(viewsets.ModelViewSet):
                     {"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND
                 )
             except Exception as e:
+                logger.error(f"Exception in add_item: {str(e)}")
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        logger.error(f"Serializer validation failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["delete"], url_path="items/(?P<item_id>[^/.]+)")

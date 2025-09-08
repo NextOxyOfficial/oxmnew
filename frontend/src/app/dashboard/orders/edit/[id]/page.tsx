@@ -643,14 +643,30 @@ export default function EditOrderPage() {
       const orderId = params.id as string;
 
       // Add item via API
-      const itemData = {
+      const itemData: any = {
         product: selectedProduct.id,
-        variant: newItem.variant ? parseInt(newItem.variant) : undefined,
         quantity: newItem.quantity,
         unit_price: newItem.unit_price || unitPrice,
         buy_price: buyPrice,
       };
 
+      // Always include variant field - set to null for products without variants
+      if (selectedProduct.has_variants) {
+        // For products with variants, include the selected variant or null
+        if (newItem.variant && parseInt(newItem.variant)) {
+          itemData.variant = parseInt(newItem.variant);
+        } else {
+          itemData.variant = null;
+        }
+      } else {
+        // For products without variants, explicitly set variant to null
+        itemData.variant = null;
+      }
+
+      console.log("Adding item with data:", itemData);
+      console.log("Product has_variants:", selectedProduct.has_variants);
+      console.log("New item variant:", newItem.variant);
+      
       await ApiService.addOrderItem(parseInt(orderId), itemData);
 
       // Add to local state
@@ -932,51 +948,122 @@ export default function EditOrderPage() {
           return;
         }
 
-        setOrderForm((prev) => ({
-          ...prev,
-          items: prev.items.map((item, index) =>
-            index === existingItemIndex
-              ? { ...item, quantity: newQuantity, total: newQuantity * item.unit_price }
-              : item
-          ),
-        }));
+        // Update via API
+        try {
+          const orderId = params.id as string;
+          await ApiService.updateOrderItem(parseInt(orderId), parseInt(existingItem.id), {
+            quantity: newQuantity,
+          });
+
+          // Update local state
+          setOrderForm((prev) => ({
+            ...prev,
+            items: prev.items.map((item, index) =>
+              index === existingItemIndex
+                ? { ...item, quantity: newQuantity, total: newQuantity * item.unit_price }
+                : item
+            ),
+          }));
+        } catch (error) {
+          console.error("Error updating item quantity:", error);
+          setError("Failed to update item quantity. Please try again.");
+          return;
+        }
       } else {
         // Add new item
         let unitPrice = 0;
         let buyPrice = 0;
         let selectedVariant = null;
+        let variantDetails = "";
 
         if (productToAdd.has_variants && productToAdd.variants?.[0]) {
           selectedVariant = productToAdd.variants[0];
           unitPrice = selectedVariant.sell_price || 0;
           buyPrice = selectedVariant.buy_price || 0;
+          variantDetails = `${selectedVariant.color || ""} - ${selectedVariant.size || ""}${
+            selectedVariant.custom_variant ? ` - ${selectedVariant.custom_variant}` : ""
+          }`.trim();
         } else {
           unitPrice = productToAdd.sell_price || 0;
           buyPrice = productToAdd.buy_price || 0;
         }
 
-        const item: OrderItem = {
-          id: Date.now().toString(),
-          product: parseInt(productId),
-          variant: selectedVariant?.id,
-          quantity: requestedQuantity,
-          unit_price: unitPrice,
-          buy_price: buyPrice,
-          total: requestedQuantity * unitPrice,
-          product_name: productToAdd.name,
-          variant_details: selectedVariant
-            ? `${selectedVariant.color} - ${selectedVariant.size}${
-                selectedVariant.custom_variant
-                  ? ` - ${selectedVariant.custom_variant}`
-                  : ""
-              }`
-            : undefined,
-        };
+        try {
+          const orderId = params.id as string;
 
-        setOrderForm((prev) => ({
-          ...prev,
-          items: [...prev.items, item],
-        }));
+          // Add item via API
+          const itemData: any = {
+            product: productToAdd.id,
+            quantity: requestedQuantity,
+            unit_price: unitPrice,
+            buy_price: buyPrice,
+          };
+
+          // Always include variant field - set to appropriate value based on product type
+          if (productToAdd.has_variants) {
+            // For products with variants, include the selected variant
+            if (selectedVariant?.id) {
+              itemData.variant = selectedVariant.id;
+            } else {
+              itemData.variant = null;
+            }
+          } else {
+            // For products without variants, explicitly set variant to null
+            itemData.variant = null;
+          }
+
+          console.log("Adding item with data:", itemData);
+          console.log("Product has_variants:", productToAdd.has_variants);
+          console.log("Selected variant:", selectedVariant);
+          const apiResponse = await ApiService.addOrderItem(parseInt(orderId), itemData);
+          console.log("API response:", apiResponse);
+
+          // Add to local state using the response from API if available, otherwise use generated data
+          const newOrderItem: OrderItem = {
+            id: apiResponse?.id ? apiResponse.id.toString() : Date.now().toString(),
+            product: productToAdd.id,
+            variant: selectedVariant?.id,
+            quantity: requestedQuantity,
+            unit_price: unitPrice,
+            buy_price: buyPrice,
+            total: requestedQuantity * unitPrice,
+            product_name: productToAdd.name,
+            variant_details: variantDetails,
+          };
+
+          setOrderForm((prev) => ({
+            ...prev,
+            items: [...prev.items, newOrderItem],
+          }));
+        } catch (error) {
+          console.error("Error adding item:", error);
+          
+          // Try to extract more detailed error information
+          let errorMessage = "Failed to add item. Please try again.";
+          if (error && typeof error === 'object') {
+            if ('response' in error && error.response) {
+              const response = error.response as any;
+              if (response.data) {
+                if (typeof response.data === 'string') {
+                  errorMessage = response.data;
+                } else if (response.data.error) {
+                  errorMessage = response.data.error;
+                } else if (response.data.detail) {
+                  errorMessage = response.data.detail;
+                } else {
+                  errorMessage = JSON.stringify(response.data);
+                }
+              } else if (response.statusText) {
+                errorMessage = response.statusText;
+              }
+            } else if ('message' in error) {
+              errorMessage = (error as any).message;
+            }
+          }
+          
+          setError(errorMessage);
+          return;
+        }
       }
 
       // Clear search and close dropdown
@@ -993,7 +1080,7 @@ export default function EditOrderPage() {
         }
       }, 10); // Immediate focus restore
     },
-    [products, searchResults, orderForm.items]
+    [products, searchResults, orderForm.items, params.id]
   );
 
   const handleDropdownClose = useCallback(() => {

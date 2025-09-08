@@ -175,10 +175,13 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class OrderItemCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating order items"""
+    
+    variant = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = OrderItem
         fields = [
+            "order",
             "product",
             "variant",
             "quantity",
@@ -200,22 +203,48 @@ class OrderItemCreateSerializer(serializers.ModelSerializer):
         except (Product.DoesNotExist, AttributeError):
             raise serializers.ValidationError("Product not found")
 
-        # Validate variant if provided
-        if data.get("variant"):
-            try:
-                variant = ProductVariant.objects.get(
-                    id=data["variant"].id
-                    if hasattr(data["variant"], "id")
-                    else data["variant"]
-                )
-                if variant.product != product:
-                    raise serializers.ValidationError(
-                        "Variant does not belong to the specified product"
+        # Check if product has variants and validate accordingly
+        if product.has_variants:
+            variant_id = data.get("variant")
+            if variant_id is not None:
+                # Validate the variant belongs to this product
+                try:
+                    variant = ProductVariant.objects.get(
+                        id=variant_id.id if hasattr(variant_id, "id") else variant_id
                     )
-            except (ProductVariant.DoesNotExist, AttributeError):
-                raise serializers.ValidationError("Product variant not found")
+                    if variant.product != product:
+                        raise serializers.ValidationError(
+                            "Variant does not belong to the specified product"
+                        )
+                except (ProductVariant.DoesNotExist, AttributeError):
+                    raise serializers.ValidationError("Product variant not found")
+            # If variant is None/null, we'll use the first available variant in the create method
+        else:
+            # For products without variants, variant should be None
+            if data.get("variant"):
+                raise serializers.ValidationError(
+                    "Variant should not be provided for products without variants"
+                )
 
         return data
+
+    def create(self, validated_data):
+        """Create order item, handling auto-selection of first variant if needed"""
+        from products.models import Product, ProductVariant
+
+        # Get the product
+        product_id = validated_data["product"].id if hasattr(validated_data["product"], "id") else validated_data["product"]
+        product = Product.objects.get(id=product_id)
+
+        # If product has variants but no variant was specified, use the first available variant
+        if product.has_variants and not validated_data.get("variant"):
+            first_variant = product.variants.first()
+            if first_variant:
+                validated_data["variant"] = first_variant
+            else:
+                raise serializers.ValidationError("Product has no available variants")
+
+        return super().create(validated_data)
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
