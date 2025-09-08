@@ -1016,9 +1016,7 @@ export default function AddOrderPage() {
 
         // Order details
         status,
-        discount_type: orderForm.discount_type,
         discount_percentage: orderForm.discount_percentage,
-        discount_flat_amount: orderForm.discount_flat_amount,
         vat_percentage: orderForm.vat_percentage,
         due_amount: orderForm.due_amount,
         previous_due: orderForm.previous_due,
