@@ -1,6 +1,10 @@
 "use client";
 
-import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import ProductDropdown from "@/components/ProductDropdown";
+import ProductSearchInput, {
+  ProductSearchInputRef,
+} from "@/components/ProductSearchInput";
+import { useCurrencyFormatter, useCurrency } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Product } from "@/types/product";
 import { useParams, useRouter } from "next/navigation";
@@ -62,14 +66,15 @@ interface OrderForm {
   customer: CustomerInfo;
   items: OrderItem[];
   subtotal: number;
+  discount_type: "percentage" | "flat"; // New field for discount type
   discount_percentage: number;
+  discount_flat_amount: number; // New field for flat discount amount
   discount_amount: number;
   vat_percentage: number;
   vat_amount: number;
   due_amount: number;
-  apply_due_to_total: boolean;
-  previous_due: number;
-  apply_previous_due_to_total: boolean;
+  previous_due: number; // Customer's existing debt
+  apply_previous_due_to_total: boolean; // Whether to add previous due amount to total
   total: number;
   due_date: string;
   notes: string;
@@ -81,21 +86,24 @@ interface OrderForm {
     | "completed"
     | "cancelled"
     | "refunded";
+  // Payment information
   payments: PaymentEntry[];
   total_payment_received: number;
-  remaining_balance: number;
+  remaining_balance: number; // total - total_payment_received
+  // Internal company fields (not shown on invoice)
   employee_id?: number;
   incentive_amount: number;
-  net_profit: number;
-  total_buy_price: number;
-  total_sell_price: number;
-  gross_profit: number;
+  net_profit: number; // total - incentive_amount
+  total_buy_price: number; // Total cost price of all items
+  total_sell_price: number; // Total selling price of all items (before discounts)
+  gross_profit: number; // total_sell_price - total_buy_price
 }
 
 export default function EditOrderPage() {
   const router = useRouter();
   const params = useParams();
   const formatCurrency = useCurrencyFormatter();
+  const { currencySymbol } = useCurrency();
 
   // State variables
   const [products, setProducts] = useState<Product[]>([]);
@@ -119,6 +127,11 @@ export default function EditOrderPage() {
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [isSalesIncentiveOpen, setIsSalesIncentiveOpen] = useState(false);
+  const [customerValidationError, setCustomerValidationError] = useState<
+    string | null
+  >(null);
+  const [matchedCustomer, setMatchedCustomer] = useState<Customer | null>(null);
+  const [duplicateField, setDuplicateField] = useState<'email' | 'phone' | null>(null);
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
@@ -127,6 +140,7 @@ export default function EditOrderPage() {
   );
 
   // Refs
+  const productSearchInputRef = useRef<ProductSearchInputRef>(null);
   const isActivelyTypingRef = useRef(false);
 
   // Order form state
@@ -140,12 +154,13 @@ export default function EditOrderPage() {
     },
     items: [],
     subtotal: 0,
+    discount_type: "percentage",
     discount_percentage: 0,
+    discount_flat_amount: 0,
     discount_amount: 0,
     vat_percentage: 0,
     vat_amount: 0,
     due_amount: 0,
-    apply_due_to_total: true,
     previous_due: 0,
     apply_previous_due_to_total: true,
     total: 0,
@@ -208,12 +223,13 @@ export default function EditOrderPage() {
               variant_details: item.variant_details,
             })) || [],
           subtotal: fetchedOrder.subtotal || 0,
+          discount_type: fetchedOrder.discount_type || "percentage",
           discount_percentage: fetchedOrder.discount_percentage || 0,
+          discount_flat_amount: fetchedOrder.discount_flat_amount || 0,
           discount_amount: fetchedOrder.discount_amount || 0,
           vat_percentage: fetchedOrder.vat_percentage || 0,
           vat_amount: fetchedOrder.vat_amount || 0,
           due_amount: fetchedOrder.due_amount || 0,
-          apply_due_to_total: true,
           previous_due: fetchedOrder.previous_due || 0,
           apply_previous_due_to_total:
             fetchedOrder.apply_previous_due_to_total || false,
@@ -335,39 +351,38 @@ export default function EditOrderPage() {
   // Calculate totals
   const calculateTotals = (
     items: OrderItem[],
+    discountType: "percentage" | "flat",
     discountPercentage: number,
+    discountFlatAmount: number,
     vatPercentage: number,
     dueAmount: number,
-    applyDueToTotal: boolean,
     previousDue: number,
     applyPreviousDueToTotal: boolean,
     incentiveAmount: number,
     payments: PaymentEntry[]
   ) => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const discountAmount = (subtotal * discountPercentage) / 100;
-    const afterDiscount = subtotal - discountAmount;
-    const vatAmount = (afterDiscount * vatPercentage) / 100;
-    let total = afterDiscount + vatAmount;
-
-    if (applyDueToTotal) {
-      total -= dueAmount;
-    }
-
-    if (applyPreviousDueToTotal) {
-      total += previousDue;
-    }
-
     const totalBuyPrice = items.reduce(
       (sum, item) => sum + item.buy_price * item.quantity,
       0
     );
-    const totalSellPrice = items.reduce(
-      (sum, item) => sum + item.unit_price * item.quantity,
-      0
-    );
+    const totalSellPrice = subtotal; // Sell price is the same as subtotal before discounts
+    
+    // Calculate discount amount based on type
+    const discountAmount = discountType === "percentage" 
+      ? (subtotal * discountPercentage) / 100
+      : discountFlatAmount;
+    
+    const afterDiscount = subtotal - discountAmount;
+    const vatAmount = (afterDiscount * vatPercentage) / 100;
+    // Due amount is just a note and should not affect total calculation
+    // Only add previous due if checkbox is checked (this is existing debt)
+    const total =
+      afterDiscount +
+      vatAmount +
+      (applyPreviousDueToTotal ? previousDue : 0);
     const grossProfit = totalSellPrice - totalBuyPrice;
-    const netProfit = grossProfit - incentiveAmount;
+    const netProfit = grossProfit - incentiveAmount; // Net Profit = Gross Profit - Incentive
     const totalPaymentReceived = payments.reduce(
       (sum, payment) => sum + payment.amount,
       0
@@ -403,10 +418,11 @@ export default function EditOrderPage() {
       remainingBalance,
     } = calculateTotals(
       orderForm.items,
+      orderForm.discount_type,
       orderForm.discount_percentage,
+      orderForm.discount_flat_amount,
       orderForm.vat_percentage,
       orderForm.due_amount,
-      orderForm.apply_due_to_total,
       orderForm.previous_due,
       orderForm.apply_previous_due_to_total,
       orderForm.incentive_amount,
@@ -428,10 +444,11 @@ export default function EditOrderPage() {
     }));
   }, [
     orderForm.items,
+    orderForm.discount_type,
     orderForm.discount_percentage,
+    orderForm.discount_flat_amount,
     orderForm.vat_percentage,
     orderForm.due_amount,
-    orderForm.apply_due_to_total,
     orderForm.previous_due,
     orderForm.apply_previous_due_to_total,
     orderForm.incentive_amount,
@@ -473,7 +490,9 @@ export default function EditOrderPage() {
         customer_address: orderForm.customer.address?.trim() || undefined,
         customer_company: orderForm.customer.company?.trim() || undefined,
         status,
+        discount_type: orderForm.discount_type,
         discount_percentage: orderForm.discount_percentage,
+        discount_flat_amount: orderForm.discount_flat_amount,
         vat_percentage: orderForm.vat_percentage,
         due_amount: orderForm.due_amount,
         previous_due: orderForm.previous_due,
@@ -751,6 +770,455 @@ export default function EditOrderPage() {
     }
   };
 
+  // Cleanup effect for search timeout
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
+  // Simplified focus management - only restore focus when necessary
+  useEffect(() => {
+    // Only restore focus if the dropdown just opened and input should have focus
+    if (isProductDropdownOpen && productSearch.trim().length >= 1 && !isSearchingProducts) {
+      // Use a minimal delay to ensure smooth typing experience
+      const timer = setTimeout(() => {
+        if (productSearchInputRef.current && !isActivelyTypingRef.current) {
+          productSearchInputRef.current.focus();
+        }
+      }, 50); // Minimal delay
+
+      return () => clearTimeout(timer);
+    }
+  }, [isProductDropdownOpen, productSearch]);
+
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    (query: string) => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      const timeout = setTimeout(() => {
+        // Search if query has content (removed the actively typing check to make it more responsive)
+        if (query.trim().length >= 1) {
+          searchProducts(query.trim());
+        }
+      }, 250); // Reduced delay from 300ms to 250ms for better responsiveness
+
+      setSearchTimeout(timeout);
+    },
+    [searchTimeout, searchProducts]
+  );
+
+  // Callbacks for the search input component
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setProductSearch(value);
+      
+      // Keep user actively typing while they're entering content
+      if (value.trim().length >= 1) {
+        isActivelyTypingRef.current = true; // Keep this true while typing
+        setIsProductDropdownOpen(true);
+        // Use debounced search for backend API
+        debouncedSearch(value.trim());
+      } else {
+        // Only reset when completely empty
+        isActivelyTypingRef.current = false;
+        setIsProductDropdownOpen(false);
+        setSearchResults([]); // Clear search results
+      }
+    },
+    [debouncedSearch]
+  );
+
+  const handleSearchFocus = useCallback(() => {
+    // Open dropdown on focus if user has already typed at least 1 character
+    if (productSearch.trim().length >= 1) {
+      setIsProductDropdownOpen(true);
+      // Mark as actively typing when focusing with existing content
+      isActivelyTypingRef.current = true;
+    }
+  }, [productSearch]);
+
+  const handleSearchClear = useCallback(() => {
+    isActivelyTypingRef.current = false; // User cleared, no longer actively typing
+    setProductSearch("");
+    setSearchResults([]); // Clear search results
+    setIsProductDropdownOpen(false);
+    setError(null); // Clear any error messages
+    // Clear any pending search timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+      setSearchTimeout(null);
+    }
+    // Keep focus on the input after clearing
+    setTimeout(() => {
+      if (productSearchInputRef.current) {
+        productSearchInputRef.current.focus();
+      }
+    }, 10);
+  }, [searchTimeout]);
+
+  const handleProductSelect = useCallback(
+    async (productId: string, displayText: string) => {
+      // Temporarily stop tracking typing while processing selection
+      const wasTyping = isActivelyTypingRef.current;
+      isActivelyTypingRef.current = false;
+      
+      // Try to find the product in both arrays
+      let productFromMain = products.find((p) => p.id === parseInt(productId));
+      let productFromSearch = searchResults.find((p) => p.id === parseInt(productId));
+      
+      let productToAdd = productFromMain || productFromSearch;
+      
+      // If not found in either array, try to fetch it directly from the backend
+      if (!productToAdd) {
+        try {
+          productToAdd = await ApiService.getProduct(parseInt(productId));
+        } catch (error) {
+          console.error("Error fetching product:", error);
+        }
+      }
+      
+      if (!productToAdd) {
+        setError("Product not found. Please try searching again.");
+        return;
+      }
+      
+      // If product was found in search results but not in main products array,
+      // add it to the main products array for future reference
+      if (!productFromMain && productFromSearch) {
+        setProducts(prev => [...prev, productFromSearch]);
+      }
+
+      // Check stock availability - skip for products that don't require stock tracking
+      let availableStock = 0;
+      const requestedQuantity = 1; // Default quantity when clicking on product
+
+      if (productToAdd.has_variants) {
+        // For products with variants, we'll use the first available variant
+        const firstVariant = productToAdd.variants?.[0];
+        if (firstVariant) {
+          availableStock = firstVariant.stock || 0;
+        }
+      } else {
+        availableStock = productToAdd.stock || 0;
+      }
+
+      // Only check stock if the product requires stock tracking
+      const requiresStockTracking = !productToAdd.no_stock_required;
+      if (requiresStockTracking && availableStock <= 0) {
+        setError("Product is out of stock");
+        setProductSearch("");
+        setIsProductDropdownOpen(false);
+        return;
+      }
+
+      // Check if the same product already exists in the order
+      const existingItemIndex = orderForm.items.findIndex(
+        (item) => item.product === parseInt(productId) && 
+        (!productToAdd.has_variants || item.variant === productToAdd.variants?.[0]?.id)
+      );
+
+      if (existingItemIndex >= 0) {
+        // Update existing item quantity
+        const existingItem = orderForm.items[existingItemIndex];
+        const newQuantity = existingItem.quantity + requestedQuantity;
+
+        // Only check stock limits if the product requires stock tracking
+        if (requiresStockTracking && newQuantity > availableStock) {
+          setError(`Only ${availableStock} items available in stock`);
+          setProductSearch("");
+          setIsProductDropdownOpen(false);
+          return;
+        }
+
+        setOrderForm((prev) => ({
+          ...prev,
+          items: prev.items.map((item, index) =>
+            index === existingItemIndex
+              ? { ...item, quantity: newQuantity, total: newQuantity * item.unit_price }
+              : item
+          ),
+        }));
+      } else {
+        // Add new item
+        let unitPrice = 0;
+        let buyPrice = 0;
+        let selectedVariant = null;
+
+        if (productToAdd.has_variants && productToAdd.variants?.[0]) {
+          selectedVariant = productToAdd.variants[0];
+          unitPrice = selectedVariant.sell_price || 0;
+          buyPrice = selectedVariant.buy_price || 0;
+        } else {
+          unitPrice = productToAdd.sell_price || 0;
+          buyPrice = productToAdd.buy_price || 0;
+        }
+
+        const item: OrderItem = {
+          id: Date.now().toString(),
+          product: parseInt(productId),
+          variant: selectedVariant?.id,
+          quantity: requestedQuantity,
+          unit_price: unitPrice,
+          buy_price: buyPrice,
+          total: requestedQuantity * unitPrice,
+          product_name: productToAdd.name,
+          variant_details: selectedVariant
+            ? `${selectedVariant.color} - ${selectedVariant.size}${
+                selectedVariant.custom_variant
+                  ? ` - ${selectedVariant.custom_variant}`
+                  : ""
+              }`
+            : undefined,
+        };
+
+        setOrderForm((prev) => ({
+          ...prev,
+          items: [...prev.items, item],
+        }));
+      }
+
+      // Clear search and close dropdown
+      setProductSearch("");
+      setIsProductDropdownOpen(false);
+      setError(null);
+      
+      // Refocus the search input immediately and restore typing state for continued use
+      setTimeout(() => {
+        if (productSearchInputRef.current) {
+          productSearchInputRef.current.focus();
+          // Restore the typing state so user can continue adding products
+          isActivelyTypingRef.current = wasTyping;
+        }
+      }, 10); // Immediate focus restore
+    },
+    [products, searchResults, orderForm.items]
+  );
+
+  const handleDropdownClose = useCallback(() => {
+    isActivelyTypingRef.current = false; // User closed dropdown, stop tracking
+    setIsProductDropdownOpen(false);
+  }, []);
+
+  // Handle customer info changes
+  const handleCustomerChange = (field: keyof CustomerInfo, value: string) => {
+    setOrderForm((prev) => ({
+      ...prev,
+      customer: {
+        ...prev.customer,
+        [field]: value,
+      },
+    }));
+
+    // Clear validation error when user starts typing
+    if (customerValidationError) {
+      setCustomerValidationError(null);
+      setMatchedCustomer(null);
+      setDuplicateField(null);
+    }
+
+    // Check for existing customer if email or phone is being changed
+    // Only validate if the field has a value (since these fields are optional for new customers)
+    if ((field === "email" || field === "phone") && value.trim()) {
+      const existingCustomer = customers.find(
+        (c) =>
+          (field === "email" &&
+            c.email &&
+            c.email.toLowerCase() === value.toLowerCase()) ||
+          (field === "phone" && c.phone && c.phone === value)
+      );
+
+      if (existingCustomer) {
+        setCustomerValidationError(
+          `This ${field} is already associated with customer "${existingCustomer.name}". Click to select this customer instead.`
+        );
+        setMatchedCustomer(existingCustomer);
+        setDuplicateField(field);
+      }
+    }
+  };
+
+  // Handle clicking on matched customer name in validation message
+  const handleSelectMatchedCustomer = () => {
+    if (matchedCustomer) {
+      handleCustomerSelection(matchedCustomer.id);
+      setCustomerValidationError(null);
+      setMatchedCustomer(null);
+      setDuplicateField(null);
+      // Format the customer search display the same way as normal selection
+      setCustomerSearch(
+        `${matchedCustomer.name}${
+          matchedCustomer.email ? ` (${matchedCustomer.email})` : ""
+        }${
+          matchedCustomer.phone ? ` - ${matchedCustomer.phone}` : ""
+        }`
+      );
+      setIsCustomerDropdownOpen(false);
+    }
+  };
+
+  // Handle customer selection
+  const handleCustomerSelection = async (customerId: number) => {
+    if (customerId) {
+      setCustomerType("existing");
+      setSelectedCustomerId(customerId);
+      const selectedCustomer = customers.find((c) => c.id === customerId);
+      if (selectedCustomer) {
+        setOrderForm((prev) => ({
+          ...prev,
+          customer: {
+            name: selectedCustomer.name,
+            email: selectedCustomer.email,
+            phone: selectedCustomer.phone,
+            address: selectedCustomer.address || "",
+            company: "",
+          },
+          previous_due: selectedCustomer.previous_due || 0,
+          apply_previous_due_to_total: true, // Default to true when selecting customer
+        }));
+      }
+    } else {
+      // If no customer selected, reset to neutral state (no customer type selected)
+      setCustomerType("existing");
+      setSelectedCustomerId(null);
+      setOrderForm((prev) => ({
+        ...prev,
+        customer: {
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          company: "",
+        },
+        previous_due: 0,
+        apply_previous_due_to_total: true,
+      }));
+    }
+  };
+
+  // Handle new customer selection
+  const handleGuestCustomer = () => {
+    setCustomerType("guest");
+    setSelectedCustomerId(null);
+    setOrderForm((prev) => ({
+      ...prev,
+      customer: {
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        company: "",
+      },
+      previous_due: 0,
+      apply_previous_due_to_total: true,
+    }));
+  };
+
+  // Check if quantity can be increased based on available stock
+  const canIncreaseQuantity = (item: OrderItem) => {
+    const product = products.find((p) => p.id === item.product);
+    if (!product) return false;
+
+    // Products that don't require stock tracking can always increase quantity
+    if (product.no_stock_required) return true;
+
+    let availableStock = 0;
+
+    if (product.has_variants && item.variant) {
+      // For products with variants, check variant stock
+      const variant = product.variants?.find((v) => v.id === item.variant);
+      availableStock = variant?.stock || 0;
+    } else {
+      // For products without variants, check product stock
+      availableStock = product.stock || 0;
+    }
+
+    return item.quantity < availableStock;
+  };
+
+  // Payment management functions
+  const addPayment = () => {
+    const newPayment: PaymentEntry = {
+      id: Date.now().toString(),
+      method: "Cash",
+      amount: 0,
+    };
+
+    setOrderForm((prev) => ({
+      ...prev,
+      payments: [...prev.payments, newPayment],
+    }));
+  };
+
+  const removePayment = (paymentId: string) => {
+    setOrderForm((prev) => ({
+      ...prev,
+      payments: prev.payments.filter((payment) => payment.id !== paymentId),
+    }));
+  };
+
+  const updatePayment = (
+    paymentId: string,
+    field: keyof PaymentEntry,
+    value: string | number
+  ) => {
+    setOrderForm((prev) => ({
+      ...prev,
+      payments: prev.payments.map((payment) =>
+        payment.id === paymentId ? { ...payment, [field]: value } : payment
+      ),
+    }));
+  };
+
+  // Filter customers based on search
+  const filteredCustomers = customers.filter((customer) => {
+    if (!customerSearch.trim()) return true;
+    const search = customerSearch.toLowerCase();
+    const matches =
+      customer.name?.toLowerCase().includes(search) ||
+      customer.email?.toLowerCase().includes(search) ||
+      customer.phone?.includes(search);
+
+    return matches;
+  });
+
+  // Filter employees based on search
+  const filteredEmployees = employees.filter((employee) => {
+    if (!employeeSearch.trim()) return true;
+    const search = employeeSearch.toLowerCase();
+    return (
+      employee.name.toLowerCase().includes(search) ||
+      employee.email.toLowerCase().includes(search) ||
+      (employee.role && employee.role.toLowerCase().includes(search))
+    );
+  });
+
+  // Helper function to highlight search terms
+  const highlightText = (text: string, search: string) => {
+    if (!search.trim()) return text;
+
+    const regex = new RegExp(
+      `(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi"
+    );
+    const parts = text.split(regex);
+
+    return parts.map((part, index) =>
+      regex.test(part) ? (
+        <span key={index} className="bg-cyan-400/20 text-cyan-300 font-medium">
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
+
   if (isLoadingOrder) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -776,7 +1244,7 @@ export default function EditOrderPage() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Loading order...
+              <span>Loading order...</span>
             </div>
           </div>
         </div>
@@ -830,105 +1298,108 @@ export default function EditOrderPage() {
             {/* Customer Information */}
             <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
               <div className="sm:p-4 p-2">
-                <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                  Customer Information
-                </h3>
-
-                {/* Customer Type Selection */}
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="existing-customer"
-                      name="customerType"
-                      checked={customerType === "existing"}
-                      onChange={() => setCustomerType("existing")}
-                      className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2"
-                    />
-                    <label
-                      htmlFor="existing-customer"
-                      className="text-slate-300"
+                <div className="flex items-center gap-1 mb-4">
+                  <button
+                    onClick={() => router.back()}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <svg
+                      className="w-6 h-6 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      Existing Customer
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="guest-customer"
-                      name="customerType"
-                      checked={customerType === "guest"}
-                      onChange={() => setCustomerType("guest")}
-                      className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2"
-                    />
-                    <label htmlFor="guest-customer" className="text-slate-300">
-                      Guest Customer
-                    </label>
-                  </div>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                  </button>
+                  <h3 className="text-lg font-semibold text-slate-200">
+                    Edit Order
+                  </h3>
                 </div>
 
-                {/* Existing Customer Search */}
-                {customerType === "existing" && (
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      Search Customer
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Search by name, email, or phone..."
-                        value={customerSearch}
-                        onChange={(e) => {
-                          setCustomerSearch(e.target.value);
-                          setIsCustomerDropdownOpen(true);
-                        }}
-                        onFocus={() => setIsCustomerDropdownOpen(true)}
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      />
-
-                      {/* Clear button */}
-                      {customerSearch && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCustomerSearch("");
-                            setSelectedCustomerId(null);
-                            setIsCustomerDropdownOpen(false);
-                            setOrderForm((prev) => ({
-                              ...prev,
-                              customer: {
-                                name: "",
-                                email: "",
-                                phone: "",
-                                address: "",
-                                company: "",
-                              },
-                              previous_due: 0,
-                              apply_previous_due_to_total: true,
-                            }));
+                {/* Customer Selection Row */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Customer Selection
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    {/* Customer Dropdown with Integrated Search */}
+                    <div className="flex-1 relative">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search and select customer (minimum 2 characters)..."
+                          value={customerSearch}
+                          onChange={(e) => {
+                            setCustomerSearch(e.target.value);
+                            // Only open dropdown if user has typed at least 2 characters
+                            if (e.target.value.trim().length >= 2) {
+                              setIsCustomerDropdownOpen(true);
+                            } else {
+                              setIsCustomerDropdownOpen(false);
+                            }
                           }}
-                          className="absolute right-12 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
-                          title="Clear search"
-                        >
-                          Clear
-                        </button>
-                      )}
-
-                      <svg
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
+                          onFocus={() => {
+                            // Only open dropdown on focus if user has already typed at least 2 characters
+                            if (customerSearch.trim().length >= 2) {
+                              setIsCustomerDropdownOpen(true);
+                            }
+                          }}
+                          disabled={customerType === "guest"}
+                          className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
+                            customerType === "guest"
+                              ? "opacity-50 cursor-not-allowed"
+                              : "cursor-text"
+                          }`}
                         />
-                      </svg>
+                        {/* Clear button */}
+                        {customerSearch && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomerSearch("");
+                              setSelectedCustomerId(null);
+                              setIsCustomerDropdownOpen(false);
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                customer: {
+                                  name: "",
+                                  email: "",
+                                  phone: "",
+                                  address: "",
+                                  company: "",
+                                },
+                                previous_due: 0,
+                                apply_previous_due_to_total: true,
+                              }));
+                            }}
+                            className="absolute right-12 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
+                            title="Clear search"
+                          >
+                            Clear
+                          </button>
+                        )}
+                        <svg
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
 
-                      {/* Customer Dropdown */}
+                      {/* Dropdown Options */}
                       {isCustomerDropdownOpen &&
                         customerSearch.trim().length >= 2 && (
                           <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
@@ -936,51 +1407,14 @@ export default function EditOrderPage() {
                               <div className="p-3 text-slate-400">
                                 Loading customers...
                               </div>
-                            ) : customers.filter((customer) => {
-                                const search = customerSearch.toLowerCase();
-                                return (
-                                  customer.name
-                                    .toLowerCase()
-                                    .includes(search) ||
-                                  customer.email
-                                    ?.toLowerCase()
-                                    .includes(search) ||
-                                  customer.phone?.includes(search)
-                                );
-                              }).length > 0 ? (
-                              customers
-                                .filter((customer) => {
-                                  const search = customerSearch.toLowerCase();
-                                  return (
-                                    customer.name
-                                      .toLowerCase()
-                                      .includes(search) ||
-                                    customer.email
-                                      ?.toLowerCase()
-                                      .includes(search) ||
-                                    customer.phone?.includes(search)
-                                  );
-                                })
+                            ) : filteredCustomers.length > 0 ? (
+                              filteredCustomers
                                 .slice(0, 10)
                                 .map((customer) => (
                                   <div
                                     key={customer.id}
                                     onClick={() => {
-                                      setSelectedCustomerId(customer.id);
-                                      setOrderForm((prev) => ({
-                                        ...prev,
-                                        customer: {
-                                          name: customer.name,
-                                          email: customer.email || "",
-                                          phone: customer.phone || "",
-                                          address: customer.address || "",
-                                          company: "",
-                                        },
-                                        previous_due:
-                                          customer.previous_due || 0,
-                                        apply_previous_due_to_total:
-                                          (customer.previous_due || 0) > 0,
-                                      }));
+                                      handleCustomerSelection(customer.id);
                                       setCustomerSearch(
                                         `${customer.name}${
                                           customer.email
@@ -1019,6 +1453,13 @@ export default function EditOrderPage() {
                                 No customers found
                               </div>
                             )}
+                            {/* Show indicator when there are more than 10 results */}
+                            {filteredCustomers.length > 10 && (
+                              <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
+                                Showing 10 of {filteredCustomers.length}{" "}
+                                results. Type more to refine search.
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -1030,302 +1471,445 @@ export default function EditOrderPage() {
                         />
                       )}
                     </div>
-                  </div>
-                )}
 
-                {/* Customer Form Fields */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Customer Name *
+                    {/* New Customer Checkbox */}
+                    <div className="flex items-center">
+                      <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={customerType === "guest"}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleGuestCustomer();
+                              // Clear customer search input when "New Customer" is checked
+                              setCustomerSearch("");
+                              setSelectedCustomerId(null);
+                              setIsCustomerDropdownOpen(false);
+                            } else {
+                              // If unchecked, switch to existing customer mode and clear form
+                              setCustomerType("existing");
+                              setSelectedCustomerId(null);
+                              setOrderForm((prev) => ({
+                                ...prev,
+                                customer: {
+                                  name: "",
+                                  email: "",
+                                  phone: "",
+                                  address: "",
+                                  company: "",
+                                },
+                                previous_due: 0,
+                                apply_previous_due_to_total: true,
+                              }));
+                            }
+                          }}
+                          className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2 rounded cursor-pointer"
+                        />
+                        <span className="text-sm text-slate-300">New Customer</span>
                       </label>
-                      <input
-                        type="text"
-                        value={orderForm.customer.name}
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            customer: {
-                              ...prev.customer,
-                              name: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        placeholder="Enter customer name"
-                        required
-                      />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Phone
-                      </label>
-                      <input
-                        type="tel"
-                        value={orderForm.customer.phone}
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            customer: {
-                              ...prev.customer,
-                              phone: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        placeholder="Enter phone number"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={orderForm.customer.email}
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            customer: {
-                              ...prev.customer,
-                              email: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        placeholder="Enter email address"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Company
-                      </label>
-                      <input
-                        type="text"
-                        value={orderForm.customer.company}
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            customer: {
-                              ...prev.customer,
-                              company: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        placeholder="Enter company name"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      Address
-                    </label>
-                    <textarea
-                      value={orderForm.customer.address}
-                      onChange={(e) =>
-                        setOrderForm((prev) => ({
-                          ...prev,
-                          customer: {
-                            ...prev.customer,
-                            address: e.target.value,
-                          },
-                        }))
-                      }
-                      className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                      placeholder="Enter customer address"
-                      rows={3}
-                    />
                   </div>
                 </div>
+
+                {/* New Customer Form */}
+                {customerType === "guest" && (
+                  <div>
+                    {/* Customer Validation Warning */}
+                    {customerValidationError && (
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+                        <div className="flex items-start gap-2">
+                          <svg
+                            className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
+                            />
+                          </svg>
+                          <div>
+                            <p className="text-amber-400 text-sm font-medium">
+                              Note:
+                            </p>
+                            <p className="text-amber-300 text-sm">
+                              A customer with this {duplicateField || 'field'} already exists: {' '}
+                              <button
+                                type="button"
+                                onClick={handleSelectMatchedCustomer}
+                                className="text-cyan-400 hover:text-cyan-300 underline font-medium transition-colors duration-200"
+                              >
+                                {matchedCustomer?.name}
+                              </button>
+                              . You may want to select them from existing customers instead, or use a different {duplicateField || 'field'}. You can still proceed
+                              with creating this order.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                          Customer Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={orderForm.customer.name}
+                          onChange={(e) =>
+                            handleCustomerChange("name", e.target.value)
+                          }
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
+                          placeholder="Enter customer name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                          Company
+                        </label>
+                        <input
+                          type="text"
+                          value={orderForm.customer.company}
+                          onChange={(e) =>
+                            handleCustomerChange("company", e.target.value)
+                          }
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
+                          placeholder="Company name (optional)"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                          Email (Optional)
+                        </label>
+                        <input
+                          type="email"
+                          value={orderForm.customer.email}
+                          onChange={(e) =>
+                            handleCustomerChange("email", e.target.value)
+                          }
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
+                          placeholder="customer@email.com (optional)"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                          Phone (Optional)
+                        </label>
+                        <input
+                          type="tel"
+                          value={orderForm.customer.phone}
+                          onChange={(e) =>
+                            handleCustomerChange("phone", e.target.value)
+                          }
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
+                          placeholder="Phone number (optional)"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                          Address (Optional)
+                        </label>
+                        <textarea
+                          value={orderForm.customer.address}
+                          onChange={(e) =>
+                            handleCustomerChange("address", e.target.value)
+                          }
+                          rows={2}
+                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
+                          placeholder="Customer address (optional)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Order Items */}
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
+            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-visible">
               <div className="sm:p-4 p-2">
                 <h3 className="text-lg font-semibold text-slate-200 mb-4">
                   Order Items
                 </h3>
 
-                {/* Items List */}
-                <div className="space-y-3 mb-4">
-                  {orderForm.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/30"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <h5 className="text-sm font-medium text-slate-200">
-                            {item.product_name}
-                            {item.variant_details && (
-                              <span className="text-slate-400 ml-2">
-                                ({item.variant_details})
-                              </span>
-                            )}
-                          </h5>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {/* Quantity Controls */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() =>
-                                updateItemQuantity(item.id, item.quantity - 1)
-                              }
-                              className="w-8 h-8 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-sm"
-                            >
-                              −
-                            </button>
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) =>
-                                updateItemQuantity(
-                                  item.id,
-                                  parseInt(e.target.value) || 1
-                                )
-                              }
-                              className="w-16 bg-slate-800/50 border border-slate-700/50 text-white text-center rounded py-1 px-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                              min="1"
-                            />
-                            <button
-                              onClick={() =>
-                                updateItemQuantity(item.id, item.quantity + 1)
-                              }
-                              className="w-8 h-8 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-sm"
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          {/* Total */}
-                          <div className="text-cyan-400 font-medium w-20 text-right">
-                            {formatCurrency(item.total)}
-                          </div>
-
-                          {/* Remove Button */}
-                          <button
-                            onClick={() => removeItem(item.id)}
-                            className="w-8 h-8 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center justify-center transition-colors text-sm"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {orderForm.items.length === 0 && (
+                {/* Order Items List */}
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">
+                    Items in Order ({orderForm.items.length})
+                  </h4>
+                  {orderForm.items.length === 0 ? (
                     <div className="text-center py-8 text-slate-400">
-                      <p>No items in this order yet.</p>
-                      <p className="text-sm mt-1">
-                        Add items below to get started.
+                      <svg
+                        className="w-12 h-12 mx-auto mb-3 text-slate-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 14H6L5 9z"
+                        />
+                      </svg>
+                      <p>No items added yet</p>
+                      <p className="text-sm text-slate-500 mt-1">
+                        Use the form below to add items to your order
                       </p>
                     </div>
+                  ) : (
+                    <>
+                      {/* Column Headers */}
+                      <div className="grid grid-cols-5 gap-4 pb-2 border-b border-slate-700/30 mb-2">
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                          Product
+                        </div>
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
+                          Quantity
+                        </div>
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
+                          Buy Price
+                        </div>
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
+                          Sell Price
+                        </div>
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
+                          Total
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {orderForm.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="grid grid-cols-5 gap-4 items-center py-3 px-2 hover:bg-slate-800/20 rounded-lg transition-colors"
+                          >
+                            {/* Product Name */}
+                            <div className="flex-1">
+                              <div className="font-medium text-slate-100 text-sm">
+                                {item.product_name}
+                              </div>
+                              {item.variant_details && (
+                                <div className="text-xs text-slate-400 mt-1">
+                                  {item.variant_details}
+                                </div>
+                              )}
+                              {/* Variant Selection for products with variants */}
+                              {(() => {
+                                const product = products.find(
+                                  (p) => p.id === item.product
+                                );
+                                return product?.has_variants &&
+                                  product.variants &&
+                                  product.variants.length > 0 ? (
+                                  <div className="mt-2">
+                                    <select
+                                      value={item.variant || ""}
+                                      onChange={(e) => {
+                                        const variantId = e.target.value
+                                          ? parseInt(e.target.value)
+                                          : undefined;
+                                        const selectedVariant =
+                                          product.variants?.find(
+                                            (v) => v.id === variantId
+                                          );
+                                        const newUnitPrice = selectedVariant
+                                          ? selectedVariant.sell_price || 0
+                                          : product.sell_price || 0;
+                                        const newBuyPrice = selectedVariant
+                                          ? selectedVariant.buy_price || 0
+                                          : product.buy_price || 0;
+
+                                        setOrderForm((prev) => ({
+                                          ...prev,
+                                          items: prev.items.map((orderItem) =>
+                                            orderItem.id === item.id
+                                              ? {
+                                                  ...orderItem,
+                                                  variant: variantId,
+                                                  unit_price: newUnitPrice,
+                                                  buy_price: newBuyPrice,
+                                                  total:
+                                                    orderItem.quantity *
+                                                    newUnitPrice,
+                                                  variant_details:
+                                                    selectedVariant
+                                                      ? `${
+                                                          selectedVariant.color
+                                                        } - ${
+                                                          selectedVariant.size
+                                                        }${
+                                                          selectedVariant.custom_variant
+                                                            ? ` - ${selectedVariant.custom_variant}`
+                                                            : ""
+                                                        }`
+                                                      : undefined,
+                                                }
+                                              : orderItem
+                                          ),
+                                        }));
+                                      }}
+                                      className="w-full bg-slate-700/50 border border-slate-600/50 text-white text-xs rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                                    >
+                                      <option
+                                        value=""
+                                        className="bg-slate-800"
+                                      >
+                                        Select variant
+                                      </option>
+                                      {product.variants.map((variant) => (
+                                        <option
+                                          key={variant.id}
+                                          value={variant.id}
+                                          className="bg-slate-800"
+                                        >
+                                          {variant.color} - {variant.size}
+                                          {variant.custom_variant &&
+                                            ` - ${variant.custom_variant}`}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                ) : null;
+                              })()}
+                            </div>
+
+                            {/* Quantity */}
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() =>
+                                  updateItemQuantity(
+                                    item.id,
+                                    item.quantity - 1
+                                  )
+                                }
+                                className="w-6 h-6 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-xs"
+                              >
+                                −
+                              </button>
+                              <span className="w-8 text-center text-slate-100 font-medium text-sm">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  updateItemQuantity(
+                                    item.id,
+                                    item.quantity + 1
+                                  )
+                                }
+                                disabled={!canIncreaseQuantity(item)}
+                                className={`w-6 h-6 rounded flex items-center justify-center transition-colors text-xs ${
+                                  canIncreaseQuantity(item)
+                                    ? "bg-slate-700/50 text-slate-300 hover:bg-slate-600 cursor-pointer"
+                                    : "bg-slate-800/30 text-slate-500 cursor-not-allowed"
+                                }`}
+                                title={
+                                  canIncreaseQuantity(item)
+                                    ? "Increase quantity"
+                                    : "Maximum stock reached"
+                                }
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            {/* Buy Price */}
+                            <div className="text-center">
+                              <div className="text-sm text-slate-300">
+                                {formatCurrency(item.buy_price || 0)}
+                              </div>
+                            </div>
+
+                            {/* Unit Price */}
+                            <div className="text-center">
+                              <input
+                                type="number"
+                                value={item.unit_price}
+                                onChange={(e) => {
+                                  const newPrice =
+                                    parseFloat(e.target.value) || 0;
+                                  updateItemUnitPrice(item.id, newPrice);
+                                }}
+                                className="w-20 bg-slate-800/50 border border-slate-700/50 text-white text-sm text-center rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                min="0"
+                                step="0.01"
+                              />
+                            </div>
+
+                            {/* Total Price & Actions */}
+                            <div className="flex items-center justify-end gap-3">
+                              <div className="font-semibold text-slate-100 text-sm">
+                                {formatCurrency(item.total)}
+                              </div>
+                              <button
+                                onClick={() => removeItem(item.id)}
+                                className="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/10 rounded transition-colors"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
 
-                {/* Add New Item */}
+                {/* Add New Item Section */}
                 <div className="border-t border-slate-700/50 pt-4">
-                  <h4 className="text-md font-medium text-slate-200 mb-3">
+                  {/* Error Message */}
+                  {error && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
+                      <p className="text-red-400">{error}</p>
+                    </div>
+                  )}
+
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">
                     Add New Item
                   </h4>
-
-                  <div className="space-y-4">
-                    {/* Product Search, Quantity, and Add Button in one line */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                      {/* Product Search */}
-                      <div className="md:col-span-6 relative">
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Search Product
+                  
+                  <div className="space-y-4 pb-20">
+                    {/* Product Search Row */}
+                    <div className="flex flex-col md:flex-row gap-4 items-end">
+                      <div className="flex-1 md:flex-[2] relative">
+                        <label className="block text-xs font-medium text-slate-400 mb-1">
+                          Product Search (Click product name to add to order)
                         </label>
-                        <input
-                          type="text"
+                        <ProductSearchInput
+                          ref={productSearchInputRef}
                           value={productSearch}
-                          onChange={(e) => handleProductSearch(e.target.value)}
-                          onFocus={() => setIsProductDropdownOpen(true)}
-                          placeholder="Search products..."
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                          onChange={handleSearchChange}
+                          onFocus={handleSearchFocus}
+                          onClear={handleSearchClear}
+                          isSearching={isSearchingProducts}
+                          isLoading={isLoadingProducts}
                         />
 
-                        {/* Product Dropdown */}
-                        {isProductDropdownOpen &&
-                          (productSearch.length >= 1 ||
-                            searchResults.length > 0) && (
-                            <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                              {isSearchingProducts ? (
-                                <div className="p-3 text-slate-400">
-                                  Loading...
-                                </div>
-                              ) : searchResults.length > 0 ? (
-                                searchResults.slice(0, 10).map((product) => (
-                                  <div
-                                    key={product.id}
-                                    onClick={() => {
-                                      handleNewItemChange(
-                                        "product",
-                                        product.id.toString()
-                                      );
-                                      setProductSearch(
-                                        `${product.name} (${
-                                          product.product_code || "No Code"
-                                        })`
-                                      );
-                                      setIsProductDropdownOpen(false);
-                                    }}
-                                    className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
-                                  >
-                                    <div className="text-white font-medium">
-                                      {product.name}
-                                    </div>
-                                    <div className="text-slate-400 text-sm">
-                                      {product.category_name} • Stock:{" "}
-                                      {product.stock}
-                                      {product.product_code &&
-                                        ` • Code: ${product.product_code}`}
-                                    </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="p-3 text-slate-400">
-                                  No products found
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                        {/* Click outside to close dropdown */}
-                        {isProductDropdownOpen && (
-                          <div
-                            className="fixed inset-0 z-5"
-                            onClick={() => setIsProductDropdownOpen(false)}
-                          />
-                        )}
-                      </div>
-
-                      {/* Quantity */}
-                      <div className="md:col-span-3">
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Quantity
-                        </label>
-                        <input
-                          type="number"
-                          value={newItem.quantity}
-                          onChange={(e) =>
-                            handleNewItemChange(
-                              "quantity",
-                              parseInt(e.target.value) || 1
-                            )
-                          }
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                          min="1"
+                        <ProductDropdown
+                          isOpen={isProductDropdownOpen}
+                          searchQuery={productSearch}
+                          searchResults={searchResults}
+                          isLoading={isLoadingProducts}
+                          isSearching={isSearchingProducts}
+                          onProductSelect={handleProductSelect}
+                          onClose={handleDropdownClose}
+                          highlightText={highlightText}
                         />
                       </div>
 
@@ -1368,60 +1952,14 @@ export default function EditOrderPage() {
                         </select>
                       </div>
                     )}
-
-                    {/* Selected Product Preview */}
-                    {selectedProduct && (
-                      <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/30">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h5 className="text-sm font-medium text-slate-200">
-                              {selectedProduct.name}
-                            </h5>
-                            <p className="text-xs text-slate-400">
-                              {selectedProduct.category_name} • Stock:{" "}
-                              {selectedProduct.has_variants && newItem.variant
-                                ? availableVariants.find(
-                                    (v) => v.id === parseInt(newItem.variant)
-                                  )?.stock || 0
-                                : selectedProduct.stock}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium text-cyan-400">
-                              {formatCurrency(
-                                (newItem.unit_price ||
-                                  (selectedProduct.has_variants &&
-                                  newItem.variant
-                                    ? availableVariants.find(
-                                        (v) =>
-                                          v.id === parseInt(newItem.variant)
-                                      )?.sell_price || 0
-                                    : selectedProduct.sell_price || 0)) *
-                                  newItem.quantity
-                              )}
-                            </div>
-                            <div className="text-xs text-slate-400">
-                              {formatCurrency(
-                                newItem.unit_price ||
-                                  (selectedProduct.has_variants &&
-                                  newItem.variant
-                                    ? availableVariants.find(
-                                        (v) =>
-                                          v.id === parseInt(newItem.variant)
-                                      )?.sell_price || 0
-                                    : selectedProduct.sell_price || 0)
-                              )}{" "}
-                              × {newItem.quantity}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
+          {/* Right Column */}
+          <div className="space-y-6">
             {/* Notes */}
             <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
               <div className="sm:p-4 p-2">
@@ -1441,8 +1979,9 @@ export default function EditOrderPage() {
             </div>
           </div>
 
-          {/* Right Column - Continue with Bill Summary */}
+          {/* Right Column */}
           <div className="space-y-6">
+            <div>Test</div>
             {/* Bill Summary */}
             <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
               <div className="sm:p-4 p-2">
