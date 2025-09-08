@@ -5,6 +5,7 @@ import { ApiService } from "@/lib/api";
 import { StockEntry } from "@/types/product";
 import {
   ArrowLeft,
+  Edit,
   History,
   Package,
   Palette,
@@ -461,13 +462,22 @@ export default function ProductDetailsPage() {
       <div className="max-w-7xl">
         {/* Page Header */}
         <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center justify-between gap-3 mb-2">
             <button
               onClick={() => router.push("/dashboard/products")}
               className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors group cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
               Back to Products
+            </button>
+            
+            {/* Edit Button */}
+            <button
+              onClick={() => router.push(`/dashboard/products/${product.id}/edit`)}
+              className="flex items-center gap-2 px-4 py-2 bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-lg hover:bg-cyan-500/30 transition-colors cursor-pointer"
+            >
+              <Edit className="w-4 h-4" />
+              Edit Product
             </button>
           </div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">

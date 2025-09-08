@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
 import { ApiService } from "@/lib/api";
 import {
   Activity,
@@ -55,6 +56,7 @@ export default function Sidebar({
   smsCredits: initialSmsCredits = 1250
 }: SidebarProps) {
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { subscriptionStatus, isPro, isLoading: subscriptionLoading } = useSubscription();
   const [smsCredits, setSmsCredits] = useState<number | null>(null);
 
   useEffect(() => {
@@ -72,6 +74,34 @@ export default function Sidebar({
     }
     fetchSmsCredits();
   }, [isAuthenticated]);
+
+  // Component for dynamic subscription badge
+  const SubscriptionBadge = () => {
+    if (subscriptionLoading) {
+      return (
+        <div className="flex items-center gap-1 bg-slate-600/50 text-slate-400 px-2 py-1 rounded-full text-xs font-bold">
+          <Crown className="h-3 w-3" />
+          ...
+        </div>
+      );
+    }
+
+    if (isPro) {
+      return (
+        <div className="flex items-center gap-1 bg-gradient-to-r from-amber-400 to-orange-500 text-black px-2 py-1 rounded-full text-xs font-bold">
+          <Crown className="h-3 w-3" />
+          PRO
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-1 bg-slate-600/50 text-slate-400 px-2 py-1 rounded-full text-xs font-bold">
+        <Crown className="h-3 w-3" />
+        FREE
+      </div>
+    );
+  };
 
   return (
     <Fragment>
@@ -100,15 +130,20 @@ export default function Sidebar({
 
               {/* Subscription & SMS Credits Section */}
               <div className="mb-6">
-                {/* SMS Credits with Pro Badge */}
-                <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/10 border border-emerald-500/30 rounded-xl p-4 relative overflow-hidden">
-                  {/* Pro Badge */}
+                {/* SMS Credits with Subscription Badge */}
+                <div className={`bg-gradient-to-br ${isPro ? 'from-emerald-500/20 to-green-600/10 border-emerald-500/30' : 'from-slate-500/20 to-slate-600/10 border-slate-500/30'} border rounded-xl p-4 relative overflow-hidden`}>
+                  {/* Subscription Badge */}
                   <div className="absolute top-2 right-2">
-                    <div className="flex items-center gap-1 bg-gradient-to-r from-amber-400 to-orange-500 text-black px-2 py-1 rounded-full text-xs font-bold">
-                      <Crown className="h-3 w-3" />
-                      PRO
-                    </div>
+                    <SubscriptionBadge />
                   </div>
+                  
+                  {!isPro && !subscriptionLoading && (
+                    <div className="absolute top-2 left-2">
+                      <Link href="/dashboard/subscriptions" className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                        Upgrade
+                      </Link>
+                    </div>
+                  )}
                       <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="rounded-lg bg-emerald-500/20 p-2">
@@ -142,16 +177,12 @@ export default function Sidebar({
           <div className="p-3 flex-1 flex flex-col overflow-y-auto">
             {/* Subscription & SMS Credits Section */}
             <div className="mb-6">
-              {/* SMS Credits with Pro Badge */}
-              <div className="bg-gradient-to-br from-emerald-500/20 to-green-600/10 border border-emerald-500/30 rounded-xl py-5 px-2 relative overflow-hidden">
-                {/* Pro Badge */}
+              {/* SMS Credits with Subscription Badge */}
+              <div className={`bg-gradient-to-br ${isPro ? 'from-emerald-500/20 to-green-600/10 border-emerald-500/30' : 'from-slate-500/20 to-slate-600/10 border-slate-500/30'} border rounded-xl py-5 px-2 relative overflow-hidden`}>
+                {/* Subscription Badge */}
                 <div className="absolute top-2 right-2">
-                  <div className="flex items-center gap-1 bg-gradient-to-r from-amber-400 to-orange-500 text-black px-2 py-1 rounded-full text-xs font-bold">
-                    <Crown className="h-3 w-3" />
-                    PRO
-                  </div>
+                  <SubscriptionBadge />
                 </div>
-                
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="rounded-lg bg-emerald-500/20 p-2">

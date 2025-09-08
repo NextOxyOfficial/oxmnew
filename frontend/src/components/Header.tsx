@@ -21,6 +21,7 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ApiService } from '@/lib/api';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface User {
   id: number;
@@ -66,10 +67,13 @@ export default function Header({
   onToggleDarkMode
 }: HeaderProps) {
   const pathname = usePathname();
+  const { subscriptionStatus, isPro, isLoading: subscriptionLoading } = useSubscription();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
+  const [currentTime, setCurrentTime] = useState('');
+  const [currentDate, setCurrentDate] = useState('');
 
   const unreadNotifications = notifications.filter(n => !n.read).length;
 
@@ -119,18 +123,34 @@ export default function Header({
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
-  // Get current time
-  const currentTime = new Date().toLocaleTimeString('en-US', { 
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  // Function to update Dhaka time
+  const updateDhakaTime = () => {
+    const now = new Date();
+    const dhakaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Dhaka"}));
+    
+    setCurrentTime(dhakaTime.toLocaleTimeString('en-US', { 
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }));
 
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric'
-  });
+    setCurrentDate(dhakaTime.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric'
+    }));
+  };
+
+  // Update time every second
+  useEffect(() => {
+    updateDhakaTime(); // Initial update
+    const interval = setInterval(updateDhakaTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Get current time
+  // Removed old static declarations
   
   return (
     <header className="bg-slate-900/98 backdrop-blur-xl border-b border-slate-700/50 shadow-xl relative z-50">
@@ -141,7 +161,7 @@ export default function Header({
             {/* Mobile menu button */}
             <button
               onClick={onMenuClick}
-              className="lg:hidden rounded-lg p-2 inline-flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
+              className="lg:hidden rounded-lg p-2 inline-flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 cursor-pointer"
             >
               <span className="sr-only">Open sidebar</span>
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -166,7 +186,7 @@ export default function Header({
             <nav className="hidden lg:flex items-center space-x-1 text-sm ml-6 pl-6 border-l border-slate-700/50">
               <Link 
                 href="/dashboard" 
-                className="flex items-center text-slate-400 hover:text-cyan-400 transition-colors px-2 py-1 rounded-md hover:bg-slate-800/40"
+                className="flex items-center text-slate-400 hover:text-cyan-400 transition-colors px-2 py-1 rounded-md hover:bg-slate-800/40 cursor-pointer"
               >
                 <Home className="h-4 w-4 mr-1" />
                 <span className="font-medium">Dashboard</span>
@@ -177,7 +197,7 @@ export default function Header({
                   {item.href ? (
                     <Link 
                       href={item.href} 
-                      className="text-slate-400 hover:text-cyan-400 transition-colors px-2 py-1 rounded-md hover:bg-slate-800/40 font-medium"
+                      className="text-slate-400 hover:text-cyan-400 transition-colors px-2 py-1 rounded-md hover:bg-slate-800/40 font-medium cursor-pointer"
                     >
                       {item.name}
                     </Link>
@@ -224,7 +244,7 @@ export default function Header({
             {/* Help Button */}
             <Link
               href="/dashboard/help"
-              className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors"
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors cursor-pointer"
             >
               <HelpCircle className="h-5 w-5" />
             </Link>
@@ -233,7 +253,7 @@ export default function Header({
             {onToggleDarkMode && (
               <button
                 onClick={onToggleDarkMode}
-                className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors"
+                className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors cursor-pointer"
               >
                 {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </button>
@@ -243,7 +263,7 @@ export default function Header({
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-slate-800/50 transition-colors group"
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-slate-800/50 transition-colors group cursor-pointer"
               >
                 <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-full flex items-center justify-center text-slate-900 font-medium text-sm shadow-lg">
                   {(user.first_name?.[0] || user.username[0]).toUpperCase()}
@@ -253,8 +273,8 @@ export default function Header({
                     {user.first_name || user.username}
                   </div>
                   <div className="text-xs text-slate-500 flex items-center gap-1">
-                    <Crown className="h-3 w-3 text-amber-400" />
-                    Pro Account
+                    <Crown className={`h-3 w-3 ${isPro ? 'text-amber-400' : 'text-slate-500'}`} />
+                    {subscriptionLoading ? '...' : (isPro ? 'Pro Account' : 'Free Account')}
                   </div>
                 </div>
               </button>
@@ -274,9 +294,9 @@ export default function Header({
                             : user.username}
                         </div>
                         <div className="text-xs text-slate-400">{user.email}</div>
-                        <div className="text-xs text-amber-400 flex items-center gap-1 mt-1">
+                        <div className={`text-xs flex items-center gap-1 mt-1 ${isPro ? 'text-amber-400' : 'text-slate-500'}`}>
                           <Crown className="h-3 w-3" />
-                          Pro Account
+                          {subscriptionLoading ? 'Loading...' : (isPro ? 'Pro Account' : 'Free Account')}
                         </div>
                       </div>
                     </div>
@@ -285,21 +305,21 @@ export default function Header({
                   <div className="py-2">
                     <Link
                       href="/dashboard/profile"
-                      className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors"
+                      className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors cursor-pointer"
                     >
                       <User className="h-4 w-4 mr-3" />
                       My Profile
                     </Link>
                     <Link
                       href="/dashboard/settings"
-                      className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors"
+                      className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors cursor-pointer"
                     >
                       <Settings className="h-4 w-4 mr-3" />
                       Settings
                     </Link>
                     <Link
                       href="/dashboard/subscriptions"
-                      className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors"
+                      className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors cursor-pointer"
                     >
                       <Crown className="h-4 w-4 mr-3 text-amber-400" />
                       Subscription
@@ -309,7 +329,7 @@ export default function Header({
                   <div className="border-t border-slate-700/50">
                     <button
                       onClick={onLogout}
-                      className="flex items-center w-full px-4 py-3 text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-colors"
+                      className="flex items-center w-full px-4 py-3 text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-colors cursor-pointer"
                     >
                       <LogOut className="h-4 w-4 mr-3" />
                       Sign Out

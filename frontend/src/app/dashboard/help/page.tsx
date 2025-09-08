@@ -186,7 +186,7 @@ export default function HelpPage() {
                       <button
                         key={category.id}
                         onClick={() => setSelectedCategory(category.id)}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
                           selectedCategory === category.id
                             ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                             : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 border border-slate-600/50'
@@ -208,7 +208,7 @@ export default function HelpPage() {
                     >
                       <button
                         onClick={() => toggleFaq(faq.id)}
-                        className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-slate-700/50 transition-colors"
+                        className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-slate-700/50 transition-colors cursor-pointer"
                       >
                         <span className="font-medium text-slate-200 pr-4">
                           {faq.question}
@@ -236,57 +236,6 @@ export default function HelpPage() {
                 )}
               </div>
             </div>
-        </div>
-
-        {/* Additional Resources */}
-        <div className="mt-8 bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl p-6">
-          <h2 className="text-xl font-semibold text-slate-100 mb-6">Additional Resources</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-start space-x-4">
-              <div className="bg-cyan-500/20 p-3 rounded-lg border border-cyan-500/30">
-                <Package className="h-6 w-6 text-cyan-400" />
-              </div>
-              <div>
-                <h3 className="font-medium text-slate-200 mb-2">User Guide</h3>
-                <p className="text-slate-400 text-sm mb-2">
-                  Comprehensive guide to using all platform features
-                </p>
-                <a href="#" className="text-cyan-400 hover:text-cyan-300 text-sm font-medium flex items-center">
-                  View Guide <ExternalLink className="h-4 w-4 ml-1" />
-                </a>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4">
-              <div className="bg-emerald-500/20 p-3 rounded-lg border border-emerald-500/30">
-                <Settings className="h-6 w-6 text-emerald-400" />
-              </div>
-              <div>
-                <h3 className="font-medium text-slate-200 mb-2">API Documentation</h3>
-                <p className="text-slate-400 text-sm mb-2">
-                  Technical documentation for developers
-                </p>
-                <a href="#" className="text-cyan-400 hover:text-cyan-300 text-sm font-medium flex items-center">
-                  View Docs <ExternalLink className="h-4 w-4 ml-1" />
-                </a>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4">
-              <div className="bg-purple-500/20 p-3 rounded-lg border border-purple-500/30">
-                <Users className="h-6 w-6 text-purple-400" />
-              </div>
-              <div>
-                <h3 className="font-medium text-slate-200 mb-2">Community Forum</h3>
-                <p className="text-slate-400 text-sm mb-2">
-                  Connect with other users and share experiences
-                </p>
-                <a href="#" className="text-cyan-400 hover:text-cyan-300 text-sm font-medium flex items-center">
-                  Join Forum <ExternalLink className="h-4 w-4 ml-1" />
-                </a>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Emergency Contact */}
