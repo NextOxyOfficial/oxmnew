@@ -63,7 +63,6 @@ export default function BankingPage() {
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
   const [isSavingAccountNames, setIsSavingAccountNames] = useState(false);
 
@@ -83,18 +82,10 @@ export default function BankingPage() {
   // Settings modal states
   const [editableAccounts, setEditableAccounts] = useState<BankAccount[]>([]);
 
-  // Payment modal states
-  const [selectedPaymentPeriod, setSelectedPaymentPeriod] = useState<
-    "monthly" | "yearly"
-  >("monthly");
-  const [bankingPlans, setBankingPlans] = useState<any[]>([]);
-  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
-
   // Create Account Form State
   const [newAccount, setNewAccount] = useState({
     name: "",
     balance: "",
-    selectedPlan: "monthly", // "monthly" or "yearly"
   });
 
   // Address form state for payment
@@ -118,160 +109,29 @@ export default function BankingPage() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [showError, setShowError] = useState(false);
-  const [paymentVerificationLoader, setPaymentVerificationLoader] =
-    useState(false);
 
-  // Payment verification function
-  const verifyBankingPayment = useCallback(
-    async (orderId: string) => {
-      setPaymentVerificationLoader(true);
-      try {
-        const response = await ApiService.verifyPayment(orderId);
-        console.log("Banking payment verification response:", response);
+  // User subscription state
+  const [userSubscription, setUserSubscription] = useState<string>("free");
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
 
-        if (response) {
-          // Check for successful payment
-          const isSuccessful =
-            response.shurjopay_message === "Success" ||
-            response.data?.shurjopay_message === "Success" ||
-            response.payment_verification_status === true ||
-            response.bank_status === "Completed";
-
-          if (isSuccessful) {
-            const actualOrderId = response.customer_order_id || orderId;
-
-            if (actualOrderId.startsWith("BANK-")) {
-              const pendingPlan = localStorage.getItem("pending_banking_plan");
-              const pendingAccount = localStorage.getItem(
-                "pending_banking_account"
-              );
-              const pendingPrice = localStorage.getItem(
-                "pending_banking_price"
-              );
-
-              if (pendingPlan && pendingAccount && pendingPrice) {
-                try {
-                  // Get banking plans to find the plan ID
-                  const bankingPlans = await ApiService.getBankingPlans();
-                  const plan = Array.isArray(bankingPlans)
-                    ? bankingPlans.find(
-                        (p: { period: string; id: number }) =>
-                          p.period === pendingPlan
-                      )
-                    : null;
-
-                  if (plan) {
-                    const activationResponse =
-                      await ApiService.activateBankingPlan({
-                        account_id: pendingAccount,
-                        plan_id: plan.id,
-                        payment_order_id: actualOrderId,
-                        payment_amount: parseFloat(pendingPrice),
-                      });
-
-                    if (activationResponse && activationResponse.success) {
-                      // Check if there's a pending account to create
-                      const pendingAccountData = localStorage.getItem(
-                        "pending_banking_account_data"
-                      );
-
-                      if (pendingAccountData) {
-                        try {
-                          const accountData = JSON.parse(pendingAccountData);
-
-                          // Create the account with the stored details
-                          await createAccount({
-                            name: accountData.name,
-                            balance: accountData.balance,
-                          });
-
-                          localStorage.removeItem(
-                            "pending_banking_account_data"
-                          );
-
-                          setSuccessMessage(
-                            `🎉 Banking plan activated and account "${accountData.name}" created successfully!`
-                          );
-                        } catch (accountError) {
-                          console.error(
-                            "Failed to create pending account:",
-                            accountError
-                          );
-                          setSuccessMessage(
-                            `🎉 Banking plan activated successfully! Your ${pendingPlan} plan is now active. Please create your account manually.`
-                          );
-                        }
-                      } else {
-                        setSuccessMessage(
-                          `🎉 Banking plan activated successfully! Your ${pendingPlan} plan is now active.`
-                        );
-                      }
-
-                      localStorage.removeItem("pending_banking_plan");
-                      localStorage.removeItem("pending_banking_account");
-                      localStorage.removeItem("pending_banking_price");
-
-                      setShowSuccessMessage(true);
-
-                      // Refresh accounts
-                      await new Promise((resolve) => setTimeout(resolve, 2000));
-                      window.location.reload();
-                    } else {
-                      setShowError(true);
-                    }
-                  } else {
-                    setShowError(true);
-                  }
-                } catch (activationError) {
-                  console.error(
-                    "Failed to activate banking plan:",
-                    activationError
-                  );
-                  setShowError(true);
-                }
-              }
-            }
-
-            // Remove order_id from URL
-            const url = new URL(window.location.href);
-            url.searchParams.delete("order_id");
-            window.history.replaceState({}, "", url.toString());
-          } else {
-            setShowError(true);
-            localStorage.removeItem("pending_banking_plan");
-            localStorage.removeItem("pending_banking_account");
-            localStorage.removeItem("pending_banking_price");
-            localStorage.removeItem("pending_banking_account_data");
-          }
-        } else if (response && response.error) {
-          console.error("Banking payment verification failed:", response.error);
-          setShowError(true);
-          localStorage.removeItem("pending_banking_plan");
-          localStorage.removeItem("pending_banking_account");
-          localStorage.removeItem("pending_banking_price");
-          localStorage.removeItem("pending_banking_account_data");
-        }
-      } catch (error) {
-        console.error("Error verifying banking payment:", error);
-        setShowError(true);
-        localStorage.removeItem("pending_banking_plan");
-        localStorage.removeItem("pending_banking_account");
-        localStorage.removeItem("pending_banking_price");
-        localStorage.removeItem("pending_banking_account_data");
-      } finally {
-        setPaymentVerificationLoader(false);
+  // Function to load user subscription status
+  const loadUserSubscription = useCallback(async () => {
+    try {
+      setIsLoadingSubscription(true);
+      const subscriptionData = await ApiService.getMySubscription();
+      
+      if (subscriptionData?.success && subscriptionData?.subscription?.plan?.name) {
+        setUserSubscription(subscriptionData.subscription.plan.name.toLowerCase());
+      } else {
+        setUserSubscription("free");
       }
-    },
-    [createAccount]
-  );
-
-  // Check for payment verification on page load
-  useEffect(() => {
-    const orderId = searchParams.get("order_id");
-    if (orderId && orderId.startsWith("BANK-")) {
-      verifyBankingPayment(orderId);
+    } catch (error) {
+      console.error("Failed to load user subscription:", error);
+      setUserSubscription("free");
+    } finally {
+      setIsLoadingSubscription(false);
     }
-  }, [searchParams, verifyBankingPayment]);
+  }, []);
 
   // Auto-hide success message after 10 seconds
   useEffect(() => {
@@ -283,6 +143,13 @@ export default function BankingPage() {
       return () => clearTimeout(timer);
     }
   }, [showSuccessMessage]);
+
+  // Load user subscription on component mount
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadUserSubscription();
+    }
+  }, [isAuthenticated, user, loadUserSubscription]);
 
   // Load transactions with current filters
   const loadFilteredTransactions = useCallback(() => {
@@ -368,32 +235,6 @@ export default function BankingPage() {
     };
   }, [isAuthenticated, refreshData]);
 
-  // Load banking plans when payment modal or create account modal opens
-  useEffect(() => {
-    if (showPaymentModal || showCreateAccountModal) {
-      const fetchBankingPlans = async () => {
-        setIsLoadingPlans(true);
-        try {
-          console.log("📞 Fetching banking plans...");
-          const plans = await ApiService.getBankingPlans();
-          console.log("✅ Received banking plans:", plans);
-          console.log("🔍 Plans type:", typeof plans);
-          console.log("🔍 Plans isArray:", Array.isArray(plans));
-          console.log("🔍 Plans length:", plans?.length);
-
-          // Ensure we always set an array
-          setBankingPlans(Array.isArray(plans) ? plans : []);
-        } catch (error) {
-          console.error("❌ Error loading banking plans:", error);
-          setBankingPlans([]); // Set empty array on error
-        } finally {
-          setIsLoadingPlans(false);
-        }
-      };
-      fetchBankingPlans();
-    }
-  }, [showPaymentModal, showCreateAccountModal]);
-
   // Initialize address form with profile data when create account modal opens
   useEffect(() => {
     if (showCreateAccountModal && profile) {
@@ -449,158 +290,36 @@ export default function BankingPage() {
           name: newAccount.name,
           balance: parseFloat(newAccount.balance) || 0,
         });
-        setNewAccount({ name: "", balance: "", selectedPlan: "monthly" });
+        setNewAccount({ name: "", balance: "" });
         setShowCreateAccountModal(false);
         return;
       }
 
-      // For other accounts, check if user has active banking plan
-      try {
-        const userPlan = await ApiService.getUserBankingPlan();
-        if (userPlan && userPlan.is_active) {
-          // User has active plan, create account directly
-          await createAccount({
-            name: newAccount.name,
-            balance: parseFloat(newAccount.balance) || 0,
-          });
-          setNewAccount({ name: "", balance: "", selectedPlan: "monthly" });
-          setShowCreateAccountModal(false);
-          return;
-        }
-      } catch (error: any) {
-        // No active plan found, need to purchase
-        console.log("No active banking plan found, will need to purchase:", error);
-        
-        // Check if it's a 404 error (no plan found) or a network/other error
-        const errorMessage = error?.message || "";
-        const isNoPlanFound = 
-          errorMessage.includes("404") ||
-          errorMessage.includes("No active banking plan found") ||
-          errorMessage.includes("not found");
-        
-        if (!isNoPlanFound) {
-          console.error("Error checking banking plan:", error);
-          alert("Error checking banking plan. Please try again.");
+      // For other accounts, check if user has pro subscription
+      if (userSubscription === "pro") {
+        // Check if user has reached the 5-account limit
+        if (accounts.length >= 5) {
+          alert("You have reached the maximum limit of 5 accounts. Please delete an existing account before creating a new one.");
           return;
         }
         
-        // Continue to payment process for 404/no plan found
-        console.log("Proceeding to payment process - no active plan found");
-      }
-
-      // User doesn't have active plan, initiate payment process
-      if (!isAuthenticated || !user || !profile) {
-        alert(
-          "Please log in and complete your profile to proceed with payment."
-        );
-        return;
-      }
-
-      // Validate billing address form
-      const errors: Record<string, string> = {};
-      
-      if (!addressForm.phone.trim()) errors.phone = "Phone is required";
-      if (!addressForm.address.trim()) errors.address = "Address is required";
-      if (!addressForm.city.trim()) errors.city = "City is required";
-      if (!addressForm.post_code.trim()) errors.post_code = "Post code is required";
-      
-      if (Object.keys(errors).length > 0) {
-        setAddressErrors(errors);
-        return;
-      }
-
-      // Clear any previous errors
-      setAddressErrors({});
-
-      // Update profile with address information before payment
-      try {
-        const profileData = {
-          phone: addressForm.phone,
-          address: addressForm.address,
-          city: addressForm.city,
-          post_code: addressForm.post_code,
-        };
-        
-        console.log("Updating profile with billing data:", profileData);
-        await ApiService.updateProfile(profileData);
-      } catch (error: any) {
-        console.error("Error updating profile:", error);
-        setAddressErrors({ general: "Failed to update profile. Please try again." });
-        return;
-      }
-
-      // Profile is complete, proceed with payment
-      await proceedWithPayment();
-
-    } catch (error: any) {
-      console.error("Banking plan payment error:", error);
-      alert(error.message || "Failed to initiate payment. Please try again.");
-    }
-  };
-
-  // Function to proceed with payment after profile is complete
-  const proceedWithPayment = async () => {
-    try {
-      // Store account details for creation after payment
-      const accountData = {
-        name: newAccount.name,
-        balance: parseFloat(newAccount.balance) || 0,
-        selectedPlan: newAccount.selectedPlan,
-      };
-      localStorage.setItem(
-        "pending_banking_account_data",
-        JSON.stringify(accountData)
-      );
-
-      // Initiate payment - get price from loaded banking plans
-      let planPrice = 99; // default fallback
-      if (Array.isArray(bankingPlans) && bankingPlans.length > 0) {
-        const selectedPlan = bankingPlans.find(
-          (plan) => plan.period === newAccount.selectedPlan
-        );
-        if (selectedPlan) {
-          planPrice = selectedPlan.price;
-        }
-      }
-      const orderId = `BANK-${Date.now()}-${newAccount.selectedPlan}`;
-
-      const paymentData = {
-        amount: planPrice,
-        order_id: orderId,
-        currency: currency,
-        customer_name: `${user?.first_name || ""} ${user?.last_name || ""}`.trim(),
-        customer_address: addressForm.address,
-        customer_phone: addressForm.phone,
-        customer_city: addressForm.city,
-        customer_post_code: addressForm.post_code,
-      };
-
-      console.log("Banking payment data:", paymentData);
-
-      // Create payment request
-      const payment = await ApiService.makePayment(paymentData);
-
-      if (payment && payment.checkout_url) {
-        // Store additional pending data
-        localStorage.setItem("pending_banking_plan", newAccount.selectedPlan);
-        localStorage.setItem("pending_banking_price", planPrice.toString());
-
-        console.log("Opening banking payment URL:", payment.checkout_url);
-        window.open(payment.checkout_url, "_blank");
-
-        // Close the modal
+        // User has pro subscription and is under the limit, create account directly
+        await createAccount({
+          name: newAccount.name,
+          balance: parseFloat(newAccount.balance) || 0,
+        });
+        setNewAccount({ name: "", balance: "" });
         setShowCreateAccountModal(false);
+        return;
       } else {
-        console.error("Payment response missing checkout_url:", payment);
-        const errorMessage =
-          payment?.error ||
-          payment?.message ||
-          "Failed to get payment URL. Please try again later.";
-        throw new Error(errorMessage);
+        // User is on free plan, redirect to subscription page
+        alert("Upgrade to Pro to create additional accounts. Redirecting to subscriptions page...");
+        router.push("/dashboard/subscriptions");
+        return;
       }
     } catch (error: any) {
-      console.error("Banking plan payment error:", error);
-      alert(error.message || "Failed to initiate payment. Please try again.");
+      console.error("Account creation error:", error);
+      alert(error.message || "Failed to create account. Please try again.");
     }
   };
 
@@ -1116,13 +835,13 @@ export default function BankingPage() {
               No accounts yet
             </h3>
             <p className="text-slate-500 mb-4">
-              Buy your first account to get started
+              {userSubscription === "pro" ? "Create your first account to get started" : "Upgrade to Pro to create accounts"}
             </p>
             <button
               onClick={() => setShowCreateAccountModal(true)}
               className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
             >
-              Buy First Account
+              {userSubscription === "pro" ? "Create First Account" : "Upgrade to Pro"}
             </button>
           </div>
         ) : (
@@ -1238,20 +957,22 @@ export default function BankingPage() {
                     );
                   })}
 
-                {/* Buy Account Tab - Only show if less than 4 accounts */}
-                {accounts.length < 4 && (
+                {/* Create Account Tab - Only show if less than 5 accounts */}
+                {accounts.length < 5 && (
                   <button
                     onClick={() => {
-                      // Always show create account modal - form will handle payment if needed
+                      // Always show create account modal - form will handle subscription check
                       setShowCreateAccountModal(true);
                     }}
                     className="px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 text-slate-400 hover:text-cyan-300 hover:bg-gradient-to-r hover:from-cyan-500/10 hover:to-cyan-600/5 border-l border-slate-700/50 cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
                     <div className="text-left">
-                      <div className="font-semibold text-sm">Buy Account</div>
+                      <div className="font-semibold text-sm">
+                        {userSubscription === "pro" ? "Create Account" : "Create Account"}
+                      </div>
                       <div className="text-xs text-slate-500">
-                        Add new account
+                        {userSubscription === "pro" ? `${accounts.length}/5 accounts` : "For pro users"}
                       </div>
                     </div>
                   </button>
@@ -1693,7 +1414,7 @@ export default function BankingPage() {
               <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-lg mx-auto backdrop-blur-md">
                 <div className="flex items-center justify-between p-4 border-b border-slate-700/50 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-md rounded-t-2xl">
                   <h2 className="text-lg font-semibold text-white">
-                    Buy New Account
+                    Create Account
                 </h2>
                 <button
                   onClick={() => {
@@ -1701,7 +1422,6 @@ export default function BankingPage() {
                     setNewAccount({
                       name: "",
                       balance: "",
-                      selectedPlan: "monthly",
                     });
                     setAddressErrors({});
                     setAddressForm({
@@ -1756,254 +1476,40 @@ export default function BankingPage() {
                   />
                 </div>
 
-                {/* Pricing Plans */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-3">
-                    Choose Your Plan
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Monthly Plan */}
-                    <div
-                      onClick={() =>
-                        setNewAccount({
-                          ...newAccount,
-                          selectedPlan: "monthly",
-                        })
-                      }
-                      className={`relative cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 ${
-                        newAccount.selectedPlan === "monthly"
-                          ? "border-cyan-500 bg-cyan-500/10"
-                          : "border-slate-600/50 bg-slate-800/30 hover:border-slate-500"
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-white">
-                          Monthly
-                        </div>
-                        <div className="text-2xl font-bold text-cyan-400 mt-1">
-                          {isLoadingPlans ? (
-                            <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                          ) : (
-                            formatCurrency(
-                              Array.isArray(bankingPlans)
-                                ? bankingPlans.find(
-                                    (p) => p.period === "monthly"
-                                  )?.price || 1
-                                : 1
-                            )
-                          )}
-                        </div>
-                        <div className="text-xs text-slate-400 mt-1">
-                          Per month
-                        </div>
+                {/* Subscription Status */}
+                <div className="bg-slate-800/30 rounded-lg border border-slate-700/30 p-4">
+                  {isLoadingSubscription ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+                      <span className="ml-2 text-slate-400">Checking subscription...</span>
+                    </div>
+                  ) : userSubscription === "pro" ? (
+                    <div className="text-center">
+                      <div className="text-green-400 font-medium mb-2">✓ Pro Subscription Active</div>
+                      <div className="text-sm text-slate-400">
+                        You can create up to 5 accounts with your Pro subscription.
                       </div>
-                      {newAccount.selectedPlan === "monthly" && (
-                        <div className="absolute top-2 right-2">
-                          <Check className="h-4 w-4 text-cyan-400" />
+                      {accounts.length >= 5 && (
+                        <div className="text-xs text-orange-400 mt-2">
+                          Account limit reached (5/5)
                         </div>
                       )}
                     </div>
-
-                    {/* Yearly Plan */}
-                    <div
-                      onClick={() =>
-                        setNewAccount({ ...newAccount, selectedPlan: "yearly" })
-                      }
-                      className={`relative cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 ${
-                        newAccount.selectedPlan === "yearly"
-                          ? "border-cyan-500 bg-cyan-500/10"
-                          : "border-slate-600/50 bg-slate-800/30 hover:border-slate-500"
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-white">
-                          Yearly
-                        </div>
-                        <div className="text-2xl font-bold text-cyan-400 mt-1">
-                          {isLoadingPlans ? (
-                            <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                          ) : (
-                            formatCurrency(
-                              Array.isArray(bankingPlans)
-                                ? bankingPlans.find(
-                                    (p) => p.period === "yearly"
-                                  )?.price || 1000
-                                : 1000
-                            )
-                          )}
-                        </div>
-                        <div className="text-xs text-slate-400 mt-1">
-                          Per year
-                        </div>
-                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-2 py-1 rounded-full font-medium">
-                          {(() => {
-                            if (isLoadingPlans) return "Loading...";
-                            if (!Array.isArray(bankingPlans)) return `Save ${formatCurrency(89)}`;
-                            const monthlyPlan = bankingPlans.find(
-                              (p) => p.period === "monthly"
-                            );
-                            const yearlyPlan = bankingPlans.find(
-                              (p) => p.period === "yearly"
-                            );
-                            if (monthlyPlan && yearlyPlan) {
-                              const savings =
-                                monthlyPlan.price * 12 - yearlyPlan.price;
-                              return `Save ${formatCurrency(savings)}`;
-                            }
-                            return `Save ${formatCurrency(89)}`;
-                          })()}
-                        </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="text-orange-400 font-medium mb-2">⚡ Upgrade Required</div>
+                      <div className="text-sm text-slate-400 mb-3">
+                        Pro subscription required to create additional accounts.
                       </div>
-                      {newAccount.selectedPlan === "yearly" && (
-                        <div className="absolute top-2 right-2">
-                          <Check className="h-4 w-4 text-cyan-400" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-
-                  {/* Plan Benefits */}
-                  <div className="mt-3 p-3 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                    <div className="text-xs text-slate-300 font-medium mb-2">
-                      Plan Includes:
-                    </div>
-                    <ul className="text-xs text-slate-400 space-y-1">
-                      <li className="flex items-center gap-2">
-                        <Check className="h-3 w-3 text-green-400" />
-                        <span>Unlimited transactions</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="h-3 w-3 text-green-400" />
-                        <span>Advanced reporting</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="h-3 w-3 text-green-400" />
-                        <span>24/7 support</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="h-3 w-3 text-green-400" />
-                        <span>Multi-user access</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  {/* Billing Address Section - Always shown for payment */}
-                  <div className="mt-4 p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                    <div className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      Billing Address (Required)
-                    </div>
-                    <div className="text-xs text-slate-400 mb-3">
-                      Please provide your billing information for payment processing:
-                    </div>
-                    
-                    {addressErrors.general && (
-                      <div className="mb-3 p-2 bg-red-900/20 border border-red-700/50 rounded text-sm text-red-400">
-                        {addressErrors.general}
-                      </div>
-                    )}
-                    
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-300 mb-1">
-                          Phone Number *
-                        </label>
-                        <input
-                          type="tel"
-                          value={addressForm.phone}
-                          onChange={(e) => {
-                            setAddressForm({ ...addressForm, phone: e.target.value });
-                            if (addressErrors.phone) {
-                              setAddressErrors({ ...addressErrors, phone: "" });
-                            }
-                          }}
-                          className={`w-full bg-slate-800/50 border text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
-                            addressErrors.phone ? 'border-red-500' : 'border-slate-700/50'
-                          }`}
-                          placeholder="Enter your phone number"
-                        />
-                        {addressErrors.phone && (
-                          <div className="text-xs text-red-400 mt-1">{addressErrors.phone}</div>
-                        )}
-                      </div>
-                      
-                      <div>
-                        <label className="block text-xs font-medium text-slate-300 mb-1">
-                          Street Address *
-                        </label>
-                        <input
-                          type="text"
-                          value={addressForm.address}
-                          onChange={(e) => {
-                            setAddressForm({ ...addressForm, address: e.target.value });
-                            if (addressErrors.address) {
-                              setAddressErrors({ ...addressErrors, address: "" });
-                            }
-                          }}
-                          className={`w-full bg-slate-800/50 border text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
-                            addressErrors.address ? 'border-red-500' : 'border-slate-700/50'
-                          }`}
-                          placeholder="Enter your street address"
-                        />
-                        {addressErrors.address && (
-                          <div className="text-xs text-red-400 mt-1">{addressErrors.address}</div>
-                        )}
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-slate-300 mb-1">
-                            City *
-                          </label>
-                          <input
-                            type="text"
-                            value={addressForm.city}
-                            onChange={(e) => {
-                              setAddressForm({ ...addressForm, city: e.target.value });
-                              if (addressErrors.city) {
-                                setAddressErrors({ ...addressErrors, city: "" });
-                              }
-                            }}
-                            className={`w-full bg-slate-800/50 border text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
-                              addressErrors.city ? 'border-red-500' : 'border-slate-700/50'
-                            }`}
-                            placeholder="City"
-                          />
-                          {addressErrors.city && (
-                            <div className="text-xs text-red-400 mt-1">{addressErrors.city}</div>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <label className="block text-xs font-medium text-slate-300 mb-1">
-                            Post Code *
-                          </label>
-                          <input
-                            type="text"
-                            value={addressForm.post_code}
-                            onChange={(e) => {
-                              setAddressForm({ ...addressForm, post_code: e.target.value });
-                              if (addressErrors.post_code) {
-                                setAddressErrors({ ...addressErrors, post_code: "" });
-                              }
-                            }}
-                            className={`w-full bg-slate-800/50 border text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
-                              addressErrors.post_code ? 'border-red-500' : 'border-slate-700/50'
-                            }`}
-                            placeholder="Post code"
-                          />
-                          {addressErrors.post_code && (
-                            <div className="text-xs text-red-400 mt-1">{addressErrors.post_code}</div>
-                          )}
-                        </div>
+                      <div className="text-xs text-slate-500">
+                        Free users can only use the Main account.
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Main form buttons */}
-                <div className="flex space-x-2 pt-2">
+                <div className="flex space-x-2 pt-4">
                   <button
                     type="button"
                     onClick={() => {
@@ -2012,7 +1518,6 @@ export default function BankingPage() {
                       setNewAccount({
                         name: "",
                         balance: "",
-                        selectedPlan: "monthly",
                       });
                       setShowCreateAccountModal(false);
                       setAddressErrors({});
@@ -2029,9 +1534,19 @@ export default function BankingPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-3 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium cursor-pointer"
+                    disabled={userSubscription === "pro" && accounts.length >= 5}
+                    className={`flex-1 py-2 px-3 rounded-lg transition-all duration-200 text-sm font-medium cursor-pointer ${
+                      userSubscription === "pro" && accounts.length >= 5
+                        ? "bg-slate-600/50 text-slate-400 cursor-not-allowed"
+                        : "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700"
+                    }`}
                   >
-                    Buy Account
+                    {userSubscription === "pro" 
+                      ? accounts.length >= 5 
+                        ? "Account Limit Reached" 
+                        : "Create Account"
+                      : "Upgrade to Pro"
+                    }
                   </button>
                 </div>
               </form>
@@ -2040,207 +1555,7 @@ export default function BankingPage() {
           </div>
         )}
 
-        {/* Banking Plan Payment Modal */}
-        {showPaymentModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-full p-4">
-              <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-auto backdrop-blur-md">
-                <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
-                  <h2 className="text-lg font-semibold text-white">
-                    Purchase Banking Plan
-                  </h2>
-                <button
-                  onClick={() => setShowPaymentModal(false)}
-                  className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 hover:bg-slate-700/50 rounded-lg"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
 
-              <div className="p-4 space-y-4">
-                <div className="text-sm text-slate-300 mb-4">
-                  You need an active banking plan to create additional accounts.
-                  Choose your plan below:
-                </div>
-
-                {/* Plan Selection */}
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Monthly Plan */}
-                  <div
-                    onClick={() => setSelectedPaymentPeriod("monthly")}
-                    className={`relative cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 ${
-                      selectedPaymentPeriod === "monthly"
-                        ? "border-cyan-500 bg-cyan-500/10"
-                        : "border-slate-600/50 bg-slate-800/30 hover:border-slate-500"
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-white">
-                        Monthly
-                      </div>
-                      <div className="text-2xl font-bold text-cyan-400 mt-1">
-                        {isLoadingPlans ? (
-                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                        ) : (
-                          formatCurrency(
-                            Array.isArray(bankingPlans)
-                              ? bankingPlans.find((p) => p.period === "monthly")
-                                  ?.price || 99
-                              : 99
-                          )
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-400 mt-1">
-                        per month
-                      </div>
-                    </div>
-                    {selectedPaymentPeriod === "monthly" && (
-                      <div className="absolute top-2 right-2">
-                        <div className="bg-cyan-500 rounded-full p-1">
-                          <Check className="h-3 w-3 text-white" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Yearly Plan */}
-                  <div
-                    onClick={() => setSelectedPaymentPeriod("yearly")}
-                    className={`relative cursor-pointer rounded-lg border-2 transition-all duration-200 p-4 ${
-                      selectedPaymentPeriod === "yearly"
-                        ? "border-cyan-500 bg-cyan-500/10"
-                        : "border-slate-600/50 bg-slate-800/30 hover:border-slate-500"
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-white">Yearly</div>
-                      <div className="text-2xl font-bold text-cyan-400 mt-1">
-                        {isLoadingPlans ? (
-                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                        ) : (
-                          formatCurrency(
-                            Array.isArray(bankingPlans)
-                              ? bankingPlans
-                                  .find((p) => p.period === "yearly")
-                                  ?.price || 1099
-                              : 1099
-                          )
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-400 mt-1">
-                        per year
-                      </div>
-                      <div className="text-xs text-green-400 mt-1 font-medium">
-                        {(() => {
-                          if (isLoadingPlans) return "Loading...";
-                          if (!Array.isArray(bankingPlans)) return `Save ${formatCurrency(89)}!`;
-                          const monthlyPlan = bankingPlans.find(
-                            (p) => p.period === "monthly"
-                          );
-                          const yearlyPlan = bankingPlans.find(
-                            (p) => p.period === "yearly"
-                          );
-                          if (monthlyPlan && yearlyPlan) {
-                            const savings =
-                              monthlyPlan.price * 12 - yearlyPlan.price;
-                            return `Save ${formatCurrency(savings)}!`;
-                          }
-                          return `Save ${formatCurrency(89)}!`;
-                        })()}
-                      </div>
-                    </div>
-                    {selectedPaymentPeriod === "yearly" && (
-                      <div className="absolute top-2 right-2">
-                        <div className="bg-cyan-500 rounded-full p-1">
-                          <Check className="h-3 w-3 text-white" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Features List */}
-                <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 mt-4">
-                  <div className="text-sm font-medium text-slate-300 mb-3">
-                    Included Features:
-                  </div>
-                  <ul className="space-y-2 text-sm text-slate-400">
-                    <li className="flex items-center gap-2">
-                      <Check className="h-3 w-3 text-green-400" />
-                      <span>Multiple bank accounts</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="h-3 w-3 text-green-400" />
-                      <span>Unlimited transactions</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="h-3 w-3 text-green-400" />
-                      <span>Advanced reporting</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="h-3 w-3 text-green-400" />
-                      <span>24/7 support</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="flex space-x-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowPaymentModal(false)}
-                    className="flex-1 bg-slate-700/50 border border-slate-600/50 text-white py-2 px-3 rounded-lg hover:bg-slate-600/50 transition-colors text-sm cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      try {
-                        // Redirect to payment - get price from loaded banking plans
-                        let planPrice = 99; // default fallback
-                        if (
-                          Array.isArray(bankingPlans) &&
-                          bankingPlans.length > 0
-                        ) {
-                          const selectedPlan = bankingPlans.find(
-                            (plan) => plan.period === selectedPaymentPeriod
-                          );
-                          if (selectedPlan) {
-                            planPrice = selectedPlan.price;
-                          }
-                        }
-                        const orderId = `BANK-${Date.now()}-${selectedPaymentPeriod}`;
-
-                        // Store pending plan data
-                        localStorage.setItem(
-                          "pending_banking_plan",
-                          selectedPaymentPeriod
-                        );
-                        localStorage.setItem(
-                          "pending_banking_price",
-                          planPrice.toString()
-                        );
-
-                        // Redirect to payment gateway
-                        const paymentUrl = `${
-                          process.env.NEXT_PUBLIC_API_URL ||
-                          "http://localhost:8000"
-                        }/subscription/payment/?amount=${planPrice}&order_id=${orderId}`;
-                        window.location.href = paymentUrl;
-                      } catch (error) {
-                        console.error("Payment initiation error:", error);
-                        alert("Failed to initiate payment. Please try again.");
-                      }
-                    }}
-                    className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-3 rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 text-sm font-medium cursor-pointer"
-                  >
-                    Proceed to Payment
-                  </button>
-                </div>
-              </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Add Transaction Modal */}
         {showTransactionModal && (

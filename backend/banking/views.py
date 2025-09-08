@@ -19,11 +19,12 @@ from .serializers import (
 
 
 def has_active_banking_plan(user):
-    """Check if user has an active banking plan"""
+    """Check if user has a pro subscription plan"""
     try:
-        user_plan = UserBankingPlan.objects.get(user=user)
-        return user_plan.is_active()
-    except UserBankingPlan.DoesNotExist:
+        from subscription.models import UserSubscription
+        user_subscription = UserSubscription.objects.get(user=user, active=True)
+        return user_subscription.plan.name == 'pro'
+    except UserSubscription.DoesNotExist:
         return False
 
 
@@ -78,8 +79,21 @@ class BankAccountViewSet(viewsets.ModelViewSet):
                 from rest_framework.exceptions import PermissionDenied
 
                 raise PermissionDenied(
-                    "You need an active banking plan to create additional accounts. "
-                    "Please purchase a banking plan first."
+                    "You need to upgrade to Pro to create additional accounts. "
+                    "Free users can only have the Main account."
+                )
+            
+            # Check if user has reached the account limit (5 accounts total)
+            existing_accounts_count = BankAccount.objects.filter(
+                owner=user, is_active=True
+            ).count()
+            
+            if existing_accounts_count >= 5:
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied(
+                    "You have reached the maximum limit of 5 accounts. "
+                    "Please delete an existing account before creating a new one."
                 )
 
         serializer.save(owner=user)
