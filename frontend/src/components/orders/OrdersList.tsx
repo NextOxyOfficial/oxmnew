@@ -62,6 +62,23 @@ const OrdersList: React.FC<OrdersListProps> = ({
     });
   };
 
+  // Render status label
+  const renderStatusLabel = (status?: string) => {
+    if (status === "draft") {
+      return (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100/10 text-yellow-400 border border-yellow-400/20 ml-1">
+          Draft
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100/10 text-green-400 border border-green-400/20 ml-1">
+          Completed
+        </span>
+      );
+    }
+  };
+
   if (isSearching) {
     return (
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -137,9 +154,12 @@ const OrdersList: React.FC<OrdersListProps> = ({
           >
             <div className="flex justify-between items-start mb-3">
               <div className="flex-1 min-w-0 pr-2">
-                <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 transition-colors">
-                  Order #{order.id}
-                </h4>
+                <div className="flex items-center">
+                  <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 transition-colors">
+                    Order #{order.id}
+                  </h4>
+                  {renderStatusLabel(order.status)}
+                </div>
                 <p className="text-xs text-slate-400 mt-1">
                   {formatDate(order.sale_date)}
                 </p>
@@ -337,9 +357,12 @@ const OrdersList: React.FC<OrdersListProps> = ({
                 >
                   <td className="py-4 px-4">
                     <div>
-                      <p className="text-sm font-medium text-slate-100">
-                        #{order.id}
-                      </p>
+                      <div className="flex items-center">
+                        <p className="text-sm font-medium text-slate-100">
+                          #{order.id}
+                        </p>
+                        {renderStatusLabel(order.status)}
+                      </div>
                       <p className="text-xs text-slate-400 mt-1">
                         {formatDate(order.sale_date)}
                       </p>
