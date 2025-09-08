@@ -361,9 +361,31 @@ export default function EditOrderPage() {
     incentiveAmount: number,
     payments: PaymentEntry[]
   ) => {
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+    console.log("=== CALCULATE TOTALS FUNCTION ===");
+    console.log("Input items:", items);
+    
+    items.forEach((item, index) => {
+      console.log(`Item ${index} details:`, {
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.total,
+        typeof_total: typeof item.total,
+        isNaN: isNaN(Number(item.total)),
+        converted: Number(item.total) || 0
+      });
+    });
+
+    const subtotal = items.reduce((sum, item) => {
+      const itemTotal = Number(item.total) || 0;
+      console.log(`Adding to subtotal: ${itemTotal} (from ${item.product_name})`);
+      return sum + itemTotal;
+    }, 0);
+    
+    console.log("Final subtotal:", subtotal);
+    
     const totalBuyPrice = items.reduce(
-      (sum, item) => sum + item.buy_price * item.quantity,
+      (sum, item) => sum + (Number(item.buy_price) || 0) * (Number(item.quantity) || 0),
       0
     );
     const totalSellPrice = subtotal; // Sell price is the same as subtotal before discounts
@@ -405,6 +427,20 @@ export default function EditOrderPage() {
 
   // Update totals when form changes
   useEffect(() => {
+    console.log("=== CALCULATING TOTALS ===");
+    console.log("Items:", orderForm.items);
+    console.log("Items length:", orderForm.items.length);
+    
+    // Check each item's total
+    orderForm.items.forEach((item, index) => {
+      console.log(`Item ${index}:`, {
+        name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.total
+      });
+    });
+
     const {
       subtotal,
       discountAmount,
@@ -428,6 +464,14 @@ export default function EditOrderPage() {
       orderForm.incentive_amount,
       orderForm.payments
     );
+
+    console.log("Calculated results:", {
+      subtotal,
+      discountAmount,
+      vatAmount,
+      total,
+      itemsCount: orderForm.items.length
+    });
 
     setOrderForm((prev) => ({
       ...prev,
@@ -483,7 +527,10 @@ export default function EditOrderPage() {
       const orderId = params.id as string;
 
       // Helper function to round monetary values to 2 decimal places
-      const roundToTwoDecimals = (value: number) => Math.round(value * 100) / 100;
+      const roundToTwoDecimals = (value: number | null | undefined) => {
+        const numValue = typeof value === 'number' ? value : 0;
+        return Math.round(numValue * 100) / 100;
+      };
 
       // First, sync the order items with the database
       console.log("Syncing order items with database...");
@@ -534,24 +581,49 @@ export default function EditOrderPage() {
         customer_address: orderForm.customer.address?.trim() || undefined,
         customer_company: orderForm.customer.company?.trim() || undefined,
         status,
-        discount_percentage: roundToTwoDecimals(orderForm.discount_percentage),
-        vat_percentage: roundToTwoDecimals(orderForm.vat_percentage),
+        discount_percentage: roundToTwoDecimals(orderForm.discount_percentage || 0),
+        vat_percentage: roundToTwoDecimals(orderForm.vat_percentage || 0),
         notes: orderForm.notes || undefined,
         due_date: orderForm.due_date || undefined,
-        // Let the backend recalculate these based on current items
-        subtotal: roundToTwoDecimals(orderForm.subtotal),
-        discount_amount: roundToTwoDecimals(orderForm.discount_amount),
-        vat_amount: roundToTwoDecimals(orderForm.vat_amount),
-        total_amount: roundToTwoDecimals(orderForm.total),
+        // Ensure these fields are never null/undefined
+        subtotal: roundToTwoDecimals(orderForm.subtotal || 0),
+        discount_amount: roundToTwoDecimals(orderForm.discount_amount || 0),
+        vat_amount: roundToTwoDecimals(orderForm.vat_amount || 0),
+        total_amount: roundToTwoDecimals(orderForm.total || 0),
       };
 
+      console.log("Order update data:", orderUpdateData);
+
       // Update the order
+      console.log("Updating order with data:", orderUpdateData);
       await ApiService.updateOrder(parseInt(orderId), orderUpdateData);
 
       router.push("/dashboard/orders?updated=true");
     } catch (error) {
       console.error("Error updating order:", error);
-      setError("Failed to update order. Please try again.");
+      
+      // Extract detailed error message
+      let errorMessage = "Failed to update order. Please try again.";
+      if (error && typeof error === 'object') {
+        if ('response' in error && error.response) {
+          const response = error.response as any;
+          if (response.data) {
+            if (typeof response.data === 'string') {
+              errorMessage = response.data;
+            } else if (response.data.error) {
+              errorMessage = response.data.error;
+            } else if (response.data.detail) {
+              errorMessage = response.data.detail;
+            } else {
+              errorMessage = JSON.stringify(response.data);
+            }
+          }
+        } else if ('message' in error) {
+          errorMessage = (error as any).message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
