@@ -124,8 +124,6 @@ export default function CustomerDetailsPage() {
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [duePayments, setDuePayments] = useState<DuePayment[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedDuePayment, setSelectedDuePayment] =
@@ -368,14 +366,9 @@ export default function CustomerDetailsPage() {
     fetchCustomerData();
   }, [params.id]);
 
-  const handleShowInvoice = (order: Order) => {
-    setSelectedOrder(order);
-    setShowInvoiceModal(true);
-  };
-
-  const handleCloseInvoice = () => {
-    setShowInvoiceModal(false);
-    setSelectedOrder(null);
+  const handleViewInvoice = (order: Order) => {
+    // Navigate to the dedicated invoice page
+    router.push(`/dashboard/orders/invoice/${order.id}`);
   };
 
   const handleShowTransaction = () => {
@@ -1140,7 +1133,7 @@ export default function CustomerDetailsPage() {
                               <div className="col-span-2">
                                 <div className="flex items-center space-x-2">
                                   <button
-                                    onClick={() => handleShowInvoice(order)}
+                                    onClick={() => handleViewInvoice(order)}
                                     className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
                                   >
                                     <FileText className="w-4 h-4" />
@@ -1626,205 +1619,6 @@ export default function CustomerDetailsPage() {
             )}
           </div>
         </div>
-
-        {/* Invoice Modal */}
-        {showInvoiceModal && selectedOrder && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-            <div className="min-h-full flex items-center justify-center p-4">
-              <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-xl shadow-2xl max-w-4xl w-full my-8 print:bg-white print:border-none print:shadow-none print:max-w-none print:my-0 print:mb-0">
-                {/* Modal Header */}
-                <div className="flex justify-end items-center p-6 border-b border-slate-700/50 print:hidden">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => window.print()}
-                      className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 flex items-center gap-2 shadow-lg cursor-pointer"
-                    >
-                      <Printer className="w-4 h-4" />
-                      Print
-                    </button>
-                    <button
-                      onClick={handleCloseInvoice}
-                      className="p-2 text-slate-400 hover:text-slate-200 transition-colors rounded-lg hover:bg-slate-800/50"
-                    >
-                      <X className="w-6 h-6" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Invoice Content */}
-                <div className="p-6 print:px-0 print:bg-white print:w-full">
-                  {/* Invoice Header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center justify-start">
-                      <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center print:bg-gray-800">
-                        <span className="text-white font-bold text-xs print:text-white">
-                          Logo
-                        </span>
-                      </div>
-                    </div>
-                    <h2 className="text-lg font-bold text-slate-100 print:text-gray-900">
-                      Invoice #{selectedOrder.order_number || selectedOrder.id}
-                    </h2>
-                    <p className="text-sm text-slate-300 print:text-gray-600">
-                      {formatDate(selectedOrder.date)}
-                    </p>
-                  </div>
-
-                  {/* Invoice Details */}
-                  <div className="grid grid-cols-1 print:grid-cols-2 md:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-slate-800/50 rounded-lg p-3 print:bg-transparent">
-                      <div className="text-slate-300 print:text-gray-600 space-y-0.5 text-xs">
-                        <p className="font-medium text-slate-100 print:text-gray-900">
-                          Your Store Name
-                        </p>
-                        <p>123 Business Street</p>
-                        <p>City, State 12345</p>
-                        <p>Phone: (555) 123-4567</p>
-                        <p>Email: store@yourstore.com</p>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-800/50 rounded-lg p-3 print:bg-transparent">
-                      <div className="text-slate-300 print:text-gray-600 space-y-0.5 text-xs">
-                        <p className="font-medium text-slate-100 print:text-gray-900">
-                          {selectedOrder.customer_name || customer.name}
-                        </p>
-                        {selectedOrder.customer_phone && (
-                          <p>{selectedOrder.customer_phone}</p>
-                        )}
-                        {selectedOrder.customer_email && (
-                          <p>{selectedOrder.customer_email}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Items Table */}
-                  <div className="mb-6 bg-slate-800/30 border border-slate-700/50 rounded-lg overflow-hidden print:bg-transparent print:border-gray-300">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-slate-700/50 print:bg-gray-50">
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
-                            Item
-                          </th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
-                            Qty
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
-                            Unit Price
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
-                            Total
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {/* Check if order has items details */}
-                        {selectedOrder.items_details &&
-                        selectedOrder.items_details.length > 0 ? (
-                          // Multiple items - display all items
-                          selectedOrder.items_details.map(
-                            (item: CustomerOrderItem, index: number) => (
-                              <tr
-                                key={index}
-                                className="border-b border-slate-700/30 print:border-gray-200"
-                              >
-                                <td className="px-4 py-3">
-                                  <div>
-                                    <p className="text-sm font-medium text-slate-100 print:text-gray-900">
-                                      {item.product_name}
-                                    </p>
-                                    {item.variant_name && (
-                                      <p className="text-xs text-slate-400 print:text-gray-600 mt-0.5">
-                                        {item.variant_name}
-                                      </p>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-center text-sm text-slate-200 print:text-gray-800">
-                                  {item.quantity}
-                                </td>
-                                <td className="px-4 py-3 text-right text-sm text-slate-200 print:text-gray-800">
-                                  {formatCurrency(item.unit_price || 0)}
-                                </td>
-                                <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400 print:text-gray-900">
-                                  {formatCurrency(item.total_price || 0)}
-                                </td>
-                              </tr>
-                            )
-                          )
-                        ) : (
-                          // Fallback - display basic order info
-                          <tr className="border-b border-slate-700/30 print:border-gray-200">
-                            <td className="px-4 py-3">
-                              <div>
-                                <p className="text-sm font-medium text-slate-100 print:text-gray-900">
-                                  Order Items
-                                </p>
-                                <p className="text-xs text-slate-400 print:text-gray-600 mt-0.5">
-                                  {selectedOrder.items} items
-                                </p>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-center text-sm text-slate-200 print:text-gray-800">
-                              {selectedOrder.items}
-                            </td>
-                            <td className="px-4 py-3 text-right text-sm text-slate-200 print:text-gray-800">
-                              -
-                            </td>
-                            <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400 print:text-gray-900">
-                              {formatCurrency(selectedOrder.total || 0)}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Totals */}
-                  <div className="flex justify-end mb-6">
-                    <div className="w-64 bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 print:bg-transparent print:border-gray-300">
-                      <div className="space-y-2">
-                        <div className="flex justify-between py-1 text-slate-300 print:text-gray-600 text-sm">
-                          <span>Subtotal:</span>
-                          <span className="font-semibold">
-                            {formatCurrency(
-                              selectedOrder.items_details &&
-                                selectedOrder.items_details.length > 0
-                                ? selectedOrder.items_details.reduce(
-                                    (sum, item) =>
-                                      sum + (item.total_price || 0),
-                                    0
-                                  )
-                                : selectedOrder.total || 0
-                            )}
-                          </span>
-                        </div>
-                        <div className="border-t border-slate-600/50 print:border-gray-300 pt-2">
-                          <div className="flex justify-between text-base font-bold text-slate-100 print:text-gray-900">
-                            <span>Total:</span>
-                            <span className="text-cyan-400 print:text-gray-900">
-                              {formatCurrency(
-                                selectedOrder.items_details &&
-                                  selectedOrder.items_details.length > 0
-                                  ? selectedOrder.items_details.reduce(
-                                      (sum, item) =>
-                                        sum + (item.total_price || 0),
-                                      0
-                                    )
-                                  : selectedOrder.total || 0
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Transaction Modal */}
         {showTransactionModal && (
