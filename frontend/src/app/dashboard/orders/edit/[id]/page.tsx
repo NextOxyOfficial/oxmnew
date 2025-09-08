@@ -1277,8 +1277,8 @@ export default function EditOrderPage() {
 
   if (isLoadingOrder) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="max-w-6xl px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="min-h-screen bg-slate-900">
+        <div className="sm:p-6 p-1 space-y-6">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="flex items-center gap-3 text-slate-300">
               <svg
@@ -1309,20 +1309,72 @@ export default function EditOrderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="max-w-6xl  px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        
-
-        {/* Error Display */}
-        {error && (
-          <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-            <div className="flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-red-400 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+    <div className={`min-h-screen bg-slate-900 ${isProductDropdownOpen ? 'dropdown-page' : ''}`}>
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none; /* Internet Explorer 10+ */
+          scrollbar-width: none; /* Firefox */
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none; /* Safari and Chrome */
+        }
+        .dropdown-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+        }
+        .dropdown-scroll::-webkit-scrollbar {
+          width: 6px;
+        }
+        .dropdown-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .dropdown-scroll::-webkit-scrollbar-thumb {
+          background-color: rgba(148, 163, 184, 0.3);
+          border-radius: 3px;
+        }
+        .dropdown-scroll::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(148, 163, 184, 0.5);
+        }
+        /* Cursor styles for better UX */
+        input, textarea, select {
+          cursor: text !important;
+        }
+        button, .clickable, [role="button"] {
+          cursor: pointer !important;
+        }
+        input[type="checkbox"], input[type="radio"] {
+          cursor: pointer !important;
+        }
+        .dropdown-item, .dropdown-option {
+          cursor: pointer !important;
+        }
+        input:disabled, textarea:disabled, select:disabled {
+          cursor: not-allowed !important;
+        }
+        button:disabled {
+          cursor: not-allowed !important;
+        }
+        /* Ensure body and html have dark background */
+        body {
+          background-color: rgb(15, 23, 42) !important; /* slate-900 equivalent */
+        }
+        /* When dropdown is open, ensure page height is adequate */
+        .dropdown-page {
+          min-height: calc(100vh + 400px);
+        }
+      `}</style>
+      <div className="sm:p-6 p-1 space-y-6">
+        <div className="max-w-7xl">
+          {/* Error Display */}
+          {error && (
+              <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-red-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -2604,6 +2656,7 @@ export default function EditOrderPage() {
               </button>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
