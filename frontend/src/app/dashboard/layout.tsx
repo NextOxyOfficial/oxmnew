@@ -16,7 +16,6 @@ import {
   Building2,
   Briefcase,
   CreditCard,
-  Store,
   BookOpen,
   Smartphone,
   Diamond,
@@ -108,14 +107,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       current: pathname.startsWith("/dashboard/sms"),
       category: "communication",
     },
-    {
-      name: "Online Store",
-      href: "/dashboard/online-store",
-      icon: Store,
-      current: pathname.startsWith("/dashboard/online-store"),
-      category: "communication",
-      badge: "e-commerce",
-    },
 
     // Tools & Utilities
     {
@@ -161,8 +152,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "Human Resources";
       case pathname.startsWith("/dashboard/duebook"):
         return "Due Book & Payments";
-      case pathname.startsWith("/dashboard/online-store"):
-        return "Online Store";
       case pathname.startsWith("/dashboard/notebook"):
         return "Business Notebook";
       case pathname.startsWith("/dashboard/sms"):
