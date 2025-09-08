@@ -177,10 +177,12 @@ class OrderItemCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating order items"""
     
     variant = serializers.IntegerField(required=False, allow_null=True)
+    order = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = OrderItem
         fields = [
+            "order",
             "product",
             "variant",
             "quantity",
@@ -231,6 +233,17 @@ class OrderItemCreateSerializer(serializers.ModelSerializer):
         """Create order item, handling auto-selection of first variant if needed"""
         from products.models import Product, ProductVariant
 
+        # For adding items to existing orders, ensure we have an order
+        # For new order creation, order will be set by the parent OrderCreateSerializer
+        order_id = validated_data.get('order')
+        if order_id and not hasattr(validated_data.get('order'), 'id'):
+            # If order_id is just an integer, convert it to Order instance
+            from .models import Order
+            try:
+                validated_data['order'] = Order.objects.get(id=order_id)
+            except Order.DoesNotExist:
+                raise serializers.ValidationError("Order not found")
+
         # Get the product
         product_id = validated_data["product"].id if hasattr(validated_data["product"], "id") else validated_data["product"]
         product = Product.objects.get(id=product_id)
@@ -243,13 +256,80 @@ class OrderItemCreateSerializer(serializers.ModelSerializer):
             else:
                 raise serializers.ValidationError("Product has no available variants")
 
+        # Add product name for reference
+        validated_data["product_name"] = product.name
+        
+        # Add variant details if variant exists
+        if validated_data.get("variant"):
+            variant = validated_data["variant"]
+            if hasattr(variant, 'color') and hasattr(variant, 'size'):
+                validated_data["variant_details"] = f"{variant.color} - {variant.size}"
+
+        # Calculate total price
+        validated_data["total_price"] = validated_data["quantity"] * validated_data["unit_price"]
+
         return super().create(validated_data)
+
+
+class OrderItemNestedSerializer(serializers.ModelSerializer):
+    """Serializer for creating order items as nested items during order creation"""
+    
+    variant = serializers.IntegerField(required=False, allow_null=True)
+
+    class Meta:
+        model = OrderItem
+        fields = [
+            "product",
+            "variant",
+            "quantity",
+            "unit_price",
+            "buy_price",
+        ]
+
+    def validate(self, data):
+        """Validate order item data"""
+        from products.models import Product, ProductVariant
+
+        # Validate product exists
+        try:
+            product = Product.objects.get(
+                id=data["product"].id
+                if hasattr(data["product"], "id")
+                else data["product"]
+            )
+        except (Product.DoesNotExist, AttributeError):
+            raise serializers.ValidationError("Product not found")
+
+        # Check if product has variants and validate accordingly
+        if product.has_variants:
+            variant_id = data.get("variant")
+            if variant_id is not None:
+                # Validate the variant belongs to this product
+                try:
+                    variant = ProductVariant.objects.get(
+                        id=variant_id.id if hasattr(variant_id, "id") else variant_id
+                    )
+                    if variant.product != product:
+                        raise serializers.ValidationError(
+                            "Variant does not belong to the specified product"
+                        )
+                except (ProductVariant.DoesNotExist, AttributeError):
+                    raise serializers.ValidationError("Product variant not found")
+            # If variant is None/null, we'll use the first available variant in the create method
+        else:
+            # For products without variants, variant should be None
+            if data.get("variant"):
+                raise serializers.ValidationError(
+                    "Variant should not be provided for products without variants"
+                )
+
+        return data
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating orders with items"""
 
-    items = OrderItemCreateSerializer(many=True, required=True)
+    items = OrderItemNestedSerializer(many=True, required=True)
     payments = OrderPaymentSerializer(many=True, required=False)
 
     # Financial calculation fields

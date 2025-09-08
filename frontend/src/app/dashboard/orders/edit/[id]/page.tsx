@@ -79,6 +79,7 @@ interface OrderForm {
   due_date: string;
   notes: string;
   status:
+    | "draft"
     | "pending"
     | "processing"
     | "shipped"
@@ -1416,6 +1417,18 @@ export default function EditOrderPage() {
                   <h3 className="text-lg font-semibold text-slate-200">
                     Edit Order
                   </h3>
+                  {/* Order Status Label */}
+                  <div className="ml-3">
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        orderForm.status === 'draft'
+                          ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                          : 'bg-green-500/10 text-green-400 border border-green-500/20'
+                      }`}
+                    >
+                      {orderForm.status === 'draft' ? 'DRAFT' : 'COMPLETED'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Customer Selection Row */}
@@ -2645,11 +2658,18 @@ export default function EditOrderPage() {
             {/* Order Actions */}
             <div className="flex gap-3">
               <button
-                onClick={() => handleSubmit("pending")}
+                onClick={() => handleSubmit(orderForm.status === 'draft' ? 'completed' : 'pending')}
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
+                className={`flex-1 px-6 py-3 text-white text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-all duration-200 shadow-lg ${
+                  orderForm.status === 'draft'
+                    ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500'
+                    : 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 focus:ring-cyan-500'
+                }`}
               >
-                {isSubmitting ? "Updating..." : "Update Order"}
+                {isSubmitting 
+                  ? (orderForm.status === 'draft' ? "Completing..." : "Updating...") 
+                  : (orderForm.status === 'draft' ? "Complete Order" : "Update Order")
+                }
               </button>
 
               <button
