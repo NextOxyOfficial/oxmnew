@@ -781,10 +781,14 @@ export default function SuppliersPage() {
     updatedData: { status: "pending" | "completed" | "cancelled" }
   ) => {
     try {
+      console.log("handleUpdatePurchase called with:", { purchaseId, updatedData });
+      
       const updatedPurchase = await ApiService.updatePurchase(
         purchaseId,
         updatedData
       );
+
+      console.log("Purchase updated successfully:", updatedPurchase);
 
       // Update the local state
       setPurchases((prev) =>
@@ -798,6 +802,11 @@ export default function SuppliersPage() {
       showNotification("success", "Purchase status updated successfully");
     } catch (error) {
       console.error("Error updating purchase:", error);
+      console.error("Error details:", {
+        purchaseId,
+        updatedData,
+        error: error instanceof Error ? error.message : error
+      });
       showNotification(
         "error",
         "Failed to update purchase status. Please try again."

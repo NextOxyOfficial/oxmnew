@@ -325,6 +325,14 @@ export class ApiService {
     return this.request(endpoint, { method: "DELETE" });
   }
 
+  static async postFormData(endpoint: string, formData: FormData) {
+    return this.request(endpoint, {
+      method: "POST",
+      body: formData,
+      // Don't set Content-Type or Authorization headers, they will be handled by the request method
+    });
+  }
+
   // General API methods
   static async healthCheck() {
     return this.request("/health/", {
@@ -1550,14 +1558,30 @@ export class ApiService {
     status?: string;
     products?: string;
     notes?: string;
-    proof_document?: string;
+    proof_document?: File | string;
     items?: Array<{
       product: number;
       quantity: number;
       price: number;
     }>;
   }) {
-    return this.post("/purchases/", purchaseData);
+    // If we have a file, use FormData for file upload
+    if (purchaseData.proof_document instanceof File) {
+      const formData = new FormData();
+      formData.append('supplier', purchaseData.supplier.toString());
+      if (purchaseData.date) formData.append('date', purchaseData.date);
+      if (purchaseData.amount) formData.append('amount', purchaseData.amount.toString());
+      if (purchaseData.status) formData.append('status', purchaseData.status);
+      if (purchaseData.products) formData.append('products', purchaseData.products);
+      if (purchaseData.notes) formData.append('notes', purchaseData.notes);
+      formData.append('proof_document', purchaseData.proof_document);
+      if (purchaseData.items) formData.append('items', JSON.stringify(purchaseData.items));
+
+      return this.postFormData("/purchases/", formData);
+    } else {
+      // Regular JSON request without file
+      return this.post("/purchases/", purchaseData);
+    }
   }
 
   static async updatePurchase(
@@ -1577,7 +1601,18 @@ export class ApiService {
       }>;
     }>
   ) {
-    return this.put(`/purchases/${id}/`, purchaseData);
+    console.log("API updatePurchase called with:", { id, purchaseData });
+    console.log("Making PATCH request to:", `/purchases/${id}/`);
+    
+    try {
+      // Use PATCH instead of PUT for partial updates
+      const result = await this.patch(`/purchases/${id}/`, purchaseData);
+      console.log("API updatePurchase response:", result);
+      return result;
+    } catch (error) {
+      console.error("API updatePurchase error:", error);
+      throw error;
+    }
   }
 
   static async deletePurchase(id: number) {
@@ -1618,9 +1653,27 @@ export class ApiService {
     status?: string;
     reference?: string;
     notes?: string;
-    proof_document?: string;
+    proof_document?: File | string;
   }) {
-    return this.post("/payments/", paymentData);
+    // If we have a file, use FormData for file upload
+    if (paymentData.proof_document instanceof File) {
+      const formData = new FormData();
+      if (paymentData.supplier) formData.append('supplier', paymentData.supplier.toString());
+      if (paymentData.type) formData.append('type', paymentData.type);
+      formData.append('amount', paymentData.amount.toString());
+      if (paymentData.description) formData.append('description', paymentData.description);
+      if (paymentData.date) formData.append('date', paymentData.date);
+      if (paymentData.method) formData.append('method', paymentData.method);
+      if (paymentData.status) formData.append('status', paymentData.status);
+      if (paymentData.reference) formData.append('reference', paymentData.reference);
+      if (paymentData.notes) formData.append('notes', paymentData.notes);
+      formData.append('proof_document', paymentData.proof_document);
+
+      return this.postFormData("/payments/", formData);
+    } else {
+      // Regular JSON request without file
+      return this.post("/payments/", paymentData);
+    }
   }
 
   static async updatePayment(
@@ -1638,7 +1691,18 @@ export class ApiService {
       proof_document?: string;
     }>
   ) {
-    return this.put(`/payments/${id}/`, paymentData);
+    console.log("API updatePayment called with:", { id, paymentData });
+    console.log("Making PATCH request to:", `/payments/${id}/`);
+    
+    try {
+      // Use PATCH instead of PUT for partial updates
+      const result = await this.patch(`/payments/${id}/`, paymentData);
+      console.log("API updatePayment response:", result);
+      return result;
+    } catch (error) {
+      console.error("API updatePayment error:", error);
+      throw error;
+    }
   }
 
   static async deletePayment(id: number) {
