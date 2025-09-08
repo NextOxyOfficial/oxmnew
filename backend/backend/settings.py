@@ -101,7 +101,7 @@ CSRF_TRUSTED_ORIGINS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        "core.authentication.CSRFExemptTokenAuthentication",
         "public_api.authentication.PublicAPIKeyAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [

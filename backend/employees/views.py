@@ -1,12 +1,16 @@
 from django.db.models import Avg
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
-from rest_framework.authentication import SessionAuthentication, TokenAuthentication
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+
+from core.authentication import CSRFExemptTokenAuthentication
 
 from .models import (
     Document,
@@ -28,15 +32,16 @@ from .serializers import (
 )
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = (
         Employee.objects.all()
     )  # Default queryset (will be filtered by get_queryset)
     permission_classes = [AllowAny]  # Allow unauthenticated access for testing
     authentication_classes = [
+        CSRFExemptTokenAuthentication,
         SessionAuthentication,
-        TokenAuthentication,
-    ]  # Support both session and token auth
+    ]  # Support both session and CSRF-exempt token auth
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
