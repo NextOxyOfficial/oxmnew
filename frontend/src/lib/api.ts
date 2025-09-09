@@ -1470,6 +1470,8 @@ export class ApiService {
     search?: string;
     customer?: string;
     ordering?: string;
+    start_date?: string;
+    end_date?: string;
   }) {
     let endpoint = "/sales/";
 

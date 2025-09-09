@@ -878,27 +878,42 @@ export default function OrdersPage() {
   const exportToExcel = useCallback(async () => {
     try {
       setIsExporting(true);
+      console.log("Starting export with dates:", exportStartDate, exportEndDate);
       
       // Fetch product sales data with date filtering
       const params: any = {
         page_size: 1000, // Get all data for export
-        ordering: "-sale_date",
+        ordering: "-created_at", // Use created_at for ordering
       };
 
       if (exportStartDate) {
         params.start_date = exportStartDate;
+        console.log("Added start_date:", exportStartDate);
       }
       if (exportEndDate) {
         params.end_date = exportEndDate;
+        console.log("Added end_date:", exportEndDate);
       }
 
+      console.log("Export API params:", params);
       const response = await ApiService.getProductSalesWithPagination(params);
+      console.log("Export API response:", response);
       
       let allOrders: Order[] = [];
       if (response && typeof response === "object" && "results" in response) {
         allOrders = response.results || [];
       } else if (Array.isArray(response)) {
         allOrders = response;
+      } else {
+        console.error("Unexpected response format:", response);
+        throw new Error("Invalid response format from API");
+      }
+
+      console.log("Processing", allOrders.length, "orders for export");
+
+      if (allOrders.length === 0) {
+        alert("No data found for the selected date range");
+        return;
       }
 
       // Process data similar to fetchProductSales
@@ -1004,11 +1019,17 @@ export default function OrdersPage() {
 
       // Convert to CSV and download
       const csvContent = convertToCSV(excelData);
+      if (!csvContent) {
+        throw new Error("Failed to generate CSV content");
+      }
+      
       downloadCSV(csvContent, `product-sales-${exportStartDate || 'all'}-to-${exportEndDate || 'now'}.csv`);
+      console.log("Export completed successfully");
       
       setShowExportDialog(false);
     } catch (error) {
       console.error("Error exporting to Excel:", error);
+      alert(`Export failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsExporting(false);
     }
@@ -1092,17 +1113,36 @@ export default function OrdersPage() {
 
   // Helper function to download CSV
   const downloadCSV = (csvContent: string, filename: string) => {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    try {
+      console.log("Attempting to download CSV with filename:", filename);
+      console.log("CSV content length:", csvContent.length);
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      console.log("Blob created successfully, size:", blob.size);
+      
+      const link = document.createElement('a');
+      
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        console.log("Object URL created:", url);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        
+        console.log("Triggering download...");
+        link.click();
+        
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        console.log("Download completed and cleanup done");
+      } else {
+        throw new Error("Browser does not support file downloads");
+      }
+    } catch (error) {
+      console.error("Error in downloadCSV:", error);
+      throw error;
     }
   };
 
