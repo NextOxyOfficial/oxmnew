@@ -13,11 +13,37 @@ import { Order, OrderItem } from "@/types/order";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+// Define interface for product sales summary
+interface ProductSale {
+  id: number;
+  product_id?: number;
+  variant_id?: number;
+  product_name: string;
+  variant_display?: string;
+  total_quantity: number;
+  total_revenue: number;
+  total_profit: number;
+  profit_margin: number;
+  last_sold: string;
+  last_sold_customer?: string;
+  stock_remaining?: number;
+  available_stock?: number;
+  avg_unit_price: number;
+  avg_buy_price: number;
+  total_buy_price: number; // To track total for calculating average
+  sales_count: number;
+}
+
 export default function OrdersPage() {
   console.log("OrdersPage main component re-rendered");
   const router = useRouter();
   const searchParams = useSearchParams();
   const formatCurrency = useCurrencyFormatter();
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"orders" | "products">("orders");
+  
+  // Orders tab state
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -48,6 +74,27 @@ export default function OrdersPage() {
     };
   } | null>(null);
 
+  // Products tab state
+  const [productSales, setProductSales] = useState<ProductSale[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [productSearchInput, setProductSearchInput] = useState("");
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [productSortBy, setProductSortBy] = useState("last_sold");
+  const [isSearchingProducts, setIsSearchingProducts] = useState(false);
+  
+  // Product pagination state
+  const [productCurrentPage, setProductCurrentPage] = useState(1);
+  const [productPageSize, setProductPageSize] = useState(50);
+  const [productTotalItems, setProductTotalItems] = useState(0);
+  const [productTotalPages, setProductTotalPages] = useState(0);
+
+  // Date filter state for Excel export
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
+  const [exportPreset, setExportPreset] = useState("");
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -72,6 +119,15 @@ export default function OrdersPage() {
 
     return () => clearTimeout(debounceTimer);
   }, [searchInput]);
+
+  // Debounce product search input
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setProductSearchTerm(productSearchInput);
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [productSearchInput]);
 
   // Handle success message from edit page
   useEffect(() => {
@@ -181,6 +237,229 @@ export default function OrdersPage() {
     }
   }, [currentPage, pageSize, searchTerm, filterCustomer, sortBy]);
 
+  // Fetch product sales summary
+  const fetchProductSales = useCallback(async () => {
+    try {
+      if (activeTab !== "products") return; // Only fetch when on products tab
+      
+      setIsSearchingProducts(true);
+      if (productCurrentPage === 1 && productSales.length === 0) {
+        setIsLoadingProducts(true);
+      }
+
+      // Since product-summary endpoint doesn't exist, we'll fetch all sales
+      // and process them locally to create the product summary
+      const params: any = {
+        page_size: 1000, // Get a large number to process locally
+        ordering: "-sale_date", // Get latest sales first
+      };
+
+      const response = await ApiService.getProductSalesWithPagination(params);
+      
+      // Process the orders/sales to create product summary
+      let allOrders: Order[] = [];
+      
+      if (response && typeof response === "object" && "results" in response) {
+        allOrders = response.results || [];
+      } else if (Array.isArray(response)) {
+        allOrders = response;
+      }
+
+      // Create product summary from orders
+      const productSummaryMap = new Map<string, ProductSale>();
+      
+      allOrders.forEach((order: Order) => {
+        if (order.items && order.items.length > 0) {
+          // Process orders with items
+          order.items.forEach((item: any) => {
+            const variantInfo = item.variant_details || '';
+            const key = `${item.product_name || 'Unknown'}-${variantInfo}`;
+            const existing = productSummaryMap.get(key);
+            
+            if (existing) {
+              existing.total_quantity += item.quantity || 0;
+              existing.total_revenue += item.total_price || 0;
+              existing.total_profit += (item.total_price || 0) - ((item.buy_price || 0) * (item.quantity || 0));
+              existing.total_buy_price += (item.buy_price || 0) * (item.quantity || 0);
+              existing.sales_count += 1;
+              if (new Date(order.sale_date) > new Date(existing.last_sold)) {
+                existing.last_sold = order.sale_date;
+                existing.last_sold_customer = order.customer_name || 'Unknown Customer';
+              }
+            } else {
+              const totalPrice = item.total_price || 0;
+              const buyPrice = (item.buy_price || 0) * (item.quantity || 0);
+              const profit = totalPrice - buyPrice;
+              
+              productSummaryMap.set(key, {
+                id: Math.random(), // Temporary ID
+                product_id: item.product?.id || item.product,
+                variant_id: item.variant_id || item.variant,
+                product_name: item.product_name || 'Unknown Product',
+                variant_display: variantInfo,
+                total_quantity: item.quantity || 0,
+                total_revenue: totalPrice,
+                total_profit: profit,
+                profit_margin: totalPrice > 0 ? (profit / totalPrice) * 100 : 0,
+                last_sold: order.sale_date,
+                last_sold_customer: order.customer_name || 'Unknown Customer',
+                avg_unit_price: item.unit_price || 0,
+                avg_buy_price: item.buy_price || 0,
+                total_buy_price: buyPrice,
+                sales_count: 1,
+                stock_remaining: undefined, // We don't have this data
+                available_stock: undefined, // We don't have this data
+              });
+            }
+          });
+        } else {
+          // Process legacy single-product orders
+          const variantInfo = order.variant ? `${order.variant.color || ''} ${order.variant.size || ''} ${order.variant.custom_variant || ''}`.trim() : '';
+          const key = `${order.product_name || 'Unknown'}-${variantInfo}`;
+          const existing = productSummaryMap.get(key);
+          
+          const profit = (order.total_amount || 0) - ((order.buy_price || 0) * (order.quantity || 0));
+          
+          if (existing) {
+            existing.total_quantity += order.quantity || 0;
+            existing.total_revenue += order.total_amount || 0;
+            existing.total_profit += profit;
+            existing.total_buy_price += (order.buy_price || 0) * (order.quantity || 0);
+            existing.sales_count += 1;
+            if (new Date(order.sale_date) > new Date(existing.last_sold)) {
+              existing.last_sold = order.sale_date;
+              existing.last_sold_customer = order.customer_name || 'Unknown Customer';
+            }
+          } else {
+            productSummaryMap.set(key, {
+              id: order.id,
+              product_id: order.product?.id,
+              variant_id: order.variant?.id,
+              product_name: order.product_name || 'Unknown Product',
+              variant_display: variantInfo || undefined,
+              total_quantity: order.quantity || 0,
+              total_revenue: order.total_amount || 0,
+              total_profit: profit,
+              profit_margin: (order.total_amount || 0) > 0 ? (profit / (order.total_amount || 0)) * 100 : 0,
+              last_sold: order.sale_date,
+              avg_unit_price: order.unit_price || 0,
+              avg_buy_price: order.buy_price || 0,
+              total_buy_price: (order.buy_price || 0) * (order.quantity || 0),
+              sales_count: 1,
+              stock_remaining: undefined,
+              available_stock: undefined,
+            });
+          }
+        }
+      });
+
+      // Fetch product details to get stock information
+      const productIds = new Set<number>();
+      productSummaryMap.forEach(product => {
+        if (product.product_id) {
+          productIds.add(product.product_id);
+        }
+      });
+
+      const stockMap = new Map<string, number>();
+      try {
+        for (const productId of productIds) {
+          const productResponse = await ApiService.get(`/products/${productId}/`);
+          if (productResponse && typeof productResponse === 'object') {
+            const product = productResponse as any;
+            
+            // Store stock for different variants
+            if (product.has_variants && product.variants) {
+              product.variants.forEach((variant: any) => {
+                const variantKey = `${product.id}-${variant.id}`;
+                stockMap.set(variantKey, variant.stock || 0);
+              });
+            } else {
+              // Single product without variants
+              stockMap.set(`${product.id}`, product.stock || 0);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching product stock:", error);
+      }
+
+      // Convert map to array and calculate final values with stock information
+      let salesData = Array.from(productSummaryMap.values()).map(product => {
+        let availableStock = 0;
+        
+        if (product.variant_id && product.product_id) {
+          // Product with variant
+          const variantKey = `${product.product_id}-${product.variant_id}`;
+          availableStock = stockMap.get(variantKey) || 0;
+        } else if (product.product_id) {
+          // Single product
+          availableStock = stockMap.get(`${product.product_id}`) || 0;
+        }
+        
+        return {
+          ...product,
+          avg_unit_price: product.total_quantity > 0 ? product.total_revenue / product.total_quantity : 0,
+          avg_buy_price: product.total_quantity > 0 ? product.total_buy_price / product.total_quantity : 0,
+          profit_margin: product.total_revenue > 0 ? (product.total_profit / product.total_revenue) * 100 : 0,
+          available_stock: availableStock,
+        };
+      });
+
+      // Apply search filter if exists
+      if (productSearchTerm.trim()) {
+        const searchLower = productSearchTerm.toLowerCase();
+        salesData = salesData.filter(product => 
+          product.product_name.toLowerCase().includes(searchLower) ||
+          (product.variant_display && product.variant_display.toLowerCase().includes(searchLower))
+        );
+      }
+
+      // Apply sorting
+      salesData.sort((a, b) => {
+        switch (productSortBy) {
+          case "total_quantity":
+            return b.total_quantity - a.total_quantity;
+          case "total_profit":
+            return b.total_profit - a.total_profit;
+          case "profit_margin":
+            return b.profit_margin - a.profit_margin;
+          case "last_sold":
+            return new Date(b.last_sold).getTime() - new Date(a.last_sold).getTime();
+          case "product_name":
+            return a.product_name.localeCompare(b.product_name);
+          default:
+            return b.total_quantity - a.total_quantity;
+        }
+      });
+
+      // Apply pagination
+      const totalItems = salesData.length;
+      const startIndex = (productCurrentPage - 1) * productPageSize;
+      const endIndex = startIndex + productPageSize;
+      const paginatedData = salesData.slice(startIndex, endIndex);
+
+      setProductSales(paginatedData);
+      setProductTotalItems(totalItems);
+      setProductTotalPages(Math.ceil(totalItems / productPageSize));
+    } catch (error) {
+      console.error("Error fetching product sales:", error);
+      setProductSales([]);
+      setProductTotalItems(0);
+      setProductTotalPages(0);
+    } finally {
+      setIsLoadingProducts(false);
+      setIsSearchingProducts(false);
+    }
+  }, [activeTab, productCurrentPage, productPageSize, productSearchTerm, productSortBy]);
+
+  // Fetch product sales when dependencies change
+  useEffect(() => {
+    if (activeTab === "products") {
+      fetchProductSales();
+    }
+  }, [fetchProductSales]);
+
   // Fetch orders when dependencies change
   useEffect(() => {
     fetchOrders();
@@ -190,6 +469,11 @@ export default function OrdersPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterCustomer]);
+
+  // Reset product page when search or sort changes
+  useEffect(() => {
+    setProductCurrentPage(1);
+  }, [productSearchTerm, productSortBy]);
 
   const fetchUserProfile = useCallback(async () => {
     try {
@@ -560,6 +844,268 @@ export default function OrdersPage() {
     setSortBy(value);
   }, []);
 
+  // Product tab handlers
+  const handleProductSearchChange = useCallback((value: string) => {
+    setProductSearchInput(value);
+  }, []);
+
+  const handleProductSortChange = useCallback((value: string) => {
+    setProductSortBy(value);
+  }, []);
+
+  const handleTabChange = useCallback((tab: "orders" | "products") => {
+    setActiveTab(tab);
+  }, []);
+
+  // Handle product name click navigation
+  const handleProductClick = useCallback((productId?: number) => {
+    if (productId) {
+      router.push(`/dashboard/products/${productId}`);
+    }
+  }, [router]);
+
+  // Product pagination handlers
+  const handleProductPageChange = useCallback((page: number) => {
+    setProductCurrentPage(page);
+  }, []);
+
+  const handleProductPageSizeChange = useCallback((newPageSize: number) => {
+    setProductPageSize(newPageSize);
+    setProductCurrentPage(1); // Reset to first page when changing page size
+  }, []);
+
+  // Excel export functionality
+  const exportToExcel = useCallback(async () => {
+    try {
+      setIsExporting(true);
+      
+      // Fetch product sales data with date filtering
+      const params: any = {
+        page_size: 1000, // Get all data for export
+        ordering: "-sale_date",
+      };
+
+      if (exportStartDate) {
+        params.start_date = exportStartDate;
+      }
+      if (exportEndDate) {
+        params.end_date = exportEndDate;
+      }
+
+      const response = await ApiService.getProductSalesWithPagination(params);
+      
+      let allOrders: Order[] = [];
+      if (response && typeof response === "object" && "results" in response) {
+        allOrders = response.results || [];
+      } else if (Array.isArray(response)) {
+        allOrders = response;
+      }
+
+      // Process data similar to fetchProductSales
+      const productSummaryMap = new Map<string, ProductSale>();
+      
+      allOrders.forEach((order: Order) => {
+        if (order.items && order.items.length > 0) {
+          order.items.forEach((item: any) => {
+            const variantInfo = item.variant_details || '';
+            const key = `${item.product_name || 'Unknown'}-${variantInfo}`;
+            const existing = productSummaryMap.get(key);
+            
+            if (existing) {
+              existing.total_quantity += item.quantity || 0;
+              existing.total_revenue += item.total_price || 0;
+              existing.total_profit += (item.total_price || 0) - ((item.buy_price || 0) * (item.quantity || 0));
+              existing.total_buy_price += (item.buy_price || 0) * (item.quantity || 0);
+              existing.sales_count += 1;
+              if (new Date(order.sale_date) > new Date(existing.last_sold)) {
+                existing.last_sold = order.sale_date;
+              }
+            } else {
+              const totalPrice = item.total_price || 0;
+              const buyPrice = (item.buy_price || 0) * (item.quantity || 0);
+              const profit = totalPrice - buyPrice;
+              
+              productSummaryMap.set(key, {
+                id: Math.random(),
+                product_name: item.product_name || 'Unknown Product',
+                variant_display: variantInfo,
+                total_quantity: item.quantity || 0,
+                total_revenue: totalPrice,
+                total_profit: profit,
+                profit_margin: totalPrice > 0 ? (profit / totalPrice) * 100 : 0,
+                last_sold: order.sale_date,
+                avg_unit_price: item.unit_price || 0,
+                avg_buy_price: item.buy_price || 0,
+                total_buy_price: buyPrice,
+                sales_count: 1,
+                stock_remaining: undefined,
+                available_stock: undefined,
+              });
+            }
+          });
+        } else {
+          // Process legacy orders
+          const variantInfo = order.variant ? `${order.variant.color || ''} ${order.variant.size || ''} ${order.variant.custom_variant || ''}`.trim() : '';
+          const key = `${order.product_name || 'Unknown'}-${variantInfo}`;
+          const existing = productSummaryMap.get(key);
+          
+          const profit = (order.total_amount || 0) - ((order.buy_price || 0) * (order.quantity || 0));
+          
+          if (existing) {
+            existing.total_quantity += order.quantity || 0;
+            existing.total_revenue += order.total_amount || 0;
+            existing.total_profit += profit;
+            existing.total_buy_price += (order.buy_price || 0) * (order.quantity || 0);
+            existing.sales_count += 1;
+            if (new Date(order.sale_date) > new Date(existing.last_sold)) {
+              existing.last_sold = order.sale_date;
+            }
+          } else {
+            productSummaryMap.set(key, {
+              id: order.id,
+              product_name: order.product_name || 'Unknown Product',
+              variant_display: variantInfo || undefined,
+              total_quantity: order.quantity || 0,
+              total_revenue: order.total_amount || 0,
+              total_profit: profit,
+              profit_margin: (order.total_amount || 0) > 0 ? (profit / (order.total_amount || 0)) * 100 : 0,
+              last_sold: order.sale_date,
+              avg_unit_price: order.unit_price || 0,
+              avg_buy_price: order.buy_price || 0,
+              total_buy_price: (order.buy_price || 0) * (order.quantity || 0),
+              sales_count: 1,
+              stock_remaining: undefined,
+              available_stock: undefined,
+            });
+          }
+        }
+      });
+
+      // Calculate final averages
+      const salesData = Array.from(productSummaryMap.values()).map(product => ({
+        ...product,
+        avg_unit_price: product.total_quantity > 0 ? product.total_revenue / product.total_quantity : 0,
+        avg_buy_price: product.total_quantity > 0 ? product.total_buy_price / product.total_quantity : 0,
+        profit_margin: product.total_revenue > 0 ? (product.total_profit / product.total_revenue) * 100 : 0,
+      }));
+
+      // Create Excel data
+      const excelData = salesData.map(product => ({
+        'Product Name': product.product_name,
+        'Variant': product.variant_display || '',
+        'Total Sold': product.total_quantity,
+        'Sell Price': product.avg_unit_price.toFixed(2),
+        'Buy Price': product.avg_buy_price.toFixed(2),
+        'Total Revenue': product.total_revenue.toFixed(2),
+        'Total Profit': product.total_profit.toFixed(2),
+        'Profit Margin (%)': product.profit_margin.toFixed(2),
+        'Last Sold': new Date(product.last_sold).toLocaleDateString(),
+      }));
+
+      // Convert to CSV and download
+      const csvContent = convertToCSV(excelData);
+      downloadCSV(csvContent, `product-sales-${exportStartDate || 'all'}-to-${exportEndDate || 'now'}.csv`);
+      
+      setShowExportDialog(false);
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [exportStartDate, exportEndDate]);
+
+  // Handle preset date selection
+  const handlePresetChange = (preset: string) => {
+    setExportPreset(preset);
+    const today = new Date();
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+    switch (preset) {
+      case "today":
+        setExportStartDate(formatDate(today));
+        setExportEndDate(formatDate(today));
+        break;
+      case "yesterday":
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        setExportStartDate(formatDate(yesterday));
+        setExportEndDate(formatDate(yesterday));
+        break;
+      case "this_week":
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        setExportStartDate(formatDate(startOfWeek));
+        setExportEndDate(formatDate(today));
+        break;
+      case "last_week":
+        const lastWeekEnd = new Date(today);
+        lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
+        const lastWeekStart = new Date(lastWeekEnd);
+        lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
+        setExportStartDate(formatDate(lastWeekStart));
+        setExportEndDate(formatDate(lastWeekEnd));
+        break;
+      case "this_month":
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        setExportStartDate(formatDate(startOfMonth));
+        setExportEndDate(formatDate(today));
+        break;
+      case "last_month":
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        setExportStartDate(formatDate(lastMonth));
+        setExportEndDate(formatDate(lastMonthEnd));
+        break;
+      case "custom":
+        // Keep existing dates or clear them
+        break;
+      default:
+        setExportStartDate("");
+        setExportEndDate("");
+    }
+  };
+
+  // Helper function to convert data to CSV
+  const convertToCSV = (data: any[]) => {
+    if (data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvRows = [];
+    
+    // Add headers
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    for (const row of data) {
+      const values = headers.map(header => {
+        const value = row[header];
+        // Escape commas and quotes in values
+        return typeof value === 'string' && (value.includes(',') || value.includes('"')) 
+          ? `"${value.replace(/"/g, '""')}"` 
+          : value;
+      });
+      csvRows.push(values.join(','));
+    }
+    
+    return csvRows.join('\n');
+  };
+
+  // Helper function to download CSV
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!orderToDelete) return;
 
@@ -636,7 +1182,7 @@ export default function OrdersPage() {
             <p className="text-red-400/70 mb-4">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+              className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors cursor-pointer"
             >
               Try Again
             </button>
@@ -680,7 +1226,7 @@ export default function OrdersPage() {
               </span>
               <button
                 onClick={() => setSuccessMessage(null)}
-                className="ml-auto text-green-400 hover:text-green-300"
+                className="ml-auto text-green-400 hover:text-green-300 cursor-pointer"
               >
                 <svg
                   className="w-4 h-4"
@@ -699,53 +1245,333 @@ export default function OrdersPage() {
             </div>
           </div>
         )}
-        {/* Orders Table/List */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg flex flex-col">
-          <div className="sm:p-4 p-2 flex-shrink-0 border-b border-slate-700/50">
-            <OrdersControls
-              searchInput={searchInput}
-              searchTerm={searchTerm}
-              isSearching={isSearching}
-              filterCustomer={filterCustomer}
-              sortBy={sortBy}
-              isNavigating={isNavigating}
-              onSearchChange={handleSearchChange}
-              onFilterChange={handleFilterChange}
-              onSortChange={handleSortChange}
-              onAddOrder={handleAddOrder}
-            />
+
+        {/* Tab Navigation */}
+        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
+          <div className="flex border-b border-slate-700/50">
+            <button
+              onClick={() => handleTabChange("orders")}
+              className={`px-6 py-3 text-sm font-medium transition-colors cursor-pointer ${
+                activeTab === "orders"
+                  ? "text-cyan-400 border-b-2 border-cyan-400 bg-slate-800/50"
+                  : "text-slate-400 hover:text-slate-300"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Orders
+              </div>
+            </button>
+            <button
+              onClick={() => handleTabChange("products")}
+              className={`px-6 py-3 text-sm font-medium transition-colors cursor-pointer ${
+                activeTab === "products"
+                  ? "text-cyan-400 border-b-2 border-cyan-400 bg-slate-800/50"
+                  : "text-slate-400 hover:text-slate-300"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
+                </svg>
+                Sold Products
+              </div>
+            </button>
           </div>
 
-          {/* Scrollable content area */}
-          <div className="flex-1 overflow-x-auto relative">
-            <OrdersList
-              orders={orders}
-              totalItems={totalItems}
-              isSearching={isSearching}
-              isSendingSms={isSendingSms}
-              onOrderClick={handleOrderClick}
-              onCustomerClick={handleCustomerClick}
-              onViewInvoice={handleViewInvoice}
-              onPrintInvoice={handlePrintInvoice}
-              onEditInvoice={handleEditInvoice}
-              onDeleteOrder={handleDeleteOrder}
-              onSendSms={handleSendSms}
-              onAddOrder={handleAddOrder}
-            />
-          </div>
+          {/* Tab Content */}
+          {activeTab === "orders" ? (
+            <>
+              <div className="sm:p-4 p-2 flex-shrink-0 border-b border-slate-700/50">
+                <OrdersControls
+                  searchInput={searchInput}
+                  searchTerm={searchTerm}
+                  isSearching={isSearching}
+                  filterCustomer={filterCustomer}
+                  sortBy={sortBy}
+                  isNavigating={isNavigating}
+                  onSearchChange={handleSearchChange}
+                  onFilterChange={handleFilterChange}
+                  onSortChange={handleSortChange}
+                  onAddOrder={handleAddOrder}
+                />
+              </div>
 
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="p-4 border-t border-slate-700/50">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={pageSize}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-              />
-            </div>
+              {/* Scrollable content area */}
+              <div className="flex-1 overflow-x-auto relative">
+                <OrdersList
+                  orders={orders}
+                  totalItems={totalItems}
+                  isSearching={isSearching}
+                  isSendingSms={isSendingSms}
+                  onOrderClick={handleOrderClick}
+                  onCustomerClick={handleCustomerClick}
+                  onViewInvoice={handleViewInvoice}
+                  onPrintInvoice={handlePrintInvoice}
+                  onEditInvoice={handleEditInvoice}
+                  onDeleteOrder={handleDeleteOrder}
+                  onSendSms={handleSendSms}
+                  onAddOrder={handleAddOrder}
+                />
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="p-4 border-t border-slate-700/50">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={pageSize}
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Product Sales Controls */}
+              <div className="sm:p-4 p-2 flex-shrink-0 border-b border-slate-700/50">
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-1">
+                    {/* Search Input */}
+                    <div className="relative flex-1 max-w-md">
+                      <svg
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                      <input
+                        type="text"
+                        placeholder="Search products..."
+                        value={productSearchInput}
+                        onChange={(e) => handleProductSearchChange(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-sm"
+                      />
+                      {isSearchingProducts && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <svg
+                            className="animate-spin h-4 w-4 text-slate-400"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Sort Dropdown */}
+                    <select
+                      value={productSortBy}
+                      onChange={(e) => handleProductSortChange(e.target.value)}
+                      className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-sm cursor-pointer"
+                    >
+                      <option value="total_quantity">Most Sold (Qty)</option>
+                      <option value="total_profit">Highest Profit</option>
+                      <option value="profit_margin">Highest Margin</option>
+                      <option value="last_sold">Recently Sold</option>
+                      <option value="product_name">Product Name</option>
+                    </select>
+
+                    {/* Export Button */}
+                    <button
+                      onClick={() => setShowExportDialog(true)}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      Export Excel
+                    </button>
+                  </div>
+
+                  <div className="text-sm text-slate-400">
+                    {productTotalItems} products total • Page {productCurrentPage} of {productTotalPages}
+                  </div>
+                </div>
+              </div>
+
+              {/* Product Sales List */}
+              <div className="flex-1 overflow-x-auto relative">
+                {isLoadingProducts ? (
+                  <div className="p-8 text-center">
+                    <div className="animate-spin inline-block w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full mb-2"></div>
+                    <p className="text-slate-400">Loading products...</p>
+                  </div>
+                ) : productSales.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <svg
+                      className="w-12 h-12 text-slate-600 mx-auto mb-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1}
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                      />
+                    </svg>
+                    <h3 className="text-lg font-medium text-slate-400 mb-2">
+                      No products found
+                    </h3>
+                    <p className="text-slate-500">
+                      {productSearchTerm ? "No products match your search." : "No products have been sold yet."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-slate-800/50 border-b border-slate-700/50">
+                        <tr>
+                          <th className="text-left p-4 text-slate-300 font-medium text-sm">Product</th>
+                          <th className="text-center p-4 text-slate-300 font-medium text-sm">Total Sold</th>
+                          <th className="text-right p-4 text-slate-300 font-medium text-sm">Price</th>
+                          <th className="text-right p-4 text-slate-300 font-medium text-sm">Profit</th>
+                          <th className="text-center p-4 text-slate-300 font-medium text-sm">Available Stock</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/50">
+                        {productSales.map((product) => (
+                          <tr
+                            key={product.id}
+                            className="hover:bg-slate-800/30 transition-colors cursor-pointer"
+                          >
+                            <td className="p-4">
+                              <div>
+                                <div 
+                                  className={`font-medium ${
+                                    product.product_id 
+                                      ? "text-cyan-400 hover:text-cyan-300 cursor-pointer transition-colors" 
+                                      : "text-slate-100"
+                                  }`}
+                                  onClick={() => product.product_id && handleProductClick(product.product_id)}
+                                >
+                                  {product.product_name}
+                                </div>
+                                {product.variant_display && (
+                                  <div className="text-xs text-slate-400 mt-1">
+                                    {product.variant_display}
+                                  </div>
+                                )}
+                                <div className="text-xs text-slate-400 mt-1">
+                                  {new Date(product.last_sold).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4 text-center">
+                              <div>
+                                <span className="text-slate-100 font-medium">
+                                  {product.total_quantity}
+                                </span>
+                                <div className="text-xs text-green-400 mt-1">
+                                  Last Bought: {product.last_sold_customer || 'N/A'}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="space-y-1">
+                                <div className="text-green-400 font-medium text-sm">
+                                  Sell: {formatCurrency(product.avg_unit_price)}
+                                </div>
+                                <div className="text-orange-400 font-medium text-xs">
+                                  Buy: {formatCurrency(product.avg_buy_price)}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4 text-right">
+                              <span className="text-cyan-400 font-medium">
+                                {formatCurrency(product.total_profit)}
+                              </span>
+                            </td>
+                            <td className="p-4 text-center">
+                              <span className={`text-sm font-medium ${
+                                (product.available_stock || 0) === 0
+                                  ? "text-red-400"
+                                  : (product.available_stock || 0) < 10
+                                  ? "text-yellow-400"
+                                  : "text-green-400"
+                              }`}>
+                                {product.available_stock !== undefined ? product.available_stock : "N/A"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Product Pagination Controls */}
+              {productTotalPages > 1 && (
+                <div className="p-4 border-t border-slate-700/50">
+                  <Pagination
+                    currentPage={productCurrentPage}
+                    totalPages={productTotalPages}
+                    totalItems={productTotalItems}
+                    itemsPerPage={productPageSize}
+                    onPageChange={handleProductPageChange}
+                    onPageSizeChange={handleProductPageSizeChange}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -777,7 +1603,7 @@ export default function OrdersPage() {
                   </button>
                   <button
                     onClick={closeInvoicePopup}
-                    className="p-2 text-slate-400 hover:text-slate-200 transition-colors rounded-lg hover:bg-slate-800/50"
+                    className="p-2 text-slate-400 hover:text-slate-200 transition-colors rounded-lg hover:bg-slate-800/50 cursor-pointer"
                   >
                     <svg
                       className="w-6 h-6"
@@ -1158,6 +1984,115 @@ export default function OrdersPage() {
           </div>
         )}
       </div>
+
+      {/* Export Dialog */}
+      {showExportDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-slate-100 mb-4">Export Product Sales</h3>
+            
+            <div className="space-y-4">
+              {/* Preset Options */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Quick Date Selection
+                </label>
+                <select
+                  value={exportPreset}
+                  onChange={(e) => handlePresetChange(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
+                >
+                  <option value="">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="this_week">This Week</option>
+                  <option value="last_week">Last Week</option>
+                  <option value="this_month">This Month</option>
+                  <option value="last_month">Last Month</option>
+                  <option value="custom">Custom Date Range</option>
+                </select>
+              </div>
+
+              {/* Custom Date Inputs */}
+              {(exportPreset === "custom" || exportPreset === "") && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Start Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={exportStartDate}
+                      onChange={(e) => setExportStartDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      End Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={exportEndDate}
+                      onChange={(e) => setExportEndDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Show selected date range for presets */}
+              {exportPreset && exportPreset !== "custom" && exportStartDate && (
+                <div className="text-sm text-slate-400 bg-slate-700/50 p-2 rounded">
+                  <strong>Selected Range:</strong> {exportStartDate} to {exportEndDate}
+                </div>
+              )}
+              
+              <div className="text-sm text-slate-400">
+                {exportPreset === "" ? "Leave dates empty to export all product sales data." : ""}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowExportDialog(false);
+                  setExportPreset("");
+                  setExportStartDate("");
+                  setExportEndDate("");
+                }}
+                className="px-4 py-2 text-slate-300 hover:text-slate-100 transition-colors"
+                disabled={isExporting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={exportToExcel}
+                disabled={isExporting}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 text-white rounded-lg transition-colors flex items-center gap-2"
+              >
+                {isExporting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

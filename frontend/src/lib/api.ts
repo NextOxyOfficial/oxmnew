@@ -1494,6 +1494,30 @@ export class ApiService {
     return this.get("/sales/stats/");
   }
 
+  static async getProductSalesSummary(params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    ordering?: string;
+    date_filter?: string;
+    start_date?: string;
+    end_date?: string;
+  }) {
+    let endpoint = "/sales/";
+
+    if (params && Object.keys(params).length > 0) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, value.toString());
+        }
+      });
+      endpoint += `?${searchParams.toString()}`;
+    }
+
+    return this.get(endpoint);
+  }
+
   static async createProductSale(saleData: {
     product: number;
     variant?: number;

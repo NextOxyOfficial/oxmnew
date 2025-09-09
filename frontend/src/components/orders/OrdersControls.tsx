@@ -137,7 +137,7 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
         <select
           value={filterCustomer}
           onChange={(e) => onFilterChange(e.target.value)}
-          className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[160px]"
+          className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[160px] cursor-pointer"
         >
           <option value="all" className="bg-slate-800">
             All Orders
@@ -154,7 +154,7 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
         <select
           value={sortBy}
           onChange={(e) => onSortChange(e.target.value)}
-          className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[180px]"
+          className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm min-w-[180px] cursor-pointer"
         >
           <option value="date" className="bg-slate-800">
             Date (Newest)
