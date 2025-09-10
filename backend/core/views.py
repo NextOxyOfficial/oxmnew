@@ -39,13 +39,33 @@ def build_absolute_url(request, relative_url):
         return relative_url
 
     # For production, use a more reliable base URL construction
+    base_url = None
+    
+    # Try to get SITE_URL from settings first
     if hasattr(settings, "SITE_URL") and settings.SITE_URL:
-        # Use explicit SITE_URL if configured
         base_url = settings.SITE_URL.rstrip("/")
-        return f"{base_url}{relative_url}"
-    else:
-        # Fallback to request.build_absolute_uri
-        return request.build_absolute_uri(relative_url)
+        print(f"🔗 Using SITE_URL from settings: {base_url}")
+    
+    # If no SITE_URL, try to detect from request
+    if not base_url and request:
+        # Check if request has the production domain
+        host = request.get_host()
+        if 'oxymanager.com' in host:
+            base_url = f"https://{host}"
+            print(f"🔗 Detected production domain from request: {base_url}")
+        else:
+            # Fallback to request.build_absolute_uri for localhost/dev
+            base_url = request.build_absolute_uri("/").rstrip("/")
+            print(f"🔗 Using request.build_absolute_uri: {base_url}")
+    
+    # Final fallback for production
+    if not base_url:
+        base_url = "https://oxymanager.com"
+        print(f"🔗 Using hardcoded production fallback: {base_url}")
+    
+    final_url = f"{base_url}{relative_url}"
+    print(f"🔗 Final URL constructed: {final_url}")
+    return final_url
 
 
 @api_view(["GET"])

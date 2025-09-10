@@ -247,7 +247,12 @@ else:
     STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
 # Site URL for absolute URL construction in production
-SITE_URL = config("SITE_URL", default="http://localhost:8000")
+# Dynamically determine site URL based on environment
+if DEBUG:
+    SITE_URL = config("SITE_URL", default="http://localhost:8000")
+else:
+    # Production settings
+    SITE_URL = config("SITE_URL", default="https://oxymanager.com")
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
