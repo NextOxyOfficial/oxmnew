@@ -3,6 +3,43 @@ const API_BASE_URL =
 const BACKEND_BASE_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
+// Helper function to determine if we're in production
+const isProduction = () => {
+  const nodeEnvProduction = process.env.NODE_ENV === 'production';
+  const notLocalhost = typeof window !== 'undefined' && 
+         !window.location.hostname.includes('localhost') &&
+         !window.location.hostname.includes('127.0.0.1');
+  
+  const result = nodeEnvProduction || notLocalhost;
+  
+  // Debug logging
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    console.log('Production detection:', {
+      nodeEnvProduction,
+      notLocalhost,
+      hostname: window.location.hostname,
+      result
+    });
+  }
+  
+  return result;
+};
+
+// Get the production backend URL based on current domain
+const getProductionBackendUrl = () => {
+  if (typeof window !== 'undefined') {
+    const url = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
+    
+    // Debug logging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Production backend URL:', url);
+    }
+    
+    return url;
+  }
+  return BACKEND_BASE_URL;
+};
+
 // Product interfaces
 interface ProductVariant {
   id?: number;
@@ -182,8 +219,24 @@ interface APIKeyUsageStats {
 
 export class ApiService {
   private static async request(endpoint: string, options: RequestInit = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    // Use dynamic API URL for production
+    const apiUrl = isProduction() 
+      ? `${getProductionBackendUrl()}/api` 
+      : API_BASE_URL;
+    const url = `${apiUrl}${endpoint}`;
     const token = AuthToken.get();
+
+    // Debug logging for API requests
+    if (process.env.NODE_ENV === 'development') {
+      console.log('API Request:', {
+        endpoint,
+        apiUrl,
+        url,
+        isProduction: isProduction(),
+        API_BASE_URL,
+        BACKEND_BASE_URL
+      });
+    }
 
     const headers: HeadersInit = {};
 
@@ -1817,7 +1870,9 @@ export class ApiService {
       ? relativePath
       : `/${relativePath}`;
 
-    const fullUrl = `${BACKEND_BASE_URL}${cleanPath}`;
+    // Use dynamic backend URL for production
+    const backendUrl = isProduction() ? getProductionBackendUrl() : BACKEND_BASE_URL;
+    const fullUrl = `${backendUrl}${cleanPath}`;
 
     // Add cache-busting parameter for better image refreshing
     const timestamp = Date.now();
@@ -1829,8 +1884,10 @@ export class ApiService {
         relativePath,
         cleanPath,
         BACKEND_BASE_URL,
+        backendUrl,
         fullUrl,
         urlWithCacheBust,
+        isProduction: isProduction(),
       });
     }
 
