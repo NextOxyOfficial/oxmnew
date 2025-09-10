@@ -1083,8 +1083,52 @@ export class ApiService {
     if (!query || query.trim().length < 1) {
       return [];
     }
-    // Add page_size parameter to get all matching products instead of limiting to 10
-    return this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=1000`);
+    
+    try {
+      // Try to get all results with a large page_size first
+      const response = await this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=10000`);
+      
+      // Handle paginated response
+      if (response && response.results && Array.isArray(response.results)) {
+        console.log(`API: Search returned ${response.results.length} products out of ${response.count} total`);
+        
+        // If we got all results in one page, return them
+        if (response.results.length >= (response.count || 0)) {
+          return response.results;
+        }
+        
+        // If there are more results, fetch all pages
+        const allResults = [...response.results];
+        let nextPage = 2;
+        
+        while (allResults.length < (response.count || 0)) {
+          try {
+            const nextResponse = await this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=10000&page=${nextPage}`);
+            if (nextResponse && nextResponse.results && Array.isArray(nextResponse.results) && nextResponse.results.length > 0) {
+              allResults.push(...nextResponse.results);
+              nextPage++;
+            } else {
+              break;
+            }
+          } catch (error) {
+            console.warn(`Failed to fetch page ${nextPage}:`, error);
+            break;
+          }
+        }
+        
+        console.log(`API: Total search results fetched: ${allResults.length}`);
+        return allResults;
+      } else if (Array.isArray(response)) {
+        console.log(`API: Search returned ${response.length} products (direct array)`);
+        return response;
+      } else {
+        console.log('API: Unexpected search response format:', response);
+        return [];
+      }
+    } catch (error) {
+      console.error('API: Error in searchProducts:', error);
+      return [];
+    }
   }
 
   static async getProduct(id: number) {

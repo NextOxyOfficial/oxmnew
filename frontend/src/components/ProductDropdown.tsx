@@ -60,7 +60,26 @@ const ProductDropdown = memo<ProductDropdownProps>(
               {isSearching ? "Searching products..." : "Loading products..."}
             </div>
           ) : searchResults.length > 0 ? (
-            <div className="max-h-[30rem] overflow-y-auto dropdown-scroll">
+            <div className="max-h-[30rem] overflow-y-auto dropdown-scroll" style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgb(71 85 105) rgb(30 41 59)'
+            }}>
+              <style jsx>{`
+                .dropdown-scroll::-webkit-scrollbar {
+                  width: 6px;
+                }
+                .dropdown-scroll::-webkit-scrollbar-track {
+                  background: rgb(30 41 59);
+                  border-radius: 3px;
+                }
+                .dropdown-scroll::-webkit-scrollbar-thumb {
+                  background: rgb(71 85 105);
+                  border-radius: 3px;
+                }
+                .dropdown-scroll::-webkit-scrollbar-thumb:hover {
+                  background: rgb(100 116 139);
+                }
+              `}</style>
               {searchResults.map((product) => (
                 <div
                   key={product.id}
