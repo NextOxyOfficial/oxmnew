@@ -46,7 +46,7 @@ const ProductDropdown = memo<ProductDropdownProps>(
     return (
       <>
         <div
-          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-80 overflow-hidden"
+          className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-[32rem] overflow-hidden"
           style={{
             bottom: "auto",
             top: "100%",
@@ -60,8 +60,8 @@ const ProductDropdown = memo<ProductDropdownProps>(
               {isSearching ? "Searching products..." : "Loading products..."}
             </div>
           ) : searchResults.length > 0 ? (
-            <div className="max-h-60 overflow-y-auto dropdown-scroll">
-              {searchResults.slice(0, 5).map((product) => (
+            <div className="max-h-[30rem] overflow-y-auto dropdown-scroll">
+              {searchResults.map((product) => (
                 <div
                   key={product.id}
                   onClick={() => {
@@ -160,13 +160,6 @@ const ProductDropdown = memo<ProductDropdownProps>(
               <div className="text-xs mt-1 text-slate-500">
                 Try searching by product name, product code, or category
               </div>
-            </div>
-          )}
-          {/* Show indicator when there are more than 5 results */}
-          {searchResults.length > 5 && (
-            <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
-              Showing 5 of {searchResults.length} results. Type more to refine
-              search.
             </div>
           )}
         </div>

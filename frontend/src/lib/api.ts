@@ -1083,7 +1083,8 @@ export class ApiService {
     if (!query || query.trim().length < 1) {
       return [];
     }
-    return this.get(`/products/?search=${encodeURIComponent(query.trim())}`);
+    // Add page_size parameter to get all matching products instead of limiting to 10
+    return this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=1000`);
   }
 
   static async getProduct(id: number) {
