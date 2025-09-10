@@ -8,17 +8,22 @@ const isProduction = () => {
   const nodeEnvProduction = process.env.NODE_ENV === 'production';
   const notLocalhost = typeof window !== 'undefined' && 
          !window.location.hostname.includes('localhost') &&
-         !window.location.hostname.includes('127.0.0.1');
+         !window.location.hostname.includes('127.0.0.1') &&
+         !window.location.hostname.includes('dev');
   
   const result = nodeEnvProduction || notLocalhost;
   
-  // Debug logging
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-    console.log('Production detection:', {
+  // Always log production detection for debugging
+  if (typeof window !== 'undefined') {
+    console.log('🔍 Production detection:', {
       nodeEnvProduction,
       notLocalhost,
       hostname: window.location.hostname,
-      result
+      href: window.location.href,
+      env: process.env.NODE_ENV,
+      result,
+      envApiUrl: process.env.NEXT_PUBLIC_API_URL,
+      envBackendUrl: process.env.NEXT_PUBLIC_BACKEND_URL
     });
   }
   
@@ -28,16 +33,38 @@ const isProduction = () => {
 // Get the production backend URL based on current domain
 const getProductionBackendUrl = () => {
   if (typeof window !== 'undefined') {
-    const url = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
-    
-    // Debug logging
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Production backend URL:', url);
+    // If we have environment variable, use it in production
+    if (process.env.NEXT_PUBLIC_BACKEND_URL && process.env.NEXT_PUBLIC_BACKEND_URL !== "http://localhost:8000") {
+      console.log('🌐 Using environment backend URL:', process.env.NEXT_PUBLIC_BACKEND_URL);
+      return process.env.NEXT_PUBLIC_BACKEND_URL;
     }
     
+    // Fallback to current domain
+    const url = `${window.location.protocol}//${window.location.hostname}${window.location.port && window.location.port !== '80' && window.location.port !== '443' ? ':' + window.location.port : ''}`;
+    
+    console.log('🌐 Using dynamic backend URL:', url);
     return url;
   }
   return BACKEND_BASE_URL;
+};
+
+// Get the API URL for requests
+const getApiUrl = () => {
+  if (isProduction()) {
+    // In production, prefer environment variable, fallback to dynamic
+    if (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL !== "http://localhost:8000/api") {
+      console.log('🚀 Using environment API URL:', process.env.NEXT_PUBLIC_API_URL);
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    
+    const backendUrl = getProductionBackendUrl();
+    const apiUrl = `${backendUrl}/api`;
+    console.log('🚀 Using dynamic API URL:', apiUrl);
+    return apiUrl;
+  }
+  
+  console.log('💻 Using development API URL:', API_BASE_URL);
+  return API_BASE_URL;
 };
 
 // Product interfaces
@@ -219,24 +246,21 @@ interface APIKeyUsageStats {
 
 export class ApiService {
   private static async request(endpoint: string, options: RequestInit = {}) {
-    // Use dynamic API URL for production
-    const apiUrl = isProduction() 
-      ? `${getProductionBackendUrl()}/api` 
-      : API_BASE_URL;
+    // Use centralized API URL function
+    const apiUrl = getApiUrl();
     const url = `${apiUrl}${endpoint}`;
     const token = AuthToken.get();
 
-    // Debug logging for API requests
-    if (process.env.NODE_ENV === 'development') {
-      console.log('API Request:', {
-        endpoint,
-        apiUrl,
-        url,
-        isProduction: isProduction(),
-        API_BASE_URL,
-        BACKEND_BASE_URL
-      });
-    }
+    // Always log API requests for debugging upload issues
+    console.log('📡 API Request:', {
+      endpoint,
+      apiUrl,
+      url,
+      isProduction: isProduction(),
+      method: options.method || 'GET',
+      hasToken: !!token,
+      isFormData: options.body instanceof FormData
+    });
 
     const headers: HeadersInit = {};
 
@@ -468,23 +492,55 @@ export class ApiService {
   }
 
   static async uploadStoreLogo(file: File) {
+    console.log('🖼️ Starting store logo upload:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      apiUrl: getApiUrl(),
+      isProduction: isProduction()
+    });
+    
     const formData = new FormData();
     formData.append("store_logo", file);
 
-    return this.request("/auth/profile/upload-logo/", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const response = await this.request("/auth/profile/upload-logo/", {
+        method: "POST",
+        body: formData,
+      });
+      
+      console.log('✅ Store logo upload successful:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Store logo upload failed:', error);
+      throw error;
+    }
   }
 
   static async uploadBannerImage(file: File) {
+    console.log('🖼️ Starting banner image upload:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      apiUrl: getApiUrl(),
+      isProduction: isProduction()
+    });
+    
     const formData = new FormData();
     formData.append("banner_image", file);
 
-    return this.request("/auth/profile/upload-banner/", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const response = await this.request("/auth/profile/upload-banner/", {
+        method: "POST",
+        body: formData,
+      });
+      
+      console.log('✅ Banner image upload successful:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Banner image upload failed:', error);
+      throw error;
+    }
   }
 
   static async removeStoreLogo() {

@@ -1,4 +1,5 @@
 import json
+import os
 
 import requests
 from django.conf import settings
@@ -469,14 +470,52 @@ def upload_store_logo(request):
     Upload store logo
     """
     try:
+        print(f"📁 Store logo upload request from user: {request.user.username}")
+        print(f"📁 Files in request: {list(request.FILES.keys())}")
+        print(f"📁 Request method: {request.method}")
+        print(f"📁 Content type: {request.content_type}")
+        
         if "store_logo" not in request.FILES:
+            print("❌ No store_logo file in request")
             return Response(
                 {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        file = request.FILES["store_logo"]
+        print(f"📁 File details: name={file.name}, size={file.size}, content_type={file.content_type}")
+        
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        if file.content_type not in allowed_types:
+            return Response(
+                {"error": f"File type not allowed. Allowed types: {', '.join(allowed_types)}"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file size (10MB max)
+        max_size = 10 * 1024 * 1024  # 10MB
+        if file.size > max_size:
+            return Response(
+                {"error": "File size too large. Maximum size is 10MB"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         profile, created = UserProfile.objects.get_or_create(user=request.user)
-        profile.store_logo = request.FILES["store_logo"]
+        print(f"📁 Profile {'created' if created else 'found'} for user: {request.user.username}")
+        
+        # Delete old logo if exists
+        if profile.store_logo:
+            try:
+                old_logo_path = profile.store_logo.path
+                if os.path.exists(old_logo_path):
+                    os.remove(old_logo_path)
+                    print(f"📁 Deleted old logo: {old_logo_path}")
+            except Exception as e:
+                print(f"⚠️ Could not delete old logo: {e}")
+        
+        profile.store_logo = file
         profile.save()
+        print(f"✅ Store logo saved successfully: {profile.store_logo.url}")
 
         return Response(
             {
@@ -487,6 +526,9 @@ def upload_store_logo(request):
         )
 
     except Exception as e:
+        print(f"❌ Store logo upload error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -497,14 +539,52 @@ def upload_banner_image(request):
     Upload banner image
     """
     try:
+        print(f"📁 Banner image upload request from user: {request.user.username}")
+        print(f"📁 Files in request: {list(request.FILES.keys())}")
+        print(f"📁 Request method: {request.method}")
+        print(f"📁 Content type: {request.content_type}")
+        
         if "banner_image" not in request.FILES:
+            print("❌ No banner_image file in request")
             return Response(
                 {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        file = request.FILES["banner_image"]
+        print(f"📁 File details: name={file.name}, size={file.size}, content_type={file.content_type}")
+        
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        if file.content_type not in allowed_types:
+            return Response(
+                {"error": f"File type not allowed. Allowed types: {', '.join(allowed_types)}"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file size (10MB max)
+        max_size = 10 * 1024 * 1024  # 10MB
+        if file.size > max_size:
+            return Response(
+                {"error": "File size too large. Maximum size is 10MB"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         profile, created = UserProfile.objects.get_or_create(user=request.user)
-        profile.banner_image = request.FILES["banner_image"]
+        print(f"📁 Profile {'created' if created else 'found'} for user: {request.user.username}")
+        
+        # Delete old banner if exists
+        if profile.banner_image:
+            try:
+                old_banner_path = profile.banner_image.path
+                if os.path.exists(old_banner_path):
+                    os.remove(old_banner_path)
+                    print(f"📁 Deleted old banner: {old_banner_path}")
+            except Exception as e:
+                print(f"⚠️ Could not delete old banner: {e}")
+        
+        profile.banner_image = file
         profile.save()
+        print(f"✅ Banner image saved successfully: {profile.banner_image.url}")
 
         return Response(
             {
@@ -517,6 +597,9 @@ def upload_banner_image(request):
         )
 
     except Exception as e:
+        print(f"❌ Banner image upload error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

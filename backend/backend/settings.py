@@ -212,6 +212,18 @@ STATICFILES_FINDERS = [
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
+# Ensure media directories exist
+os.makedirs(os.path.join(MEDIA_ROOT, "store_logos"), exist_ok=True)
+os.makedirs(os.path.join(MEDIA_ROOT, "banner_images"), exist_ok=True)
+os.makedirs(os.path.join(MEDIA_ROOT, "purchase_proofs"), exist_ok=True)
+os.makedirs(os.path.join(MEDIA_ROOT, "payment_proofs"), exist_ok=True)
+os.makedirs(os.path.join(MEDIA_ROOT, "products"), exist_ok=True)
+
+# File upload settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = config("FILE_UPLOAD_MAX_MEMORY_SIZE", default=10485760, cast=int)  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = config("DATA_UPLOAD_MAX_MEMORY_SIZE", default=10485760, cast=int)  # 10MB
+FILE_UPLOAD_PERMISSIONS = 0o644
+
 # WhiteNoise configuration for static files in production
 if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
