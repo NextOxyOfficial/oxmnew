@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ApiService } from "../lib/api";
 
 interface OptimizedImageProps {
@@ -24,6 +24,14 @@ export default function OptimizedImage({
 }: OptimizedImageProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [imageKey, setImageKey] = useState(0);
+
+  // Reset state when src changes
+  useEffect(() => {
+    setImageError(false);
+    setImageLoading(true);
+    setImageKey(prev => prev + 1);
+  }, [src]);
 
   const handleError = () => {
     console.error("Image failed to load:", src);
@@ -65,16 +73,17 @@ export default function OptimizedImage({
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full h-full">
       {imageLoading && (
         <div className={`absolute inset-0 flex items-center justify-center bg-slate-800/50 ${className}`}>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
         </div>
       )}
       <img
+        key={imageKey}
         src={imageUrl}
         alt={alt}
-        className={className}
+        className={`${className} max-w-full max-h-full`}
         onError={handleError}
         onLoad={handleLoad}
         style={{ display: imageError ? 'none' : 'block' }}

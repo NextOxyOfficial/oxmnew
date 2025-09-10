@@ -46,6 +46,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [notification, setNotification] = useState<{
     isVisible: boolean;
     type: "success" | "error";
@@ -148,17 +150,42 @@ export default function ProfilePage() {
 
   const handleImageUpload = async (type: "logo" | "banner", file: File) => {
     try {
+      console.log(`Starting ${type} upload...`);
+      
+      // Set loading state
       if (type === "logo") {
-        await ApiService.uploadStoreLogo(file);
+        setIsUploadingLogo(true);
+      } else {
+        setIsUploadingBanner(true);
+      }
+      
+      let response;
+      
+      if (type === "logo") {
+        response = await ApiService.uploadStoreLogo(file);
         showNotification("success", "Store logo uploaded successfully!");
       } else {
-        await ApiService.uploadBannerImage(file);
+        response = await ApiService.uploadBannerImage(file);
         showNotification("success", "Banner image uploaded successfully!");
       }
+      
+      console.log(`${type} upload response:`, response);
+      
+      // Force refresh profile data after successful upload
+      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay to ensure backend processing
       await fetchProfile();
+      
+      console.log(`Profile refreshed after ${type} upload`);
     } catch (error) {
       console.error(`Failed to upload ${type}:`, error);
       showNotification("error", `Failed to upload ${type}. Please try again.`);
+    } finally {
+      // Clear loading state
+      if (type === "logo") {
+        setIsUploadingLogo(false);
+      } else {
+        setIsUploadingBanner(false);
+      }
     }
   };
 
@@ -266,7 +293,7 @@ export default function ProfilePage() {
               {!isEditing ? (
                 <button
                   onClick={handleEdit}
-                  className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg"
+                  className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg cursor-pointer"
                 >
                   <svg
                     className="w-4 h-4"
@@ -288,7 +315,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg"
+                    className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg cursor-pointer disabled:cursor-not-allowed"
                   >
                     <svg
                       className="w-4 h-4"
@@ -308,7 +335,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleCancel}
                     disabled={isSaving}
-                    className="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all duration-200"
+                    className="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all duration-200 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <svg
                       className="w-4 h-4"
@@ -774,18 +801,25 @@ export default function ProfilePage() {
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Store Logo
                   </label>
-                  <div className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group">
-                    {profileData.profile.store_logo ? (
-                      <div className="relative w-full h-full">
+                  <div className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group overflow-hidden">
+                    {isUploadingLogo ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto mb-2"></div>
+                          <p className="text-slate-400 text-sm">Uploading logo...</p>
+                        </div>
+                      </div>
+                    ) : profileData.profile.store_logo ? (
+                      <div className="relative w-full h-full overflow-hidden">
                         <OptimizedImage
                           src={profileData.profile.store_logo}
                           alt="Store Logo"
-                          className="w-full h-full object-contain rounded-lg"
+                          className="w-full h-full object-contain rounded-lg max-w-full max-h-full"
                           fallbackText="Logo failed to load"
                         />
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg">
                           <div className="flex space-x-2">
-                            <label className="cursor-pointer p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+                            <label className={`cursor-pointer p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors ${isUploadingLogo ? 'opacity-50 cursor-not-allowed' : ''}`}>
                               <svg
                                 className="w-4 h-4"
                                 fill="none"
@@ -803,15 +837,16 @@ export default function ProfilePage() {
                                 type="file"
                                 accept="image/*"
                                 className="hidden"
+                                disabled={isUploadingLogo}
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
-                                  if (file) handleImageUpload("logo", file);
+                                  if (file && !isUploadingLogo) handleImageUpload("logo", file);
                                 }}
                               />
                             </label>
                             <button
                               onClick={() => handleRemoveImage("logo")}
-                              className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors flex items-center gap-1"
+                              className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors flex items-center gap-1 cursor-pointer"
                             >
                               <svg
                                 className="w-4 h-4"
@@ -831,7 +866,7 @@ export default function ProfilePage() {
                         </div>
                       </div>
                     ) : (
-                      <label className="cursor-pointer w-full h-full flex items-center justify-center">
+                      <label className={`cursor-pointer w-full h-full flex items-center justify-center ${isUploadingLogo ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <div className="text-center">
                           <svg
                             className="mx-auto h-12 w-12 text-slate-400 mb-2"
@@ -849,7 +884,7 @@ export default function ProfilePage() {
                           <p className="text-slate-400 text-sm mb-3">
                             No logo uploaded
                           </p>
-                          <span className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 shadow-lg">
+                          <span className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 shadow-lg cursor-pointer">
                             Upload Logo
                           </span>
                         </div>
@@ -857,9 +892,10 @@ export default function ProfilePage() {
                           type="file"
                           accept="image/*"
                           className="hidden"
+                          disabled={isUploadingLogo}
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) handleImageUpload("logo", file);
+                            if (file && !isUploadingLogo) handleImageUpload("logo", file);
                           }}
                         />
                       </label>
@@ -872,18 +908,25 @@ export default function ProfilePage() {
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Banner Image
                   </label>
-                  <div className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group">
-                    {profileData.profile.banner_image ? (
-                      <div className="relative w-full h-full">
+                  <div className="w-full h-32 border-2 border-dashed border-slate-700/50 rounded-lg flex items-center justify-center bg-slate-800/50 hover:border-slate-600 transition-all duration-200 cursor-pointer relative group overflow-hidden">
+                    {isUploadingBanner ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto mb-2"></div>
+                          <p className="text-slate-400 text-sm">Uploading banner...</p>
+                        </div>
+                      </div>
+                    ) : profileData.profile.banner_image ? (
+                      <div className="relative w-full h-full overflow-hidden">
                         <OptimizedImage
                           src={profileData.profile.banner_image}
                           alt="Banner Image"
-                          className="w-full h-full object-cover rounded-lg"
+                          className="w-full h-full object-cover rounded-lg max-w-full max-h-full"
                           fallbackText="Banner failed to load"
                         />
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg">
                           <div className="flex space-x-2">
-                            <label className="cursor-pointer p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+                            <label className={`cursor-pointer p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors ${isUploadingBanner ? 'opacity-50 cursor-not-allowed' : ''}`}>
                               <svg
                                 className="w-4 h-4"
                                 fill="none"
@@ -901,15 +944,16 @@ export default function ProfilePage() {
                                 type="file"
                                 accept="image/*"
                                 className="hidden"
+                                disabled={isUploadingBanner}
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
-                                  if (file) handleImageUpload("banner", file);
+                                  if (file && !isUploadingBanner) handleImageUpload("banner", file);
                                 }}
                               />
                             </label>
                             <button
                               onClick={() => handleRemoveImage("banner")}
-                              className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors flex items-center gap-1"
+                              className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors flex items-center gap-1 cursor-pointer"
                             >
                               <svg
                                 className="w-4 h-4"
@@ -929,7 +973,7 @@ export default function ProfilePage() {
                         </div>
                       </div>
                     ) : (
-                      <label className="cursor-pointer w-full h-full flex items-center justify-center">
+                      <label className={`cursor-pointer w-full h-full flex items-center justify-center ${isUploadingBanner ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <div className="text-center">
                           <svg
                             className="mx-auto h-12 w-12 text-slate-400 mb-2"
@@ -947,7 +991,7 @@ export default function ProfilePage() {
                           <p className="text-slate-400 text-sm mb-3">
                             No banner uploaded
                           </p>
-                          <span className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 shadow-lg">
+                          <span className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 shadow-lg cursor-pointer">
                             Upload Banner
                           </span>
                         </div>
@@ -955,9 +999,10 @@ export default function ProfilePage() {
                           type="file"
                           accept="image/*"
                           className="hidden"
+                          disabled={isUploadingBanner}
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) handleImageUpload("banner", file);
+                            if (file && !isUploadingBanner) handleImageUpload("banner", file);
                           }}
                         />
                       </label>

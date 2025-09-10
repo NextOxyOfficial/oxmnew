@@ -1819,6 +1819,10 @@ export class ApiService {
 
     const fullUrl = `${BACKEND_BASE_URL}${cleanPath}`;
 
+    // Add cache-busting parameter for better image refreshing
+    const timestamp = Date.now();
+    const urlWithCacheBust = `${fullUrl}?t=${timestamp}`;
+
     // Debug logging for development
     if (process.env.NODE_ENV === "development") {
       console.log("Image URL constructed:", {
@@ -1826,10 +1830,11 @@ export class ApiService {
         cleanPath,
         BACKEND_BASE_URL,
         fullUrl,
+        urlWithCacheBust,
       });
     }
 
-    return fullUrl;
+    return urlWithCacheBust;
   }
 
   static async sendSmsNotification(phone: string, message: string) {
