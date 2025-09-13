@@ -24,7 +24,7 @@ function ProductsPageContent() {
   const [searchInput, setSearchInput] = useState(""); // For immediate UI updates
   const [searchTerm, setSearchTerm] = useState(""); // For debounced API calls
   const [filterCategory, setFilterCategory] = useState("all");
-  const [sortBy, setSortBy] = useState("name");
+  const [sortBy, setSortBy] = useState("newest");
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [loadingStates, setLoadingStates] = useState<{
     deleting: { [key: string]: boolean };
@@ -238,6 +238,9 @@ function ProductsPageContent() {
         // Add ordering
         if (sortBy) {
           switch (sortBy) {
+            case "newest":
+              params.ordering = "-created_at";
+              break;
             case "name":
               params.ordering = "name";
               break;
@@ -254,7 +257,7 @@ function ProductsPageContent() {
               params.ordering = "sell_price";
               break;
             default:
-              params.ordering = "name";
+              params.ordering = "-created_at";
           }
         }
 
@@ -1165,6 +1168,9 @@ function ProductsPageContent() {
                     onChange={(e) => setSortBy(e.target.value)}
                     className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm w-full lg:min-w-[180px] lg:w-auto cursor-pointer"
                   >
+                    <option value="newest" className="bg-slate-800">
+                      Newest First
+                    </option>
                     <option value="name" className="bg-slate-800">
                       Sort by Name
                     </option>
