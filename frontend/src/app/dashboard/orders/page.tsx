@@ -111,23 +111,198 @@ export default function OrdersPage() {
   });
   const [isStatsLoading, setIsStatsLoading] = useState(true);
 
+  // Function to update URL parameters for orders
+  const updateOrdersUrlParams = (updates: { 
+    page?: number; 
+    pageSize?: number;
+    search?: string;
+    customer?: string;
+    sort?: string;
+  }) => {
+    const current = new URLSearchParams(searchParams);
+    
+    if (updates.page !== undefined) {
+      if (updates.page === 1) {
+        current.delete('page'); // Remove page=1 to keep URLs clean
+      } else {
+        current.set('page', updates.page.toString());
+      }
+    }
+    
+    if (updates.pageSize !== undefined) {
+      if (updates.pageSize === 10) {
+        current.delete('pageSize'); // Remove default page size to keep URLs clean
+      } else {
+        current.set('pageSize', updates.pageSize.toString());
+      }
+    }
+
+    if (updates.search !== undefined) {
+      if (updates.search === '') {
+        current.delete('search');
+      } else {
+        current.set('search', updates.search);
+      }
+    }
+
+    if (updates.customer !== undefined) {
+      if (updates.customer === 'all') {
+        current.delete('customer');
+      } else {
+        current.set('customer', updates.customer);
+      }
+    }
+
+    if (updates.sort !== undefined) {
+      if (updates.sort === 'date') {
+        current.delete('sort'); // Remove default sort to keep URLs clean
+      } else {
+        current.set('sort', updates.sort);
+      }
+    }
+
+    const search = current.toString();
+    const query = search ? `?${search}` : '';
+    
+    // Use replace to avoid adding to browser history for every change
+    router.replace(`/dashboard/orders${query}`, { scroll: false });
+  };
+
+  // Function to update URL parameters for products
+  const updateProductsUrlParams = (updates: { 
+    page?: number; 
+    pageSize?: number;
+    search?: string;
+    sort?: string;
+  }) => {
+    const current = new URLSearchParams(searchParams);
+    
+    // Set active tab
+    current.set('tab', 'products');
+    
+    if (updates.page !== undefined) {
+      if (updates.page === 1) {
+        current.delete('productsPage');
+      } else {
+        current.set('productsPage', updates.page.toString());
+      }
+    }
+    
+    if (updates.pageSize !== undefined) {
+      if (updates.pageSize === 50) {
+        current.delete('productsPageSize');
+      } else {
+        current.set('productsPageSize', updates.pageSize.toString());
+      }
+    }
+
+    if (updates.search !== undefined) {
+      if (updates.search === '') {
+        current.delete('productsSearch');
+      } else {
+        current.set('productsSearch', updates.search);
+      }
+    }
+
+    if (updates.sort !== undefined) {
+      if (updates.sort === 'last_sold') {
+        current.delete('productsSort');
+      } else {
+        current.set('productsSort', updates.sort);
+      }
+    }
+
+    const search = current.toString();
+    const query = search ? `?${search}` : '';
+    
+    router.replace(`/dashboard/orders${query}`, { scroll: false });
+  };
+
   // Debounce search input to prevent excessive API calls
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       setSearchTerm(searchInput);
+      if (activeTab === 'orders') {
+        updateOrdersUrlParams({ search: searchInput, page: 1 });
+      }
     }, 500); // 500ms delay
 
     return () => clearTimeout(debounceTimer);
-  }, [searchInput]);
+  }, [searchInput, activeTab]);
 
   // Debounce product search input
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       setProductSearchTerm(productSearchInput);
+      if (activeTab === 'products') {
+        updateProductsUrlParams({ search: productSearchInput, page: 1 });
+      }
     }, 500);
 
     return () => clearTimeout(debounceTimer);
-  }, [productSearchInput]);
+  }, [productSearchInput, activeTab]);
+
+  // Initial URL parameter setup
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'products') {
+      setActiveTab('products');
+    }
+  }, []); // Run only once on mount
+
+  // Handle URL parameter changes for orders (browser back/forward navigation and page reloads)
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    const pageParam = searchParams.get('page');
+    const sizeParam = searchParams.get('pageSize');
+    const searchParam = searchParams.get('search');
+    const customerParam = searchParams.get('customer');
+    const sortParam = searchParams.get('sort');
+    
+    // Set active tab based on URL
+    if (tabParam === 'products') {
+      setActiveTab('products');
+    } else {
+      setActiveTab('orders');
+    }
+    
+    if (activeTab === 'orders' || !tabParam) {
+      const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
+      const urlPageSize = sizeParam ? parseInt(sizeParam, 10) : 10;
+      const urlSearch = searchParam || '';
+      const urlCustomer = customerParam || 'all';
+      const urlSort = sortParam || 'date';
+      
+      // Only update state if different from current values
+      if (urlPage !== currentPage) setCurrentPage(urlPage);
+      if (urlPageSize !== pageSize) setPageSize(urlPageSize);
+      if (urlSearch !== searchInput) setSearchInput(urlSearch);
+      if (urlCustomer !== filterCustomer) setFilterCustomer(urlCustomer);
+      if (urlSort !== sortBy) setSortBy(urlSort);
+    }
+  }, [searchParams.toString()]);
+
+  // Handle URL parameter changes for products
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    const pageParam = searchParams.get('productsPage');
+    const sizeParam = searchParams.get('productsPageSize');
+    const searchParam = searchParams.get('productsSearch');
+    const sortParam = searchParams.get('productsSort');
+    
+    if (tabParam === 'products') {
+      const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
+      const urlPageSize = sizeParam ? parseInt(sizeParam, 10) : 50;
+      const urlSearch = searchParam || '';
+      const urlSort = sortParam || 'last_sold';
+      
+      // Only update state if different from current values
+      if (urlPage !== productCurrentPage) setProductCurrentPage(urlPage);
+      if (urlPageSize !== productPageSize) setProductPageSize(urlPageSize);
+      if (urlSearch !== productSearchInput) setProductSearchInput(urlSearch);
+      if (urlSort !== productSortBy) setProductSortBy(urlSort);
+    }
+  }, [searchParams.toString()]);
 
   // Handle success message from edit page
   useEffect(() => {
@@ -453,27 +628,19 @@ export default function OrdersPage() {
     }
   }, [activeTab, productCurrentPage, productPageSize, productSearchTerm, productSortBy]);
 
+  // Fetch orders when dependencies change
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      fetchOrders();
+    }
+  }, [fetchOrders, activeTab]);
+
   // Fetch product sales when dependencies change
   useEffect(() => {
     if (activeTab === "products") {
       fetchProductSales();
     }
-  }, [fetchProductSales]);
-
-  // Fetch orders when dependencies change
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
-  // Reset to first page when search or filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterCustomer]);
-
-  // Reset product page when search or sort changes
-  useEffect(() => {
-    setProductCurrentPage(1);
-  }, [productSearchTerm, productSortBy]);
+  }, [fetchProductSales, activeTab]);
 
   const fetchUserProfile = useCallback(async () => {
     try {
@@ -521,11 +688,13 @@ export default function OrdersPage() {
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
+    updateOrdersUrlParams({ page });
   }, []);
 
   const handlePageSizeChange = useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentPage(1); // Reset to first page when changing page size
+    updateOrdersUrlParams({ page: 1, pageSize: newPageSize });
   }, []);
 
   const handleAddOrder = useCallback(() => {
@@ -834,28 +1003,45 @@ export default function OrdersPage() {
   // Memoized state setters
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value);
+    // URL update is handled in debounced effect
   }, []);
 
   const handleFilterChange = useCallback((value: string) => {
     setFilterCustomer(value);
+    setCurrentPage(1); // Reset to first page when filtering
+    updateOrdersUrlParams({ customer: value, page: 1 });
   }, []);
 
   const handleSortChange = useCallback((value: string) => {
     setSortBy(value);
+    updateOrdersUrlParams({ sort: value });
   }, []);
 
   // Product tab handlers
   const handleProductSearchChange = useCallback((value: string) => {
     setProductSearchInput(value);
+    // URL update is handled in debounced effect
   }, []);
 
   const handleProductSortChange = useCallback((value: string) => {
     setProductSortBy(value);
+    setProductCurrentPage(1); // Reset to first page when sorting
+    updateProductsUrlParams({ sort: value, page: 1 });
   }, []);
 
   const handleTabChange = useCallback((tab: "orders" | "products") => {
     setActiveTab(tab);
-  }, []);
+    // Update URL with tab parameter
+    const current = new URLSearchParams(searchParams);
+    if (tab === 'products') {
+      current.set('tab', 'products');
+    } else {
+      current.delete('tab'); // Default to orders
+    }
+    const search = current.toString();
+    const query = search ? `?${search}` : '';
+    router.replace(`/dashboard/orders${query}`, { scroll: false });
+  }, [searchParams, router]);
 
   // Handle product name click navigation
   const handleProductClick = useCallback((productId?: number) => {
@@ -867,11 +1053,13 @@ export default function OrdersPage() {
   // Product pagination handlers
   const handleProductPageChange = useCallback((page: number) => {
     setProductCurrentPage(page);
+    updateProductsUrlParams({ page });
   }, []);
 
   const handleProductPageSizeChange = useCallback((newPageSize: number) => {
     setProductPageSize(newPageSize);
     setProductCurrentPage(1); // Reset to first page when changing page size
+    updateProductsUrlParams({ page: 1, pageSize: newPageSize });
   }, []);
 
   // Excel export functionality
