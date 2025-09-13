@@ -221,36 +221,37 @@ export default function OrdersPage() {
   // Debounce search input to prevent excessive API calls
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      setSearchTerm(searchInput);
-      if (activeTab === 'orders') {
-        updateOrdersUrlParams({ search: searchInput, page: 1 });
+      // Only update if the search input actually changed from user typing
+      if (searchTerm !== searchInput) {
+        setSearchTerm(searchInput);
+        if (activeTab === 'orders') {
+          updateOrdersUrlParams({ search: searchInput, page: 1 });
+        }
       }
     }, 500); // 500ms delay
 
     return () => clearTimeout(debounceTimer);
-  }, [searchInput, activeTab]);
+  }, [searchInput, activeTab]); // Removed searchTerm from dependency to avoid loops
 
   // Debounce product search input
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      setProductSearchTerm(productSearchInput);
-      if (activeTab === 'products') {
-        updateProductsUrlParams({ search: productSearchInput, page: 1 });
+      // Only update if the search input actually changed from user typing
+      if (productSearchTerm !== productSearchInput) {
+        setProductSearchTerm(productSearchInput);
+        if (activeTab === 'products') {
+          updateProductsUrlParams({ search: productSearchInput, page: 1 });
+        }
       }
     }, 500);
 
     return () => clearTimeout(debounceTimer);
-  }, [productSearchInput, activeTab]);
+  }, [productSearchInput, activeTab]); // Removed productSearchTerm from dependency to avoid loops
 
-  // Initial URL parameter setup
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam === 'products') {
-      setActiveTab('products');
-    }
-  }, []); // Run only once on mount
+  // State to track if URL parameters have been initialized
+  const [urlParamsInitialized, setUrlParamsInitialized] = useState(false);
 
-  // Handle URL parameter changes for orders (browser back/forward navigation and page reloads)
+  // Initial URL parameter setup - run once on mount
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     const pageParam = searchParams.get('page');
@@ -259,50 +260,101 @@ export default function OrdersPage() {
     const customerParam = searchParams.get('customer');
     const sortParam = searchParams.get('sort');
     
-    // Set active tab based on URL
+    // Products tab parameters
+    const productsPageParam = searchParams.get('productsPage');
+    const productsSizeParam = searchParams.get('productsPageSize');
+    const productsSearchParam = searchParams.get('productsSearch');
+    const productsSortParam = searchParams.get('productsSort');
+    
+    // Set active tab first
     if (tabParam === 'products') {
       setActiveTab('products');
     } else {
       setActiveTab('orders');
     }
     
-    if (activeTab === 'orders' || !tabParam) {
-      const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
-      const urlPageSize = sizeParam ? parseInt(sizeParam, 10) : 10;
-      const urlSearch = searchParam || '';
-      const urlCustomer = customerParam || 'all';
-      const urlSort = sortParam || 'date';
-      
-      // Only update state if different from current values
-      if (urlPage !== currentPage) setCurrentPage(urlPage);
-      if (urlPageSize !== pageSize) setPageSize(urlPageSize);
-      if (urlSearch !== searchInput) setSearchInput(urlSearch);
-      if (urlCustomer !== filterCustomer) setFilterCustomer(urlCustomer);
-      if (urlSort !== sortBy) setSortBy(urlSort);
-    }
-  }, [searchParams.toString()]);
-
-  // Handle URL parameter changes for products
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    const pageParam = searchParams.get('productsPage');
-    const sizeParam = searchParams.get('productsPageSize');
-    const searchParam = searchParams.get('productsSearch');
-    const sortParam = searchParams.get('productsSort');
+    // Set orders parameters
+    const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
+    const urlPageSize = sizeParam ? parseInt(sizeParam, 10) : 10;
+    const urlSearch = searchParam || '';
+    const urlCustomer = customerParam || 'all';
+    const urlSort = sortParam || 'date';
     
-    if (tabParam === 'products') {
-      const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
-      const urlPageSize = sizeParam ? parseInt(sizeParam, 10) : 50;
-      const urlSearch = searchParam || '';
-      const urlSort = sortParam || 'last_sold';
-      
-      // Only update state if different from current values
-      if (urlPage !== productCurrentPage) setProductCurrentPage(urlPage);
-      if (urlPageSize !== productPageSize) setProductPageSize(urlPageSize);
-      if (urlSearch !== productSearchInput) setProductSearchInput(urlSearch);
-      if (urlSort !== productSortBy) setProductSortBy(urlSort);
+    setCurrentPage(urlPage);
+    setPageSize(urlPageSize);
+    setSearchInput(urlSearch);
+    setSearchTerm(urlSearch); // Also set the debounced term immediately
+    setFilterCustomer(urlCustomer);
+    setSortBy(urlSort);
+    
+    // Set products parameters
+    const urlProductsPage = productsPageParam ? parseInt(productsPageParam, 10) : 1;
+    const urlProductsPageSize = productsSizeParam ? parseInt(productsSizeParam, 10) : 50;
+    const urlProductsSearch = productsSearchParam || '';
+    const urlProductsSort = productsSortParam || 'last_sold';
+    
+    setProductCurrentPage(urlProductsPage);
+    setProductPageSize(urlProductsPageSize);
+    setProductSearchInput(urlProductsSearch);
+    setProductSearchTerm(urlProductsSearch); // Also set the debounced term immediately
+    setProductSortBy(urlProductsSort);
+    
+    // Mark URL parameters as initialized
+    setUrlParamsInitialized(true);
+  }, []); // Run only once on mount
+
+  // Handle URL parameter changes for browser navigation (back/forward)
+  useEffect(() => {
+    // Skip the initial mount since we handle it in the setup effect
+    const tabParam = searchParams.get('tab');
+    const pageParam = searchParams.get('page');
+    const sizeParam = searchParams.get('pageSize');
+    const searchParam = searchParams.get('search');
+    const customerParam = searchParams.get('customer');
+    const sortParam = searchParams.get('sort');
+    
+    // Products tab parameters
+    const productsPageParam = searchParams.get('productsPage');
+    const productsSizeParam = searchParams.get('productsPageSize');
+    const productsSearchParam = searchParams.get('productsSearch');
+    const productsSortParam = searchParams.get('productsSort');
+    
+    // Update active tab
+    const newTab = tabParam === 'products' ? 'products' : 'orders';
+    if (newTab !== activeTab) {
+      setActiveTab(newTab);
     }
-  }, [searchParams.toString()]);
+    
+    // Update orders parameters only if they changed
+    const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
+    const urlPageSize = sizeParam ? parseInt(sizeParam, 10) : 10;
+    const urlSearch = searchParam || '';
+    const urlCustomer = customerParam || 'all';
+    const urlSort = sortParam || 'date';
+    
+    if (urlPage !== currentPage) setCurrentPage(urlPage);
+    if (urlPageSize !== pageSize) setPageSize(urlPageSize);
+    if (urlSearch !== searchInput) {
+      setSearchInput(urlSearch);
+      setSearchTerm(urlSearch);
+    }
+    if (urlCustomer !== filterCustomer) setFilterCustomer(urlCustomer);
+    if (urlSort !== sortBy) setSortBy(urlSort);
+    
+    // Update products parameters only if they changed
+    const urlProductsPage = productsPageParam ? parseInt(productsPageParam, 10) : 1;
+    const urlProductsPageSize = productsSizeParam ? parseInt(productsSizeParam, 10) : 50;
+    const urlProductsSearch = productsSearchParam || '';
+    const urlProductsSort = productsSortParam || 'last_sold';
+    
+    if (urlProductsPage !== productCurrentPage) setProductCurrentPage(urlProductsPage);
+    if (urlProductsPageSize !== productPageSize) setProductPageSize(urlProductsPageSize);
+    if (urlProductsSearch !== productSearchInput) {
+      setProductSearchInput(urlProductsSearch);
+      setProductSearchTerm(urlProductsSearch);
+    }
+    if (urlProductsSort !== productSortBy) setProductSortBy(urlProductsSort);
+  }, [searchParams.toString()]); // React to URL changes only
 
   // Handle success message from edit page
   useEffect(() => {
@@ -630,17 +682,17 @@ export default function OrdersPage() {
 
   // Fetch orders when dependencies change
   useEffect(() => {
-    if (activeTab === 'orders') {
+    if (activeTab === 'orders' && urlParamsInitialized) {
       fetchOrders();
     }
-  }, [fetchOrders, activeTab]);
+  }, [fetchOrders, activeTab, urlParamsInitialized]);
 
   // Fetch product sales when dependencies change
   useEffect(() => {
-    if (activeTab === "products") {
+    if (activeTab === "products" && urlParamsInitialized) {
       fetchProductSales();
     }
-  }, [fetchProductSales, activeTab]);
+  }, [fetchProductSales, activeTab, urlParamsInitialized]);
 
   const fetchUserProfile = useCallback(async () => {
     try {
