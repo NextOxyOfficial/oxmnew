@@ -244,13 +244,34 @@ def get_my_subscription(request):
     """Get current user's subscription"""
     try:
         # Get or create user subscription (only one per user)
-        user_subscription, created = UserSubscription.objects.get_or_create(
-            user=request.user,
-            defaults={
-                'plan': SubscriptionPlan.objects.get(name='free'),
-                'active': True
-            }
-        )
+        try:
+            # First try to get the user's existing subscription
+            user_subscription = UserSubscription.objects.get(user=request.user)
+        except UserSubscription.DoesNotExist:
+            # If no subscription exists, create one with free plan
+            try:
+                free_plan = SubscriptionPlan.objects.get(name='free')
+            except SubscriptionPlan.DoesNotExist:
+                # If free plan doesn't exist, create it
+                free_plan = SubscriptionPlan.objects.create(
+                    name='free',
+                    price=0.00,
+                    period='lifetime',
+                    description='Free plan with basic features',
+                    features=[
+                        'Basic dashboard access',
+                        'Up to 5 products',
+                        'Limited customer support',
+                        'Basic reporting'
+                    ],
+                    is_popular=False
+                )
+            
+            user_subscription = UserSubscription.objects.create(
+                user=request.user,
+                plan=free_plan,
+                active=True
+            )
         
         serializer = UserSubscriptionSerializer(user_subscription)
         return Response({
