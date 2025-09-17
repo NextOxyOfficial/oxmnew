@@ -246,80 +246,44 @@ export default function AddOrderPage() {
           ? response
           : response?.results || [];
 
-        // If no backend results, fallback to local filtering
-        if (results.length === 0) {
+        // Filter backend results to ensure they actually match the search term in the product name
+        const filteredBackendResults = results.filter((product: any) => {
+          const search = query.toLowerCase().trim();
+          const productName = product.name ? product.name.toLowerCase() : '';
+          const productCode = product.product_code ? product.product_code.toLowerCase() : '';
+          
+          // Only show products that match in name or product code (most relevant fields)
+          return productName.includes(search) || productCode.includes(search);
+        });
+
+        if (filteredBackendResults.length === 0) {
+          // Fallback to local search with the same strict filtering
           const localResults = products.filter((product) => {
             const search = query.toLowerCase().trim();
+            const productName = product.name ? product.name.toLowerCase() : '';
+            const productCode = product.product_code ? product.product_code.toLowerCase() : '';
             
-            // Only proceed if search query has meaningful content
-            if (search.length < 1) return false;
-            
-            const safeIncludes = (field: string | null | undefined) => {
-              return field && 
-                     field.toString().trim().length > 0 && 
-                     field.toString().toLowerCase().includes(search);
-            };
-            
-            // Check each field explicitly and return true only if there's a match
-            const nameMatch = safeIncludes(product.name);
-            const codeMatch = safeIncludes(product.product_code);
-            const categoryMatch = safeIncludes(product.category_name);
-            const supplierMatch = safeIncludes(product.supplier_name);
-            const detailsMatch = safeIncludes(product.details);
-            
-            return nameMatch || codeMatch || categoryMatch || supplierMatch || detailsMatch;
+            // Only match in name or product code
+            return productName.includes(search) || productCode.includes(search);
           });
           setSearchResults(localResults);
         } else {
-          // Even for backend results, apply additional client-side filtering to ensure relevancy
-          const filteredResults = results.filter((product: Product) => {
-            const search = query.toLowerCase().trim();
-            if (search.length < 1) return false;
-            
-            const safeIncludes = (field: string | null | undefined) => {
-              return field && 
-                     field.toString().trim().length > 0 && 
-                     field.toString().toLowerCase().includes(search);
-            };
-            
-            return (
-              safeIncludes(product.name) ||
-              safeIncludes(product.product_code) ||
-              safeIncludes(product.category_name) ||
-              safeIncludes(product.supplier_name) ||
-              safeIncludes(product.details)
-            );
-          });
-          setSearchResults(filteredResults);
+          setSearchResults(filteredBackendResults);
         }
       } catch (error) {
         console.error("Error searching products:", error);
-        // Fallback to local search on error with strict filtering
+        // Fallback to local search with strict filtering
         const localResults = products.filter((product) => {
           const search = query.toLowerCase().trim();
+          const productName = product.name ? product.name.toLowerCase() : '';
+          const productCode = product.product_code ? product.product_code.toLowerCase() : '';
           
-          // Only proceed if search query has meaningful content
-          if (search.length < 1) return false;
-          
-          const safeIncludes = (field: string | null | undefined) => {
-            return field && 
-                   field.toString().trim().length > 0 && 
-                   field.toString().toLowerCase().includes(search);
-          };
-          
-          // Check each field explicitly and return true only if there's a match
-          const nameMatch = safeIncludes(product.name);
-          const codeMatch = safeIncludes(product.product_code);
-          const categoryMatch = safeIncludes(product.category_name);
-          const supplierMatch = safeIncludes(product.supplier_name);
-          const detailsMatch = safeIncludes(product.details);
-          
-          return nameMatch || codeMatch || categoryMatch || supplierMatch || detailsMatch;
+          // Only match in name or product code
+          return productName.includes(search) || productCode.includes(search);
         });
         setSearchResults(localResults);
       } finally {
         setIsSearchingProducts(false);
-        // Mark that search is complete, keep actively typing flag for focus restoration
       }
     },
     [products]
