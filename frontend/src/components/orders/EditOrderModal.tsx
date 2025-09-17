@@ -19,7 +19,9 @@ interface EditOrderData {
   customer_address: string;
   customer_company: string;
   notes: string;
+  discount_type: "percentage" | "flat";
   discount_percentage: number;
+  discount_flat_amount: number;
   vat_percentage: number;
   status: string;
   items: OrderItem[];
@@ -41,7 +43,9 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
     customer_address: "",
     customer_company: "",
     notes: "",
+    discount_type: "percentage",
     discount_percentage: 0,
+    discount_flat_amount: 0,
     vat_percentage: 0,
     status: "pending",
     items: [],
@@ -57,7 +61,9 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
         customer_address: order.customer_address || "",
         customer_company: order.customer_company || "",
         notes: order.notes || "",
+        discount_type: order.discount_type || "percentage",
         discount_percentage: order.discount_percentage || 0,
+        discount_flat_amount: order.discount_flat_amount || 0,
         vat_percentage: order.vat_percentage || 0,
         status: order.status || "pending",
         items: order.items || [],
@@ -139,7 +145,9 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
       (sum, item) => sum + item.total_price,
       0
     );
-    const discountAmount = (subtotal * orderData.discount_percentage) / 100;
+    const discountAmount = orderData.discount_type === "percentage" 
+      ? (subtotal * orderData.discount_percentage) / 100
+      : orderData.discount_flat_amount;
     const afterDiscount = subtotal - discountAmount;
     const vatAmount = (afterDiscount * orderData.vat_percentage) / 100;
     const total = afterDiscount + vatAmount;
@@ -166,9 +174,11 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
         customer_address: orderData.customer_address,
         customer_company: orderData.customer_company,
         notes: orderData.notes,
+        discount_type: orderData.discount_type,
         discount_percentage: orderData.discount_percentage,
+        discount_flat_amount: orderData.discount_flat_amount,
         vat_percentage: orderData.vat_percentage,
-        status: orderData.status,
+        status: orderData.status as any,
         subtotal: totals.subtotal,
         discount_amount: totals.discountAmount,
         vat_amount: totals.vatAmount,

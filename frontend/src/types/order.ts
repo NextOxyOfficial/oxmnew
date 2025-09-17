@@ -47,7 +47,9 @@ export interface Order {
   sale_date: string;
   // Pricing and discounts
   subtotal?: number;
+  discount_type?: "percentage" | "flat";
   discount_percentage?: number;
+  discount_flat_amount?: number;
   discount_amount?: number;
   vat_percentage?: number;
   vat_amount?: number;

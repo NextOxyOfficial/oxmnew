@@ -338,7 +338,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
                   Buy Price
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                  Sell Price
+                  Total Price
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
                   Profit
@@ -394,11 +394,11 @@ const OrdersList: React.FC<OrdersListProps> = ({
                   <td className="py-4 px-4 text-sm text-slate-100">
                     {formatCurrency(order.total_buy_price || 0)}
                   </td>
-                  <td className="py-4 px-4 text-sm text-slate-100">
-                    {formatCurrency(order.total_sell_price || 0)}
+                  <td className="py-4 px-4 text-sm font-bold text-cyan-400">
+                    {formatCurrency(order.total_amount || 0)}
                   </td>
-                  <td className="py-4 px-4 text-sm font-medium text-cyan-400">
-                    {formatCurrency(order.gross_profit || 0)}
+                  <td className="py-4 px-4 text-sm font-medium text-green-400">
+                    {formatCurrency((order.total_amount || 0) - (order.total_buy_price || 0))}
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">

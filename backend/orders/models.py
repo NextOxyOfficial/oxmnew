@@ -44,8 +44,14 @@ class Order(models.Model):
     subtotal = models.DecimalField(
         max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
     )
+    discount_type = models.CharField(
+        max_length=20, choices=[("percentage", "Percentage"), ("flat", "Flat Amount")], default="percentage"
+    )
     discount_percentage = models.DecimalField(
         max_digits=5, decimal_places=2, default=0, validators=[MinValueValidator(0)]
+    )
+    discount_flat_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
     )
     discount_amount = models.DecimalField(
         max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
@@ -144,7 +150,10 @@ class Order(models.Model):
         self.total_sell_price = items_data["total_sell"] or Decimal("0")
 
         # Calculate discount and VAT
-        self.discount_amount = (self.subtotal * self.discount_percentage) / 100
+        if self.discount_type == "flat":
+            self.discount_amount = self.discount_flat_amount
+        else:
+            self.discount_amount = (self.subtotal * self.discount_percentage) / 100
         after_discount = self.subtotal - self.discount_amount
         self.vat_amount = (after_discount * self.vat_percentage) / 100
 

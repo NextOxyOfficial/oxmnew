@@ -687,6 +687,15 @@ export default function OrdersPage() {
     }
   }, [fetchOrders, activeTab, urlParamsInitialized]);
 
+  // Handle order update success notification and refetch data
+  useEffect(() => {
+    const updated = searchParams.get("updated");
+    if (updated === "true" && activeTab === 'orders') {
+      // Refetch orders to show updated data
+      fetchOrders();
+    }
+  }, [searchParams, fetchOrders, activeTab]);
+
   // Fetch product sales when dependencies change
   useEffect(() => {
     if (activeTab === "products" && urlParamsInitialized) {

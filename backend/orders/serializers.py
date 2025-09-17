@@ -105,13 +105,21 @@ class OrderSerializer(serializers.ModelSerializer):
             "customer_company",
             "status",
             "subtotal",
+            "discount_type",
+            "discount_percentage",
+            "discount_flat_amount",
             "discount_amount",
+            "vat_percentage",
             "vat_amount",
             "total_amount",
             "paid_amount",
             "due_amount",
+            "previous_due",
+            "apply_previous_due_to_total",
             "notes",
             "due_date",
+            "employee",
+            "incentive_amount",
             "items",
             "payments",
             "total_buy_price",
@@ -333,8 +341,14 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     payments = OrderPaymentSerializer(many=True, required=False)
 
     # Financial calculation fields
+    discount_type = serializers.ChoiceField(
+        choices=[("percentage", "Percentage"), ("flat", "Flat Amount")], default="percentage"
+    )
     discount_percentage = serializers.DecimalField(
         max_digits=5, decimal_places=2, default=0
+    )
+    discount_flat_amount = serializers.DecimalField(
+        max_digits=12, decimal_places=2, default=0
     )
     vat_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, default=0)
     due_amount = serializers.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -365,7 +379,9 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             "customer_address",
             "customer_company",
             "status",
+            "discount_type",
             "discount_percentage",
+            "discount_flat_amount",
             "vat_percentage",
             "due_amount",
             "previous_due",
@@ -642,7 +658,9 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
             "customer_address",
             "customer_company",
             "status",
+            "discount_type",
             "discount_percentage",
+            "discount_flat_amount",
             "vat_percentage",
             "notes",
             "subtotal",
@@ -659,7 +677,9 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
 
         # If discount or vat percentage changed, recalculate totals
         if (
-            "discount_percentage" in validated_data
+            "discount_type" in validated_data
+            or "discount_percentage" in validated_data
+            or "discount_flat_amount" in validated_data
             or "vat_percentage" in validated_data
         ):
             instance.calculate_totals()
