@@ -216,25 +216,25 @@ export default function EditOrderPage() {
               id: item.id ? item.id.toString() : Date.now().toString(),
               product: item.product,
               variant: item.variant,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              buy_price: item.buy_price,
-              total: item.total_price || item.unit_price * item.quantity,
+              quantity: Number(item.quantity) || 0,
+              unit_price: Number(item.unit_price) || 0,
+              buy_price: Number(item.buy_price) || 0,
+              total: Number(item.total_price) || (Number(item.unit_price) || 0) * (Number(item.quantity) || 0),
               product_name: item.product_name,
               variant_details: item.variant_details,
             })) || [],
-          subtotal: fetchedOrder.subtotal || 0,
+          subtotal: Number(fetchedOrder.subtotal) || 0,
           discount_type: fetchedOrder.discount_type || "percentage",
-          discount_percentage: fetchedOrder.discount_percentage || 0,
-          discount_flat_amount: fetchedOrder.discount_flat_amount || 0,
-          discount_amount: fetchedOrder.discount_amount || 0,
-          vat_percentage: fetchedOrder.vat_percentage || 0,
-          vat_amount: fetchedOrder.vat_amount || 0,
-          due_amount: fetchedOrder.due_amount || 0,
-          previous_due: fetchedOrder.previous_due || 0,
+          discount_percentage: Number(fetchedOrder.discount_percentage) || 0,
+          discount_flat_amount: Number(fetchedOrder.discount_flat_amount) || 0,
+          discount_amount: Number(fetchedOrder.discount_amount) || 0,
+          vat_percentage: Number(fetchedOrder.vat_percentage) || 0,
+          vat_amount: Number(fetchedOrder.vat_amount) || 0,
+          due_amount: Number(fetchedOrder.due_amount) || 0,
+          previous_due: Number(fetchedOrder.previous_due) || 0,
           apply_previous_due_to_total:
             fetchedOrder.apply_previous_due_to_total || false,
-          total: fetchedOrder.total_amount || 0,
+          total: Number(fetchedOrder.total_amount) || 0,
           due_date: fetchedOrder.due_date || "",
           notes: fetchedOrder.notes || "",
           status: fetchedOrder.status || "pending",
@@ -242,17 +242,17 @@ export default function EditOrderPage() {
             fetchedOrder.payments?.map((payment: PaymentEntry) => ({
               id: payment.id ? payment.id.toString() : Date.now().toString(),
               method: payment.method,
-              amount: payment.amount,
+              amount: Number(payment.amount) || 0,
             })) || [],
-          total_payment_received: fetchedOrder.paid_amount || 0,
+          total_payment_received: Number(fetchedOrder.paid_amount) || 0,
           remaining_balance:
-            (fetchedOrder.total_amount || 0) - (fetchedOrder.paid_amount || 0),
+            Number(fetchedOrder.total_amount || 0) - Number(fetchedOrder.paid_amount || 0),
           employee_id: fetchedOrder.employee?.id,
-          incentive_amount: fetchedOrder.incentive_amount || 0,
-          net_profit: fetchedOrder.net_profit || 0,
-          total_buy_price: fetchedOrder.total_buy_price || 0,
-          total_sell_price: fetchedOrder.total_sell_price || 0,
-          gross_profit: fetchedOrder.gross_profit || 0,
+          incentive_amount: Number(fetchedOrder.incentive_amount) || 0,
+          net_profit: Number(fetchedOrder.net_profit) || 0,
+          total_buy_price: Number(fetchedOrder.total_buy_price) || 0,
+          total_sell_price: Number(fetchedOrder.total_sell_price) || 0,
+          gross_profit: Number(fetchedOrder.gross_profit) || 0,
         });
 
         // Set customer type and selected customer
@@ -378,8 +378,10 @@ export default function EditOrderPage() {
     });
 
     const subtotal = items.reduce((sum, item) => {
-      const itemTotal = Number(item.total) || 0;
+      const itemTotal = parseFloat(String(item.total)) || 0;
       console.log(`Adding to subtotal: ${itemTotal} (from ${item.product_name})`);
+      console.log(`  - Original item.total: ${item.total}, type: ${typeof item.total}`);
+      console.log(`  - Parsed itemTotal: ${itemTotal}, type: ${typeof itemTotal}`);
       return sum + itemTotal;
     }, 0);
     
@@ -804,7 +806,11 @@ export default function EditOrderPage() {
       ...prev,
       items: prev.items.map((item) =>
         item.id === itemId
-          ? { ...item, quantity, total: quantity * item.unit_price }
+          ? { 
+              ...item, 
+              quantity: Number(quantity), 
+              total: Number(quantity) * Number(item.unit_price) 
+            }
           : item
       ),
     }));
@@ -821,8 +827,8 @@ export default function EditOrderPage() {
         item.id === itemId
           ? {
               ...item,
-              unit_price: unitPrice,
-              total: item.quantity * unitPrice,
+              unit_price: Number(unitPrice),
+              total: Number(item.quantity) * Number(unitPrice),
             }
           : item
       ),
