@@ -250,9 +250,38 @@ export default function AddOrderPage() {
         if (results.length === 0) {
           const localResults = products.filter((product) => {
             const search = query.toLowerCase().trim();
+            
+            // Only proceed if search query has meaningful content
+            if (search.length < 1) return false;
+            
             const safeIncludes = (field: string | null | undefined) => {
-              return field && field.toString().toLowerCase().includes(search);
+              return field && 
+                     field.toString().trim().length > 0 && 
+                     field.toString().toLowerCase().includes(search);
             };
+            
+            // Check each field explicitly and return true only if there's a match
+            const nameMatch = safeIncludes(product.name);
+            const codeMatch = safeIncludes(product.product_code);
+            const categoryMatch = safeIncludes(product.category_name);
+            const supplierMatch = safeIncludes(product.supplier_name);
+            const detailsMatch = safeIncludes(product.details);
+            
+            return nameMatch || codeMatch || categoryMatch || supplierMatch || detailsMatch;
+          });
+          setSearchResults(localResults);
+        } else {
+          // Even for backend results, apply additional client-side filtering to ensure relevancy
+          const filteredResults = results.filter((product: Product) => {
+            const search = query.toLowerCase().trim();
+            if (search.length < 1) return false;
+            
+            const safeIncludes = (field: string | null | undefined) => {
+              return field && 
+                     field.toString().trim().length > 0 && 
+                     field.toString().toLowerCase().includes(search);
+            };
+            
             return (
               safeIncludes(product.name) ||
               safeIncludes(product.product_code) ||
@@ -261,25 +290,31 @@ export default function AddOrderPage() {
               safeIncludes(product.details)
             );
           });
-          setSearchResults(localResults);
-        } else {
-          setSearchResults(results);
+          setSearchResults(filteredResults);
         }
       } catch (error) {
         console.error("Error searching products:", error);
-        // Fallback to local search on error
+        // Fallback to local search on error with strict filtering
         const localResults = products.filter((product) => {
           const search = query.toLowerCase().trim();
+          
+          // Only proceed if search query has meaningful content
+          if (search.length < 1) return false;
+          
           const safeIncludes = (field: string | null | undefined) => {
-            return field && field.toString().toLowerCase().includes(search);
+            return field && 
+                   field.toString().trim().length > 0 && 
+                   field.toString().toLowerCase().includes(search);
           };
-          return (
-            safeIncludes(product.name) ||
-            safeIncludes(product.product_code) ||
-            safeIncludes(product.category_name) ||
-            safeIncludes(product.supplier_name) ||
-            safeIncludes(product.details)
-          );
+          
+          // Check each field explicitly and return true only if there's a match
+          const nameMatch = safeIncludes(product.name);
+          const codeMatch = safeIncludes(product.product_code);
+          const categoryMatch = safeIncludes(product.category_name);
+          const supplierMatch = safeIncludes(product.supplier_name);
+          const detailsMatch = safeIncludes(product.details);
+          
+          return nameMatch || codeMatch || categoryMatch || supplierMatch || detailsMatch;
         });
         setSearchResults(localResults);
       } finally {
