@@ -1,3 +1,5 @@
+import type { PaginatedTransactions, Transaction } from "@/types/banking";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 const BACKEND_BASE_URL =
@@ -710,7 +712,7 @@ export class ApiService {
   static async getAccountTransactions(
     accountId: string,
     filters?: Record<string, string>
-  ) {
+  ): Promise<PaginatedTransactions | Transaction[]> {
     let endpoint = `/banking/accounts/${accountId}/transactions/`;
 
     if (filters && Object.keys(filters).length > 0) {
@@ -722,7 +724,16 @@ export class ApiService {
       endpoint = `${endpoint}${queryString ? `?${queryString}` : ""}`;
     }
 
-    return this.get(endpoint);
+    const response = await this.get(endpoint);
+    
+    // Handle both paginated and non-paginated responses
+    // If response has 'results' property, it's paginated
+    if (response && typeof response === 'object' && 'results' in response) {
+      return response as PaginatedTransactions;
+    }
+    
+    // Otherwise, it's a regular array (backward compatibility)
+    return Array.isArray(response) ? response : [];
   }
 
   static async createTransaction(transactionData: {

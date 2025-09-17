@@ -39,6 +39,15 @@ export interface TransactionWithBalance extends Transaction {
   runningBalance: number;
 }
 
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface PaginatedTransactions extends PaginatedResponse<Transaction> {}
+
 export interface Employee {
   id: number;
   employee_id: string;

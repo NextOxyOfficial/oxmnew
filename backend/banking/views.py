@@ -8,6 +8,7 @@ from rest_framework import filters, generics, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 
 from .models import BankAccount, BankingPlan, Transaction, UserBankingPlan
 from .serializers import (
@@ -16,6 +17,13 @@ from .serializers import (
     TransactionCreateSerializer,
     TransactionSerializer,
 )
+
+
+class TransactionPagination(PageNumberPagination):
+    """Custom pagination for transactions"""
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 
 def has_active_banking_plan(user):
@@ -111,9 +119,9 @@ class BankAccountViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"])
     def transactions(self, request, pk=None):
-        """Get all transactions for a specific account"""
+        """Get all transactions for a specific account with pagination"""
         account = self.get_object()
-        transactions = account.transactions.all()
+        transactions = account.transactions.all().order_by('-date', '-updated_at')
 
         # Apply filtering
         transaction_type = request.query_params.get("type")
@@ -148,6 +156,15 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         if verified_by:
             transactions = transactions.filter(verified_by=verified_by)
 
+        # Apply pagination
+        paginator = TransactionPagination()
+        paginated_transactions = paginator.paginate_queryset(transactions, request)
+        
+        if paginated_transactions is not None:
+            serializer = TransactionSerializer(paginated_transactions, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        
+        # Fallback if pagination fails
         serializer = TransactionSerializer(transactions, many=True)
         return Response(serializer.data)
 

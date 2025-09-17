@@ -11,6 +11,7 @@ import type {
   CreateTransactionData,
   CreateAccountData,
   UpdateAccountData,
+  PaginatedTransactions,
 } from "@/types/banking";
 
 export const useBanking = () => {
@@ -21,6 +22,13 @@ export const useBanking = () => {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPreviousPage, setHasPreviousPage] = useState(false);
 
   // Load initial data
   const loadAccounts = useCallback(async () => {
@@ -94,9 +102,16 @@ export const useBanking = () => {
     }
   }, [isAuthenticated]);
 
-  const loadTransactions = useCallback(async (accountId: string, filters?: TransactionFilters) => {
+  const loadTransactions = useCallback(async (
+    accountId: string, 
+    filters?: TransactionFilters, 
+    page: number = 1,
+    append: boolean = false
+  ) => {
     try {
-      setLoading(true);
+      if (!append) {
+        setLoading(true);
+      }
       setError(null);
       
       // Convert filters to backend format
@@ -109,17 +124,61 @@ export const useBanking = () => {
         if (filters.search) backendFilters.search = filters.search;
         if (filters.verified_by && filters.verified_by !== "all") backendFilters.verified_by = filters.verified_by;
       }
-
-      const transactionsData = await ApiService.getAccountTransactions(accountId, backendFilters);
       
-      // Ensure transactionsData is an array
-      const validTransactionsData = Array.isArray(transactionsData) ? transactionsData : [];
-      setTransactions(validTransactionsData);
+      // Add pagination parameters
+      backendFilters.page = page.toString();
+
+      const paginatedData: PaginatedTransactions = await ApiService.getAccountTransactions(accountId, backendFilters);
+      
+      // Handle both paginated and non-paginated responses for backward compatibility
+      let transactionsData: Transaction[];
+      let paginationInfo = {
+        count: 0,
+        next: null as string | null,
+        previous: null as string | null,
+        current_page: page,
+        total_pages: 1
+      };
+
+      if (paginatedData && typeof paginatedData === 'object' && 'results' in paginatedData) {
+        // Paginated response
+        transactionsData = Array.isArray(paginatedData.results) ? paginatedData.results : [];
+        paginationInfo = {
+          count: paginatedData.count || 0,
+          next: paginatedData.next,
+          previous: paginatedData.previous,
+          current_page: page,
+          total_pages: Math.ceil((paginatedData.count || 0) / 20) // Assuming 20 items per page
+        };
+      } else {
+        // Non-paginated response (fallback)
+        transactionsData = Array.isArray(paginatedData) ? paginatedData : [];
+      }
+
+      if (append && page > 1) {
+        // Append new transactions for "load more" functionality
+        setTransactions(prev => [...prev, ...transactionsData]);
+      } else {
+        // Replace transactions for first page or filters change
+        setTransactions(transactionsData);
+      }
+
+      // Update pagination state
+      setCurrentPage(paginationInfo.current_page);
+      setTotalPages(paginationInfo.total_pages);
+      setTotalCount(paginationInfo.count);
+      setHasNextPage(!!paginationInfo.next);
+      setHasPreviousPage(!!paginationInfo.previous);
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load transactions");
-      setTransactions([]); // Ensure transactions is always an array even on error
+      if (!append) {
+        setTransactions([]); // Only clear on new load, not append
+      }
     } finally {
-      setLoading(false);
+      if (!append) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -240,6 +299,32 @@ export const useBanking = () => {
 
   const selectedAccount = Array.isArray(accounts) ? accounts.find(acc => acc.id === selectedAccountId) : undefined;
 
+  // Pagination functions
+  const loadNextPage = useCallback(() => {
+    if (hasNextPage && selectedAccountId) {
+      loadTransactions(selectedAccountId, undefined, currentPage + 1, true);
+    }
+  }, [hasNextPage, selectedAccountId, currentPage, loadTransactions]);
+
+  const loadPreviousPage = useCallback(() => {
+    if (hasPreviousPage && selectedAccountId && currentPage > 1) {
+      loadTransactions(selectedAccountId, undefined, currentPage - 1, false);
+    }
+  }, [hasPreviousPage, selectedAccountId, currentPage, loadTransactions]);
+
+  const goToPage = useCallback((page: number) => {
+    if (selectedAccountId && page >= 1 && page <= totalPages) {
+      loadTransactions(selectedAccountId, undefined, page, false);
+    }
+  }, [selectedAccountId, totalPages, loadTransactions]);
+
+  const refreshCurrentPage = useCallback((filters?: TransactionFilters) => {
+    if (selectedAccountId) {
+      setCurrentPage(1); // Reset to first page when filters change
+      loadTransactions(selectedAccountId, filters, 1, false);
+    }
+  }, [selectedAccountId, loadTransactions]);
+
   return {
     // State
     accounts,
@@ -251,6 +336,13 @@ export const useBanking = () => {
     error,
     isAuthenticated,
     authLoading,
+
+    // Pagination state
+    currentPage,
+    totalPages,
+    totalCount,
+    hasNextPage,
+    hasPreviousPage,
 
     // Actions
     setSelectedAccountId,
@@ -264,12 +356,18 @@ export const useBanking = () => {
     getAccountSummary,
     getDashboardStats,
 
+    // Pagination actions
+    loadNextPage,
+    loadPreviousPage,
+    goToPage,
+    refreshCurrentPage,
+
     // Utilities
     refreshData: () => {
       if (isAuthenticated) {
         loadAccounts();
         if (selectedAccountId) {
-          loadTransactions(selectedAccountId);
+          refreshCurrentPage();
         }
       }
     },
@@ -279,7 +377,8 @@ export const useBanking = () => {
       accountsCount: accounts.length,
       hasSelectedAccount: !!selectedAccount,
       authStatus: isAuthenticated ? 'authenticated' : 'not authenticated',
-      loading: loading || authLoading
+      loading: loading || authLoading,
+      pagination: `${currentPage}/${totalPages} (${totalCount} total)`
     }
   };
 };

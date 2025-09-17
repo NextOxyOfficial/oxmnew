@@ -47,6 +47,11 @@ export default function BankingPage() {
     error,
     isAuthenticated: bankingAuth,
     authLoading: bankingAuthLoading,
+    currentPage,
+    totalPages,
+    totalCount,
+    hasNextPage,
+    hasPreviousPage,
     setSelectedAccountId,
     setError,
     loadEmployees,
@@ -54,6 +59,10 @@ export default function BankingPage() {
     updateAccount,
     createTransaction,
     loadTransactions,
+    loadNextPage,
+    loadPreviousPage,
+    goToPage,
+    refreshCurrentPage,
     refreshData,
     debugInfo,
   } = useBanking();
@@ -188,7 +197,7 @@ export default function BankingPage() {
       }
     }
 
-    loadTransactions(selectedAccountId, currentFilters);
+    refreshCurrentPage(currentFilters);
   }, [
     selectedAccountId,
     filters,
@@ -196,7 +205,7 @@ export default function BankingPage() {
     dateRange,
     customStartDate,
     customEndDate,
-    loadTransactions,
+    refreshCurrentPage,
   ]);
 
   // Update transactions when filters change
@@ -801,23 +810,6 @@ export default function BankingPage() {
           </button>
         </div>
 
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6 flex items-center space-x-3">
-            <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
-            <div>
-              <p className="text-red-400 text-sm font-medium">Error</p>
-              <p className="text-red-300 text-sm">{error}</p>
-            </div>
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto text-red-400 hover:text-red-300 transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
                 {/* Main Content */}
         {accounts.length === 0 ? (
           /* No Accounts State */
@@ -1199,6 +1191,23 @@ export default function BankingPage() {
 
                 {/* Transaction History */}
                 <div>
+                  {/* Error Display */}
+                  {error && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6 flex items-center space-x-3">
+                      <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
+                      <div>
+                        <p className="text-red-400 text-sm font-medium">Error</p>
+                        <p className="text-red-300 text-sm">{error}</p>
+                      </div>
+                      <button
+                        onClick={() => setError(null)}
+                        className="ml-auto text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+
                   {getTransactionsWithRunningBalance().length === 0 ? (
                     <div className="p-8 text-center">
                       <DollarSign className="h-10 w-10 text-slate-500 mx-auto mb-3" />
@@ -1338,12 +1347,78 @@ export default function BankingPage() {
                         </tbody>
                       </table>
 
+                      {/* Pagination */}
+                      {totalPages > 1 && (
+                        <div className="p-4 border-t border-slate-700/50 bg-gradient-to-r from-slate-800/20 to-slate-700/20">
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-slate-400">
+                              Page {currentPage} of {totalPages} ({totalCount} total transactions)
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={loadPreviousPage}
+                                disabled={!hasPreviousPage}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all duration-200 ${
+                                  hasPreviousPage
+                                    ? "bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white cursor-pointer"
+                                    : "bg-slate-800/50 border-slate-700/50 text-slate-500 cursor-not-allowed"
+                                }`}
+                              >
+                                Previous
+                              </button>
+                              
+                              {/* Page numbers */}
+                              <div className="flex items-center space-x-1">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                  let pageNum;
+                                  if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                  } else {
+                                    // Show pages around current page
+                                    const start = Math.max(1, currentPage - 2);
+                                    const end = Math.min(totalPages, start + 4);
+                                    pageNum = start + i;
+                                    if (pageNum > end) return null;
+                                  }
+                                  
+                                  return (
+                                    <button
+                                      key={pageNum}
+                                      onClick={() => goToPage(pageNum)}
+                                      className={`w-8 h-8 text-xs font-medium rounded-lg border transition-all duration-200 ${
+                                        currentPage === pageNum
+                                          ? "bg-cyan-500 border-cyan-500 text-white"
+                                          : "bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white cursor-pointer"
+                                      }`}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              
+                              <button
+                                onClick={loadNextPage}
+                                disabled={!hasNextPage}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all duration-200 ${
+                                  hasNextPage
+                                    ? "bg-slate-700/50 border-slate-600/50 text-slate-300 hover:bg-slate-600/50 hover:text-white cursor-pointer"
+                                    : "bg-slate-800/50 border-slate-700/50 text-slate-500 cursor-not-allowed"
+                                }`}
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Results Summary */}
                       <div className="p-3 border-t border-slate-700/50 bg-gradient-to-r from-slate-800/20 to-slate-700/20">
                         <div className="flex items-center justify-between text-xs text-slate-400">
                           <span>
-                            Showing {getTransactionsWithRunningBalance().length}{" "}
-                            of {transactions.length} transactions
+                            Showing {getTransactionsWithRunningBalance().length} transactions on this page
+                            {totalPages > 1 && ` (${totalCount} total)`}
                             {(searchTerm ||
                               filters.type !== "all" ||
                               filters.verified_by !== "all" ||
