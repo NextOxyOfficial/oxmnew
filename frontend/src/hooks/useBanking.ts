@@ -47,10 +47,33 @@ export const useBanking = () => {
       // Ensure accountsData is an array
       const validAccountsData = Array.isArray(accountsData) ? accountsData : [];
       console.log("✅ Valid accounts data:", validAccountsData, "Count:", validAccountsData.length);
+      
+      // Log detailed account information
+      validAccountsData.forEach((account, index) => {
+        console.log(`📋 Account ${index + 1}:`, {
+          id: account.id,
+          name: account.name,
+          balance: account.balance,
+          owner: account.owner
+        });
+      });
+      
       setAccounts(validAccountsData);
       
+      // Validate current selectedAccountId still exists in new account data
+      if (selectedAccountId && validAccountsData.length > 0) {
+        console.log(`🔍 Checking if current selected account ID ${selectedAccountId} still exists...`);
+        const currentAccountExists = validAccountsData.find((acc: BankAccount) => acc.id === selectedAccountId);
+        if (!currentAccountExists) {
+          console.log("⚠️ Current selected account no longer exists, resetting selection");
+          setSelectedAccountId(null);
+        } else {
+          console.log("✅ Current selected account still exists:", currentAccountExists);
+        }
+      }
+      
       // Auto-select Main account first, then any account if none selected
-      if (validAccountsData.length > 0) {
+      if (validAccountsData.length > 0 && !selectedAccountId) {
         const mainAccount = validAccountsData.find((acc: BankAccount) => acc.name === "Main");
         if (mainAccount) {
           console.log("🎯 Found Main account, selecting:", mainAccount);
@@ -61,6 +84,7 @@ export const useBanking = () => {
         }
       } else {
         console.log("⚠️ No accounts found");
+        setSelectedAccountId(null);
       }
     } catch (err) {
       console.error("❌ Error loading accounts:", err);
@@ -114,6 +138,23 @@ export const useBanking = () => {
       }
       setError(null);
       
+      // Validate that the account exists in the current user's accounts
+      if (accounts.length > 0) {
+        console.log(`🔍 Checking if account ID ${accountId} exists in user's accounts...`);
+        console.log(`📋 Available accounts:`, accounts.map(acc => ({ id: acc.id, name: acc.name })));
+        const accountExists = accounts.find(acc => acc.id === accountId);
+        if (!accountExists) {
+          console.log(`❌ Account ID ${accountId} not found in user's accounts`);
+          setError(`Account not found or access denied. Please refresh the page.`);
+          setLoading(false);
+          return;
+        } else {
+          console.log(`✅ Account ID ${accountId} found:`, { id: accountExists.id, name: accountExists.name });
+        }
+      } else {
+        console.log(`⚠️ No accounts loaded yet, proceeding with API call for account ID ${accountId}`);
+      }
+      
       // Convert filters to backend format
       const backendFilters: Record<string, string> = {};
       if (filters) {
@@ -128,7 +169,7 @@ export const useBanking = () => {
       // Add pagination parameters
       backendFilters.page = page.toString();
 
-      const paginatedData: PaginatedTransactions = await ApiService.getAccountTransactions(accountId, backendFilters);
+      const paginatedData = await ApiService.getAccountTransactions(accountId, backendFilters);
       
       // Handle both paginated and non-paginated responses for backward compatibility
       let transactionsData: Transaction[];
@@ -180,7 +221,7 @@ export const useBanking = () => {
         setLoading(false);
       }
     }
-  }, []);
+  }, [accounts]);
 
   // Create new account
   const createAccount = useCallback(async (data: CreateAccountData) => {
@@ -325,6 +366,32 @@ export const useBanking = () => {
     }
   }, [selectedAccountId, loadTransactions]);
 
+  // Safe account selection that validates the account exists
+  const safeSetSelectedAccountId = useCallback((accountId: string | null) => {
+    if (accountId === null) {
+      setSelectedAccountId(null);
+      return;
+    }
+    
+    // Validate that the account exists in the user's accounts
+    const accountExists = accounts.find(acc => acc.id === accountId);
+    if (accountExists) {
+      setSelectedAccountId(accountId);
+      setError(null); // Clear any previous errors
+    } else {
+      setError(`Account with ID ${accountId} not found. Please select a valid account.`);
+      // Auto-select the main account or first available account
+      const mainAccount = accounts.find(acc => acc.name === "Main");
+      if (mainAccount) {
+        setSelectedAccountId(mainAccount.id);
+      } else if (accounts.length > 0) {
+        setSelectedAccountId(accounts[0].id);
+      } else {
+        setSelectedAccountId(null);
+      }
+    }
+  }, [accounts]);
+
   return {
     // State
     accounts,
@@ -345,7 +412,7 @@ export const useBanking = () => {
     hasPreviousPage,
 
     // Actions
-    setSelectedAccountId,
+    setSelectedAccountId: safeSetSelectedAccountId,
     setError,
     loadAccounts,
     loadEmployees,

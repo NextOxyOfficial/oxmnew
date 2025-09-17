@@ -120,8 +120,30 @@ class BankAccountViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def transactions(self, request, pk=None):
         """Get all transactions for a specific account with pagination"""
-        account = self.get_object()
+        print(f"🏦 Fetching transactions for account {pk}")
+        print(f"🔍 Query params: {dict(request.query_params)}")
+        
+        try:
+            account = self.get_object()
+            print(f"✅ Found account: {account.name} (ID: {account.id})")
+        except BankAccount.DoesNotExist:
+            return Response(
+                {"error": f"Bank account with ID {pk} not found or you don't have permission to access it."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            print(f"Error retrieving account {pk}: {str(e)}")
+            return Response(
+                {"error": f"Account with ID {pk} not found or access denied."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
         transactions = account.transactions.all().order_by('-date', '-updated_at')
+        print(f"📊 Total transactions in account: {transactions.count()}")
+        
+        # Show sample transaction purposes for debugging
+        sample_data = transactions.values('id', 'purpose', 'reference_number')[:5]
+        print(f"📝 Sample transaction data: {list(sample_data)}")
 
         # Apply filtering
         transaction_type = request.query_params.get("type")
@@ -150,9 +172,17 @@ class BankAccountViewSet(viewsets.ModelViewSet):
                 # Fallback to original behavior if date parsing fails
                 transactions = transactions.filter(date__lte=date_to)
         if search:
-            transactions = transactions.filter(
-                Q(purpose__icontains=search) | Q(reference_number__icontains=search)
-            )
+            print(f"🔍 Search term: '{search}'")
+            print(f"📊 Total transactions before search: {transactions.count()}")
+            search_filter = Q(purpose__icontains=search) | Q(reference_number__icontains=search)
+            print(f"🔍 Search filter: {search_filter}")
+            transactions = transactions.filter(search_filter)
+            print(f"📊 Total transactions after search: {transactions.count()}")
+            
+            # Debug: Show some sample purposes to verify data
+            sample_purposes = transactions.values_list('purpose', flat=True)[:10]
+            print(f"📝 Sample purposes found: {list(sample_purposes)}")
+            
         if verified_by:
             transactions = transactions.filter(verified_by=verified_by)
 

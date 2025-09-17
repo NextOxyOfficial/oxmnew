@@ -1212,23 +1212,26 @@ export class ApiService {
       if (response && response.results && Array.isArray(response.results)) {
         console.log(`API: Search returned ${response.results.length} products out of ${response.count} total`);
         
-        // If we got all results in one page, return them
-        if (response.results.length >= (response.count || 0)) {
+        // If there's no 'next' URL, we have all results
+        if (!response.next) {
+          console.log(`API: All search results fetched: ${response.results.length}`);
           return response.results;
         }
         
-        // If there are more results, fetch all pages
+        // If there are more pages (indicated by 'next' URL), fetch them
         const allResults = [...response.results];
         let nextPage = 2;
+        let hasMorePages = !!response.next;
         
-        while (allResults.length < (response.count || 0)) {
+        while (hasMorePages) {
           try {
             const nextResponse = await this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=10000&page=${nextPage}`);
             if (nextResponse && nextResponse.results && Array.isArray(nextResponse.results) && nextResponse.results.length > 0) {
               allResults.push(...nextResponse.results);
+              hasMorePages = !!nextResponse.next; // Check if there's another page
               nextPage++;
             } else {
-              break;
+              hasMorePages = false;
             }
           } catch (error) {
             console.warn(`Failed to fetch page ${nextPage}:`, error);
