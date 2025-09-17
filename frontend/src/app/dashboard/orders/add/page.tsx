@@ -256,37 +256,17 @@ export default function AddOrderPage() {
           return productName.includes(search) || productCode.includes(search);
         });
 
-        if (filteredBackendResults.length === 0) {
-          // Fallback to local search with the same strict filtering
-          const localResults = products.filter((product) => {
-            const search = query.toLowerCase().trim();
-            const productName = product.name ? product.name.toLowerCase() : '';
-            const productCode = product.product_code ? product.product_code.toLowerCase() : '';
-            
-            // Only match in name or product code
-            return productName.includes(search) || productCode.includes(search);
-          });
-          setSearchResults(localResults);
-        } else {
-          setSearchResults(filteredBackendResults);
-        }
+        // Always use backend results - no fallback to local products array
+        setSearchResults(filteredBackendResults);
       } catch (error) {
         console.error("Error searching products:", error);
-        // Fallback to local search with strict filtering
-        const localResults = products.filter((product) => {
-          const search = query.toLowerCase().trim();
-          const productName = product.name ? product.name.toLowerCase() : '';
-          const productCode = product.product_code ? product.product_code.toLowerCase() : '';
-          
-          // Only match in name or product code
-          return productName.includes(search) || productCode.includes(search);
-        });
-        setSearchResults(localResults);
+        // If API fails, show empty results instead of fallback
+        setSearchResults([]);
       } finally {
         setIsSearchingProducts(false);
       }
     },
-    [products]
+    []
   );
 
   // Debounced search function
