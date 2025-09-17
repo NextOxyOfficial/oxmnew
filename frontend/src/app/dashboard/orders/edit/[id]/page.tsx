@@ -1549,22 +1549,31 @@ export default function EditOrderPage() {
                                     }}
                                     className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
                                   >
-                                    <div className="text-white font-medium">
-                                      {customer.name}
-                                    </div>
-                                    <div className="text-slate-400 text-sm">
-                                      {customer.email || "No email"} •{" "}
-                                      {customer.phone || "No phone"}
-                                    </div>
-                                    {customer.previous_due &&
-                                      customer.previous_due > 0 && (
-                                        <div className="text-red-400 text-xs">
-                                          Previous Due:{" "}
-                                          {formatCurrency(
-                                            customer.previous_due
-                                          )}
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1">
+                                        <div className="text-white font-medium">
+                                          {highlightText(customer.name, customerSearch.trim())}
                                         </div>
-                                      )}
+                                        <div className="text-slate-400 text-sm">
+                                          {highlightText(customer.email || "No email", customerSearch.trim())} •{" "}
+                                          {highlightText(customer.phone || "No phone", customerSearch.trim())}
+                                        </div>
+                                      </div>
+                                      <div className="ml-3 text-right">
+                                        <div className={`text-xs font-medium ${
+                                          customer.previous_due && customer.previous_due > 0 
+                                            ? 'text-red-400' 
+                                            : 'text-green-400'
+                                        }`}>
+                                          Due: {formatCurrency(customer.previous_due || 0)}
+                                        </div>
+                                        {customer.total_orders && (
+                                          <div className="text-xs text-slate-500">
+                                            {customer.total_orders} orders
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 ))
                             ) : (
