@@ -127,6 +127,9 @@ export default function AddOrderPage() {
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
     null
   );
+  const [searchAbortController, setSearchAbortController] = useState<AbortController | null>(
+    null
+  );
 
   // Ref to maintain focus on product search input
   const productSearchInputRef = useRef<ProductSearchInputRef>(null);
@@ -196,7 +199,7 @@ export default function AddOrderPage() {
   // Simplified focus management - only restore focus when necessary
   useEffect(() => {
     // Only restore focus if the dropdown just opened and input should have focus
-    if (isProductDropdownOpen && productSearch.trim().length >= 1 && !isSearchingProducts) {
+    if (isProductDropdownOpen && productSearch.trim().length >= 2 && !isSearchingProducts) {
       // Use a minimal delay to ensure smooth typing experience
       const timer = setTimeout(() => {
         if (productSearchInputRef.current) {
@@ -231,17 +234,31 @@ export default function AddOrderPage() {
     }
   };
 
-  // New function to search products from backend
+  // New function to search products from backend with proper cancellation
   const searchProducts = useCallback(
-    async (query: string) => {
-      if (!query || query.trim().length < 1) {
+    async (query: string, signal?: AbortSignal) => {
+      if (!query || query.trim().length < 2) {
         setSearchResults([]);
         return;
       }
 
       try {
         setIsSearchingProducts(true);
-        const response = await ApiService.searchProducts(query.trim());
+        
+        // Check if request was cancelled before making the API call
+        if (signal?.aborted) {
+          console.log('🚫 Search cancelled before API call for query:', query);
+          return;
+        }
+
+        const response = await ApiService.searchProducts(query.trim(), signal);
+        
+        // Check if request was cancelled after API call
+        if (signal?.aborted) {
+          console.log('🚫 Search cancelled after API call for query:', query);
+          return;
+        }
+
         const results = Array.isArray(response)
           ? response
           : response?.results || [];
@@ -256,36 +273,68 @@ export default function AddOrderPage() {
           return productName.includes(search) || productCode.includes(search);
         });
 
-        // Always use backend results - no fallback to local products array
-        setSearchResults(filteredBackendResults);
+        // Only update results if the request wasn't cancelled
+        if (!signal?.aborted) {
+          console.log('✅ Search completed for query:', query, 'Results:', filteredBackendResults.length);
+          setSearchResults(filteredBackendResults);
+        }
       } catch (error) {
+        if (error instanceof Error && (error.message === 'AbortError' || error.name === 'AbortError')) {
+          console.log('🚫 Search request aborted for query:', query);
+          return;
+        }
         console.error("Error searching products:", error);
         // If API fails, show empty results instead of fallback
-        setSearchResults([]);
+        if (!signal?.aborted) {
+          setSearchResults([]);
+        }
       } finally {
-        setIsSearchingProducts(false);
+        if (!signal?.aborted) {
+          setIsSearchingProducts(false);
+        }
       }
     },
     []
   );
 
-  // Debounced search function
+  // Improved debounced search function with proper request cancellation
   const debouncedSearch = useCallback(
     (query: string) => {
+      console.log('🔍 Debounced search triggered for:', query);
+      
+      // Cancel any existing timeout
       if (searchTimeout) {
         clearTimeout(searchTimeout);
+        console.log('⏰ Cancelled previous timeout');
+      }
+
+      // Cancel any existing API request
+      if (searchAbortController) {
+        searchAbortController.abort();
+        console.log('🚫 Cancelled previous API request');
+      }
+
+      // Clear results immediately for short queries
+      if (query.trim().length < 2) {
+        setSearchResults([]);
+        setIsSearchingProducts(false);
+        return;
       }
 
       const timeout = setTimeout(() => {
-        // Search if query has content (removed the actively typing check to make it more responsive)
-        if (query.trim().length >= 1) {
-          searchProducts(query);
-        }
-      }, 250); // Reduced delay from 300ms to 250ms for better responsiveness
+        console.log('⏱️ Timeout executed for query:', query);
+        
+        // Create new AbortController for this request
+        const controller = new AbortController();
+        setSearchAbortController(controller);
+        
+        // Execute search with abort signal
+        searchProducts(query, controller.signal);
+      }, 500); // Increased delay to 500ms for better debouncing
 
       setSearchTimeout(timeout);
     },
-    [searchTimeout, searchProducts]
+    [searchTimeout, searchAbortController, searchProducts]
   );
 
   // Callbacks for the search input component
@@ -310,8 +359,8 @@ export default function AddOrderPage() {
   );
 
   const handleSearchFocus = useCallback(() => {
-    // Open dropdown on focus if user has already typed at least 1 character
-    if (productSearch.trim().length >= 1) {
+    // Open dropdown on focus if user has already typed at least 2 characters
+    if (productSearch.trim().length >= 2) {
       setIsProductDropdownOpen(true);
       // Mark as actively typing when focusing with existing content
       isActivelyTypingRef.current = true;

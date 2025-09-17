@@ -375,8 +375,8 @@ export class ApiService {
     }
   }
 
-  static async get(endpoint: string) {
-    return this.request(endpoint, { method: "GET" });
+  static async get(endpoint: string, signal?: AbortSignal) {
+    return this.request(endpoint, { method: "GET", signal });
   }
 
   static async post(endpoint: string, data: unknown) {
@@ -1199,41 +1199,69 @@ export class ApiService {
     return result;
   }
 
-  static async searchProducts(query: string) {
+  static async searchProducts(query: string, signal?: AbortSignal) {
     if (!query || query.trim().length < 1) {
       return [];
     }
     
     try {
-      // Try to get all results with a large page_size first
-      const response = await this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=10000`);
+      // For search, we want to get all matching results in one request
+      // Use a very large page_size to avoid pagination issues
+      const response = await this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=50000`, signal);
+      
+      // Check if request was aborted
+      if (signal?.aborted) {
+        throw new Error('Request aborted');
+      }
       
       // Handle paginated response
       if (response && response.results && Array.isArray(response.results)) {
         console.log(`API: Search returned ${response.results.length} products out of ${response.count} total`);
+        console.log(`API: Response pagination info:`, { 
+          count: response.count, 
+          next: response.next, 
+          previous: response.previous 
+        });
         
-        // If there's no 'next' URL, we have all results
-        if (!response.next) {
-          console.log(`API: All search results fetched: ${response.results.length}`);
+        // With page_size=50000, we should get all results in one page for most searches
+        // Only paginate if absolutely necessary (more than 50000 matching results)
+        if (!response.next || response.results.length >= (response.count || 0)) {
+          console.log(`API: All search results fetched in single request: ${response.results.length}`);
           return response.results;
         }
         
-        // If there are more pages (indicated by 'next' URL), fetch them
+        // If there are still more pages (very rare case), fetch them
+        console.log(`API: Warning - Search has more than 50000 results, using pagination`);
         const allResults = [...response.results];
         let nextPage = 2;
-        let hasMorePages = !!response.next;
         
-        while (hasMorePages) {
+        while (allResults.length < (response.count || 0) && nextPage <= 10) { // Limit to 10 pages max for safety
+          // Check if request was aborted before each pagination request
+          if (signal?.aborted) {
+            throw new Error('Request aborted');
+          }
+          
           try {
-            const nextResponse = await this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=10000&page=${nextPage}`);
+            const nextResponse = await this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=50000&page=${nextPage}`, signal);
+            console.log(`API: Page ${nextPage} response:`, { 
+              resultsLength: nextResponse?.results?.length, 
+              hasNext: !!nextResponse?.next 
+            });
+            
             if (nextResponse && nextResponse.results && Array.isArray(nextResponse.results) && nextResponse.results.length > 0) {
               allResults.push(...nextResponse.results);
-              hasMorePages = !!nextResponse.next; // Check if there's another page
               nextPage++;
+              
+              // Stop if no more pages
+              if (!nextResponse.next) break;
             } else {
-              hasMorePages = false;
+              console.log(`API: No more results on page ${nextPage}, stopping`);
+              break;
             }
           } catch (error) {
+            if (error instanceof Error && error.message === 'Request aborted') {
+              throw error; // Re-throw abort errors
+            }
             console.warn(`Failed to fetch page ${nextPage}:`, error);
             break;
           }
@@ -1249,6 +1277,10 @@ export class ApiService {
         return [];
       }
     } catch (error) {
+      if (error instanceof Error && error.message === 'Request aborted') {
+        console.log('🚫 Search request was aborted');
+        throw new Error('AbortError'); // Standardize abort error name
+      }
       console.error('API: Error in searchProducts:', error);
       return [];
     }
