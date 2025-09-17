@@ -653,38 +653,40 @@ export default function EditOrderPage() {
           ? response
           : response?.results || [];
 
-        if (results.length === 0) {
+        // Filter backend results to ensure they actually match the search term in the product name
+        const filteredBackendResults = results.filter((product: any) => {
+          const search = query.toLowerCase().trim();
+          const productName = product.name ? product.name.toLowerCase() : '';
+          const productCode = product.product_code ? product.product_code.toLowerCase() : '';
+          
+          // Only show products that match in name or product code (most relevant fields)
+          return productName.includes(search) || productCode.includes(search);
+        });
+
+        if (filteredBackendResults.length === 0) {
+          // Fallback to local search with the same strict filtering
           const localResults = products.filter((product) => {
             const search = query.toLowerCase().trim();
-            const safeIncludes = (field: string | null | undefined) => {
-              return field && field.toString().toLowerCase().includes(search);
-            };
-            return (
-              safeIncludes(product.name) ||
-              safeIncludes(product.product_code) ||
-              safeIncludes(product.category_name) ||
-              safeIncludes(product.supplier_name) ||
-              safeIncludes(product.details)
-            );
+            const productName = product.name ? product.name.toLowerCase() : '';
+            const productCode = product.product_code ? product.product_code.toLowerCase() : '';
+            
+            // Only match in name or product code
+            return productName.includes(search) || productCode.includes(search);
           });
           setSearchResults(localResults);
         } else {
-          setSearchResults(results);
+          setSearchResults(filteredBackendResults);
         }
       } catch (error) {
         console.error("Error searching products:", error);
+        // Fallback to local search with strict filtering
         const localResults = products.filter((product) => {
           const search = query.toLowerCase().trim();
-          const safeIncludes = (field: string | null | undefined) => {
-            return field && field.toString().toLowerCase().includes(search);
-          };
-          return (
-            safeIncludes(product.name) ||
-            safeIncludes(product.product_code) ||
-            safeIncludes(product.category_name) ||
-            safeIncludes(product.supplier_name) ||
-            safeIncludes(product.details)
-          );
+          const productName = product.name ? product.name.toLowerCase() : '';
+          const productCode = product.product_code ? product.product_code.toLowerCase() : '';
+          
+          // Only match in name or product code
+          return productName.includes(search) || productCode.includes(search);
         });
         setSearchResults(localResults);
       } finally {
