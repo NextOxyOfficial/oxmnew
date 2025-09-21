@@ -95,84 +95,143 @@ export default function BankAccountPage() {
   // Custom hook for horizontal mouse wheel scrolling and drag scrolling
   useEffect(() => {
     const scrollContainer = accountTabsScrollRef.current;
-    if (!scrollContainer) return;
+    if (!scrollContainer || allAccounts.length <= 1) return;
 
     let isDown = false;
     let startX = 0;
     let scrollLeft = 0;
 
-    // Simple and reliable mouse wheel horizontal scrolling
+    // More aggressive wheel event handling
     const handleWheel = (e: WheelEvent) => {
-      // Check if the event target is within our scroll container
-      const target = e.target as HTMLElement;
-      if (!scrollContainer.contains(target)) return;
+      // Always check if we have horizontal scrollable content first
+      const hasHorizontalScroll = scrollContainer.scrollWidth > scrollContainer.clientWidth;
+      console.log('🔍 Scroll check:', { 
+        scrollWidth: scrollContainer.scrollWidth, 
+        clientWidth: scrollContainer.clientWidth, 
+        hasHorizontalScroll 
+      });
       
-      // Convert vertical scrolling to horizontal
-      if (e.deltaY !== 0) {
+      if (!hasHorizontalScroll) return;
+
+      // Check if we're hovering over the scroll container or its children
+      const rect = scrollContainer.getBoundingClientRect();
+      const isHoveringContainer = (
+        e.clientX >= rect.left && 
+        e.clientX <= rect.right && 
+        e.clientY >= rect.top && 
+        e.clientY <= rect.bottom
+      );
+
+      console.log('🎯 Mouse position check:', {
+        mouseX: e.clientX,
+        mouseY: e.clientY,
+        containerRect: rect,
+        isHoveringContainer
+      });
+
+      if (isHoveringContainer && e.deltaY !== 0) {
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         
-        const scrollAmount = e.deltaY;
+        // Convert vertical scroll to horizontal
+        const scrollAmount = e.deltaY * 1.5;
+        const oldScrollLeft = scrollContainer.scrollLeft;
         scrollContainer.scrollLeft += scrollAmount;
         
-        // Debug log
-        console.log('Horizontal scroll:', { 
+        console.log('🖱️ Wheel scroll applied:', { 
           deltaY: e.deltaY, 
+          scrollAmount,
+          oldScrollLeft,
           newScrollLeft: scrollContainer.scrollLeft,
-          scrollWidth: scrollContainer.scrollWidth,
-          clientWidth: scrollContainer.clientWidth
+          changed: oldScrollLeft !== scrollContainer.scrollLeft
         });
+      } else {
+        console.log('❌ Wheel event not processed:', { isHoveringContainer, deltaY: e.deltaY });
       }
     };
 
-    // Drag to scroll functionality
+    // Drag to scroll functionality  
     const handleMouseDown = (e: MouseEvent) => {
-      // Don't interfere with button clicks
-      if ((e.target as HTMLElement).tagName === 'BUTTON') {
+      const target = e.target as HTMLElement;
+      
+      // Don't interfere with buttons or interactive elements
+      if (target.tagName === 'BUTTON' || target.closest('button')) {
         return;
       }
       
       isDown = true;
-      scrollContainer.classList.add('cursor-grabbing');
+      scrollContainer.style.cursor = 'grabbing';
+      scrollContainer.style.userSelect = 'none';
       startX = e.pageX - scrollContainer.offsetLeft;
       scrollLeft = scrollContainer.scrollLeft;
+      
+      console.log('🤏 Drag started');
     };
 
     const handleMouseLeave = () => {
-      isDown = false;
-      scrollContainer.classList.remove('cursor-grabbing');
+      if (isDown) {
+        isDown = false;
+        scrollContainer.style.cursor = 'grab';
+        scrollContainer.style.userSelect = '';
+        console.log('🤏 Drag ended (leave)');
+      }
     };
 
     const handleMouseUp = () => {
-      isDown = false;
-      scrollContainer.classList.remove('cursor-grabbing');
+      if (isDown) {
+        isDown = false;
+        scrollContainer.style.cursor = 'grab';
+        scrollContainer.style.userSelect = '';
+        console.log('🤏 Drag ended (up)');
+      }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDown) return;
+      
       e.preventDefault();
       const x = e.pageX - scrollContainer.offsetLeft;
       const walk = (x - startX) * 2;
       scrollContainer.scrollLeft = scrollLeft - walk;
     };
 
-    // Add event listeners
-    scrollContainer.addEventListener('wheel', handleWheel, { passive: false });
+    // Add multiple levels of event listeners for better capture
+    
+    // 1. Direct on container
+    scrollContainer.addEventListener('wheel', handleWheel, { passive: false, capture: true });
     scrollContainer.addEventListener('mousedown', handleMouseDown);
     scrollContainer.addEventListener('mouseleave', handleMouseLeave);
     scrollContainer.addEventListener('mouseup', handleMouseUp);
     scrollContainer.addEventListener('mousemove', handleMouseMove);
+    
+    // 2. On document for global capture (as backup)
+    const documentWheelHandler = (e: WheelEvent) => {
+      const target = e.target as HTMLElement;
+      if (scrollContainer.contains(target)) {
+        handleWheel(e);
+      }
+    };
+    
+    document.addEventListener('wheel', documentWheelHandler, { passive: false, capture: true });
 
-    console.log('Horizontal scroll event listeners attached to:', scrollContainer);
+    console.log('🔧 Horizontal scroll handlers attached. Container:', scrollContainer);
+    console.log('📏 Scroll dimensions:', {
+      scrollWidth: scrollContainer.scrollWidth,
+      clientWidth: scrollContainer.clientWidth,
+      hasHorizontalScroll: scrollContainer.scrollWidth > scrollContainer.clientWidth
+    });
 
     // Cleanup
     return () => {
-      scrollContainer.removeEventListener('wheel', handleWheel);
+      scrollContainer.removeEventListener('wheel', handleWheel, { capture: true });
       scrollContainer.removeEventListener('mousedown', handleMouseDown);
       scrollContainer.removeEventListener('mouseleave', handleMouseLeave);
       scrollContainer.removeEventListener('mouseup', handleMouseUp);
       scrollContainer.removeEventListener('mousemove', handleMouseMove);
-      console.log('Horizontal scroll event listeners removed');
+      document.removeEventListener('wheel', documentWheelHandler, { capture: true });
+      
+      console.log('🧹 Horizontal scroll handlers cleaned up');
     };
   }, [allAccounts]); // Re-run when accounts change
 
@@ -599,7 +658,33 @@ export default function BankAccountPage() {
                   style={{ 
                     scrollbarWidth: 'thin',
                     WebkitUserSelect: 'none',
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    overscrollBehaviorX: 'contain',
+                    scrollBehavior: 'smooth'
+                  }}
+                  onWheel={(e) => {
+                    // Prevent main page scrolling ALWAYS when over account tabs
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('🎯 React onWheel triggered:', e.deltaY);
+                    
+                    if (e.deltaY !== 0) {
+                      const container = accountTabsScrollRef.current;
+                      if (container && container.scrollWidth > container.clientWidth) {
+                        const oldScrollLeft = container.scrollLeft;
+                        container.scrollLeft += e.deltaY * 1.5;
+                        
+                        console.log('🎯 React onWheel scroll applied:', {
+                          deltaY: e.deltaY,
+                          oldScrollLeft,
+                          newScrollLeft: container.scrollLeft,
+                          scrollChanged: oldScrollLeft !== container.scrollLeft
+                        });
+                      } else {
+                        console.log('🚫 Page scroll prevented - no horizontal scroll needed');
+                      }
+                    }
                   }}
                 >
                 {allAccounts.map((acc) => {
