@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "orders",  # New orders app
     "online_store",  # Added online store app
     "public_api",  # Public API app for external access
+    "notebook",  # Added notebook app for note management
 ]
 
 CORS_ALLOWED_ORIGINS = [

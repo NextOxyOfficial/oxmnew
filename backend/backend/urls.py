@@ -19,6 +19,7 @@ urlpatterns = [
     path(
         "api/public/", include("public_api.urls")
     ),  # Public API endpoints for external access
+    path("api/", include("notebook.urls")),  # Added notebook app endpoints
 ]
 
 # Serve media files during development
