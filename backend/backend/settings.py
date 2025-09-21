@@ -223,6 +223,15 @@ os.makedirs(os.path.join(MEDIA_ROOT, "products"), exist_ok=True)
 FILE_UPLOAD_MAX_MEMORY_SIZE = config("FILE_UPLOAD_MAX_MEMORY_SIZE", default=10485760, cast=int)  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = config("DATA_UPLOAD_MAX_MEMORY_SIZE", default=10485760, cast=int)  # 10MB
 FILE_UPLOAD_PERMISSIONS = 0o644
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
+
+# Allow file uploads
+ALLOWED_UPLOAD_EXTENSIONS = [
+    'jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx'
+]
+
+# Security settings for file uploads
+SECURE_FILE_UPLOAD = True
 
 # WhiteNoise configuration for static files in production
 if not DEBUG:
