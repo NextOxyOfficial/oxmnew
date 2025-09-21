@@ -687,11 +687,14 @@ export class ApiService {
 
   static async createBankAccount(accountData: {
     name: string;
+    account_number?: string;
     balance?: number;
+    is_active?: boolean;
   }) {
     return this.post("/banking/accounts/", {
       ...accountData,
       balance: accountData.balance || 0,
+      is_active: accountData.is_active !== undefined ? accountData.is_active : true,
     });
   }
 

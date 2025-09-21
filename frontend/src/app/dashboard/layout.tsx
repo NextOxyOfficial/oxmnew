@@ -82,6 +82,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       category: "finance",
     },
     {
+      name: "Banking New",
+      href: "/dashboard/banking-new",
+      icon: CreditCard,
+      current: pathname.startsWith("/dashboard/banking-new"),
+      category: "finance",
+    },
+    {
       name: "Due Book",
       href: "/dashboard/duebook",
       icon: CreditCard,
@@ -146,6 +153,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "Supplier Management";
       case pathname.startsWith("/dashboard/customers"):
         return "Customer Management";
+      case pathname.startsWith("/dashboard/banking-new"):
+        return "Banking Management";
       case pathname.startsWith("/dashboard/banking"):
         return "Banking & Finance";
       case pathname.startsWith("/dashboard/employees"):

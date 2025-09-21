@@ -8,6 +8,7 @@ from employees.models import Employee
 
 class BankAccount(models.Model):
     name = models.CharField(max_length=100)
+    account_number = models.CharField(max_length=10, unique=True, null=True, blank=True, help_text="10-digit unique account number")
     owner = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

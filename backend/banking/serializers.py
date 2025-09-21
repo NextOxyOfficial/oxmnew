@@ -17,6 +17,7 @@ class BankAccountSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "account_number",
             "owner",
             "owner_name",
             "owner_username",

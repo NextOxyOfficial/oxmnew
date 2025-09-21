@@ -12,6 +12,7 @@ export interface BankAccount {
   transaction_count: number;
   total_credits: number;
   total_debits: number;
+  account_number?: string; // 10-digit unique account number
 }
 
 export interface Transaction {
@@ -27,10 +28,11 @@ export interface Transaction {
   reference_number: string;
   verified_by_details?: {
     id: string;
-    username: string;
-    first_name: string;
-    last_name: string;
-    full_name: string;
+    name: string;
+    employee_id: string;
+    email: string;
+    role: string;
+    department: string;
   };
   account_name: string;
 }
