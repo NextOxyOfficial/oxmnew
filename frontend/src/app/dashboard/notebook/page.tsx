@@ -167,12 +167,10 @@ export default function NotebookPage() {
     }
   };
 
-  // Handle view notebook (for now just show an alert, can be extended later)
+  // Handle view notebook
   const handleViewNotebook = (notebook: Notebook) => {
-    // For now, just show notebook details in console and alert
-    console.log('Viewing notebook:', notebook);
-    alert(`Viewing: ${notebook.name}\n\nDescription: ${notebook.description || 'No description'}\n\nTags: ${notebook.tags.join(', ') || 'No tags'}`);
-    // Future: router.push(`/dashboard/notebook/${notebook.id}`);
+    console.log('Navigating to notebook:', notebook.id);
+    router.push(`/dashboard/notebook/${notebook.id}`);
   };
 
   // Filter notebooks
