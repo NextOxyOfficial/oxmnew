@@ -251,55 +251,117 @@ export default function BankingNewPage() {
         {/* Bank Accounts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {/* Existing Account Cards */}
-          {filteredAccounts.map((account) => (
-            <Link
-              key={account.id}
-              href={`/dashboard/banking/${account.account_number || account.id}`}
-              className="group"
-            >
-              <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/40 border border-slate-700/50 rounded-xl p-3 hover:from-slate-800/80 hover:to-slate-900/60 transition-all duration-300 hover:border-cyan-500/40 group-hover:transform group-hover:scale-[1.02] hover:shadow-xl hover:shadow-cyan-500/5 backdrop-blur-sm">
-                {/* Account Header */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-2 flex-1 min-w-0">
-                    <div className="p-1 bg-gradient-to-br from-cyan-500/15 to-cyan-600/10 border border-cyan-500/20 rounded-lg flex-shrink-0">
-                      <Building2 className="w-3 h-3 text-cyan-400" />
+          {filteredAccounts.map((account, index) => {
+            const colorSchemes = [
+              {
+                gradient: "from-blue-600/30 via-cyan-500/20 to-teal-500/15",
+                border: "border-blue-500/40",
+                iconBg: "from-blue-500/40 to-cyan-500/30 border-blue-400/50",
+                iconColor: "text-blue-200",
+                textGradient: "from-blue-200 to-cyan-100",
+                bgPattern: "from-blue-500/10 to-cyan-500/5"
+              },
+              {
+                gradient: "from-purple-600/30 via-violet-500/20 to-indigo-500/15",
+                border: "border-purple-500/40",
+                iconBg: "from-purple-500/40 to-violet-500/30 border-purple-400/50",
+                iconColor: "text-purple-200",
+                textGradient: "from-purple-200 to-violet-100",
+                bgPattern: "from-purple-500/10 to-violet-500/5"
+              },
+              {
+                gradient: "from-emerald-600/30 via-green-500/20 to-teal-500/15",
+                border: "border-emerald-500/40",
+                iconBg: "from-emerald-500/40 to-green-500/30 border-emerald-400/50",
+                iconColor: "text-emerald-200",
+                textGradient: "from-emerald-200 to-green-100",
+                bgPattern: "from-emerald-500/10 to-green-500/5"
+              },
+              {
+                gradient: "from-orange-600/30 via-amber-500/20 to-yellow-500/15",
+                border: "border-orange-500/40",
+                iconBg: "from-orange-500/40 to-amber-500/30 border-orange-400/50",
+                iconColor: "text-orange-200",
+                textGradient: "from-orange-200 to-amber-100",
+                bgPattern: "from-orange-500/10 to-amber-500/5"
+              },
+              {
+                gradient: "from-rose-600/30 via-pink-500/20 to-red-500/15",
+                border: "border-rose-500/40",
+                iconBg: "from-rose-500/40 to-pink-500/30 border-rose-400/50",
+                iconColor: "text-rose-200",
+                textGradient: "from-rose-200 to-pink-100",
+                bgPattern: "from-rose-500/10 to-pink-500/5"
+              }
+            ];
+            
+            const colorScheme = colorSchemes[index % colorSchemes.length];
+            
+            return (
+              <Link
+                key={account.id}
+                href={`/dashboard/banking/${account.account_number || account.id}`}
+                className="group"
+              >
+                <div className={`relative bg-gradient-to-br ${colorScheme.gradient} border ${colorScheme.border} rounded-xl p-3 hover:brightness-110 transition-all duration-200 backdrop-blur-sm overflow-hidden`}>
+                  {/* Colorful Background Pattern */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${colorScheme.bgPattern} rounded-xl`}></div>
+                  
+                  {/* Account Header */}
+                  <div className="flex items-start justify-between relative z-10">
+                    <div className="flex items-center space-x-2.5 flex-1 min-w-0">
+                      <div className={`p-1.5 bg-gradient-to-br ${colorScheme.iconBg} border rounded-lg shadow-md`}>
+                        <Building2 className={`w-3.5 h-3.5 ${colorScheme.iconColor}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold text-white transition-colors truncate">
+                          {account.name}
+                        </h3>
+                        <p className="text-xs text-white/70 mt-0.5 font-medium">
+                          #{account.account_number || account.id}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-white group-hover:text-cyan-100 transition-colors truncate">
-                        {account.name}
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        #{account.account_number || account.id}
+                    <div className="text-right flex-shrink-0 ml-3">
+                      <p className="text-xs text-white/70 mb-0.5 font-medium">Balance</p>
+                      <p className={`text-sm font-bold bg-gradient-to-r ${colorScheme.textGradient} bg-clip-text text-transparent`}>
+                        {formatCurrency(parseFloat(account.balance?.toString() || "0"))}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0 ml-2">
-                    <p className="text-xs text-gray-400 mb-0.5">Balance</p>
-                    <p className="text-sm font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                      {formatCurrency(parseFloat(account.balance?.toString() || "0"))}
-                    </p>
-                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
 
           {/* Create Account Button Card */}
           <div 
             onClick={() => setShowCreateModal(true)}
             className="group cursor-pointer"
           >
-            <div className="bg-slate-800/30 border-2 border-dashed border-slate-600 hover:border-cyan-500/50 rounded-xl p-3 hover:bg-slate-800/50 transition-all duration-200 group-hover:transform group-hover:scale-[1.02] hover:shadow-lg hover:shadow-cyan-500/10 flex items-center justify-center">
-              <div className="text-center">
-                <div className="p-2 bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 border border-cyan-500/30 rounded-lg w-8 h-8 mx-auto mb-2 flex items-center justify-center group-hover:bg-cyan-500/30 transition-colors">
-                  <Plus className="w-3 h-3 text-cyan-400 group-hover:text-cyan-300 transition-colors" />
+            <div className="relative bg-gradient-to-br from-slate-600/40 via-gray-500/30 to-slate-700/35 border-2 border-dashed border-gray-400/60 hover:border-cyan-400/70 rounded-xl p-3 hover:brightness-110 transition-all duration-200 backdrop-blur-sm overflow-hidden">
+              {/* Colorful Background Pattern */}
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/8 via-blue-500/5 to-purple-500/8 rounded-xl"></div>
+              
+              <div className="flex items-start justify-between relative z-10">
+                <div className="flex items-center space-x-2.5 flex-1">
+                  <div className="p-1.5 bg-gradient-to-br from-cyan-500/40 to-blue-500/30 border border-cyan-400/50 rounded-lg shadow-md">
+                    <Plus className="w-3.5 h-3.5 text-cyan-200" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-white">
+                      Create Account
+                    </h3>
+                    <p className="text-xs text-white/70 mt-0.5 font-medium">
+                      Add new account
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-xs font-medium text-gray-300 group-hover:text-white transition-colors mb-0.5">
-                  Create Account
-                </h3>
-                <p className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors">
-                  Add new account
-                </p>
+                <div className="text-right flex-shrink-0 ml-3">
+                  <div className="w-6 h-6 bg-gradient-to-br from-cyan-500/30 to-blue-500/20 border border-cyan-400/40 rounded-lg flex items-center justify-center shadow-md">
+                    <Plus className="w-3 h-3 text-cyan-200" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
