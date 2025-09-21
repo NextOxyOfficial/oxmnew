@@ -209,12 +209,12 @@ export default function EditProductPage() {
     if (!product?.has_variants) {
       // Only validate prices if stock is required, or if prices are provided
       if (!formData.no_stock_required) {
-        if (formData.buyPrice <= 0) {
-          newErrors.buyPrice = "Buy price must be greater than 0";
+        if (formData.buyPrice < 0) {
+          newErrors.buyPrice = "Buy price cannot be negative";
         }
 
-        if (formData.sellPrice <= 0) {
-          newErrors.sellPrice = "Sell price must be greater than 0";
+        if (formData.sellPrice < 0) {
+          newErrors.sellPrice = "Sell price cannot be negative";
         }
 
         if (formData.sellPrice < formData.buyPrice) {
@@ -222,9 +222,9 @@ export default function EditProductPage() {
             "Sell price must be greater than or equal to buy price";
         }
 
-        // Only validate stock if stock tracking is required
-        if (formData.stock <= 0) {
-          newErrors.stock = "Stock quantity must be greater than 0";
+        // Allow stock to be zero or more
+        if (formData.stock < 0) {
+          newErrors.stock = "Stock quantity cannot be negative";
         }
       } else {
         // For no-stock products, only validate if prices are provided and non-zero

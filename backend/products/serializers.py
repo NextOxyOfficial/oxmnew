@@ -45,10 +45,9 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Sell price must be greater than or equal to buy price"
             )
-        # Note: For variants, we'll always require stock since variants represent individual items
-        # The no_stock_required field only applies to the main product for non-variant products
-        if data.get("stock", 0) <= 0:
-            raise serializers.ValidationError("Stock quantity must be greater than 0")
+        # Note: For variants, we'll allow 0 stock as well
+        if data.get("stock", 0) < 0:
+            raise serializers.ValidationError("Stock quantity cannot be negative")
         return data
 
 
@@ -168,18 +167,18 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
             # Only validate prices if stock is required, or if prices are provided
             if not no_stock_required:
-                if buy_price <= 0:
-                    raise serializers.ValidationError("Buy price must be greater than 0")
-                if sell_price <= 0:
-                    raise serializers.ValidationError("Sell price must be greater than 0")
-                if sell_price < buy_price:
+                if buy_price < 0:
+                    raise serializers.ValidationError("Buy price cannot be negative")
+                if sell_price < 0:
+                    raise serializers.ValidationError("Sell price cannot be negative")
+                if sell_price > 0 and buy_price > 0 and sell_price < buy_price:
                     raise serializers.ValidationError(
                         "Sell price must be greater than or equal to buy price"
                     )
-                # Validate stock for stock-tracked products
-                if stock is not None and stock <= 0:
+                # Validate stock for stock-tracked products (allow 0 stock)
+                if stock is not None and stock < 0:
                     raise serializers.ValidationError(
-                        "Stock quantity must be greater than 0"
+                        "Stock quantity cannot be negative"
                     )
             else:
                 # For no-stock products, only validate price relationship if both are provided
@@ -306,16 +305,16 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
             # Only validate prices if stock is required, or if prices are provided
             if not no_stock_required:
-                if buy_price <= 0:
-                    raise serializers.ValidationError("Buy price must be greater than 0")
-                if sell_price <= 0:
-                    raise serializers.ValidationError("Sell price must be greater than 0")
-                if sell_price < buy_price:
+                if buy_price < 0:
+                    raise serializers.ValidationError("Buy price cannot be negative")
+                if sell_price < 0:
+                    raise serializers.ValidationError("Sell price cannot be negative")
+                if sell_price > 0 and buy_price > 0 and sell_price < buy_price:
                     raise serializers.ValidationError("Sell price must be >= buy price")
-                # Validate stock for stock-tracked products
-                if stock <= 0:
+                # Validate stock for stock-tracked products (allow 0 stock)
+                if stock < 0:
                     raise serializers.ValidationError(
-                        "Stock quantity must be greater than 0"
+                        "Stock quantity cannot be negative"
                     )
             else:
                 # For no-stock products, only validate price relationship if both are provided
