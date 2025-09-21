@@ -331,7 +331,7 @@ export default function BankAccountPage() {
   // Handle switching to a different account tab
   const switchToAccount = useCallback((accountId: string, accountNumber?: string) => {
     const newId = accountNumber || accountId;
-    router.push(`/dashboard/banking-new/${newId}`);
+    router.push(`/dashboard/banking/${newId}`);
   }, [router]);
 
   useEffect(() => {
@@ -538,7 +538,7 @@ export default function BankAccountPage() {
       <div className="text-center py-8">
         <p className="text-red-400 mb-4">{error}</p>
         <Link
-          href="/dashboard/banking-new"
+          href="/dashboard/banking"
           className="inline-flex items-center px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white font-medium rounded-lg transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -590,7 +590,7 @@ export default function BankAccountPage() {
         {/* Page Header */}
           <div className="flex items-center space-x-4 mb-2">
             <Link
-              href="/dashboard/banking-new"
+              href="/dashboard/banking"
               className="inline-flex items-center px-3 py-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors cursor-pointer text-sm font-medium text-gray-300 hover:text-white"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
