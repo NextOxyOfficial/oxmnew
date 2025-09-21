@@ -76,35 +76,52 @@ class BankAccountViewSet(viewsets.ModelViewSet):
             )
 
     def perform_create(self, serializer):
-        """Set the current user as the account owner and check for active banking plan"""
+        """Set the current user as the account owner and check account limits"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         user = self.request.user
-
-        # Allow creation of Main account even without banking plan
-        account_name = serializer.validated_data.get("name", "")
-        if account_name != "Main":
-            # For all other accounts, check if user has active banking plan
-            if not has_active_banking_plan(user):
+        logger.info(f"🏦 User {user.username} attempting to create bank account")
+        
+        # Get existing active accounts count
+        existing_accounts_count = BankAccount.objects.filter(
+            owner=user, is_active=True
+        ).count()
+        logger.info(f"🏦 User {user.username} has {existing_accounts_count} existing accounts")
+        
+        # Check if user has pro subscription
+        has_pro = has_active_banking_plan(user)
+        logger.info(f"🏦 User {user.username} has pro subscription: {has_pro}")
+        
+        if has_pro:
+            # Pro users can have up to 15 accounts
+            if existing_accounts_count >= 15:
                 from rest_framework.exceptions import PermissionDenied
-
+                logger.warning(f"🏦 User {user.username} exceeded pro account limit: {existing_accounts_count}/15")
+                raise PermissionDenied(
+                    f"You have reached the maximum limit of 15 accounts. "
+                    f"Please delete an existing account before creating a new one."
+                )
+        else:
+            # Free users can only have 1 account
+            if existing_accounts_count >= 1:
+                from rest_framework.exceptions import PermissionDenied
+                logger.warning(f"🏦 User {user.username} exceeded free account limit: {existing_accounts_count}/1")
                 raise PermissionDenied(
                     "You need to upgrade to Pro to create additional accounts. "
-                    "Free users can only have the Main account."
+                    "Free users can only have 1 account."
                 )
-            
-            # Check if user has reached the account limit (5 accounts total)
-            existing_accounts_count = BankAccount.objects.filter(
-                owner=user, is_active=True
-            ).count()
-            
-            if existing_accounts_count >= 5:
-                from rest_framework.exceptions import PermissionDenied
-
-                raise PermissionDenied(
-                    "You have reached the maximum limit of 5 accounts. "
-                    "Please delete an existing account before creating a new one."
-                )
-
-        serializer.save(owner=user)
+        
+        # Set balance from the payload (frontend sends 'balance' field)
+        balance = serializer.validated_data.get('balance', 0)
+        logger.info(f"🏦 Creating account with balance: {balance}")
+        
+        try:
+            account = serializer.save(owner=user, balance=balance)
+            logger.info(f"🏦 Successfully created account: {account.id} - {account.name}")
+        except Exception as e:
+            logger.error(f"🏦 Failed to create account: {str(e)}")
+            raise
 
     @action(detail=False, methods=["get"])
     def my_accounts(self, request):

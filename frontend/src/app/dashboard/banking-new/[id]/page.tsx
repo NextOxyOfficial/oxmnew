@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function BankAccountPage() {
   const { id } = useParams();
@@ -56,6 +56,125 @@ export default function BankAccountPage() {
   const [customEndDate, setCustomEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  
+  // Ref for horizontal scrolling
+  const accountTabsScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Check scroll position for indicators
+  useEffect(() => {
+    const scrollContainer = accountTabsScrollRef.current;
+    if (!scrollContainer) return;
+
+    const checkScrollPosition = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth);
+    };
+
+    const handleScroll = () => {
+      checkScrollPosition();
+    };
+
+    // Initial check
+    checkScrollPosition();
+    
+    scrollContainer.addEventListener('scroll', handleScroll);
+    
+    // Also check when content changes
+    const resizeObserver = new ResizeObserver(checkScrollPosition);
+    resizeObserver.observe(scrollContainer);
+
+    return () => {
+      scrollContainer.removeEventListener('scroll', handleScroll);
+      resizeObserver.disconnect();
+    };
+  }, [allAccounts]);
+
+  // Custom hook for horizontal mouse wheel scrolling and drag scrolling
+  useEffect(() => {
+    const scrollContainer = accountTabsScrollRef.current;
+    if (!scrollContainer) return;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+
+    // Simple and reliable mouse wheel horizontal scrolling
+    const handleWheel = (e: WheelEvent) => {
+      // Check if the event target is within our scroll container
+      const target = e.target as HTMLElement;
+      if (!scrollContainer.contains(target)) return;
+      
+      // Convert vertical scrolling to horizontal
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const scrollAmount = e.deltaY;
+        scrollContainer.scrollLeft += scrollAmount;
+        
+        // Debug log
+        console.log('Horizontal scroll:', { 
+          deltaY: e.deltaY, 
+          newScrollLeft: scrollContainer.scrollLeft,
+          scrollWidth: scrollContainer.scrollWidth,
+          clientWidth: scrollContainer.clientWidth
+        });
+      }
+    };
+
+    // Drag to scroll functionality
+    const handleMouseDown = (e: MouseEvent) => {
+      // Don't interfere with button clicks
+      if ((e.target as HTMLElement).tagName === 'BUTTON') {
+        return;
+      }
+      
+      isDown = true;
+      scrollContainer.classList.add('cursor-grabbing');
+      startX = e.pageX - scrollContainer.offsetLeft;
+      scrollLeft = scrollContainer.scrollLeft;
+    };
+
+    const handleMouseLeave = () => {
+      isDown = false;
+      scrollContainer.classList.remove('cursor-grabbing');
+    };
+
+    const handleMouseUp = () => {
+      isDown = false;
+      scrollContainer.classList.remove('cursor-grabbing');
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - scrollContainer.offsetLeft;
+      const walk = (x - startX) * 2;
+      scrollContainer.scrollLeft = scrollLeft - walk;
+    };
+
+    // Add event listeners
+    scrollContainer.addEventListener('wheel', handleWheel, { passive: false });
+    scrollContainer.addEventListener('mousedown', handleMouseDown);
+    scrollContainer.addEventListener('mouseleave', handleMouseLeave);
+    scrollContainer.addEventListener('mouseup', handleMouseUp);
+    scrollContainer.addEventListener('mousemove', handleMouseMove);
+
+    console.log('Horizontal scroll event listeners attached to:', scrollContainer);
+
+    // Cleanup
+    return () => {
+      scrollContainer.removeEventListener('wheel', handleWheel);
+      scrollContainer.removeEventListener('mousedown', handleMouseDown);
+      scrollContainer.removeEventListener('mouseleave', handleMouseLeave);
+      scrollContainer.removeEventListener('mouseup', handleMouseUp);
+      scrollContainer.removeEventListener('mousemove', handleMouseMove);
+      console.log('Horizontal scroll event listeners removed');
+    };
+  }, [allAccounts]); // Re-run when accounts change
 
   // Load account details
   const loadAccount = useCallback(async () => {
@@ -394,6 +513,18 @@ export default function BankAccountPage() {
           scrollbar-width: thin;
           scrollbar-color: #475569 rgba(30, 41, 59, 0.3);
         }
+        /* Cursor states for scrolling */
+        .cursor-grabbing {
+          cursor: grabbing !important;
+        }
+        .cursor-grabbing * {
+          cursor: grabbing !important;
+        }
+        /* Ensure wheel events work properly */
+        .scroll-container {
+          overscroll-behavior-x: contain;
+          scroll-behavior: smooth;
+        }
       `}</style>
       <div className="sm:p-6 p-1 space-y-6">
       <div className="max-w-7xl">
@@ -422,7 +553,10 @@ export default function BankAccountPage() {
                     <span className="flex items-center">
                       💡 Click any account to switch instantly
                     </span>
-                    <span className="hidden sm:flex items-center space-x-1">
+                    <span className="hidden sm:flex items-center space-x-1 text-cyan-400">
+                      🖱️ Scroll wheel or drag to navigate
+                    </span>
+                    <span className="hidden lg:flex items-center space-x-1">
                       <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-xs">Ctrl</kbd>
                       <span>+</span>
                       <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-xs">←→</kbd>
@@ -436,9 +570,38 @@ export default function BankAccountPage() {
                 <span className="text-xs text-gray-500">
                   {allAccounts.findIndex(acc => acc.account_number === id || acc.id === id) + 1} of {allAccounts.length}
                 </span>
+                {(canScrollLeft || canScrollRight) && (
+                  <div className="flex items-center space-x-1">
+                    <div className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                      canScrollLeft ? 'bg-cyan-400 animate-pulse' : 'bg-slate-600'
+                    }`} />
+                    <div className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                      canScrollRight ? 'bg-cyan-400 animate-pulse' : 'bg-slate-600'
+                    }`} />
+                  </div>
+                )}
               </div>
               
-              <div className="flex overflow-x-auto gap-2 custom-scrollbar pb-1">
+              <div className="relative">
+                {/* Left fade indicator */}
+                {canScrollLeft && (
+                  <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-800/90 to-transparent z-10 pointer-events-none" />
+                )}
+                
+                {/* Right fade indicator */}
+                {canScrollRight && (
+                  <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-800/90 to-transparent z-10 pointer-events-none" />
+                )}
+
+                <div 
+                  ref={accountTabsScrollRef}
+                  className="flex overflow-x-auto gap-2 custom-scrollbar scroll-container pb-1 cursor-grab scroll-smooth select-none"
+                  style={{ 
+                    scrollbarWidth: 'thin',
+                    WebkitUserSelect: 'none',
+                    userSelect: 'none'
+                  }}
+                >
                 {allAccounts.map((acc) => {
                   const isActive = (acc.account_number === id || acc.id === id);
                   return (
@@ -487,10 +650,11 @@ export default function BankAccountPage() {
                     </button>
                   );
                 })}
+                </div>
               </div>
 
               {/* Account Summary */}
-              <div className="mt-4 pt-4 border-t border-slate-700 p-3 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/30 to-slate-700/20">
+              <div className="mt-4 pt-4 border-t border-slate-700 p-3 border-slate-700/50 bg-gradient-to-r from-slate-800/30 to-slate-700/20">
                 {/* Financial Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
                   <div className="bg-gradient-to-br from-cyan-500/15 to-cyan-600/8 border border-cyan-500/25 rounded-lg p-2.5 backdrop-blur-sm">
@@ -551,7 +715,7 @@ export default function BankAccountPage() {
                 </div>
 
                 {/* Filters and Search */}
-                <div className="p-4 border-b border-slate-700/50 bg-slate-800/10">
+                <div className="p-4 border-slate-700/50 bg-slate-800/10">
                   <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between space-y-3 xl:space-y-0 gap-3">
                     <div className="flex flex-col lg:flex-row lg:items-center space-y-2 lg:space-y-0 lg:space-x-3 flex-1">
                       {/* Add Transaction Button */}

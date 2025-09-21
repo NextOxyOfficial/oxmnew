@@ -691,11 +691,21 @@ export class ApiService {
     balance?: number;
     is_active?: boolean;
   }) {
-    return this.post("/banking/accounts/", {
-      ...accountData,
-      balance: accountData.balance || 0,
-      is_active: accountData.is_active !== undefined ? accountData.is_active : true,
-    });
+    console.log("🏦 Creating bank account with data:", accountData);
+    try {
+      const response = await this.post("/banking/accounts/", {
+        ...accountData,
+        balance: accountData.balance || 0,
+        is_active: accountData.is_active !== undefined ? accountData.is_active : true,
+      });
+      console.log("🏦 Bank account created successfully:", response);
+      return response;
+    } catch (error: any) {
+      console.error("🏦 Failed to create bank account:", error);
+      console.error("🏦 Error response:", error?.response?.data);
+      console.error("🏦 Error status:", error?.response?.status);
+      throw error;
+    }
   }
 
   static async updateBankAccount(
