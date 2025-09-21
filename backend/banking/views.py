@@ -153,9 +153,9 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         search = request.query_params.get("search")
         verified_by = request.query_params.get("verified_by")
 
-        if transaction_type:
+        if transaction_type and transaction_type != "all":
             transactions = transactions.filter(type=transaction_type)
-        if status_filter:
+        if status_filter and status_filter != "all":
             transactions = transactions.filter(status=status_filter)
         if date_from:
             transactions = transactions.filter(date__gte=date_from)
@@ -183,7 +183,7 @@ class BankAccountViewSet(viewsets.ModelViewSet):
             sample_purposes = transactions.values_list('purpose', flat=True)[:10]
             print(f"📝 Sample purposes found: {list(sample_purposes)}")
             
-        if verified_by:
+        if verified_by and verified_by != "all":
             transactions = transactions.filter(verified_by=verified_by)
 
         # Apply pagination
@@ -278,9 +278,9 @@ class TransactionViewSet(viewsets.ModelViewSet):
         account_id = request.query_params.get("account_id")
         verified_by = request.query_params.get("verified_by")
 
-        if transaction_type:
+        if transaction_type and transaction_type != "all":
             transactions = transactions.filter(type=transaction_type)
-        if status_filter:
+        if status_filter and status_filter != "all":
             transactions = transactions.filter(status=status_filter)
         if date_from:
             transactions = transactions.filter(date__gte=date_from)
@@ -302,7 +302,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
             )
         if account_id:
             transactions = transactions.filter(account_id=account_id)
-        if verified_by:
+        if verified_by and verified_by != "all":
             transactions = transactions.filter(verified_by=verified_by)
 
         serializer = TransactionSerializer(transactions, many=True)

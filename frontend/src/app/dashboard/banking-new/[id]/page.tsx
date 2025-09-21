@@ -744,6 +744,9 @@ export default function BankAccountPage() {
                 <thead className="bg-slate-800/50 border-b border-slate-700/50">
                   <tr>
                     <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
                       Type
                     </th>
                     <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
@@ -754,12 +757,6 @@ export default function BankAccountPage() {
                     </th>
                     <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
                       Verified By
-                    </th>
-                    <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
-                      Status
                     </th>
                     <th className="text-left py-2 px-4 text-slate-300 font-medium text-xs uppercase tracking-wider">
                       Running Balance
@@ -773,6 +770,9 @@ export default function BankAccountPage() {
                         key={transaction.id}
                         className="border-b border-slate-700/30 hover:bg-slate-800/20 transition-colors"
                       >
+                        <td className="py-3 px-4 text-sm text-slate-300">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center space-x-2">
                             {transaction.type === "credit" ? (
@@ -811,14 +811,6 @@ export default function BankAccountPage() {
                               {getEmployeeName(transaction.verified_by, transaction.verified_by_details)}
                             </span>
                           </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-slate-300">
-                          {new Date(transaction.date).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ Verified
-                          </span>
                         </td>
                         <td className="py-3 px-4">
                           <span
