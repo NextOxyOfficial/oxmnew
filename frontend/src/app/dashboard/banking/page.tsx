@@ -254,44 +254,44 @@ export default function BankingNewPage() {
           {filteredAccounts.map((account, index) => {
             const colorSchemes = [
               {
-                gradient: "from-blue-600/30 via-cyan-500/20 to-teal-500/15",
+                gradient: "from-blue-400/30 via-cyan-500/20 to-teal-300/15",
                 border: "border-blue-500/40",
                 iconBg: "from-blue-500/40 to-cyan-500/30 border-blue-400/50",
                 iconColor: "text-blue-200",
                 textGradient: "from-blue-200 to-cyan-100",
-                bgPattern: "from-blue-500/10 to-cyan-500/5"
+                bgPattern: "from-blue-300/10 to-cyan-500/5"
               },
               {
-                gradient: "from-purple-600/30 via-violet-500/20 to-indigo-500/15",
+                gradient: "from-purple-400/30 via-violet-500/20 to-indigo-300/15",
                 border: "border-purple-500/40",
                 iconBg: "from-purple-500/40 to-violet-500/30 border-purple-400/50",
                 iconColor: "text-purple-200",
                 textGradient: "from-purple-200 to-violet-100",
-                bgPattern: "from-purple-500/10 to-violet-500/5"
+                bgPattern: "from-purple-300/10 to-violet-500/5"
               },
               {
-                gradient: "from-emerald-600/30 via-green-500/20 to-teal-500/15",
+                gradient: "from-emerald-400/30 via-green-500/20 to-teal-300/15",
                 border: "border-emerald-500/40",
                 iconBg: "from-emerald-500/40 to-green-500/30 border-emerald-400/50",
                 iconColor: "text-emerald-200",
                 textGradient: "from-emerald-200 to-green-100",
-                bgPattern: "from-emerald-500/10 to-green-500/5"
+                bgPattern: "from-emerald-300/10 to-green-500/5"
               },
               {
-                gradient: "from-orange-600/30 via-amber-500/20 to-yellow-500/15",
+                gradient: "from-orange-400/30 via-amber-500/20 to-yellow-300/15",
                 border: "border-orange-500/40",
                 iconBg: "from-orange-500/40 to-amber-500/30 border-orange-400/50",
                 iconColor: "text-orange-200",
                 textGradient: "from-orange-200 to-amber-100",
-                bgPattern: "from-orange-500/10 to-amber-500/5"
+                bgPattern: "from-orange-300/10 to-amber-500/5"
               },
               {
-                gradient: "from-rose-600/30 via-pink-500/20 to-red-500/15",
+                gradient: "from-rose-400/30 via-pink-500/20 to-red-300/15",
                 border: "border-rose-500/40",
                 iconBg: "from-rose-500/40 to-pink-500/30 border-rose-400/50",
                 iconColor: "text-rose-200",
                 textGradient: "from-rose-200 to-pink-100",
-                bgPattern: "from-rose-500/10 to-pink-500/5"
+                bgPattern: "from-rose-300/10 to-pink-500/5"
               }
             ];
             
@@ -355,11 +355,6 @@ export default function BankingNewPage() {
                     <p className="text-xs text-white/70 mt-0.5 font-medium">
                       Add new account
                     </p>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0 ml-3">
-                  <div className="w-6 h-6 bg-gradient-to-br from-cyan-500/30 to-blue-500/20 border border-cyan-400/40 rounded-lg flex items-center justify-center shadow-md">
-                    <Plus className="w-3 h-3 text-cyan-200" />
                   </div>
                 </div>
               </div>
