@@ -93,3 +93,31 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Global cursor behavior */
+/* Show pointer for all obvious interactive controls */
+a[href],
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+label[for],
+select,
+option,
+summary,
+.cursor-pointer,
+.clickable,
+[data-clickable="true"] {
+  cursor: pointer;
+}
+
+/* Disabled states should not be pointer */
+button:disabled,
+input:disabled,
+select:disabled,
+option:disabled,
+[aria-disabled="true"],
+.disabled {
+  cursor: not-allowed;
+}
