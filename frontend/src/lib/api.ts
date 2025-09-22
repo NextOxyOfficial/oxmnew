@@ -1734,7 +1734,7 @@ export class ApiService {
     start_date?: string;
     end_date?: string;
   }) {
-    let endpoint = "/sales/";
+  let endpoint = "/sales/product_summary/";
 
     if (params && Object.keys(params).length > 0) {
       const searchParams = new URLSearchParams();

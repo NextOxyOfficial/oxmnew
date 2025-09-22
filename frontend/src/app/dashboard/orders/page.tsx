@@ -464,213 +464,64 @@ export default function OrdersPage() {
     }
   }, [currentPage, pageSize, searchTerm, filterCustomer, sortBy]);
 
-  // Fetch product sales summary
+  // Fetch product sales summary (server-side pagination)
   const fetchProductSales = useCallback(async () => {
     try {
-      if (activeTab !== "products") return; // Only fetch when on products tab
-      
+      if (activeTab !== "products") return;
+
       setIsSearchingProducts(true);
       if (productCurrentPage === 1 && productSales.length === 0) {
         setIsLoadingProducts(true);
       }
 
-      // Since product-summary endpoint doesn't exist, we'll fetch all sales
-      // and process them locally to create the product summary
       const params: any = {
-        page_size: 1000, // Get a large number to process locally
-        ordering: "-sale_date", // Get latest sales first
+        page: productCurrentPage,
+        page_size: productPageSize,
       };
 
-      const response = await ApiService.getProductSalesWithPagination(params);
-      
-      // Process the orders/sales to create product summary
-      let allOrders: Order[] = [];
-      
-      if (response && typeof response === "object" && "results" in response) {
-        allOrders = response.results || [];
-      } else if (Array.isArray(response)) {
-        allOrders = response;
-      }
-
-      // Create product summary from orders
-      const productSummaryMap = new Map<string, ProductSale>();
-      
-      allOrders.forEach((order: Order) => {
-        if (order.items && order.items.length > 0) {
-          // Process orders with items
-          order.items.forEach((item: any) => {
-            const variantInfo = item.variant_details || '';
-            const key = `${item.product_name || 'Unknown'}-${variantInfo}`;
-            const existing = productSummaryMap.get(key);
-            
-            if (existing) {
-              existing.total_quantity += item.quantity || 0;
-              existing.total_revenue += item.total_price || 0;
-              existing.total_profit += (item.total_price || 0) - ((item.buy_price || 0) * (item.quantity || 0));
-              existing.total_buy_price += (item.buy_price || 0) * (item.quantity || 0);
-              existing.sales_count += 1;
-              if (new Date(order.sale_date) > new Date(existing.last_sold)) {
-                existing.last_sold = order.sale_date;
-                existing.last_sold_customer = order.customer_name || 'Unknown Customer';
-              }
-            } else {
-              const totalPrice = item.total_price || 0;
-              const buyPrice = (item.buy_price || 0) * (item.quantity || 0);
-              const profit = totalPrice - buyPrice;
-              
-              productSummaryMap.set(key, {
-                id: Math.random(), // Temporary ID
-                product_id: item.product?.id || item.product,
-                variant_id: item.variant_id || item.variant,
-                product_name: item.product_name || 'Unknown Product',
-                variant_display: variantInfo,
-                total_quantity: item.quantity || 0,
-                total_revenue: totalPrice,
-                total_profit: profit,
-                profit_margin: totalPrice > 0 ? (profit / totalPrice) * 100 : 0,
-                last_sold: order.sale_date,
-                last_sold_customer: order.customer_name || 'Unknown Customer',
-                avg_unit_price: item.unit_price || 0,
-                avg_buy_price: item.buy_price || 0,
-                total_buy_price: buyPrice,
-                sales_count: 1,
-                stock_remaining: undefined, // We don't have this data
-                available_stock: undefined, // We don't have this data
-              });
-            }
-          });
-        } else {
-          // Process legacy single-product orders
-          const variantInfo = order.variant ? `${order.variant.color || ''} ${order.variant.size || ''} ${order.variant.custom_variant || ''}`.trim() : '';
-          const key = `${order.product_name || 'Unknown'}-${variantInfo}`;
-          const existing = productSummaryMap.get(key);
-          
-          const profit = (order.total_amount || 0) - ((order.buy_price || 0) * (order.quantity || 0));
-          
-          if (existing) {
-            existing.total_quantity += order.quantity || 0;
-            existing.total_revenue += order.total_amount || 0;
-            existing.total_profit += profit;
-            existing.total_buy_price += (order.buy_price || 0) * (order.quantity || 0);
-            existing.sales_count += 1;
-            if (new Date(order.sale_date) > new Date(existing.last_sold)) {
-              existing.last_sold = order.sale_date;
-              existing.last_sold_customer = order.customer_name || 'Unknown Customer';
-            }
-          } else {
-            productSummaryMap.set(key, {
-              id: order.id,
-              product_id: order.product?.id,
-              variant_id: order.variant?.id,
-              product_name: order.product_name || 'Unknown Product',
-              variant_display: variantInfo || undefined,
-              total_quantity: order.quantity || 0,
-              total_revenue: order.total_amount || 0,
-              total_profit: profit,
-              profit_margin: (order.total_amount || 0) > 0 ? (profit / (order.total_amount || 0)) * 100 : 0,
-              last_sold: order.sale_date,
-              avg_unit_price: order.unit_price || 0,
-              avg_buy_price: order.buy_price || 0,
-              total_buy_price: (order.buy_price || 0) * (order.quantity || 0),
-              sales_count: 1,
-              stock_remaining: undefined,
-              available_stock: undefined,
-            });
-          }
-        }
-      });
-
-      // Fetch product details to get stock information
-      const productIds = new Set<number>();
-      productSummaryMap.forEach(product => {
-        if (product.product_id) {
-          productIds.add(product.product_id);
-        }
-      });
-
-      const stockMap = new Map<string, number>();
-      try {
-        for (const productId of productIds) {
-          const productResponse = await ApiService.get(`/products/${productId}/`);
-          if (productResponse && typeof productResponse === 'object') {
-            const product = productResponse as any;
-            
-            // Store stock for different variants
-            if (product.has_variants && product.variants) {
-              product.variants.forEach((variant: any) => {
-                const variantKey = `${product.id}-${variant.id}`;
-                stockMap.set(variantKey, variant.stock || 0);
-              });
-            } else {
-              // Single product without variants
-              stockMap.set(`${product.id}`, product.stock || 0);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching product stock:", error);
-      }
-
-      // Convert map to array and calculate final values with stock information
-      let salesData = Array.from(productSummaryMap.values()).map(product => {
-        let availableStock = 0;
-        
-        if (product.variant_id && product.product_id) {
-          // Product with variant
-          const variantKey = `${product.product_id}-${product.variant_id}`;
-          availableStock = stockMap.get(variantKey) || 0;
-        } else if (product.product_id) {
-          // Single product
-          availableStock = stockMap.get(`${product.product_id}`) || 0;
-        }
-        
-        return {
-          ...product,
-          avg_unit_price: product.total_quantity > 0 ? product.total_revenue / product.total_quantity : 0,
-          avg_buy_price: product.total_quantity > 0 ? product.total_buy_price / product.total_quantity : 0,
-          profit_margin: product.total_revenue > 0 ? (product.total_profit / product.total_revenue) * 100 : 0,
-          available_stock: availableStock,
-        };
-      });
-
-      // Apply search filter if exists
       if (productSearchTerm.trim()) {
-        const searchLower = productSearchTerm.toLowerCase();
-        salesData = salesData.filter(product => 
-          product.product_name.toLowerCase().includes(searchLower) ||
-          (product.variant_display && product.variant_display.toLowerCase().includes(searchLower))
-        );
+        params.search = productSearchTerm.trim();
       }
 
-      // Apply sorting
-      salesData.sort((a, b) => {
-        switch (productSortBy) {
-          case "total_quantity":
-            return b.total_quantity - a.total_quantity;
-          case "total_profit":
-            return b.total_profit - a.total_profit;
-          case "profit_margin":
-            return b.profit_margin - a.profit_margin;
-          case "last_sold":
-            return new Date(b.last_sold).getTime() - new Date(a.last_sold).getTime();
-          case "product_name":
-            return a.product_name.localeCompare(b.product_name);
-          default:
-            return b.total_quantity - a.total_quantity;
-        }
-      });
+      // Map sort to backend ordering
+      switch (productSortBy) {
+        case "total_quantity":
+          params.ordering = "-total_quantity";
+          break;
+        case "total_profit":
+          params.ordering = "-total_profit";
+          break;
+        case "profit_margin":
+          params.ordering = "-profit_margin";
+          break;
+        case "last_sold":
+          params.ordering = "-last_sold";
+          break;
+        case "product_name":
+          params.ordering = "product_name";
+          break;
+        default:
+          params.ordering = "-total_quantity";
+      }
 
-      // Apply pagination
-      const totalItems = salesData.length;
-      const startIndex = (productCurrentPage - 1) * productPageSize;
-      const endIndex = startIndex + productPageSize;
-      const paginatedData = salesData.slice(startIndex, endIndex);
+      const response = await ApiService.getProductSalesSummary(params);
 
-      setProductSales(paginatedData);
-      setProductTotalItems(totalItems);
-      setProductTotalPages(Math.ceil(totalItems / productPageSize));
+      if (response && typeof response === "object" && "results" in response) {
+        setProductSales(response.results || []);
+        setProductTotalItems(response.count || 0);
+        setProductTotalPages(Math.ceil((response.count || 0) / productPageSize));
+      } else if (Array.isArray(response)) {
+        // non-paginated fallback
+        setProductSales(response);
+        setProductTotalItems(response.length);
+        setProductTotalPages(Math.ceil(response.length / productPageSize));
+      } else {
+        setProductSales([]);
+        setProductTotalItems(0);
+        setProductTotalPages(0);
+      }
     } catch (error) {
-      console.error("Error fetching product sales:", error);
+      console.error("Error fetching product sales summary:", error);
       setProductSales([]);
       setProductTotalItems(0);
       setProductTotalPages(0);
@@ -678,7 +529,7 @@ export default function OrdersPage() {
       setIsLoadingProducts(false);
       setIsSearchingProducts(false);
     }
-  }, [activeTab, productCurrentPage, productPageSize, productSearchTerm, productSortBy]);
+  }, [activeTab, productCurrentPage, productPageSize, productSearchTerm, productSortBy, productSales.length]);
 
   // Fetch orders when dependencies change
   useEffect(() => {
@@ -1808,9 +1659,6 @@ export default function OrdersPage() {
                                 <span className="text-slate-100 font-medium">
                                   {product.total_quantity}
                                 </span>
-                                <div className="text-xs text-green-400 mt-1">
-                                  Last Bought: {product.last_sold_customer || 'N/A'}
-                                </div>
                               </div>
                             </td>
                             <td className="p-4 text-right">

@@ -11,6 +11,23 @@ from .serializers import (
     OrderSerializer,
     OrderUpdateSerializer,
 )
+from django.db.models import (
+    Sum,
+    Max,
+    F,
+    Value,
+    Case,
+    When,
+    IntegerField,
+    DecimalField,
+    FloatField,
+    ExpressionWrapper,
+    Count,
+    Q,
+    OuterRef,
+    Subquery,
+)
+from django.db.models.functions import Coalesce, Cast
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -196,6 +213,178 @@ class OrderViewSet(viewsets.ModelViewSet):
                 ).order_by("total_quantity")
 
         return queryset
+
+    @action(detail=False, methods=["get"], url_path="product_summary")
+    def product_summary(self, request):
+        """Return paginated summary of sold products aggregated by product and variant.
+
+        Supports query params:
+        - search: filter by product_name or variant_details
+        - ordering: total_quantity, -total_quantity, total_profit, -total_profit,
+                    profit_margin, -profit_margin, last_sold, -last_sold, product_name
+        - date_filter or start_date/end_date: same semantics as get_queryset
+        - page, page_size: standard pagination
+        """
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+
+        # Base queryset of OrderItems for current user
+        from .models import OrderItem
+
+        items_qs = OrderItem.objects.filter(order__user=request.user)
+
+        # Date filtering (reuse logic similar to orders list)
+        date_filter = request.query_params.get("date_filter")
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+
+        if date_filter:
+            now = timezone.now()
+            today = now.date()
+
+            if date_filter == "today":
+                start_datetime = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+                end_datetime = timezone.make_aware(datetime.combine(today, datetime.max.time()))
+                items_qs = items_qs.filter(order__created_at__range=[start_datetime, end_datetime])
+            elif date_filter == "yesterday":
+                yesterday = today - timedelta(days=1)
+                start_datetime = timezone.make_aware(datetime.combine(yesterday, datetime.min.time()))
+                end_datetime = timezone.make_aware(datetime.combine(yesterday, datetime.max.time()))
+                items_qs = items_qs.filter(order__created_at__range=[start_datetime, end_datetime])
+            elif date_filter == "this_week":
+                week_start = today - timedelta(days=today.weekday())
+                start_datetime = timezone.make_aware(datetime.combine(week_start, datetime.min.time()))
+                end_datetime = now
+                items_qs = items_qs.filter(order__created_at__range=[start_datetime, end_datetime])
+            elif date_filter == "last_week":
+                week_start = today - timedelta(days=today.weekday() + 7)
+                week_end = week_start + timedelta(days=6)
+                start_datetime = timezone.make_aware(datetime.combine(week_start, datetime.min.time()))
+                end_datetime = timezone.make_aware(datetime.combine(week_end, datetime.max.time()))
+                items_qs = items_qs.filter(order__created_at__range=[start_datetime, end_datetime])
+            elif date_filter == "this_month":
+                month_start = today.replace(day=1)
+                start_datetime = timezone.make_aware(datetime.combine(month_start, datetime.min.time()))
+                end_datetime = now
+                items_qs = items_qs.filter(order__created_at__range=[start_datetime, end_datetime])
+            elif date_filter == "last_month":
+                if today.month == 1:
+                    last_month_start = today.replace(year=today.year - 1, month=12, day=1)
+                else:
+                    last_month_start = today.replace(month=today.month - 1, day=1)
+                import calendar
+                last_month = today.month - 1 if today.month != 1 else 12
+                last_day = calendar.monthrange(today.year if today.month != 1 else today.year - 1, last_month)[1]
+                last_month_end = today.replace(year=today.year if today.month != 1 else today.year - 1, month=last_month, day=last_day)
+                start_datetime = timezone.make_aware(datetime.combine(last_month_start, datetime.min.time()))
+                end_datetime = timezone.make_aware(datetime.combine(last_month_end, datetime.max.time()))
+                items_qs = items_qs.filter(order__created_at__range=[start_datetime, end_datetime])
+        elif start_date and end_date:
+            try:
+                start_datetime = timezone.make_aware(datetime.strptime(start_date, "%Y-%m-%d"))
+                end_datetime = timezone.make_aware(datetime.strptime(end_date + " 23:59:59", "%Y-%m-%d %H:%M:%S"))
+                items_qs = items_qs.filter(order__created_at__range=[start_datetime, end_datetime])
+            except ValueError:
+                pass
+
+        # Text search on product name or variant details
+        search = request.query_params.get("search")
+        if search:
+            items_qs = items_qs.filter(
+                Q(product_name__icontains=search) | Q(variant_details__icontains=search)
+            )
+
+        # Aggregate by product + variant
+        base = items_qs.values(
+            "product",
+            "product_name",
+            "variant",
+            "variant_details",
+        ).annotate(
+            total_quantity=Coalesce(Sum("quantity"), Value(0, output_field=IntegerField())),
+            total_revenue=Coalesce(Sum("total_price"), Value(0, output_field=DecimalField(max_digits=14, decimal_places=2))),
+            total_buy_price=Coalesce(Sum(F("buy_price") * F("quantity")), Value(0, output_field=DecimalField(max_digits=14, decimal_places=2))),
+            last_sold=Max("order__created_at"),
+            sales_count=Coalesce(Count("id"), Value(0, output_field=IntegerField())),
+        )
+
+        # Compute derived metrics
+        computed = base.annotate(
+            total_profit=ExpressionWrapper(
+                F("total_revenue") - F("total_buy_price"),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            ),
+            avg_unit_price=Case(
+                When(total_quantity__gt=0, then=ExpressionWrapper(F("total_revenue") / F("total_quantity"), output_field=DecimalField(max_digits=14, decimal_places=2))),
+                default=Value(0),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            ),
+            avg_buy_price=Case(
+                When(total_quantity__gt=0, then=ExpressionWrapper(F("total_buy_price") / F("total_quantity"), output_field=DecimalField(max_digits=14, decimal_places=2))),
+                default=Value(0),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            ),
+            profit_margin=Case(
+                When(total_revenue__gt=0, then=ExpressionWrapper((F("total_revenue") - F("total_buy_price")) / F("total_revenue") * 100.0, output_field=FloatField())),
+                default=Value(0.0),
+                output_field=FloatField(),
+            ),
+            # Synthetic numeric id per group for frontend keys
+            id=ExpressionWrapper(
+                Cast(F("product"), IntegerField()) * Value(100000) + Cast(Coalesce(F("variant"), Value(0)), IntegerField()),
+                output_field=IntegerField(),
+            ),
+            product_id=F("product"),
+            variant_id=F("variant"),
+        )
+
+        # Available stock via subqueries (variant stock if variant present else product stock)
+        from products.models import Product as ProdModel, ProductVariant as PVModel
+        variant_stock_sq = Subquery(
+            PVModel.objects.filter(id=OuterRef("variant")).values("stock")[:1]
+        )
+        product_stock_sq = Subquery(
+            ProdModel.objects.filter(id=OuterRef("product")).values("stock")[:1]
+        )
+        computed = computed.annotate(
+            available_stock=Case(
+                When(variant__isnull=False, then=variant_stock_sq),
+                default=product_stock_sq,
+                output_field=IntegerField(),
+            )
+        )
+
+        # Last sold customer name via subquery (optional)
+        last_customer_sub = OrderItem.objects.filter(
+            product=OuterRef("product"),
+            variant=OuterRef("variant"),
+            order__user=request.user,
+        ).order_by("-order__created_at").values("order__customer_name")[:1]
+        computed = computed.annotate(last_sold_customer=Subquery(last_customer_sub))
+
+        # Ordering
+        ordering = request.query_params.get("ordering", "-total_quantity")
+        allowed = {
+            "total_quantity": "total_quantity",
+            "-total_quantity": "-total_quantity",
+            "total_profit": "total_profit",
+            "-total_profit": "-total_profit",
+            "profit_margin": "profit_margin",
+            "-profit_margin": "-profit_margin",
+            "last_sold": "last_sold",
+            "-last_sold": "-last_sold",
+            "product_name": "product_name",
+            "-product_name": "-product_name",
+        }
+        order_by = allowed.get(ordering, "-total_quantity")
+        computed = computed.order_by(order_by)
+
+        page = self.paginate_queryset(computed)
+        if page is not None:
+            return self.get_paginated_response(list(page))
+
+        # Fallback non-paginated
+        return Response(list(computed))
 
     def create(self, request, *args, **kwargs):
         """
