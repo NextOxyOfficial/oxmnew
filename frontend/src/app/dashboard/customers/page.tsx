@@ -43,6 +43,7 @@ export default function CustomersPage() {
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
     null
   );
+  const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -158,11 +159,17 @@ export default function CustomersPage() {
   };
 
   // Handle edit customer
-  const handleEditCustomer = (customer: Customer) => {
-    // For now, just show an alert - can be replaced with navigation to edit form
-    alert(
-      `Edit customer: ${customer.name}\nThis would navigate to the edit form.`
-    );
+  const handleEditCustomer = async (customer: Customer) => {
+    try {
+      setEditingCustomerId(customer.id);
+      // Navigate to the customer details page
+      await router.push(`/dashboard/customers/${customer.id}`);
+    } catch (error) {
+      console.error('Navigation error:', error);
+    } finally {
+      // Reset the editing state after navigation
+      setTimeout(() => setEditingCustomerId(null), 1000);
+    }
   };
 
   // Handle delete customer
@@ -613,23 +620,28 @@ export default function CustomersPage() {
                         e.stopPropagation();
                         handleEditCustomer(customer);
                       }}
-                      className="flex-1 text-slate-300 hover:text-slate-100 p-2 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer text-xs font-medium flex items-center justify-center space-x-1"
+                      disabled={editingCustomerId === customer.id}
+                      className="flex-1 text-slate-300 hover:text-slate-100 p-2 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer text-xs font-medium flex items-center justify-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Edit"
                     >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                      <span>Edit</span>
+                      {editingCustomerId === customer.id ? (
+                        <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      )}
+                      <span>{editingCustomerId === customer.id ? 'Loading...' : 'Edit'}</span>
                     </button>
                     <button
                       key={`delete-${customer.id}`}
@@ -786,22 +798,27 @@ export default function CustomersPage() {
                               e.stopPropagation();
                               handleEditCustomer(customer);
                             }}
-                            className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
+                            disabled={editingCustomerId === customer.id}
+                            className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Edit"
                           >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
+                            {editingCustomerId === customer.id ? (
+                              <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            )}
                           </button>
                           <button
                             onClick={(e) => {

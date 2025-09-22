@@ -25,6 +25,7 @@ export default function EmployeesPage() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(
     null
   );
+  const [editingEmployeeId, setEditingEmployeeId] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -212,11 +213,17 @@ export default function EmployeesPage() {
   };
 
   // Handle edit employee
-  const handleEditEmployee = (employee: Employee) => {
-    // For now, just show an alert - can be replaced with navigation to edit form
-    alert(
-      `Edit employee: ${employee.name}\nThis would navigate to the edit form.`
-    );
+  const handleEditEmployee = async (employee: Employee) => {
+    try {
+      setEditingEmployeeId(employee.id);
+      // Navigate to the employee details page
+      await router.push(`/dashboard/employees/${employee.id}`);
+    } catch (error) {
+      console.error('Navigation error:', error);
+    } finally {
+      // Reset the editing state after navigation
+      setTimeout(() => setEditingEmployeeId(null), 1000);
+    }
   };
 
   // Handle delete employee
@@ -905,23 +912,28 @@ export default function EmployeesPage() {
                         e.stopPropagation();
                         handleEditEmployee(employee);
                       }}
-                      className="flex-1 text-slate-300 hover:text-slate-100 p-2 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer text-xs font-medium flex items-center justify-center space-x-1"
+                      disabled={editingEmployeeId === employee.id}
+                      className="flex-1 text-slate-300 hover:text-slate-100 p-2 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer text-xs font-medium flex items-center justify-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Edit"
                     >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                      <span>Edit</span>
+                      {editingEmployeeId === employee.id ? (
+                        <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      )}
+                      <span>{editingEmployeeId === employee.id ? 'Loading...' : 'Edit'}</span>
                     </button>
                     <button
                       onClick={(e) => {
@@ -1061,22 +1073,27 @@ export default function EmployeesPage() {
                               e.stopPropagation();
                               handleEditEmployee(employee);
                             }}
-                            className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
+                            disabled={editingEmployeeId === employee.id}
+                            className="text-slate-300 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Edit"
                           >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
+                            {editingEmployeeId === employee.id ? (
+                              <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            )}
                           </button>
                           <button
                             onClick={(e) => {
