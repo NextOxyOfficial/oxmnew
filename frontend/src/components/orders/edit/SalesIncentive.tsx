@@ -1,6 +1,7 @@
 "use client";
 
 import { OrderForm } from "../types";
+import { useEffect, useMemo } from "react";
 
 interface Employee {
   id: number;
@@ -8,6 +9,7 @@ interface Employee {
   email: string;
   department?: string;
   role?: string;
+  employee_id?: string;
 }
 
 type Props = {
@@ -24,6 +26,41 @@ type Props = {
 };
 
 export default function SalesIncentive({ orderForm, setOrderForm, employees, isEmployeeDropdownOpen, setIsEmployeeDropdownOpen, employeeSearch, setEmployeeSearch, formatCurrency, isOpen, setIsOpen }: Props) {
+  
+  // Find the selected employee
+  const selectedEmployee = useMemo(() => 
+    employees.find(e => e.id === orderForm.employee_id), 
+    [employees, orderForm.employee_id]
+  );
+
+  // Auto-populate employee search when order loads and employees are available
+  useEffect(() => {
+    console.log('Employee sync:', {
+      employee_id: orderForm.employee_id,
+      employees_count: employees.length,
+      selectedEmployee: selectedEmployee ? `${selectedEmployee.name} (ID: ${selectedEmployee.id})` : 'Not found',
+      currentSearch: employeeSearch
+    });
+    
+    // Only auto-populate if we have an employee ID, found the employee, and search is empty
+    if (orderForm.employee_id && selectedEmployee && !employeeSearch) {
+      const displayName = `${selectedEmployee.name} - ${selectedEmployee.role || selectedEmployee.department || "Employee"}`;
+      console.log('Setting employee search to:', displayName);
+      setEmployeeSearch(displayName);
+    }
+  }, [orderForm.employee_id, selectedEmployee, employees.length, employeeSearch, setEmployeeSearch]);
+
+  // Filter employees based on search (simple and reliable)
+  const filteredEmployees = useMemo(() => {
+    if (!employeeSearch.trim()) return employees;
+    const search = employeeSearch.toLowerCase();
+    return employees.filter((employee) => 
+      employee.name.toLowerCase().includes(search) ||
+      employee.email.toLowerCase().includes(search) ||
+      (employee.role && employee.role.toLowerCase().includes(search)) ||
+      (employee.department && employee.department.toLowerCase().includes(search))
+    );
+  }, [employees, employeeSearch]);
   return (
     <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
       <div className="sm:p-4 p-2">
@@ -36,6 +73,25 @@ export default function SalesIncentive({ orderForm, setOrderForm, employees, isE
 
         {isOpen && (
           <div className="space-y-3">
+            {/* Display selected employee info */}
+            {selectedEmployee && (
+              <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <div>
+                    <p className="text-cyan-300 text-sm font-medium">
+                      Selected: {selectedEmployee.name || 'Unknown'} ({selectedEmployee.employee_id || `EMP${selectedEmployee.id}`})
+                    </p>
+                    <p className="text-cyan-400 text-xs">
+                      {selectedEmployee.role || selectedEmployee.department || 'Employee'} • {selectedEmployee.email || 'No email'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Employee</label>
               <div className="relative">
@@ -43,7 +99,10 @@ export default function SalesIncentive({ orderForm, setOrderForm, employees, isE
                   type="text"
                   placeholder="Search and select employee..."
                   value={employeeSearch}
-                  onChange={(e) => { setEmployeeSearch(e.target.value); setIsEmployeeDropdownOpen(true); }}
+                  onChange={(e) => { 
+                    setEmployeeSearch(e.target.value); 
+                    setIsEmployeeDropdownOpen(true); 
+                  }}
                   onFocus={() => setIsEmployeeDropdownOpen(true)}
                   className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
                 />
@@ -65,20 +124,41 @@ export default function SalesIncentive({ orderForm, setOrderForm, employees, isE
 
                 {isEmployeeDropdownOpen && (
                   <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
-                    {employees.filter((emp) => emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.email?.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.role?.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.department?.toLowerCase().includes(employeeSearch.toLowerCase())).length > 0 ? (
-                      <>
-                        <div onClick={() => { setOrderForm((prev) => ({ ...prev, employee_id: undefined })); setEmployeeSearch(""); setIsEmployeeDropdownOpen(false); }} className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 text-slate-400 text-sm">
-                          No employee selected
-                        </div>
-                        {employees.filter((emp) => emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.email?.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.role?.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.department?.toLowerCase().includes(employeeSearch.toLowerCase())).map((employee) => (
-                          <div key={employee.id} onClick={() => { setOrderForm((prev) => ({ ...prev, employee_id: employee.id })); setEmployeeSearch(`${employee.name} - ${employee.role || employee.department}`); setIsEmployeeDropdownOpen(false); }} className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0">
-                            <div className="text-white font-medium text-sm">{employee.name}</div>
-                            <div className="text-slate-400 text-sm">{employee.role || employee.department} • {employee.email}</div>
+                    {/* No employee option */}
+                    <div 
+                      onClick={() => { 
+                        setOrderForm((prev) => ({ ...prev, employee_id: undefined })); 
+                        setEmployeeSearch(""); 
+                        setIsEmployeeDropdownOpen(false); 
+                      }} 
+                      className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 text-slate-400 text-sm"
+                    >
+                      No employee selected
+                    </div>
+                    
+                    {/* Employee list */}
+                    {filteredEmployees.length > 0 ? (
+                      filteredEmployees.map((employee) => (
+                        <div 
+                          key={employee.id} 
+                          onClick={() => { 
+                            console.log('Selecting employee:', employee);
+                            setOrderForm((prev) => ({ ...prev, employee_id: employee.id })); 
+                            setEmployeeSearch(`${employee.name} - ${employee.role || employee.department || "Employee"}`); 
+                            setIsEmployeeDropdownOpen(false); 
+                          }} 
+                          className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
+                        >
+                          <div className="text-white font-medium text-sm">{employee.name}</div>
+                          <div className="text-slate-400 text-sm">
+                            {employee.role || employee.department || 'Employee'} • {employee.email}
                           </div>
-                        ))}
-                      </>
+                        </div>
+                      ))
                     ) : (
-                      <div className="p-3 text-slate-400 text-sm">No employees found</div>
+                      <div className="p-3 text-slate-400 text-sm">
+                        {employees.length === 0 ? "No employees loaded" : "No employees match your search"}
+                      </div>
                     )}
                   </div>
                 )}

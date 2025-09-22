@@ -652,6 +652,7 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = [
+            "customer",
             "customer_name",
             "customer_phone",
             "customer_email",
@@ -667,6 +668,9 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
             "discount_amount",
             "vat_amount",
             "total_amount",
+            "due_date",
+            "employee",
+            "incentive_amount",
         ]
 
     def update(self, instance, validated_data):

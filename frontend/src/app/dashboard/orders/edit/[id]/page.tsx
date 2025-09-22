@@ -208,7 +208,33 @@ export default function EditOrderPage() {
       const existingItems = currentOrder.items || [];
       for (const existingItem of existingItems) { try { await ApiService.removeOrderItem(parseInt(orderId), existingItem.id); } catch {} }
       for (const item of orderForm.items) { const itemData: any = { product: item.product, quantity: item.quantity, unit_price: item.unit_price, buy_price: item.buy_price, variant: item.variant ?? null }; await ApiService.addOrderItem(parseInt(orderId), itemData); }
-      const orderUpdateData = { customer: selectedCustomerId || undefined, customer_name: orderForm.customer.name, customer_phone: orderForm.customer.phone?.trim() || undefined, customer_email: orderForm.customer.email?.trim() || undefined, customer_address: orderForm.customer.address?.trim() || undefined, customer_company: orderForm.customer.company?.trim() || undefined, status, discount_type: orderForm.discount_type, discount_percentage: round(orderForm.discount_percentage || 0), discount_flat_amount: round(orderForm.discount_flat_amount || 0), vat_percentage: round(orderForm.vat_percentage || 0), notes: orderForm.notes || undefined, due_date: orderForm.due_date || undefined, subtotal: round(orderForm.subtotal || 0), discount_amount: round(orderForm.discount_amount || 0), vat_amount: round(orderForm.vat_amount || 0), total_amount: round(orderForm.total || 0) };
+      const orderUpdateData = { 
+        customer: selectedCustomerId || undefined, 
+        customer_name: orderForm.customer.name, 
+        customer_phone: orderForm.customer.phone?.trim() || undefined, 
+        customer_email: orderForm.customer.email?.trim() || undefined, 
+        customer_address: orderForm.customer.address?.trim() || undefined, 
+        customer_company: orderForm.customer.company?.trim() || undefined, 
+        status, 
+        discount_type: orderForm.discount_type, 
+        discount_percentage: round(orderForm.discount_percentage || 0), 
+        discount_flat_amount: round(orderForm.discount_flat_amount || 0), 
+        vat_percentage: round(orderForm.vat_percentage || 0), 
+        notes: orderForm.notes || undefined, 
+        due_date: orderForm.due_date || undefined, 
+        subtotal: round(orderForm.subtotal || 0), 
+        discount_amount: round(orderForm.discount_amount || 0), 
+        vat_amount: round(orderForm.vat_amount || 0), 
+        total_amount: round(orderForm.total || 0),
+        employee: orderForm.employee_id || undefined,
+        incentive_amount: round(orderForm.incentive_amount || 0)
+      };
+      
+      console.log('💾 Saving order with employee data:', {
+        employee_id: orderForm.employee_id,
+        incentive_amount: orderForm.incentive_amount,
+        orderUpdateData: orderUpdateData
+      });
       await ApiService.updateOrder(parseInt(orderId), orderUpdateData);
       router.push("/dashboard/orders?updated=true");
     } catch (error) {
