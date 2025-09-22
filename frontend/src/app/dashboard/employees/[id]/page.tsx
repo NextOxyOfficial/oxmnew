@@ -101,6 +101,20 @@ export default function EmployeeDetailsPage() {
     fetchEmployeeData();
   }, [getEmployeeId]);
 
+  // Function to refresh incentives data
+  const refreshIncentives = async () => {
+    const employeeId = getEmployeeId();
+    if (!employeeId) return;
+    
+    try {
+      const id = parseInt(employeeId);
+      const incentivesData = await employeeAPI.getEmployeeIncentives(id);
+      setIncentives(Array.isArray(incentivesData) ? incentivesData : []);
+    } catch (error) {
+      console.error("Error refreshing incentives:", error);
+    }
+  };
+
   const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -255,6 +269,7 @@ export default function EmployeeDetailsPage() {
                 incentives={incentives}
                 employeeId={getEmployeeId() || ''}
                 onIncentivesUpdate={setIncentives}
+                onRefresh={refreshIncentives}
               />
             )}
 
