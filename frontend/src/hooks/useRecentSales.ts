@@ -133,7 +133,7 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
   );
 
   useEffect(() => {
-    // Only load without filter on mount - let dashboard handle initial filter
+    // Load initial data - dashboard will override with filter if needed
     fetchRecentSales();
   }, [fetchRecentSales]);
 

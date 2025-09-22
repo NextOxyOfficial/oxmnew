@@ -256,6 +256,17 @@ export default function DashboardPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [sortDropdownOpen, showDateRangePicker]);
 
+  // Apply initial filter when component mounts
+  useEffect(() => {
+    // Apply the default filter after the hook has initialized
+    const timer = setTimeout(() => {
+      console.log("Dashboard: Applying initial filter:", currentFilter);
+      fetchSalesWithFilter({ dateFilter: currentFilter });
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []); // Empty dependency array to run only on mount
+
   return (
     <div className="py-4 px-1 sm:p-6 lg:p-8">
       {/* Quick Stats Grid */}
@@ -911,7 +922,7 @@ export default function DashboardPage() {
                                     Total Qty
                                   </span>
                                   <span className="text-xs font-medium text-gray-300 ml-1.5">
-                                    {sale.quantity}
+                                    {sale.items?.reduce((total, item) => total + item.quantity, 0) || sale.quantity}
                                   </span>
                                 </div>
                                 <div className="h-3 w-px bg-gray-600"></div>
@@ -978,44 +989,6 @@ export default function DashboardPage() {
                             {date}, {time}
                           </div>
                         </div>
-
-                        {/* Show order items details if multiple items */}
-                        {sale.items && sale.items.length > 1 && (
-                          <div className="mt-2 space-y-1">
-                            <div className="text-xs text-gray-400 mb-1">
-                              Order Items:
-                            </div>
-                            {sale.items.slice(0, 3).map((item, index) => (
-                              <div
-                                key={index}
-                                className="text-xs text-gray-300 bg-black/30 rounded px-2 py-1"
-                              >
-                                <span className="font-medium">
-                                  {item.product_name}
-                                </span>
-                                {item.variant_details && (
-                                  <span className="text-gray-400">
-                                    {" "}
-                                    • {item.variant_details}
-                                  </span>
-                                )}
-                                <span className="text-gray-400">
-                                  {" "}
-                                  • Qty: {item.quantity}
-                                </span>
-                                <span className="text-gray-400">
-                                  {" "}
-                                  • {formatCurrency(item.unit_price)}
-                                </span>
-                              </div>
-                            ))}
-                            {sale.items.length > 3 && (
-                              <div className="text-xs text-gray-400 px-2">
-                                +{sale.items.length - 3} more items...
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
                     );
                   })
