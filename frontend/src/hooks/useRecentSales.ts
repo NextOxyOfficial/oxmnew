@@ -19,6 +19,7 @@ export interface Sale {
   customer_email?: string;
   notes?: string;
   sale_date: string;
+  status?: string; // Add status field
   // New fields for multiple items support
   items?: OrderItem[];
   gross_profit?: number;

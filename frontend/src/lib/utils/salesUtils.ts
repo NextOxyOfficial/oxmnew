@@ -52,15 +52,26 @@ export const generateOrderId = (saleId: number) => {
 
 // Helper function to determine order status
 export const getOrderStatus = (sale: Sale) => {
-  // Since we don't have explicit order status, we'll use some logic
-  // Orders within last 24 hours could be "draft", others "completed"
+  // If the sale has an explicit status field, use it
+  if (sale.status) {
+    return sale.status === "draft" ? "Draft" : "Completed";
+  }
+  
+  // For sales that came from orders, they should typically be "Completed"
+  // since they represent finalized transactions with sales data
+  // Only consider as draft if explicitly marked or if certain conditions are met
+  
+  // If the sale has very recent timestamp (within last hour) and no customer info,
+  // it might be a draft being tested, but this is rare
   const saleDate = new Date(sale.sale_date);
   const now = new Date();
-  const diffHours = (now.getTime() - saleDate.getTime()) / (1000 * 60 * 60);
-
-  if (diffHours < 24) {
-    return Math.random() > 0.5 ? "Draft" : "Completed";
-  } else {
-    return "Completed";
+  const diffMinutes = (now.getTime() - saleDate.getTime()) / (1000 * 60);
+  
+  // Very recent sales (less than 5 minutes) with no customer info might be test drafts
+  if (diffMinutes < 5 && !sale.customer_name && !sale.customer_phone) {
+    return "Draft";
   }
+  
+  // All other sales should be considered completed
+  return "Completed";
 };

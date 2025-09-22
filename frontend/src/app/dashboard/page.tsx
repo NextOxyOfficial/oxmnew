@@ -174,6 +174,11 @@ export default function DashboardPage() {
     router.push("/dashboard/sms");
   };
 
+  const handleViewInvoice = (saleId: number) => {
+    setIsNavigating(true);
+    router.push(`/dashboard/orders/invoice/${saleId}`);
+  };
+
   const handleCreateMainAccount = async () => {
     try {
       // Create main account via API using the banking API
@@ -885,8 +890,13 @@ export default function DashboardPage() {
                               {formatCurrency(sale.total_amount)}
                             </span>
                             <button
-                              className="text-gray-300 hover:text-white p-1 rounded-full hover:bg-white/3 transition-all ml-2"
-                              title="View Sale Details"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewInvoice(sale.id);
+                              }}
+                              disabled={isNavigating}
+                              className="text-gray-300 hover:text-white p-1 rounded-full hover:bg-white/3 transition-all ml-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                              title="View Invoice"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
