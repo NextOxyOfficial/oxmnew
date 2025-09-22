@@ -81,9 +81,9 @@ export default function NotebookPage() {
         console.log('Notebooks loaded from database:', localNotebooks.length);
         
       } catch (err) {
-        console.error('Failed to load notebooks from database:', err);
-        console.error('Error details:', err instanceof Error ? err.message : String(err));
-        setError("Unable to connect to the notebook database. Please ensure the backend server is running on localhost:8000.");
+  console.error('Failed to load notebooks from database:', err);
+  console.error('Error details:', err instanceof Error ? err.message : String(err));
+  setError("Unable to connect to the notebook service. Please check your server configuration and network, then try again.");
       } finally {
         setIsLoading(false);
       }
@@ -118,8 +118,7 @@ export default function NotebookPage() {
         is_pinned: false
       };
 
-      console.log('Creating notebook with data:', createData);
-      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api');
+  console.log('Creating notebook with data:', createData);
       
       const apiNotebook = await notebookAPI.createNotebook(createData);
       console.log('API response:', apiNotebook);
