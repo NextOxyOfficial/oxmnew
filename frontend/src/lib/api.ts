@@ -1205,8 +1205,8 @@ export class ApiService {
     page?: number;
     page_size?: number;
     search?: string;
-    category?: string;
-    supplier?: string;
+    category?: number | string;
+    supplier?: number | string;
     ordering?: string;
   }) {
     let endpoint = "/products/";

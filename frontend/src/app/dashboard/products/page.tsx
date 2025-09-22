@@ -16,14 +16,16 @@ function ProductsPageContent() {
   const formatCurrency = useCurrencyFormatter();
   const { subscriptionStatus, isPro, isLoading: subscriptionLoading } = useSubscription();
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  // Store categories as objects to have access to IDs for backend filtering
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(""); // For immediate UI updates
   const [searchTerm, setSearchTerm] = useState(""); // For debounced API calls
-  const [filterCategory, setFilterCategory] = useState("all");
+  // Filter by category ID as required by backend (use "all" for no filter)
+  const [filterCategory, setFilterCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState("newest");
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [loadingStates, setLoadingStates] = useState<{
@@ -218,7 +220,7 @@ function ProductsPageContent() {
           page: number;
           page_size: number;
           search?: string;
-          category__name?: string;
+          category?: string;
           ordering?: string;
         } = {
           page: currentPage,
@@ -230,9 +232,12 @@ function ProductsPageContent() {
           params.search = searchTerm.trim();
         }
 
-        // Add category filter if not "all"
+        // Add category filter (backend expects category ID via `category`)
         if (filterCategory !== "all") {
-          params.category__name = filterCategory;
+          const catId = Number(filterCategory);
+          if (!Number.isNaN(catId)) {
+            params.category = String(catId);
+          }
         }
 
         // Add ordering
@@ -245,10 +250,13 @@ function ProductsPageContent() {
               params.ordering = "name";
               break;
             case "stock-high":
-              params.ordering = "-stock";
+              // Backend doesn't support ordering by stock; handle client-side
+              // by leaving ordering undefined here
+              delete params.ordering;
               break;
             case "stock-low":
-              params.ordering = "stock";
+              // Backend doesn't support ordering by stock; handle client-side
+              delete params.ordering;
               break;
             case "price-high":
               params.ordering = "-sell_price";
@@ -298,24 +306,17 @@ function ProductsPageContent() {
     products.length,
   ]);
 
-  // Fetch categories on component mount
+  // Fetch categories on component mount from backend (provides IDs and names)
   useEffect(() => {
     const fetchCategories = async () => {
       if (categories.length === 0) {
         try {
-          // Fetch all products to get categories
-          const allProductsData = await ApiService.getProducts({
-            page_size: 1000,
-          });
-          const allProducts = allProductsData.results || allProductsData || [];
-          const uniqueCategories = [
-            ...new Set(
-              allProducts
-                .map((product: Product) => product.category_name)
-                .filter(Boolean)
-            ),
-          ] as string[];
-          setCategories(uniqueCategories);
+          const cats = await ApiService.getCategories();
+          // Normalize to id/name shape in case of different backend responses
+          const normalized = (cats || [])
+            .map((c: any) => ({ id: Number(c.id), name: String(c.name) }))
+            .filter((c: any) => !!c.id && !!c.name);
+          setCategories(normalized);
         } catch (error) {
           console.error("Error fetching categories:", error);
         }
@@ -599,8 +600,18 @@ function ProductsPageContent() {
     }
   }, [searchTerm, filterCategory, sortBy]);
 
-  // Products are already filtered and sorted by the backend, so we use them directly
-  const filteredProducts = products;
+  // Apply any client-side sorting that's not supported by backend (stock)
+  const filteredProducts = (() => {
+    if (sortBy === "stock-high" || sortBy === "stock-low") {
+      const sorted = [...products].sort((a, b) => {
+        const sa = getDisplayStock(a);
+        const sb = getDisplayStock(b);
+        return sortBy === "stock-high" ? sb - sa : sa - sb;
+      });
+      return sorted;
+    }
+    return products;
+  })();
 
   // Loading state - only show full skeleton on initial load
   if (isLoading && isInitialLoad) {
@@ -1153,11 +1164,11 @@ function ProductsPageContent() {
                     </option>
                     {categories.map((category) => (
                       <option
-                        key={category}
-                        value={category}
+                        key={category.id}
+                        value={String(category.id)}
                         className="bg-slate-800"
                       >
-                        {category}
+                        {category.name}
                       </option>
                     ))}
                   </select>
