@@ -1,0 +1,132 @@
+"use client";
+
+import { OrderForm } from "../types";
+
+interface Employee {
+  id: number;
+  name: string;
+  email: string;
+  department?: string;
+  role?: string;
+}
+
+type Props = {
+  orderForm: OrderForm;
+  setOrderForm: (updater: (prev: OrderForm) => OrderForm) => void;
+  employees: Employee[];
+  isEmployeeDropdownOpen: boolean;
+  setIsEmployeeDropdownOpen: (v: boolean) => void;
+  employeeSearch: string;
+  setEmployeeSearch: (v: string) => void;
+  formatCurrency: (v: number) => string;
+  isOpen: boolean;
+  setIsOpen: (v: boolean) => void;
+};
+
+export default function SalesIncentive({ orderForm, setOrderForm, employees, isEmployeeDropdownOpen, setIsEmployeeDropdownOpen, employeeSearch, setEmployeeSearch, formatCurrency, isOpen, setIsOpen }: Props) {
+  return (
+    <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
+      <div className="sm:p-4 p-2">
+        <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between text-sm font-medium text-orange-400 mb-3 p-2 rounded-lg hover:bg-slate-800/30 transition-colors">
+          <span>Sales Incentive (Internal)</span>
+          <svg className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {isOpen && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Employee</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search and select employee..."
+                  value={employeeSearch}
+                  onChange={(e) => { setEmployeeSearch(e.target.value); setIsEmployeeDropdownOpen(true); }}
+                  onFocus={() => setIsEmployeeDropdownOpen(true)}
+                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                />
+
+                {employeeSearch && (
+                  <button
+                    type="button"
+                    onClick={() => { setEmployeeSearch(""); setOrderForm((prev) => ({ ...prev, employee_id: undefined })); setIsEmployeeDropdownOpen(false); }}
+                    className="absolute right-12 top-1/2 -translate-y-1/2 text-sm text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
+                    title="Clear search"
+                  >
+                    Clear
+                  </button>
+                )}
+
+                <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+
+                {isEmployeeDropdownOpen && (
+                  <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
+                    {employees.filter((emp) => emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.email?.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.role?.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.department?.toLowerCase().includes(employeeSearch.toLowerCase())).length > 0 ? (
+                      <>
+                        <div onClick={() => { setOrderForm((prev) => ({ ...prev, employee_id: undefined })); setEmployeeSearch(""); setIsEmployeeDropdownOpen(false); }} className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 text-slate-400 text-sm">
+                          No employee selected
+                        </div>
+                        {employees.filter((emp) => emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.email?.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.role?.toLowerCase().includes(employeeSearch.toLowerCase()) || emp.department?.toLowerCase().includes(employeeSearch.toLowerCase())).map((employee) => (
+                          <div key={employee.id} onClick={() => { setOrderForm((prev) => ({ ...prev, employee_id: employee.id })); setEmployeeSearch(`${employee.name} - ${employee.role || employee.department}`); setIsEmployeeDropdownOpen(false); }} className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0">
+                            <div className="text-white font-medium text-sm">{employee.name}</div>
+                            <div className="text-slate-400 text-sm">{employee.role || employee.department} • {employee.email}</div>
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <div className="p-3 text-slate-400 text-sm">No employees found</div>
+                    )}
+                  </div>
+                )}
+
+                {isEmployeeDropdownOpen && <div className="fixed inset-0 z-5" onClick={() => setIsEmployeeDropdownOpen(false)} />}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Incentive Amount</label>
+              <input
+                type="number"
+                value={orderForm.incentive_amount === 0 ? "" : orderForm.incentive_amount}
+                onChange={(e) => setOrderForm((prev) => ({ ...prev, incentive_amount: parseFloat(e.target.value) || 0 }))}
+                className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+              />
+
+              {orderForm.employee_id && orderForm.incentive_amount > 0 && (
+                <div className="mt-2 p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <p className="text-green-400 text-sm font-medium">Incentive will be recorded</p>
+                      <p className="text-green-300 text-xs">{formatCurrency(orderForm.incentive_amount)} incentive will be given to the selected employee when the order is saved.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {orderForm.employee_id && orderForm.incentive_amount === 0 && (
+              <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <p className="text-amber-400 text-sm">Employee selected but no incentive amount set. Enter an amount above to create an incentive.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

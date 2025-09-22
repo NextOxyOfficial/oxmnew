@@ -1,16 +1,21 @@
 "use client";
 
 import ProductDropdown from "@/components/ProductDropdown";
-import ProductSearchInput, {
-  ProductSearchInputRef,
-} from "@/components/ProductSearchInput";
+import ProductSearchInput, { ProductSearchInputRef } from "@/components/ProductSearchInput";
 import { useCurrencyFormatter, useCurrency } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { Product } from "@/types/product";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, ReactNode } from "react";
 
-// Customer interface
+import CustomerSelector from "@/components/orders/edit/CustomerSelector";
+import OrderItemsTable from "@/components/orders/edit/OrderItemsTable";
+import BillSummary from "@/components/orders/edit/BillSummary";
+import PaymentsSection from "@/components/orders/edit/PaymentsSection";
+import SalesIncentive from "@/components/orders/edit/SalesIncentive";
+import type { OrderForm as OrderFormT, OrderItem as OrderItemT, PaymentEntry as PaymentEntryT, CustomerInfo } from "@/components/orders/types";
+
+// Customer and Employee interfaces for lists
 interface Customer {
   id: number;
   name: string;
@@ -23,7 +28,6 @@ interface Customer {
   total_spent?: number;
 }
 
-// Employee interface
 interface Employee {
   id: number;
   name: string;
@@ -35,124 +39,45 @@ interface Employee {
   status?: string;
 }
 
-// Types for the order
-interface OrderItem {
-  id: string;
-  product: number;
-  variant?: number;
-  quantity: number;
-  unit_price: number;
-  buy_price: number;
-  total: number;
-  product_name: string;
-  variant_details?: string;
-}
-
-interface CustomerInfo {
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  company?: string;
-}
-
-interface PaymentEntry {
-  id: string;
-  method: "Cash" | "Cheque" | "Bkash" | "Nagad" | "Bank";
-  amount: number;
-}
-
-interface OrderForm {
-  customer: CustomerInfo;
-  items: OrderItem[];
-  subtotal: number;
-  discount_type: "percentage" | "flat"; // New field for discount type
-  discount_percentage: number;
-  discount_flat_amount: number; // New field for flat discount amount
-  discount_amount: number;
-  vat_percentage: number;
-  vat_amount: number;
-  due_amount: number;
-  previous_due: number; // Customer's existing debt
-  apply_previous_due_to_total: boolean; // Whether to add previous due amount to total
-  total: number;
-  due_date: string;
-  notes: string;
-  status:
-    | "draft"
-    | "pending"
-    | "processing"
-    | "shipped"
-    | "delivered"
-    | "completed"
-    | "cancelled"
-    | "refunded";
-  // Payment information
-  payments: PaymentEntry[];
-  total_payment_received: number;
-  remaining_balance: number; // total - total_payment_received
-  // Internal company fields (not shown on invoice)
-  employee_id?: number;
-  incentive_amount: number;
-  net_profit: number; // total - incentive_amount
-  total_buy_price: number; // Total cost price of all items
-  total_sell_price: number; // Total selling price of all items (before discounts)
-  gross_profit: number; // total_sell_price - total_buy_price
-}
-
 export default function EditOrderPage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const params = useParams();
   const formatCurrency = useCurrencyFormatter();
   const { currencySymbol } = useCurrency();
 
-  // State variables
   const [products, setProducts] = useState<Product[]>([]);
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [isSearchingProducts, setIsSearchingProducts] = useState(false);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+  const [isLoadingOrder, setIsLoadingOrder] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingOrder, setIsLoadingOrder] = useState(true);
-  const [customerType, setCustomerType] = useState<"existing" | "guest">(
-    "existing"
-  );
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
-    null
-  );
+
+  const [customerType, setCustomerType] = useState<"existing" | "guest">("existing");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
-  const [isSalesIncentiveOpen, setIsSalesIncentiveOpen] = useState(false);
-  const [customerValidationError, setCustomerValidationError] = useState<
-    string | null
-  >(null);
-  const [matchedCustomer, setMatchedCustomer] = useState<Customer | null>(null);
-  const [duplicateField, setDuplicateField] = useState<'email' | 'phone' | null>(null);
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
-    null
-  );
+  const [isSalesIncentiveOpen, setIsSalesIncentiveOpen] = useState(false);
 
-  // Refs
+  const [customerValidationError, setCustomerValidationError] = useState<string | null>(null);
+  const [matchedCustomer, setMatchedCustomer] = useState<Customer | null>(null);
+  const [duplicateField, setDuplicateField] = useState<"email" | "phone" | null>(null);
+
+  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const productSearchInputRef = useRef<ProductSearchInputRef>(null);
   const isActivelyTypingRef = useRef(false);
 
-  // Order form state
-  const [orderForm, setOrderForm] = useState<OrderForm>({
-    customer: {
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      company: "",
-    },
+  const [orderForm, setOrderForm] = useState<OrderFormT>({
+    customer: { name: "", email: "", phone: "", address: "", company: "" },
     items: [],
     subtotal: 0,
     discount_type: "percentage",
@@ -167,7 +92,7 @@ export default function EditOrderPage() {
     total: 0,
     due_date: "",
     notes: "",
-    status: "pending",
+    status: "draft",
     payments: [],
     total_payment_received: 0,
     remaining_balance: 0,
@@ -179,50 +104,18 @@ export default function EditOrderPage() {
     gross_profit: 0,
   });
 
-  // State for adding new items
-  const [newItem, setNewItem] = useState({
-    product: "",
-    variant: "",
-    quantity: 1,
-    unit_price: 0,
-  });
+  const [newItem, setNewItem] = useState({ product: "", variant: "", quantity: 1, unit_price: 0 });
 
-  // Fetch order data and initialize form
   useEffect(() => {
     const fetchOrder = async () => {
       try {
         setIsLoadingOrder(true);
-        const orderId = params.id as string;
-        if (!orderId) {
-          setError("Order ID is required");
-          setIsLoadingOrder(false);
-          return;
-        }
-
-        const fetchedOrder = await ApiService.getOrder(parseInt(orderId));
-
-        // Initialize form data from existing order
+        const orderId = params?.id;
+        if (!orderId) { setError("Order ID is required"); setIsLoadingOrder(false); return; }
+        const fetchedOrder = await ApiService.getOrder(parseInt(orderId as string));
         setOrderForm({
-          customer: {
-            name: fetchedOrder.customer_name || "",
-            email: fetchedOrder.customer_email || "",
-            phone: fetchedOrder.customer_phone || "",
-            address: fetchedOrder.customer_address || "",
-            company: fetchedOrder.customer_company || "",
-          },
-          items:
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            fetchedOrder.items?.map((item: any) => ({
-              id: item.id ? item.id.toString() : Date.now().toString(),
-              product: item.product,
-              variant: item.variant,
-              quantity: Number(item.quantity) || 0,
-              unit_price: Number(item.unit_price) || 0,
-              buy_price: Number(item.buy_price) || 0,
-              total: Number(item.total_price) || (Number(item.unit_price) || 0) * (Number(item.quantity) || 0),
-              product_name: item.product_name,
-              variant_details: item.variant_details,
-            })) || [],
+          customer: { name: fetchedOrder.customer_name || "", email: fetchedOrder.customer_email || "", phone: fetchedOrder.customer_phone || "", address: fetchedOrder.customer_address || "", company: fetchedOrder.customer_company || "" },
+          items: (fetchedOrder.items || []).map((item: any) => ({ id: item.id ? String(item.id) : `${Date.now()}`, product: item.product, variant: item.variant, quantity: Number(item.quantity) || 0, unit_price: Number(item.unit_price) || 0, buy_price: Number(item.buy_price) || 0, total: Number(item.total_price) || (Number(item.unit_price) || 0) * (Number(item.quantity) || 0), product_name: item.product_name, variant_details: item.variant_details })),
           subtotal: Number(fetchedOrder.subtotal) || 0,
           discount_type: fetchedOrder.discount_type || "percentage",
           discount_percentage: Number(fetchedOrder.discount_percentage) || 0,
@@ -232,21 +125,14 @@ export default function EditOrderPage() {
           vat_amount: Number(fetchedOrder.vat_amount) || 0,
           due_amount: Number(fetchedOrder.due_amount) || 0,
           previous_due: Number(fetchedOrder.previous_due) || 0,
-          apply_previous_due_to_total:
-            fetchedOrder.apply_previous_due_to_total || false,
+          apply_previous_due_to_total: Boolean(fetchedOrder.apply_previous_due_to_total ?? true),
           total: Number(fetchedOrder.total_amount) || 0,
           due_date: fetchedOrder.due_date || "",
           notes: fetchedOrder.notes || "",
           status: fetchedOrder.status || "pending",
-          payments:
-            fetchedOrder.payments?.map((payment: PaymentEntry) => ({
-              id: payment.id ? payment.id.toString() : Date.now().toString(),
-              method: payment.method,
-              amount: Number(payment.amount) || 0,
-            })) || [],
+          payments: (fetchedOrder.payments || []).map((p: any) => ({ id: p.id ? String(p.id) : `${Date.now()}`, method: p.method, amount: Number(p.amount) || 0 })),
           total_payment_received: Number(fetchedOrder.paid_amount) || 0,
-          remaining_balance:
-            Number(fetchedOrder.total_amount || 0) - Number(fetchedOrder.paid_amount || 0),
+          remaining_balance: Number(fetchedOrder.total_amount || 0) - Number(fetchedOrder.paid_amount || 0),
           employee_id: fetchedOrder.employee?.id,
           incentive_amount: Number(fetchedOrder.incentive_amount) || 0,
           net_profit: Number(fetchedOrder.net_profit) || 0,
@@ -254,486 +140,112 @@ export default function EditOrderPage() {
           total_sell_price: Number(fetchedOrder.total_sell_price) || 0,
           gross_profit: Number(fetchedOrder.gross_profit) || 0,
         });
-
-        // Set customer type and selected customer
         if (fetchedOrder.customer_name) {
           setCustomerType("existing");
           setSelectedCustomerId(fetchedOrder.customer?.id || null);
-          setCustomerSearch(
-            `${fetchedOrder.customer_name}${
-              fetchedOrder.customer_email
-                ? ` (${fetchedOrder.customer_email})`
-                : ""
-            }${
-              fetchedOrder.customer_phone
-                ? ` - ${fetchedOrder.customer_phone}`
-                : ""
-            }`
-          );
-        } else {
-          setCustomerType("guest");
-        }
-
-        // Set employee search if employee is assigned
-        if (fetchedOrder.employee) {
-          setEmployeeSearch(
-            `${fetchedOrder.employee.name} - ${
-              fetchedOrder.employee.role ||
-              fetchedOrder.employee.department ||
-              "Employee"
-            }`
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching order:", error);
-        setError("Failed to load order. Please try again.");
-      } finally {
-        setIsLoadingOrder(false);
-      }
+          setCustomerSearch(`${fetchedOrder.customer_name}${fetchedOrder.customer_email ? ` (${fetchedOrder.customer_email})` : ""}${fetchedOrder.customer_phone ? ` - ${fetchedOrder.customer_phone}` : ""}`);
+        } else { setCustomerType("guest"); }
+        if (fetchedOrder.employee) { setEmployeeSearch(`${fetchedOrder.employee.name} - ${fetchedOrder.employee.role || fetchedOrder.employee.department || "Employee"}`); }
+      } catch (e) { console.error("Error fetching order:", e); setError("Failed to load order. Please try again."); }
+      finally { setIsLoadingOrder(false); }
     };
+    const init = async () => { fetchProducts(); fetchCustomers(); fetchEmployees(); if (params?.id) fetchOrder(); };
+    init();
+  }, [params?.id]);
 
-    fetchProducts();
-    fetchCustomers();
-    fetchEmployees();
+  const fetchProducts = async () => { try { setIsLoadingProducts(true); const response = await ApiService.getProducts(); const productsData = Array.isArray(response) ? response : response?.results || []; setProducts(productsData); } catch (error) { console.error("Error fetching products:", error); setError("Failed to load products"); } finally { setIsLoadingProducts(false); } };
+  const fetchCustomers = async () => { try { setIsLoadingCustomers(true); const response = await ApiService.getCustomers(); const customersData = Array.isArray(response) ? response : response?.results || []; setCustomers(customersData); } catch (error) { console.error("Error fetching customers:", error); setError("Failed to load customers"); } finally { setIsLoadingCustomers(false); } };
+  const fetchEmployees = async () => { try { setIsLoadingEmployees(true); const response = await ApiService.getEmployees(); const employeesData = Array.isArray(response) ? response : response?.results || []; setEmployees(employeesData); } catch (error) { console.error("Error fetching employees:", error); setError("Failed to load employees"); } finally { setIsLoadingEmployees(false); } };
 
-    if (params.id) {
-      fetchOrder();
-    }
-  }, [params.id]);
-
-  const fetchProducts = async () => {
-    try {
-      setIsLoadingProducts(true);
-      const response = await ApiService.getProducts();
-      const productsData = Array.isArray(response)
-        ? response
-        : response?.results || [];
-      setProducts(productsData);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      setError("Failed to load products");
-    } finally {
-      setIsLoadingProducts(false);
-    }
-  };
-
-  const fetchCustomers = async () => {
-    try {
-      setIsLoadingCustomers(true);
-      const response = await ApiService.getCustomers();
-      const customersData = Array.isArray(response)
-        ? response
-        : response?.results || [];
-      setCustomers(customersData);
-    } catch (error) {
-      console.error("Error fetching customers:", error);
-      setError("Failed to load customers");
-    } finally {
-      setIsLoadingCustomers(false);
-    }
-  };
-
-  const fetchEmployees = async () => {
-    try {
-      setIsLoadingEmployees(true);
-      const response = await ApiService.getEmployees();
-      const employeesData = Array.isArray(response)
-        ? response
-        : response?.results || [];
-      setEmployees(employeesData);
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      setError("Failed to load employees");
-    } finally {
-      setIsLoadingEmployees(false);
-    }
-  };
-
-  // Calculate totals
   const calculateTotals = (
-    items: OrderItem[],
+    items: OrderItemT[],
     discountType: "percentage" | "flat",
     discountPercentage: number,
     discountFlatAmount: number,
     vatPercentage: number,
-    dueAmount: number,
     previousDue: number,
     applyPreviousDueToTotal: boolean,
     incentiveAmount: number,
-    payments: PaymentEntry[]
+    payments: PaymentEntryT[]
   ) => {
-    console.log("=== CALCULATE TOTALS FUNCTION ===");
-    console.log("Input items:", items);
-    
-    items.forEach((item, index) => {
-      console.log(`Item ${index} details:`, {
-        product_name: item.product_name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total: item.total,
-        typeof_total: typeof item.total,
-        isNaN: isNaN(Number(item.total)),
-        converted: Number(item.total) || 0
-      });
-    });
-
-    const subtotal = items.reduce((sum, item) => {
-      const itemTotal = parseFloat(String(item.total)) || 0;
-      console.log(`Adding to subtotal: ${itemTotal} (from ${item.product_name})`);
-      console.log(`  - Original item.total: ${item.total}, type: ${typeof item.total}`);
-      console.log(`  - Parsed itemTotal: ${itemTotal}, type: ${typeof itemTotal}`);
-      return sum + itemTotal;
-    }, 0);
-    
-    console.log("Final subtotal:", subtotal);
-    
-    const totalBuyPrice = items.reduce(
-      (sum, item) => sum + (Number(item.buy_price) || 0) * (Number(item.quantity) || 0),
-      0
-    );
-    const totalSellPrice = subtotal; // Sell price is the same as subtotal before discounts
-    
-    // Calculate discount amount based on type
-    const discountAmount = discountType === "percentage" 
-      ? (subtotal * discountPercentage) / 100
-      : discountFlatAmount;
-    
+    const subtotal = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+    const totalBuyPrice = items.reduce((sum, item) => sum + (Number(item.buy_price) || 0) * (Number(item.quantity) || 0), 0);
+    const totalSellPrice = subtotal;
+    const discountAmount = discountType === "percentage" ? (subtotal * discountPercentage) / 100 : discountFlatAmount;
     const afterDiscount = subtotal - discountAmount;
     const vatAmount = (afterDiscount * vatPercentage) / 100;
-    // Due amount is just a note and should not affect total calculation
-    // Only add previous due if checkbox is checked (this is existing debt)
-    const total =
-      afterDiscount +
-      vatAmount +
-      (applyPreviousDueToTotal ? previousDue : 0);
+    const total = afterDiscount + vatAmount + (applyPreviousDueToTotal ? previousDue : 0);
     const grossProfit = totalSellPrice - totalBuyPrice;
-    const netProfit = grossProfit - incentiveAmount; // Net Profit = Gross Profit - Incentive
-    const totalPaymentReceived = payments.reduce(
-      (sum, payment) => sum + payment.amount,
-      0
-    );
+    const netProfit = grossProfit - incentiveAmount;
+    const totalPaymentReceived = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const remainingBalance = total - totalPaymentReceived;
-
-    return {
-      subtotal,
-      discountAmount,
-      vatAmount,
-      total,
-      netProfit,
-      totalBuyPrice,
-      totalSellPrice,
-      grossProfit,
-      totalPaymentReceived,
-      remainingBalance,
-    };
+    return { subtotal, discountAmount, vatAmount, total, netProfit, totalBuyPrice, totalSellPrice, grossProfit, totalPaymentReceived, remainingBalance };
   };
 
-  // Update totals when form changes
   useEffect(() => {
-    console.log("=== CALCULATING TOTALS ===");
-    console.log("Items:", orderForm.items);
-    console.log("Items length:", orderForm.items.length);
-    
-    // Check each item's total
-    orderForm.items.forEach((item, index) => {
-      console.log(`Item ${index}:`, {
-        name: item.product_name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total: item.total
-      });
-    });
-
-    const {
-      subtotal,
-      discountAmount,
-      vatAmount,
-      total,
-      netProfit,
-      totalBuyPrice,
-      totalSellPrice,
-      grossProfit,
-      totalPaymentReceived,
-      remainingBalance,
-    } = calculateTotals(
+    const { subtotal, discountAmount, vatAmount, total, netProfit, totalBuyPrice, totalSellPrice, grossProfit, totalPaymentReceived, remainingBalance } = calculateTotals(
       orderForm.items,
       orderForm.discount_type,
       orderForm.discount_percentage,
       orderForm.discount_flat_amount,
       orderForm.vat_percentage,
-      orderForm.due_amount,
       orderForm.previous_due,
       orderForm.apply_previous_due_to_total,
       orderForm.incentive_amount,
       orderForm.payments
     );
+    setOrderForm((prev) => ({ ...prev, subtotal, discount_amount: discountAmount, vat_amount: vatAmount, total, net_profit: netProfit, total_buy_price: totalBuyPrice, total_sell_price: totalSellPrice, gross_profit: grossProfit, total_payment_received: totalPaymentReceived, remaining_balance: remainingBalance }));
+  }, [orderForm.items, orderForm.discount_type, orderForm.discount_percentage, orderForm.discount_flat_amount, orderForm.vat_percentage, orderForm.previous_due, orderForm.apply_previous_due_to_total, orderForm.incentive_amount, orderForm.payments]);
 
-    console.log("Calculated results:", {
-      subtotal,
-      discountAmount,
-      vatAmount,
-      total,
-      itemsCount: orderForm.items.length
-    });
-
-    setOrderForm((prev) => ({
-      ...prev,
-      subtotal,
-      discount_amount: discountAmount,
-      vat_amount: vatAmount,
-      total,
-      net_profit: netProfit,
-      total_buy_price: totalBuyPrice,
-      total_sell_price: totalSellPrice,
-      gross_profit: grossProfit,
-      total_payment_received: totalPaymentReceived,
-      remaining_balance: remainingBalance,
-    }));
-  }, [
-    orderForm.items,
-    orderForm.discount_type,
-    orderForm.discount_percentage,
-    orderForm.discount_flat_amount,
-    orderForm.vat_percentage,
-    orderForm.due_amount,
-    orderForm.previous_due,
-    orderForm.apply_previous_due_to_total,
-    orderForm.incentive_amount,
-    orderForm.payments,
-  ]);
-
-  // Form submission
-  const handleSubmit = async (
-    status:
-      | "pending"
-      | "processing"
-      | "shipped"
-      | "delivered"
-      | "completed"
-      | "cancelled"
-      | "refunded"
-  ) => {
-    if (orderForm.items.length === 0) {
-      setError("Please add at least one item to the order");
-      return;
-    }
-
-    if (!orderForm.customer.name) {
-      setError("Please enter customer name");
-      return;
-    }
-
+  const handleSubmit = async (status: "pending" | "processing" | "shipped" | "delivered" | "completed" | "cancelled" | "refunded") => {
+    if (orderForm.items.length === 0) { setError("Please add at least one item to the order"); return; }
+    if (!orderForm.customer.name) { setError("Please enter customer name"); return; }
     try {
-      setIsSubmitting(true);
-      setError(null);
-
+      setIsSubmitting(true); setError(null);
       const orderId = params.id as string;
-
-      // Helper function to round monetary values to 2 decimal places
-      const roundToTwoDecimals = (value: number | null | undefined) => {
-        const numValue = typeof value === 'number' ? value : 0;
-        return Math.round(numValue * 100) / 100;
-      };
-
-      // First, sync the order items with the database
-      console.log("Syncing order items with database...");
-      
-      // Get current items from the database
+      const round = (v: number | null | undefined) => Math.round((typeof v === 'number' ? v : 0) * 100) / 100;
       const currentOrder = await ApiService.getOrder(parseInt(orderId));
       const existingItems = currentOrder.items || [];
-      
-      // Remove all existing items from the database
-      for (const existingItem of existingItems) {
-        try {
-          await ApiService.removeOrderItem(parseInt(orderId), existingItem.id);
-        } catch (error) {
-          console.warn("Error removing existing item:", error);
-        }
-      }
-      
-      // Add all current local items to the database
-      for (const item of orderForm.items) {
-        try {
-          const itemData: any = {
-            product: item.product,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            buy_price: item.buy_price,
-          };
-
-          // Handle variant field
-          if (item.variant !== undefined) {
-            itemData.variant = item.variant;
-          } else {
-            itemData.variant = null;
-          }
-
-          await ApiService.addOrderItem(parseInt(orderId), itemData);
-        } catch (error) {
-          console.error("Error adding item to database:", error);
-          throw new Error(`Failed to add item "${item.product_name}" to order`);
-        }
-      }
-
-      // Update the main order details
-      const orderUpdateData = {
-        customer: selectedCustomerId || undefined,
-        customer_name: orderForm.customer.name,
-        customer_phone: orderForm.customer.phone?.trim() || undefined,
-        customer_email: orderForm.customer.email?.trim() || undefined,
-        customer_address: orderForm.customer.address?.trim() || undefined,
-        customer_company: orderForm.customer.company?.trim() || undefined,
-        status,
-        discount_type: orderForm.discount_type,
-        discount_percentage: roundToTwoDecimals(orderForm.discount_percentage || 0),
-        discount_flat_amount: roundToTwoDecimals(orderForm.discount_flat_amount || 0),
-        vat_percentage: roundToTwoDecimals(orderForm.vat_percentage || 0),
-        notes: orderForm.notes || undefined,
-        due_date: orderForm.due_date || undefined,
-        // Ensure these fields are never null/undefined
-        subtotal: roundToTwoDecimals(orderForm.subtotal || 0),
-        discount_amount: roundToTwoDecimals(orderForm.discount_amount || 0),
-        vat_amount: roundToTwoDecimals(orderForm.vat_amount || 0),
-        total_amount: roundToTwoDecimals(orderForm.total || 0),
-      };
-
-      console.log("Order update data:", orderUpdateData);
-
-      // Update the order
-      console.log("Updating order with data:", orderUpdateData);
+      for (const existingItem of existingItems) { try { await ApiService.removeOrderItem(parseInt(orderId), existingItem.id); } catch {} }
+      for (const item of orderForm.items) { const itemData: any = { product: item.product, quantity: item.quantity, unit_price: item.unit_price, buy_price: item.buy_price, variant: item.variant ?? null }; await ApiService.addOrderItem(parseInt(orderId), itemData); }
+      const orderUpdateData = { customer: selectedCustomerId || undefined, customer_name: orderForm.customer.name, customer_phone: orderForm.customer.phone?.trim() || undefined, customer_email: orderForm.customer.email?.trim() || undefined, customer_address: orderForm.customer.address?.trim() || undefined, customer_company: orderForm.customer.company?.trim() || undefined, status, discount_type: orderForm.discount_type, discount_percentage: round(orderForm.discount_percentage || 0), discount_flat_amount: round(orderForm.discount_flat_amount || 0), vat_percentage: round(orderForm.vat_percentage || 0), notes: orderForm.notes || undefined, due_date: orderForm.due_date || undefined, subtotal: round(orderForm.subtotal || 0), discount_amount: round(orderForm.discount_amount || 0), vat_amount: round(orderForm.vat_amount || 0), total_amount: round(orderForm.total || 0) };
       await ApiService.updateOrder(parseInt(orderId), orderUpdateData);
-
       router.push("/dashboard/orders?updated=true");
     } catch (error) {
-      console.error("Error updating order:", error);
-      
-      // Extract detailed error message
-      let errorMessage = "Failed to update order. Please try again.";
-      if (error && typeof error === 'object') {
-        if ('response' in error && error.response) {
-          const response = error.response as any;
-          if (response.data) {
-            if (typeof response.data === 'string') {
-              errorMessage = response.data;
-            } else if (response.data.error) {
-              errorMessage = response.data.error;
-            } else if (response.data.detail) {
-              errorMessage = response.data.detail;
-            } else {
-              errorMessage = JSON.stringify(response.data);
-            }
-          }
-        } else if ('message' in error) {
-          errorMessage = (error as any).message;
-        }
-      }
-      
-      setError(errorMessage);
-    } finally {
-      setIsSubmitting(false);
-    }
+      let msg = "Failed to update order. Please try again.";
+      if (error && typeof error === 'object') { if ('response' in error && (error as any).response?.data) { const data = (error as any).response.data; msg = typeof data === 'string' ? data : data.error || data.detail || JSON.stringify(data); } else if ('message' in error) { msg = (error as any).message; } }
+      setError(msg);
+    } finally { setIsSubmitting(false); }
   };
 
-  const handleCancel = () => {
-    router.push("/dashboard/orders");
-  };
+  const handleCancel = () => router.push("/dashboard/orders");
 
-  // Search products from backend
-  const searchProducts = useCallback(
-    async (query: string) => {
-      if (!query || query.trim().length < 1) {
-        setSearchResults([]);
-        return;
-      }
+  const searchProducts = useCallback(async (query: string) => {
+    if (!query || query.trim().length < 1) { setSearchResults([]); return; }
+    try {
+      setIsSearchingProducts(true);
+      const response = await ApiService.searchProducts(query.trim());
+      const results = Array.isArray(response) ? response : response?.results || [];
+      const filtered = results.filter((p: any) => { const s = query.toLowerCase().trim(); const name = p.name ? p.name.toLowerCase() : ''; const code = p.product_code ? p.product_code.toLowerCase() : ''; return name.includes(s) || code.includes(s); });
+      setSearchResults(filtered.length ? filtered : products.filter((p) => { const s = query.toLowerCase().trim(); const name = p.name ? p.name.toLowerCase() : ''; const code = p.product_code ? p.product_code.toLowerCase() : ''; return name.includes(s) || code.includes(s); }));
+    } catch (e) {
+      const local = products.filter((p) => { const s = query.toLowerCase().trim(); const name = p.name ? p.name.toLowerCase() : ''; const code = p.product_code ? p.product_code.toLowerCase() : ''; return name.includes(s) || code.includes(s); });
+      setSearchResults(local);
+    } finally { setIsSearchingProducts(false); }
+  }, [products]);
 
-      try {
-        setIsSearchingProducts(true);
-        const response = await ApiService.searchProducts(query.trim());
-        const results = Array.isArray(response)
-          ? response
-          : response?.results || [];
+  const handleProductSearch = useCallback((query: string) => {
+    setProductSearch(query);
+    isActivelyTypingRef.current = true;
+    if (searchTimeout) clearTimeout(searchTimeout);
+    const timeout = setTimeout(() => { isActivelyTypingRef.current = false; searchProducts(query); }, 300);
+    setSearchTimeout(timeout);
+  }, [searchProducts, searchTimeout]);
 
-        // Filter backend results to ensure they actually match the search term in the product name
-        const filteredBackendResults = results.filter((product: any) => {
-          const search = query.toLowerCase().trim();
-          const productName = product.name ? product.name.toLowerCase() : '';
-          const productCode = product.product_code ? product.product_code.toLowerCase() : '';
-          
-          // Only show products that match in name or product code (most relevant fields)
-          return productName.includes(search) || productCode.includes(search);
-        });
-
-        if (filteredBackendResults.length === 0) {
-          // Fallback to local search with the same strict filtering
-          const localResults = products.filter((product) => {
-            const search = query.toLowerCase().trim();
-            const productName = product.name ? product.name.toLowerCase() : '';
-            const productCode = product.product_code ? product.product_code.toLowerCase() : '';
-            
-            // Only match in name or product code
-            return productName.includes(search) || productCode.includes(search);
-          });
-          setSearchResults(localResults);
-        } else {
-          setSearchResults(filteredBackendResults);
-        }
-      } catch (error) {
-        console.error("Error searching products:", error);
-        // Fallback to local search with strict filtering
-        const localResults = products.filter((product) => {
-          const search = query.toLowerCase().trim();
-          const productName = product.name ? product.name.toLowerCase() : '';
-          const productCode = product.product_code ? product.product_code.toLowerCase() : '';
-          
-          // Only match in name or product code
-          return productName.includes(search) || productCode.includes(search);
-        });
-        setSearchResults(localResults);
-      } finally {
-        setIsSearchingProducts(false);
-      }
-    },
-    [products]
-  );
-
-  // Product search and selection handlers
-  const handleProductSearch = useCallback(
-    (query: string) => {
-      setProductSearch(query);
-      isActivelyTypingRef.current = true;
-
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-      }
-
-      const timeout = setTimeout(() => {
-        isActivelyTypingRef.current = false;
-        searchProducts(query);
-      }, 300);
-
-      setSearchTimeout(timeout);
-    },
-    [searchProducts, searchTimeout]
-  );
-
-  const handleNewItemChange = useCallback(
-    (field: string, value: string | number) => {
-      setNewItem((prev) => {
-        const updated = { ...prev, [field]: value };
-        if (field === "product") {
-          updated.variant = "";
-        }
-        return updated;
-      });
-    },
-    []
-  );
+  const handleNewItemChange = useCallback((field: string, value: string | number) => { setNewItem((prev) => { const updated: any = { ...prev, [field]: value }; if (field === "product") updated.variant = ""; return updated; }); }, []);
 
   // Get the selected product and its variants
-  const selectedProduct = products.find(
-    (product) => product.id === parseInt(newItem.product)
-  );
-
+  const selectedProduct = products.find((p) => p.id === parseInt(newItem.product));
   const availableVariants = selectedProduct?.variants || [];
 
   // Add item to order (local state only, not saved to database until Update Order is clicked)
@@ -758,8 +270,8 @@ export default function EditOrderPage() {
       buyPrice = selectedProduct.buy_price || 0;
     }
 
-    // Create new item for local state only
-    const newOrderItem: OrderItem = {
+  // Create new item for local state only
+  const newOrderItem: OrderItemT = {
       id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // More unique temporary ID
       product: selectedProduct.id,
       variant: newItem.variant ? parseInt(newItem.variant) : undefined,
@@ -930,7 +442,7 @@ export default function EditOrderPage() {
   }, [searchTimeout]);
 
   const handleProductSelect = useCallback(
-    async (productId: string, displayText: string) => {
+    async (productId: string) => {
       // Temporarily stop tracking typing while processing selection
       const wasTyping = isActivelyTypingRef.current;
       isActivelyTypingRef.current = false;
@@ -1023,16 +535,14 @@ export default function EditOrderPage() {
           selectedVariant = productToAdd.variants[0];
           unitPrice = selectedVariant.sell_price || 0;
           buyPrice = selectedVariant.buy_price || 0;
-          variantDetails = `${selectedVariant.color || ""} - ${selectedVariant.size || ""}${
-            selectedVariant.custom_variant ? ` - ${selectedVariant.custom_variant}` : ""
-          }`.trim();
+          variantDetails = `${selectedVariant.color || ""} - ${selectedVariant.size || ""}${selectedVariant.custom_variant ? ` - ${selectedVariant.custom_variant}` : ""}`.trim();
         } else {
           unitPrice = productToAdd.sell_price || 0;
           buyPrice = productToAdd.buy_price || 0;
         }
 
-        // Add to local state using temporary ID
-        const newOrderItem: OrderItem = {
+  // Add to local state using temporary ID
+  const newOrderItem: OrderItemT = {
           id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // More unique temporary ID
           product: productToAdd.id,
           variant: selectedVariant?.id,
@@ -1187,7 +697,7 @@ export default function EditOrderPage() {
   };
 
   // Check if quantity can be increased based on available stock
-  const canIncreaseQuantity = (item: OrderItem) => {
+  const canIncreaseQuantity = (item: OrderItemT) => {
     const product = products.find((p) => p.id === item.product);
     if (!product) return false;
 
@@ -1210,7 +720,7 @@ export default function EditOrderPage() {
 
   // Payment management functions
   const addPayment = () => {
-    const newPayment: PaymentEntry = {
+    const newPayment: PaymentEntryT = {
       id: Date.now().toString(),
       method: "Cash",
       amount: 0,
@@ -1231,7 +741,7 @@ export default function EditOrderPage() {
 
   const updatePayment = (
     paymentId: string,
-    field: keyof PaymentEntry,
+    field: keyof PaymentEntryT,
     value: string | number
   ) => {
     setOrderForm((prev) => ({
@@ -1322,57 +832,21 @@ export default function EditOrderPage() {
   return (
     <div className={`min-h-screen bg-slate-900 ${isProductDropdownOpen ? 'dropdown-page' : ''}`}>
       <style jsx>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none; /* Internet Explorer 10+ */
-          scrollbar-width: none; /* Firefox */
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none; /* Safari and Chrome */
-        }
-        .dropdown-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
-        }
-        .dropdown-scroll::-webkit-scrollbar {
-          width: 6px;
-        }
-        .dropdown-scroll::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .dropdown-scroll::-webkit-scrollbar-thumb {
-          background-color: rgba(148, 163, 184, 0.3);
-          border-radius: 3px;
-        }
-        .dropdown-scroll::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(148, 163, 184, 0.5);
-        }
-        /* Cursor styles for better UX */
-        input, textarea, select {
-          cursor: text !important;
-        }
-        button, .clickable, [role="button"] {
-          cursor: pointer !important;
-        }
-        input[type="checkbox"], input[type="radio"] {
-          cursor: pointer !important;
-        }
-        .dropdown-item, .dropdown-option {
-          cursor: pointer !important;
-        }
-        input:disabled, textarea:disabled, select:disabled {
-          cursor: not-allowed !important;
-        }
-        button:disabled {
-          cursor: not-allowed !important;
-        }
-        /* Ensure body and html have dark background */
-        body {
-          background-color: rgb(15, 23, 42) !important; /* slate-900 equivalent */
-        }
-        /* When dropdown is open, ensure page height is adequate */
-        .dropdown-page {
-          min-height: calc(100vh + 400px);
-        }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .dropdown-scroll { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,0.3) transparent; }
+        .dropdown-scroll::-webkit-scrollbar { width: 6px; }
+        .dropdown-scroll::-webkit-scrollbar-track { background: transparent; }
+        .dropdown-scroll::-webkit-scrollbar-thumb { background-color: rgba(148,163,184,0.3); border-radius: 3px; }
+        .dropdown-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(148,163,184,0.5); }
+        input, textarea, select { cursor: text !important; }
+        button, .clickable, [role="button"] { cursor: pointer !important; }
+        input[type="checkbox"], input[type="radio"] { cursor: pointer !important; }
+        .dropdown-item, .dropdown-option { cursor: pointer !important; }
+        input:disabled, textarea:disabled, select:disabled { cursor: not-allowed !important; }
+        button:disabled { cursor: not-allowed !important; }
+        body { background-color: rgb(15, 23, 42) !important; }
+        .dropdown-page { min-height: calc(100vh + 400px); }
       `}</style>
       <div className="sm:p-6 p-1 space-y-6">
         <div className="max-w-7xl">
@@ -1386,1320 +860,145 @@ export default function EditOrderPage() {
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
-                />
-              </svg>
-              <p className="text-red-300 text-sm">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Customer & Items */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Customer Information */}
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-              <div className="sm:p-4 p-2">
-                <div className="flex items-center gap-1 mb-4">
-                  <button
-                    onClick={() => router.back()}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <svg
-                      className="w-6 h-6 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 19l-7-7 7-7"
-                      />
-                    </svg>
-                  </button>
-                  <h3 className="text-lg font-semibold text-slate-200">
-                    Edit Order
-                  </h3>
-                  {/* Order Status Label */}
-                  <div className="ml-3">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        orderForm.status === 'draft'
-                          ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                          : 'bg-green-500/10 text-green-400 border border-green-500/20'
-                      }`}
-                    >
-                      {orderForm.status === 'draft' ? 'DRAFT' : 'COMPLETED'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Customer Selection Row */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Customer Selection
-                  </label>
-                  <div className="flex gap-4 items-center">
-                    {/* Customer Dropdown with Integrated Search */}
-                    <div className="flex-1 relative">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Search and select customer (minimum 2 characters)..."
-                          value={customerSearch}
-                          onChange={(e) => {
-                            setCustomerSearch(e.target.value);
-                            // Only open dropdown if user has typed at least 2 characters
-                            if (e.target.value.trim().length >= 2) {
-                              setIsCustomerDropdownOpen(true);
-                            } else {
-                              setIsCustomerDropdownOpen(false);
-                            }
-                          }}
-                          onFocus={() => {
-                            // Only open dropdown on focus if user has already typed at least 2 characters
-                            if (customerSearch.trim().length >= 2) {
-                              setIsCustomerDropdownOpen(true);
-                            }
-                          }}
-                          disabled={customerType === "guest"}
-                          className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                            customerType === "guest"
-                              ? "opacity-50 cursor-not-allowed"
-                              : "cursor-text"
-                          }`}
-                        />
-                        {/* Clear button */}
-                        {customerSearch && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCustomerSearch("");
-                              setSelectedCustomerId(null);
-                              setIsCustomerDropdownOpen(false);
-                              setOrderForm((prev) => ({
-                                ...prev,
-                                customer: {
-                                  name: "",
-                                  email: "",
-                                  phone: "",
-                                  address: "",
-                                  company: "",
-                                },
-                                previous_due: 0,
-                                apply_previous_due_to_total: true,
-                              }));
-                            }}
-                            className="absolute right-12 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
-                            title="Clear search"
-                          >
-                            Clear
-                          </button>
-                        )}
-                        <svg
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
-
-                      {/* Dropdown Options */}
-                      {isCustomerDropdownOpen &&
-                        customerSearch.trim().length >= 2 && (
-                          <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
-                            {isLoadingCustomers ? (
-                              <div className="p-3 text-slate-400">
-                                Loading customers...
-                              </div>
-                            ) : filteredCustomers.length > 0 ? (
-                              filteredCustomers
-                                .slice(0, 10)
-                                .map((customer) => (
-                                  <div
-                                    key={customer.id}
-                                    onClick={() => {
-                                      handleCustomerSelection(customer.id);
-                                      setCustomerSearch(
-                                        `${customer.name}${
-                                          customer.email
-                                            ? ` (${customer.email})`
-                                            : ""
-                                        }${
-                                          customer.phone
-                                            ? ` - ${customer.phone}`
-                                            : ""
-                                        }`
-                                      );
-                                      setIsCustomerDropdownOpen(false);
-                                    }}
-                                    className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex-1">
-                                        <div className="text-white font-medium">
-                                          {highlightText(customer.name, customerSearch.trim())}
-                                        </div>
-                                        <div className="text-slate-400 text-sm">
-                                          {highlightText(customer.email || "No email", customerSearch.trim())} •{" "}
-                                          {highlightText(customer.phone || "No phone", customerSearch.trim())}
-                                        </div>
-                                      </div>
-                                      <div className="ml-3 text-right">
-                                        <div className={`text-xs font-medium ${
-                                          customer.previous_due && customer.previous_due > 0 
-                                            ? 'text-red-400' 
-                                            : 'text-green-400'
-                                        }`}>
-                                          Due: {formatCurrency(customer.previous_due || 0)}
-                                        </div>
-                                        {customer.total_orders && (
-                                          <div className="text-xs text-slate-500">
-                                            {customer.total_orders} orders
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))
-                            ) : (
-                              <div className="p-3 text-slate-400">
-                                No customers found
-                              </div>
-                            )}
-                            {/* Show indicator when there are more than 10 results */}
-                            {filteredCustomers.length > 10 && (
-                              <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
-                                Showing 10 of {filteredCustomers.length}{" "}
-                                results. Type more to refine search.
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                      {/* Click outside to close dropdown */}
-                      {isCustomerDropdownOpen && (
-                        <div
-                          className="fixed inset-0 z-5"
-                          onClick={() => setIsCustomerDropdownOpen(false)}
-                        />
-                      )}
-                    </div>
-
-                    {/* New Customer Checkbox */}
-                    <div className="flex items-center">
-                      <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={customerType === "guest"}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              handleGuestCustomer();
-                              // Clear customer search input when "New Customer" is checked
-                              setCustomerSearch("");
-                              setSelectedCustomerId(null);
-                              setIsCustomerDropdownOpen(false);
-                            } else {
-                              // If unchecked, switch to existing customer mode and clear form
-                              setCustomerType("existing");
-                              setSelectedCustomerId(null);
-                              setOrderForm((prev) => ({
-                                ...prev,
-                                customer: {
-                                  name: "",
-                                  email: "",
-                                  phone: "",
-                                  address: "",
-                                  company: "",
-                                },
-                                previous_due: 0,
-                                apply_previous_due_to_total: true,
-                              }));
-                            }
-                          }}
-                          className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2 rounded cursor-pointer"
-                        />
-                        <span className="text-sm text-slate-300">New Customer</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* New Customer Form */}
-                {customerType === "guest" && (
-                  <div>
-                    {/* Customer Validation Warning */}
-                    {customerValidationError && (
-                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
-                        <div className="flex items-start gap-2">
-                          <svg
-                            className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
-                            />
-                          </svg>
-                          <div>
-                            <p className="text-amber-400 text-sm font-medium">
-                              Note:
-                            </p>
-                            <p className="text-amber-300 text-sm">
-                              A customer with this {duplicateField || 'field'} already exists: {' '}
-                              <button
-                                type="button"
-                                onClick={handleSelectMatchedCustomer}
-                                className="text-cyan-400 hover:text-cyan-300 underline font-medium transition-colors duration-200"
-                              >
-                                {matchedCustomer?.name}
-                              </button>
-                              . You may want to select them from existing customers instead, or use a different {duplicateField || 'field'}. You can still proceed
-                              with creating this order.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Customer Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={orderForm.customer.name}
-                          onChange={(e) =>
-                            handleCustomerChange("name", e.target.value)
-                          }
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
-                          placeholder="Enter customer name"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Company
-                        </label>
-                        <input
-                          type="text"
-                          value={orderForm.customer.company}
-                          onChange={(e) =>
-                            handleCustomerChange("company", e.target.value)
-                          }
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
-                          placeholder="Company name (optional)"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Email (Optional)
-                        </label>
-                        <input
-                          type="email"
-                          value={orderForm.customer.email}
-                          onChange={(e) =>
-                            handleCustomerChange("email", e.target.value)
-                          }
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
-                          placeholder="customer@email.com (optional)"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Phone (Optional)
-                        </label>
-                        <input
-                          type="tel"
-                          value={orderForm.customer.phone}
-                          onChange={(e) =>
-                            handleCustomerChange("phone", e.target.value)
-                          }
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
-                          placeholder="Phone number (optional)"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Address (Optional)
-                        </label>
-                        <textarea
-                          value={orderForm.customer.address}
-                          onChange={(e) =>
-                            handleCustomerChange("address", e.target.value)
-                          }
-                          rows={2}
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
-                          placeholder="Customer address (optional)"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <p className="text-red-300 text-sm">{error}</p>
               </div>
             </div>
+          )}
 
-            {/* Order Items */}
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-visible">
-              <div className="sm:p-4 p-2">
-                <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                  Order Items
-                </h3>
-
-                {/* Order Items List */}
-                <div className="mb-6">
-                  <h4 className="text-sm font-medium text-slate-300 mb-3">
-                    Items in Order ({orderForm.items.length})
-                  </h4>
-                  {orderForm.items.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">
-                      <svg
-                        className="w-12 h-12 mx-auto mb-3 text-slate-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 14H6L5 9z"
-                        />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
+                <div className="sm:p-4 p-2">
+                  <div className="flex items-center gap-1 mb-4">
+                    <button onClick={() => router.back()} className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
+                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
-                      <p>No items added yet</p>
-                      <p className="text-sm text-slate-500 mt-1">
-                        Use the form below to add items to your order
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Column Headers */}
-                      <div className="grid grid-cols-5 gap-4 pb-2 border-b border-slate-700/30 mb-2">
-                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                          Product
-                        </div>
-                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
-                          Quantity
-                        </div>
-                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
-                          Buy Price
-                        </div>
-                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
-                          Sell Price
-                        </div>
-                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
-                          Total
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        {orderForm.items.map((item) => (
-                          <div
-                            key={item.id}
-                            className="grid grid-cols-5 gap-4 items-center py-3 px-2 hover:bg-slate-800/20 rounded-lg transition-colors"
-                          >
-                            {/* Product Name */}
-                            <div className="flex-1">
-                              <div className="font-medium text-slate-100 text-sm">
-                                {item.product_name}
-                              </div>
-                              {item.variant_details && (
-                                <div className="text-xs text-slate-400 mt-1">
-                                  {item.variant_details}
-                                </div>
-                              )}
-                              {/* Variant Selection for products with variants */}
-                              {(() => {
-                                const product = products.find(
-                                  (p) => p.id === item.product
-                                );
-                                return product?.has_variants &&
-                                  product.variants &&
-                                  product.variants.length > 0 ? (
-                                  <div className="mt-2">
-                                    <select
-                                      value={item.variant || ""}
-                                      onChange={(e) => {
-                                        const variantId = e.target.value
-                                          ? parseInt(e.target.value)
-                                          : undefined;
-                                        const selectedVariant =
-                                          product.variants?.find(
-                                            (v) => v.id === variantId
-                                          );
-                                        const newUnitPrice = selectedVariant
-                                          ? selectedVariant.sell_price || 0
-                                          : product.sell_price || 0;
-                                        const newBuyPrice = selectedVariant
-                                          ? selectedVariant.buy_price || 0
-                                          : product.buy_price || 0;
-
-                                        setOrderForm((prev) => ({
-                                          ...prev,
-                                          items: prev.items.map((orderItem) =>
-                                            orderItem.id === item.id
-                                              ? {
-                                                  ...orderItem,
-                                                  variant: variantId,
-                                                  unit_price: newUnitPrice,
-                                                  buy_price: newBuyPrice,
-                                                  total:
-                                                    orderItem.quantity *
-                                                    newUnitPrice,
-                                                  variant_details:
-                                                    selectedVariant
-                                                      ? `${
-                                                          selectedVariant.color
-                                                        } - ${
-                                                          selectedVariant.size
-                                                        }${
-                                                          selectedVariant.custom_variant
-                                                            ? ` - ${selectedVariant.custom_variant}`
-                                                            : ""
-                                                        }`
-                                                      : undefined,
-                                                }
-                                              : orderItem
-                                          ),
-                                        }));
-                                      }}
-                                      className="w-full bg-slate-700/50 border border-slate-600/50 text-white text-xs rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                                    >
-                                      <option
-                                        value=""
-                                        className="bg-slate-800"
-                                      >
-                                        Select variant
-                                      </option>
-                                      {product.variants.map((variant) => (
-                                        <option
-                                          key={variant.id}
-                                          value={variant.id}
-                                          className="bg-slate-800"
-                                        >
-                                          {variant.color} - {variant.size}
-                                          {variant.custom_variant &&
-                                            ` - ${variant.custom_variant}`}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                ) : null;
-                              })()}
-                            </div>
-
-                            {/* Quantity */}
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() =>
-                                  updateItemQuantity(
-                                    item.id,
-                                    item.quantity - 1
-                                  )
-                                }
-                                className="w-6 h-6 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-xs"
-                              >
-                                −
-                              </button>
-                              <span className="w-8 text-center text-slate-100 font-medium text-sm">
-                                {item.quantity}
-                              </span>
-                              <button
-                                onClick={() =>
-                                  updateItemQuantity(
-                                    item.id,
-                                    item.quantity + 1
-                                  )
-                                }
-                                disabled={!canIncreaseQuantity(item)}
-                                className={`w-6 h-6 rounded flex items-center justify-center transition-colors text-xs ${
-                                  canIncreaseQuantity(item)
-                                    ? "bg-slate-700/50 text-slate-300 hover:bg-slate-600 cursor-pointer"
-                                    : "bg-slate-800/30 text-slate-500 cursor-not-allowed"
-                                }`}
-                                title={
-                                  canIncreaseQuantity(item)
-                                    ? "Increase quantity"
-                                    : "Maximum stock reached"
-                                }
-                              >
-                                +
-                              </button>
-                            </div>
-
-                            {/* Buy Price */}
-                            <div className="text-center">
-                              <div className="text-sm text-slate-300">
-                                {formatCurrency(item.buy_price || 0)}
-                              </div>
-                            </div>
-
-                            {/* Unit Price */}
-                            <div className="text-center">
-                              <input
-                                type="number"
-                                value={item.unit_price}
-                                onChange={(e) => {
-                                  const newPrice =
-                                    parseFloat(e.target.value) || 0;
-                                  updateItemUnitPrice(item.id, newPrice);
-                                }}
-                                className="w-20 bg-slate-800/50 border border-slate-700/50 text-white text-sm text-center rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                min="0"
-                                step="0.01"
-                              />
-                            </div>
-
-                            {/* Total Price & Actions */}
-                            <div className="flex items-center justify-end gap-3">
-                              <div className="font-semibold text-slate-100 text-sm">
-                                {formatCurrency(item.total)}
-                              </div>
-                              <button
-                                onClick={() => removeItem(item.id)}
-                                className="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/10 rounded transition-colors"
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Add New Item Section */}
-                <div className="border-t border-slate-700/50 pt-4">
-                  {/* Error Message */}
-                  {error && (
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
-                      <p className="text-red-400">{error}</p>
-                    </div>
-                  )}
-
-                  <h4 className="text-sm font-medium text-slate-300 mb-3">
-                    Add New Item
-                  </h4>
-                  
-                  <div className="space-y-4 pb-20">
-                    {/* Product Search Row */}
-                    <div className="flex flex-col md:flex-row gap-4 items-end">
-                      <div className="flex-1 md:flex-[2] relative">
-                        <label className="block text-xs font-medium text-slate-400 mb-1">
-                          Product Search (Click product name to add to order)
-                        </label>
-                        <ProductSearchInput
-                          ref={productSearchInputRef}
-                          value={productSearch}
-                          onChange={handleSearchChange}
-                          onFocus={handleSearchFocus}
-                          onClear={handleSearchClear}
-                          isSearching={isSearchingProducts}
-                          isLoading={isLoadingProducts}
-                        />
-
-                        <ProductDropdown
-                          isOpen={isProductDropdownOpen}
-                          searchQuery={productSearch}
-                          searchResults={searchResults}
-                          isLoading={isLoadingProducts}
-                          isSearching={isSearchingProducts}
-                          onProductSelect={handleProductSelect}
-                          onClose={handleDropdownClose}
-                          highlightText={highlightText}
-                        />
-                      </div>
-
-                      {/* Add Button */}
-                      <div className="md:col-span-3">
-                        <button
-                          onClick={addItemToOrder}
-                          disabled={!selectedProduct || newItem.quantity <= 0}
-                          className={`w-full px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                            selectedProduct && newItem.quantity > 0
-                              ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
-                              : "bg-slate-700/50 text-slate-400 cursor-not-allowed"
-                          }`}
-                        >
-                          Add Item
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Variant Selection */}
-                    {selectedProduct?.has_variants && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          Select Variant
-                        </label>
-                        <select
-                          value={newItem.variant}
-                          onChange={(e) =>
-                            handleNewItemChange("variant", e.target.value)
-                          }
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        >
-                          <option value="">Select a variant</option>
-                          {availableVariants.map((variant) => (
-                            <option key={variant.id} value={variant.id}>
-                              {variant.size} {variant.color} - Stock:{" "}
-                              {variant.stock}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            {/* Bill Summary */}
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-              <div className="sm:p-4 p-2">
-                <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                  Bill Summary
-                </h3>
-
-                <div className="space-y-3">
-                  {/* Subtotal */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Subtotal:</span>
-                    <span className="text-slate-100 text-sm">
-                      {formatCurrency(orderForm.subtotal)}
-                    </span>
-                  </div>
-
-                  {/* Discount */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Discount:</span>
-                    <div className="flex items-center gap-2">
-                      {/* Discount Type Toggle */}
-                      <div className="flex items-center gap-1 mr-2">
-                        <button
-                          type="button"
-                          onClick={() => setOrderForm(prev => ({ 
-                            ...prev, 
-                            discount_type: "percentage",
-                            discount_flat_amount: 0 // Reset flat amount when switching
-                          }))}
-                          className={`px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
-                            orderForm.discount_type === "percentage"
-                              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                              : "bg-slate-700/50 text-slate-400 border border-slate-600/50 hover:bg-slate-600/50"
-                          }`}
-                        >
-                          %
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setOrderForm(prev => ({ 
-                            ...prev, 
-                            discount_type: "flat",
-                            discount_percentage: 0 // Reset percentage when switching
-                          }))}
-                          className={`px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
-                            orderForm.discount_type === "flat"
-                              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                              : "bg-slate-700/50 text-slate-400 border border-slate-600/50 hover:bg-slate-600/50"
-                          }`}
-                        >
-                          {currencySymbol}
-                        </button>
-                      </div>
-
-                      {orderForm.discount_type === "percentage" ? (
-                        <>
-                          <input
-                            type="number"
-                            value={
-                              orderForm.discount_percentage === 0
-                                ? ""
-                                : orderForm.discount_percentage
-                            }
-                            onChange={(e) =>
-                              setOrderForm((prev) => ({
-                                ...prev,
-                                discount_percentage:
-                                  parseFloat(e.target.value) || 0,
-                              }))
-                            }
-                            className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder=""
-                            min="0"
-                            max="100"
-                            step="0.01"
-                          />
-                          <span className="text-slate-400 text-sm">%</span>
-                        </>
-                      ) : (
-                        <>
-                          <input
-                            type="number"
-                            value={
-                              orderForm.discount_flat_amount === 0
-                                ? ""
-                                : orderForm.discount_flat_amount
-                            }
-                            onChange={(e) =>
-                              setOrderForm((prev) => ({
-                                ...prev,
-                                discount_flat_amount:
-                                  parseFloat(e.target.value) || 0,
-                              }))
-                            }
-                            className="w-20 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder="0"
-                            min="0"
-                            step="0.01"
-                          />
-                          <span className="text-slate-400 text-sm">{currencySymbol}</span>
-                        </>
-                      )}
-                      
-                      <span className="text-slate-100 text-sm">
-                        -{formatCurrency(orderForm.discount_amount)}
+                    </button>
+                    <h3 className="text-lg font-semibold text-slate-200">Edit Order</h3>
+                    <div className="ml-3">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${orderForm.status === 'draft' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>
+                        {orderForm.status === 'draft' ? 'DRAFT' : 'COMPLETED'}
                       </span>
                     </div>
                   </div>
 
-                  {/* VAT */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">VAT:</span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={
-                          orderForm.vat_percentage === 0
-                            ? ""
-                            : orderForm.vat_percentage
-                        }
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            vat_percentage: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        placeholder="0"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                      />
-                      <span className="text-slate-400 text-sm">%</span>
-                      <span className="text-slate-100 text-sm">
-                        {formatCurrency(orderForm.vat_amount)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Due */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Due:</span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={
-                          orderForm.due_amount === 0
-                            ? ""
-                            : orderForm.due_amount
-                        }
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            due_amount: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-16 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        placeholder="0"
-                        min="0"
-                        step="0.01"
-                      />
-                      <span className="text-slate-100 text-sm">
-                        {formatCurrency(orderForm.due_amount)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Previous Due - Only show if customer has previous due */}
-                  {orderForm.previous_due > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Previous Due:</span>
-                        <span className="text-amber-400 text-sm">
-                          {formatCurrency(orderForm.previous_due)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="applyPreviousDue"
-                          checked={orderForm.apply_previous_due_to_total}
-                          onChange={(e) =>
-                            setOrderForm((prev) => ({
-                              ...prev,
-                              apply_previous_due_to_total: e.target.checked,
-                            }))
-                          }
-                          className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2 rounded"
-                        />
-                        <label
-                          htmlFor="applyPreviousDue"
-                          className="text-xs text-slate-400"
-                        >
-                          Add to total (include previous due in this order)
-                        </label>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Total */}
-                  <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
-                    <span className="text-slate-100 font-semibold">
-                      Total:
-                    </span>
-                    <span className="text-cyan-400 font-semibold text-lg">
-                      {formatCurrency(orderForm.total)}
-                    </span>
-                  </div>
-
-                  {/* Payment Section */}
-                  <div className="space-y-3 pt-3 border-t border-slate-700/30 mt-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-300 font-medium text-sm">Payment Information</span>
-                      <button
-                        onClick={addPayment}
-                        className="text-cyan-400 hover:text-cyan-300 text-sm font-medium flex items-center gap-1"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Add Payment
-                      </button>
-                    </div>
-
-                    {/* Payment Entries */}
-                    {orderForm.payments.length > 0 && (
-                      <div className="space-y-2">
-                        {orderForm.payments.map((payment, index) => (
-                          <div key={payment.id} className="flex items-center gap-2">
-                            <select
-                              value={payment.method}
-                              onChange={(e) =>
-                                updatePayment(payment.id, "method", e.target.value as PaymentEntry["method"])
-                              }
-                              className="bg-slate-800/50 border border-slate-700/50 text-white text-sm rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                            >
-                              <option value="Cash" className="bg-slate-800">Cash</option>
-                              <option value="Cheque" className="bg-slate-800">Cheque</option>
-                              <option value="Bkash" className="bg-slate-800">Bkash</option>
-                              <option value="Nagad" className="bg-slate-800">Nagad</option>
-                              <option value="Bank" className="bg-slate-800">Bank</option>
-                            </select>
-                            <input
-                              type="number"
-                              value={payment.amount === 0 ? "" : payment.amount}
-                              onChange={(e) =>
-                                updatePayment(payment.id, "amount", parseFloat(e.target.value) || 0)
-                              }
-                              className="flex-1 bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded py-1 px-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              placeholder="0.00"
-                              min="0"
-                              step="0.01"
-                            />
-                            {orderForm.payments.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removePayment(payment.id)}
-                                className="text-red-400 hover:text-red-300 transition-colors p-1 rounded hover:bg-red-900/20"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Payment Summary */}
-                    {orderForm.payments.length > 0 && (
-                      <div className="space-y-1 pt-2 border-t border-slate-700/50">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-400">Total Received:</span>
-                          <span className="text-green-400">{formatCurrency(orderForm.total_payment_received)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-400">Remaining Balance:</span>
-                          <span className={orderForm.remaining_balance <= 0 ? "text-green-400" : "text-amber-400"}>
-                            {formatCurrency(orderForm.remaining_balance)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* No Payments Message */}
-                    {orderForm.payments.length === 0 && (
-                      <div className="text-center py-3 text-slate-400 text-sm">
-                        No payments added yet. Click "Add Payment" to record a payment.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Sales Incentive Section */}
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-              <div className="sm:p-4 p-2">
-                <button
-                  onClick={() => setIsSalesIncentiveOpen(!isSalesIncentiveOpen)}
-                  className="w-full flex items-center justify-between text-sm font-medium text-orange-400 mb-3 p-2 rounded-lg hover:bg-slate-800/30 transition-colors"
-                >
-                  <span>Sales Incentive (Internal)</span>
-                  <svg
-                    className={`w-4 h-4 transition-transform ${
-                      isSalesIncentiveOpen ? "rotate-180" : ""
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
+                  <div className="mb-6">
+                    <CustomerSelector
+                      orderForm={orderForm}
+                      setOrderForm={setOrderForm}
+                      customers={customers}
+                      customerType={customerType}
+                      setCustomerType={setCustomerType}
+                      selectedCustomerId={selectedCustomerId}
+                      setSelectedCustomerId={setSelectedCustomerId}
+                      customerSearch={customerSearch}
+                      setCustomerSearch={setCustomerSearch}
+                      isCustomerDropdownOpen={isCustomerDropdownOpen}
+                      setIsCustomerDropdownOpen={setIsCustomerDropdownOpen}
+                      highlightText={highlightText}
+                      formatCurrency={formatCurrency}
                     />
-                  </svg>
-                </button>
+                  </div>
 
-                {isSalesIncentiveOpen && (
-                  <div className="space-y-3">
+                  {customerType === "guest" && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Employee
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Search and select employee..."
-                          value={employeeSearch}
-                          onChange={(e) => {
-                            setEmployeeSearch(e.target.value);
-                            setIsEmployeeDropdownOpen(true);
-                          }}
-                          onFocus={() => setIsEmployeeDropdownOpen(true)}
-                          className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        />
-
-                        {/* Clear button */}
-                        {employeeSearch && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEmployeeSearch("");
-                              setOrderForm((prev) => ({
-                                ...prev,
-                                employee_id: undefined,
-                              }));
-                              setIsEmployeeDropdownOpen(false);
-                            }}
-                            className="absolute right-12 top-1/2 transform -translate-y-1/2 text-sm text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
-                            title="Clear search"
-                          >
-                            Clear
-                          </button>
-                        )}
-
-                        <svg
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-
-                        {/* Employee Dropdown */}
-                        {isEmployeeDropdownOpen && (
-                          <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
-                            {isLoadingEmployees ? (
-                              <div className="p-3 text-slate-400 text-sm">
-                                Loading employees...
-                              </div>
-                            ) : employees.filter(
-                                (emp) =>
-                                  emp.name
-                                    .toLowerCase()
-                                    .includes(employeeSearch.toLowerCase()) ||
-                                  emp.email
-                                    ?.toLowerCase()
-                                    .includes(employeeSearch.toLowerCase()) ||
-                                  emp.role
-                                    ?.toLowerCase()
-                                    .includes(employeeSearch.toLowerCase()) ||
-                                  emp.department
-                                    ?.toLowerCase()
-                                    .includes(employeeSearch.toLowerCase())
-                              ).length > 0 ? (
-                              <>
-                                <div
-                                  onClick={() => {
-                                    setOrderForm((prev) => ({
-                                      ...prev,
-                                      employee_id: undefined,
-                                    }));
-                                    setEmployeeSearch("");
-                                    setIsEmployeeDropdownOpen(false);
-                                  }}
-                                  className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 text-slate-400 text-sm"
-                                >
-                                  No employee selected
-                                </div>
-                                {employees
-                                  .filter(
-                                    (emp) =>
-                                      emp.name
-                                        .toLowerCase()
-                                        .includes(
-                                          employeeSearch.toLowerCase()
-                                        ) ||
-                                      emp.email
-                                        ?.toLowerCase()
-                                        .includes(
-                                          employeeSearch.toLowerCase()
-                                        ) ||
-                                      emp.role
-                                        ?.toLowerCase()
-                                        .includes(
-                                          employeeSearch.toLowerCase()
-                                        ) ||
-                                      emp.department
-                                        ?.toLowerCase()
-                                        .includes(employeeSearch.toLowerCase())
-                                  )
-                                  .map((employee) => (
-                                    <div
-                                      key={employee.id}
-                                      onClick={() => {
-                                        setOrderForm((prev) => ({
-                                          ...prev,
-                                          employee_id: employee.id,
-                                        }));
-                                        setEmployeeSearch(
-                                          `${employee.name} - ${
-                                            employee.role || employee.department
-                                          }`
-                                        );
-                                        setIsEmployeeDropdownOpen(false);
-                                      }}
-                                      className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
-                                    >
-                                      <div className="text-white font-medium text-sm">
-                                        {employee.name}
-                                      </div>
-                                      <div className="text-slate-400 text-sm">
-                                        {employee.role || employee.department} •{" "}
-                                        {employee.email}
-                                      </div>
-                                    </div>
-                                  ))}
-                              </>
-                            ) : (
-                              <div className="p-3 text-slate-400 text-sm">
-                                No employees found
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Click outside to close dropdown */}
-                        {isEmployeeDropdownOpen && (
-                          <div
-                            className="fixed inset-0 z-5"
-                            onClick={() => setIsEmployeeDropdownOpen(false)}
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Incentive Amount
-                      </label>
-                      <input
-                        type="number"
-                        value={
-                          orderForm.incentive_amount === 0
-                            ? ""
-                            : orderForm.incentive_amount
-                        }
-                        onChange={(e) =>
-                          setOrderForm((prev) => ({
-                            ...prev,
-                            incentive_amount: parseFloat(e.target.value) || 0,
-                          }))
-                        }
-                        className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-                        placeholder="0.00"
-                        min="0"
-                        step="0.01"
-                      />
-
-                      {/* Incentive note */}
-                      {orderForm.employee_id &&
-                        orderForm.incentive_amount > 0 && (
-                          <div className="mt-2 p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <svg
-                                className="w-4 h-4 text-green-400 flex-shrink-0"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              </svg>
-                              <div>
-                                <p className="text-green-400 text-sm font-medium">
-                                  Incentive will be recorded
-                                </p>
-                                <p className="text-green-300 text-xs">
-                                  {formatCurrency(orderForm.incentive_amount)}{" "}
-                                  incentive will be given to the selected
-                                  employee when the order is saved.
-                                </p>
-                              </div>
+                      {customerValidationError && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+                          <div className="flex items-start gap-2">
+                            <svg className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                            <div>
+                              <p className="text-amber-400 text-sm font-medium">Note:</p>
+                              <p className="text-amber-300 text-sm">
+                                A customer with this {duplicateField || 'field'} already exists: {" "}
+                                <button type="button" onClick={handleSelectMatchedCustomer} className="text-cyan-400 hover:text-cyan-300 underline font-medium transition-colors duration-200">
+                                  {matchedCustomer?.name}
+                                </button>
+                                . You may want to select them from existing customers instead, or use a different {duplicateField || 'field'}. You can still proceed with creating this order.
+                              </p>
                             </div>
                           </div>
-                        )}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Customer Name *</label>
+                          <input type="text" value={orderForm.customer.name} onChange={(e) => handleCustomerChange("name", e.target.value)} className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text" placeholder="Enter customer name" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Company</label>
+                          <input type="text" value={orderForm.customer.company} onChange={(e) => handleCustomerChange("company", e.target.value)} className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text" placeholder="Company name (optional)" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Email (Optional)</label>
+                          <input type="email" value={orderForm.customer.email} onChange={(e) => handleCustomerChange("email", e.target.value)} className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text" placeholder="customer@email.com (optional)" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Phone (Optional)</label>
+                          <input type="tel" value={orderForm.customer.phone} onChange={(e) => handleCustomerChange("phone", e.target.value)} className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text" placeholder="Phone number (optional)" />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Address (Optional)</label>
+                          <textarea value={orderForm.customer.address} onChange={(e) => handleCustomerChange("address", e.target.value)} rows={2} className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text" placeholder="Customer address (optional)" />
+                        </div>
+                      </div>
                     </div>
+                  )}
+                </div>
+              </div>
 
-                    {/* Employee selected but no incentive message */}
-                    {orderForm.employee_id && orderForm.incentive_amount === 0 && (
-                      <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <svg
-                            className="w-4 h-4 text-amber-400 flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
-                            />
-                          </svg>
-                          <p className="text-amber-400 text-sm">
-                            Employee selected but no incentive amount set. Enter an amount above to create an incentive.
-                          </p>
+              <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-visible">
+                <div className="sm:p-4 p-2">
+                  <h3 className="text-lg font-semibold text-slate-200 mb-4">Order Items</h3>
+
+                  <OrderItemsTable orderForm={orderForm} setOrderForm={setOrderForm} products={products} canIncreaseQuantity={canIncreaseQuantity} formatCurrency={formatCurrency} removeItem={removeItem} updateItemQuantity={updateItemQuantity} updateItemUnitPrice={updateItemUnitPrice} />
+
+                  <div className="border-t border-slate-700/50 pt-4">
+                    {error && (<div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4"><p className="text-red-400">{error}</p></div>)}
+                    <h4 className="text-sm font-medium text-slate-300 mb-3">Add New Item</h4>
+                    <div className="space-y-4 pb-20">
+                      <div className="flex flex-col md:flex-row gap-4 items-end">
+                        <div className="flex-1 md:flex-[2] relative">
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Product Search (Click product name to add to order)</label>
+                          <ProductSearchInput ref={productSearchInputRef} value={productSearch} onChange={handleProductSearch} onFocus={handleSearchFocus} onClear={handleSearchClear} isSearching={isSearchingProducts} isLoading={isLoadingProducts} />
+                          <ProductDropdown isOpen={isProductDropdownOpen} searchQuery={productSearch} searchResults={searchResults} isLoading={isLoadingProducts} isSearching={isSearchingProducts} onProductSelect={(id) => handleProductSelect(String(id))} onClose={handleDropdownClose} highlightText={highlightText} />
+                        </div>
+                        <div className="md:col-span-3">
+                          <button onClick={addItemToOrder} disabled={!selectedProduct || newItem.quantity <= 0} className={`w-full px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${selectedProduct && newItem.quantity > 0 ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500" : "bg-slate-700/50 text-slate-400 cursor-not-allowed"}`}>Add Item</button>
                         </div>
                       </div>
-                    )}
-
-                    {/* Profit Breakdown - Show when employee is selected */}
-                    {orderForm.employee_id && (
-                      <div className="mt-4 pt-4 border-t border-slate-700/50 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-400 text-sm">Total Buy Price:</span>
-                          <span className="text-slate-200 text-sm">{formatCurrency(orderForm.total_buy_price)}</span>
+                      {selectedProduct?.has_variants && (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Select Variant</label>
+                          <select value={newItem.variant} onChange={(e) => handleNewItemChange("variant", e.target.value)} className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200">
+                            <option value="">Select a variant</option>
+                            {availableVariants.map((variant) => (<option key={variant.id} value={variant.id}>{variant.size} {variant.color} - Stock: {variant.stock}</option>))}
+                          </select>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-400 text-sm">Total Sell Price:</span>
-                          <span className="text-slate-200 text-sm">{formatCurrency(orderForm.total_sell_price)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-400 text-sm">Gross Profit:</span>
-                          <span className="text-slate-200 text-sm">{formatCurrency(orderForm.gross_profit)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-400 text-sm">Incentive:</span>
-                          <span className="text-red-400 text-sm">-{formatCurrency(orderForm.incentive_amount)}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
-                          <span className="text-slate-200 text-sm font-medium">Net Profit:</span>
-                          <span className="text-green-400 text-sm font-medium">{formatCurrency(orderForm.net_profit)}</span>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
-            {/* Order Actions */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleSubmit(orderForm.status === 'draft' ? 'completed' : 'pending')}
-                disabled={isSubmitting}
-                className={`flex-1 px-6 py-3 text-white text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-all duration-200 shadow-lg ${
-                  orderForm.status === 'draft'
-                    ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500'
-                    : 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 focus:ring-cyan-500'
-                }`}
-              >
-                {isSubmitting 
-                  ? (orderForm.status === 'draft' ? "Completing..." : "Updating...") 
-                  : (orderForm.status === 'draft' ? "Complete Order" : "Update Order")
-                }
-              </button>
-
-              <button
-                onClick={handleCancel}
-                className="flex-1 px-6 py-3 bg-slate-600 text-slate-100 text-sm font-medium rounded-lg hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 transition-all duration-200"
-              >
-                Cancel
-              </button>
+            <div className="space-y-6">
+              <BillSummary orderForm={orderForm} setOrderForm={setOrderForm} currencySymbol={currencySymbol} formatCurrency={formatCurrency} />
+              <PaymentsSection orderForm={orderForm} setOrderForm={setOrderForm} formatCurrency={formatCurrency} />
+              <SalesIncentive orderForm={orderForm} setOrderForm={setOrderForm} employees={employees} isEmployeeDropdownOpen={isEmployeeDropdownOpen} setIsEmployeeDropdownOpen={setIsEmployeeDropdownOpen} employeeSearch={employeeSearch} setEmployeeSearch={setEmployeeSearch} formatCurrency={formatCurrency} isOpen={isSalesIncentiveOpen} setIsOpen={setIsSalesIncentiveOpen} />
+              <div>
+                <button onClick={() => handleSubmit(orderForm.status === 'draft' ? 'completed' : 'pending')} disabled={isSubmitting} className={`w-full px-6 py-3 text-white text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-all duration-200 shadow-lg ${orderForm.status === 'draft' ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500' : 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 focus:ring-cyan-500'}`}>
+                  {isSubmitting ? (orderForm.status === 'draft' ? "Completing..." : "Updating...") : (orderForm.status === 'draft' ? "Complete Order" : "Update Order")}
+                </button>
+                <button onClick={handleCancel} className="w-full mt-3 px-6 py-3 bg-slate-600 text-slate-100 text-sm font-medium rounded-lg hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 transition-all duration-200">Cancel</button>
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
     </div>
