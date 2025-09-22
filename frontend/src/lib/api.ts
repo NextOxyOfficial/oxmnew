@@ -2123,10 +2123,7 @@ export class ApiService {
     }
   }
 
-  // Notifications
-  static async getNotifications() {
-    return this.get("/notifications/");
-  }
+  // Notifications removed
 
   // Banking employees method (uses the banking transactions endpoint)
   static async getBankingEmployees(params?: string) {

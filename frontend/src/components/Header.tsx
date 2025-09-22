@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   ChevronRight, 
   Home, 
-  Bell, 
   Settings, 
   HelpCircle, 
   Sun, 
@@ -12,15 +11,12 @@ import {
   User,
   LogOut,
   Crown,
-  MessageSquare,
   Activity,
-  TrendingUp,
   Calendar,
   Clock
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ApiService } from '@/lib/api';
 import { useSubscription } from '@/hooks/useSubscription';
 
 interface User {
@@ -36,14 +32,7 @@ interface BreadcrumbItem {
   href?: string;
 }
 
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  timestamp: string;
-  read: boolean;
-}
+// Notifications removed
 
 interface HeaderProps {
   user: User;
@@ -68,53 +57,20 @@ export default function Header({
 }: HeaderProps) {
   const pathname = usePathname();
   const { subscriptionStatus, isPro, isLoading: subscriptionLoading } = useSubscription();
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loadingNotifications, setLoadingNotifications] = useState(true);
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-
-  const unreadNotifications = notifications.filter(n => !n.read).length;
-
-  // Fetch notifications
-  const fetchNotifications = async () => {
-    try {
-      setLoadingNotifications(true);
-      const response = await ApiService.getNotifications();
-      setNotifications(response.notifications || []);
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-      // Set empty array if fetch fails
-      setNotifications([]);
-    } finally {
-      setLoadingNotifications(false);
-    }
-  };
-
-  // Load notifications on component mount
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  // Refresh notifications periodically (every 5 minutes)
-  useEffect(() => {
-    const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  
   
   // Add click outside handlers for dropdowns
-  const notificationRef = React.useRef<HTMLDivElement>(null);
   const userMenuRef = React.useRef<HTMLDivElement>(null);
 
-  useClickOutside(notificationRef, () => setShowNotifications(false));
   useClickOutside(userMenuRef, () => setShowUserMenu(false));
 
   // Handle escape key to close dropdowns
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setShowNotifications(false);
         setShowUserMenu(false);
       }
     };
