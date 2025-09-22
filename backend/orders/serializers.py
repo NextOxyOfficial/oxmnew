@@ -82,6 +82,9 @@ class OrderPaymentSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     payments = OrderPaymentSerializer(many=True, read_only=True)
+    
+    # Employee details for frontend display
+    employee = serializers.SerializerMethodField()
 
     # For backward compatibility with ProductSale API
     product = serializers.SerializerMethodField()
@@ -179,6 +182,19 @@ class OrderSerializer(serializers.ModelSerializer):
         """Get first item's buy price for backward compatibility"""
         first_item = obj.items.first()
         return first_item.buy_price if first_item else 0
+    
+    def get_employee(self, obj):
+        """Get employee details for frontend display"""
+        if obj.employee:
+            return {
+                "id": obj.employee.id,
+                "name": obj.employee.name,
+                "email": obj.employee.email,
+                "role": getattr(obj.employee, "role", None),
+                "department": getattr(obj.employee, "department", None),
+                "employee_id": getattr(obj.employee, "employee_id", None),
+            }
+        return None
 
 
 class OrderItemCreateSerializer(serializers.ModelSerializer):
