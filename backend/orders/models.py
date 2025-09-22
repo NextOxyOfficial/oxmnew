@@ -167,8 +167,10 @@ class Order(models.Model):
         if self.apply_previous_due_to_total:
             self.total_amount += self.previous_due
 
-        # Calculate profits
-        self.gross_profit = self.total_sell_price - self.total_buy_price
+        # Calculate profits based on actual item values (excluding previous due)
+        # Gross profit = Actual sale value (after discount + vat) - Buy price
+        actual_sale_value = after_discount + self.vat_amount  # This excludes previous due
+        self.gross_profit = actual_sale_value - self.total_buy_price
         self.net_profit = self.gross_profit - self.incentive_amount
 
     def save(self, *args, **kwargs):

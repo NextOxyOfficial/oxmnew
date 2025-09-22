@@ -165,10 +165,10 @@ const OrdersList: React.FC<OrdersListProps> = ({
                 </p>
               </div>
               <div className="text-right">
-                <p className={`text-lg font-bold ${((order.total_amount || 0) - (order.total_buy_price || 0)) >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
-                  {formatCurrency((order.total_amount || 0) - (order.total_buy_price || 0))}
+                <p className={`text-lg font-bold ${(order.net_profit || 0) >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                  {formatCurrency(order.net_profit || 0)}
                 </p>
-                <p className="text-xs text-slate-400">Profit</p>
+                <p className="text-xs text-slate-400">Net Profit</p>
               </div>
             </div>
 
@@ -341,7 +341,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
                   Total Price
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                  Profit
+                  Net Profit
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
                   Invoice
@@ -398,8 +398,8 @@ const OrdersList: React.FC<OrdersListProps> = ({
                     {formatCurrency(order.total_amount || 0)}
                   </td>
                   <td className="py-4 px-4 text-sm font-medium">
-                    <span className={((order.total_amount || 0) - (order.total_buy_price || 0)) >= 0 ? 'text-green-400' : 'text-red-400'}>
-                      {formatCurrency((order.total_amount || 0) - (order.total_buy_price || 0))}
+                    <span className={((order.net_profit || 0)) >= 0 ? 'text-green-400' : 'text-red-400'}>
+                      {formatCurrency(order.net_profit || 0)}
                     </span>
                   </td>
                   <td className="py-4 px-4">
