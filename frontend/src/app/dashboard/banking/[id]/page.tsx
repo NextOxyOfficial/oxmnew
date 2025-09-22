@@ -353,6 +353,134 @@ export default function BankAccountPage() {
     loadEmployees();
   }, [loadEmployees]);
 
+  // Debounce search term into filters.search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFilters((prev) => ({ ...prev, search: searchTerm.trim() }));
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // Map dateRange to date_from/date_to
+  useEffect(() => {
+    const toYmd = (d: Date) => d.toISOString().slice(0, 10);
+    let date_from = "";
+    let date_to = "";
+    const now = new Date();
+    switch (dateRange) {
+      case "today":
+        date_from = toYmd(now);
+        date_to = toYmd(now);
+        break;
+      case "week": {
+        const start = new Date(now);
+        start.setDate(now.getDate() - 7);
+        date_from = toYmd(start);
+        date_to = toYmd(now);
+        break;
+      }
+      case "month": {
+        const start = new Date(now);
+        start.setMonth(now.getMonth() - 1);
+        date_from = toYmd(start);
+        date_to = toYmd(now);
+        break;
+      }
+      case "3months": {
+        const start = new Date(now);
+        start.setMonth(now.getMonth() - 3);
+        date_from = toYmd(start);
+        date_to = toYmd(now);
+        break;
+      }
+      case "custom":
+        date_from = customStartDate || "";
+        date_to = customEndDate || "";
+        break;
+      default:
+        date_from = "";
+        date_to = "";
+    }
+    setFilters((prev) => ({ ...prev, date_from, date_to }));
+    setCurrentPage(1);
+  }, [dateRange, customStartDate, customEndDate]);
+
+  // Reload transactions when filters/page/account change
+  useEffect(() => {
+    if (account?.id) {
+      loadTransactions(account.id);
+    }
+  }, [account?.id, currentPage, filters, loadTransactions]);
+
+  // Sync searchTerm into filters.search with debounce
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setFilters((prev) => ({ ...prev, search: searchTerm.trim() }));
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Map dateRange to date_from/date_to filter values
+  useEffect(() => {
+    const toDateString = (d: Date) => d.toISOString().slice(0, 10);
+    let date_from = "";
+    let date_to = "";
+
+    const now = new Date();
+    const end = new Date(now);
+    // Ensure end date includes the day (backend may add time)
+    switch (dateRange) {
+      case "today": {
+        date_from = toDateString(now);
+        date_to = toDateString(now);
+        break;
+      }
+      case "week": {
+        const start = new Date(now);
+        start.setDate(now.getDate() - 7);
+        date_from = toDateString(start);
+        date_to = toDateString(end);
+        break;
+      }
+      case "month": {
+        const start = new Date(now);
+        start.setMonth(now.getMonth() - 1);
+        date_from = toDateString(start);
+        date_to = toDateString(end);
+        break;
+      }
+      case "3months": {
+        const start = new Date(now);
+        start.setMonth(now.getMonth() - 3);
+        date_from = toDateString(start);
+        date_to = toDateString(end);
+        break;
+      }
+      case "custom": {
+        date_from = customStartDate || "";
+        date_to = customEndDate || "";
+        break;
+      }
+      default: {
+        // all
+        date_from = "";
+        date_to = "";
+      }
+    }
+
+    setFilters((prev) => ({ ...prev, date_from, date_to }));
+    setCurrentPage(1);
+  }, [dateRange, customStartDate, customEndDate]);
+
+  // Auto-reload transactions when filters or page changes and account is set
+  useEffect(() => {
+    if (account?.id) {
+      loadTransactions(account.id);
+    }
+  }, [account?.id, currentPage, filters, loadTransactions]);
+
   // Keyboard navigation for account tabs
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
@@ -909,6 +1037,23 @@ export default function BankAccountPage() {
                             </span>
                           </div>
                         )}
+                      {dateRange === "custom" && (
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="date"
+                            value={customStartDate}
+                            onChange={(e) => setCustomStartDate(e.target.value)}
+                            className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
+                          />
+                          <span className="text-slate-400 text-sm">to</span>
+                          <input
+                            type="date"
+                            value={customEndDate}
+                            onChange={(e) => setCustomEndDate(e.target.value)}
+                            className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center space-x-3">
@@ -933,6 +1078,7 @@ export default function BankAccountPage() {
                             setDateRange("all");
                             setCustomStartDate("");
                             setCustomEndDate("");
+                            setCurrentPage(1);
                           }}
                           className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-medium whitespace-nowrap cursor-pointer"
                         >

@@ -298,8 +298,9 @@ export class ApiService {
         let errorDetails = null;
 
         // Get response text first to check if it's HTML or JSON
-        const responseText = await response.text();
-        console.error(`API Error Response (${response.status}):`, responseText);
+  const responseText = await response.text();
+  // Use warn to avoid noisy dev overlay while we may recover via fallbacks
+  console.warn(`API Error Response (${response.status}):`, responseText);
 
         try {
           const errorData = JSON.parse(responseText);
@@ -726,27 +727,42 @@ export class ApiService {
     accountId: string,
     filters?: Record<string, string>
   ): Promise<PaginatedTransactions | Transaction[]> {
-    let endpoint = `/banking/accounts/${accountId}/transactions/`;
-
-    if (filters && Object.keys(filters).length > 0) {
-      const queryParams = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value);
+    // Build filtered params without 'all' placeholders
+    const buildParams = (base?: Record<string, string>) => {
+      const params = new URLSearchParams();
+      if (!base) return params;
+      Object.entries(base).forEach(([key, value]) => {
+        if (!value) return;
+        if (value === "all") return;
+        params.append(key, value);
       });
+      return params;
+    };
+
+    // Prefer global transactions endpoint filtered by account to avoid nested pk resolution issues
+    try {
+      const params = buildParams(filters);
+      params.set("account", accountId);
+      const queryString = params.toString();
+      const endpoint = `/banking/transactions/${queryString ? `?${queryString}` : ""}`;
+      const response = await this.get(endpoint);
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response as PaginatedTransactions;
+      }
+      return Array.isArray(response) ? response : [];
+    } catch (primaryErr: any) {
+      // Fallback to nested endpoint
+      console.warn("Global transactions endpoint failed, trying nested endpoint:", primaryErr?.message || primaryErr);
+      let endpoint = `/banking/accounts/${accountId}/transactions/`;
+      const queryParams = buildParams(filters);
       const queryString = queryParams.toString();
       endpoint = `${endpoint}${queryString ? `?${queryString}` : ""}`;
+      const response = await this.get(endpoint);
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response as PaginatedTransactions;
+      }
+      return Array.isArray(response) ? response : [];
     }
-
-    const response = await this.get(endpoint);
-    
-    // Handle both paginated and non-paginated responses
-    // If response has 'results' property, it's paginated
-    if (response && typeof response === 'object' && 'results' in response) {
-      return response as PaginatedTransactions;
-    }
-    
-    // Otherwise, it's a regular array (backward compatibility)
-    return Array.isArray(response) ? response : [];
   }
 
   static async createTransaction(transactionData: {
