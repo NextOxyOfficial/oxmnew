@@ -8,6 +8,7 @@ import { useInventoryStats } from "@/hooks/useInventoryStats";
 import { useLowStock } from "@/hooks/useLowStock";
 import { useRecentActivitiesStats } from "@/hooks/useRecentActivitiesStats";
 import { useRecentSales } from "@/hooks/useRecentSales";
+import { useRecentSms } from "@/hooks/useRecentSms";
 import { useSmsCredits } from "@/hooks/useSmsCredits";
 import { customersAPI } from "@/lib/api/customers";
 import {
@@ -34,8 +35,8 @@ export default function DashboardPage() {
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
-  const [currentFilter, setCurrentFilter] = useState("this_week");
-  const [currentFilterLabel, setCurrentFilterLabel] = useState("This Week");
+  const [currentFilter, setCurrentFilter] = useState("today");
+  const [currentFilterLabel, setCurrentFilterLabel] = useState("Today");
 
   // Use the custom hook for recent sales
   const {
@@ -89,6 +90,14 @@ export default function DashboardPage() {
     error: smsCreditsError,
     refetch: refetchSmsCredits,
   } = useSmsCredits();
+
+  // Use the custom hook for recent SMS
+  const {
+    recentSms,
+    isLoadingRecentSms,
+    recentSmsError,
+    refetchRecentSms,
+  } = useRecentSms();
 
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -158,6 +167,11 @@ export default function DashboardPage() {
   const handleBuySubscription = () => {
     setIsNavigating(true);
     router.push("/dashboard/subscriptions");
+  };
+
+  const handleSendSms = () => {
+    setIsNavigating(true);
+    router.push("/dashboard/sms");
   };
 
   const handleCreateMainAccount = async () => {
@@ -1039,15 +1053,18 @@ export default function DashboardPage() {
                     )}
                   </span>
                   <button
-                    onClick={refetchSmsCredits}
-                    disabled={isLoadingSmsCredits}
+                    onClick={() => {
+                      refetchSmsCredits();
+                      refetchRecentSms();
+                    }}
+                    disabled={isLoadingSmsCredits || isLoadingRecentSms}
                     className="p-1 rounded-full hover:bg-blue-500/20 transition-colors disabled:opacity-50"
-                    title="Refresh SMS credits"
+                    title="Refresh SMS data"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className={`h-3 w-3 text-blue-400 hover:text-blue-300 ${
-                        isLoadingSmsCredits ? "animate-spin" : ""
+                        isLoadingSmsCredits || isLoadingRecentSms ? "animate-spin" : ""
                       }`}
                       fill="none"
                       viewBox="0 0 24 24"
@@ -1072,21 +1089,75 @@ export default function DashboardPage() {
               </div>
 
               <div className="bg-black/20 rounded-xl p-3 border border-white/10">
-                <p className="text-xs text-gray-400 mb-1">Last SMS sent:</p>
-                <p className="text-sm text-white font-medium">
-                  John Doe (+1234567890)
-                </p>
-                <p className="text-xs text-gray-300 mt-1">
-                  &ldquo;Your order #1245 has been shipped...&rdquo;
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  June 25, 2025, 2:30 PM
-                </p>
+                {isLoadingRecentSms ? (
+                  // Loading state
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400/30"></div>
+                    <span className="ml-2 text-xs text-gray-400">Loading recent SMS...</span>
+                  </div>
+                ) : recentSmsError ? (
+                  // Error state
+                  <div className="text-center py-4">
+                    <p className="text-xs text-red-400 mb-2">Failed to load recent SMS</p>
+                    <button
+                      onClick={refetchRecentSms}
+                      className="text-xs text-blue-400 hover:text-blue-300 cursor-pointer"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : recentSms ? (
+                  // Recent SMS data
+                  <>
+                    <p className="text-xs text-gray-400 mb-1">Last SMS sent:</p>
+                    <p className="text-sm text-white font-medium">
+                      {recentSms.recipient}
+                    </p>
+                    <p className="text-xs text-gray-300 mt-1 line-clamp-2">
+                      &ldquo;{recentSms.message.length > 50 
+                        ? `${recentSms.message.substring(0, 50)}...` 
+                        : recentSms.message}&rdquo;
+                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-gray-500">
+                        {new Date(recentSms.sent_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          recentSms.status === 'sent' 
+                            ? 'bg-green-500/20 text-green-400' 
+                            : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {recentSms.status}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {recentSms.sms_count} SMS
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  // No SMS data
+                  <div className="text-center py-4">
+                    <p className="text-xs text-gray-400 mb-1">No SMS sent yet</p>
+                    <p className="text-xs text-gray-500">Your SMS history will appear here</p>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="flex space-x-2">
-              <button className="w-full py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 text-sm font-medium cursor-pointer">
+              <button 
+                onClick={handleSendSms}
+                disabled={isNavigating}
+                className="w-full py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Send SMS
               </button>
             </div>
