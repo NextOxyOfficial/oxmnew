@@ -1186,7 +1186,7 @@ export default function DashboardPage() {
                   🛒
                 </span>
                 <span className="text-sm text-white font-medium">
-                  New Order
+                  New Sale
                 </span>
               </button>
               <button

@@ -30,11 +30,11 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
   console.log("OrdersControls re-rendered");
   return (
     <div className="flex flex-col gap-4 mb-6">
-      <h3 className="text-xl font-bold text-slate-200">Order History</h3>
+      <h3 className="text-xl font-bold text-slate-200">Sales History</h3>
 
       {/* Controls */}
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
-        {/* Add Order Button */}
+        {/* Create A Sale Button */}
         <button
           onClick={onAddOrder}
           disabled={isNavigating}
@@ -80,7 +80,7 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
                   d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                 />
               </svg>
-              Add Order
+              Create A Sale
             </>
           )}
         </button>
@@ -89,7 +89,7 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
         <div className="relative flex-1 min-w-0">
           <input
             type="text"
-            placeholder="Search orders, customers..."
+            placeholder="Search sales, customers..."
             value={searchInput}
             onChange={(e) => onSearchChange(e.target.value)}
             className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-10 pr-10 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"

@@ -51,7 +51,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       badge: "inventory",
     },
     {
-      name: "Orders",
+      name: "Sales",
       href: "/dashboard/orders",
       icon: ShoppingCart,
       current: pathname.startsWith("/dashboard/orders"),
@@ -141,7 +141,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       case pathname.startsWith("/dashboard/products"):
         return "Product Management";
       case pathname.startsWith("/dashboard/orders"):
-        return "Order Management";
+        return "Sales Management";
       case pathname.startsWith("/dashboard/suppliers"):
         return "Supplier Management";
       case pathname.startsWith("/dashboard/customers"):
