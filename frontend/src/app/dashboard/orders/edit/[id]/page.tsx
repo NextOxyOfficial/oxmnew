@@ -220,6 +220,7 @@ export default function EditOrderPage() {
         discount_percentage: round(orderForm.discount_percentage || 0), 
         discount_flat_amount: round(orderForm.discount_flat_amount || 0), 
         vat_percentage: round(orderForm.vat_percentage || 0), 
+        due_amount: round(orderForm.due_amount || 0),
         notes: orderForm.notes || undefined, 
         due_date: orderForm.due_date || undefined, 
         subtotal: round(orderForm.subtotal || 0), 

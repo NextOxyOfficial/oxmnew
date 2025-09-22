@@ -684,13 +684,20 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
             "discount_amount",
             "vat_amount",
             "total_amount",
+            "due_amount",
             "due_date",
             "employee",
             "incentive_amount",
         ]
 
     def update(self, instance, validated_data):
-        """Update order with recalculated totals"""
+        """Update order with recalculated totals and handle due payments"""
+        from customers.models import DuePayment, Customer
+        
+        # Get the old due amount for comparison
+        old_due_amount = instance.due_amount or 0
+        new_due_amount = validated_data.get('due_amount', old_due_amount)
+        
         # Update the instance with validated data
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -705,4 +712,63 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
             instance.calculate_totals()
 
         instance.save()
+        
+        # Handle due payment changes
+        if old_due_amount != new_due_amount:
+            # Find or create customer for due payment
+            customer = instance.customer
+            if not customer and instance.customer_name and (instance.customer_email or instance.customer_phone):
+                # Try to find existing customer or create new one
+                # Try to find by email first
+                if instance.customer_email:
+                    try:
+                        customer = Customer.objects.get(
+                            email=instance.customer_email, 
+                            user=self.context["request"].user
+                        )
+                    except Customer.DoesNotExist:
+                        pass
+                
+                # Try to find by phone if not found by email
+                if not customer and instance.customer_phone:
+                    try:
+                        customer = Customer.objects.get(
+                            phone=instance.customer_phone, 
+                            user=self.context["request"].user
+                        )
+                    except Customer.DoesNotExist:
+                        pass
+                
+                # Create new customer if not found
+                if not customer:
+                    customer = Customer.objects.create(
+                        name=instance.customer_name,
+                        email=instance.customer_email,
+                        phone=instance.customer_phone,
+                        address=instance.customer_address,
+                        user=self.context["request"].user,
+                    )
+                    instance.customer = customer
+                    instance.save()
+            
+            if customer:
+                # Remove old due payment record for this order
+                DuePayment.objects.filter(
+                    order=instance, 
+                    customer=customer,
+                    payment_type="due"
+                ).delete()
+                
+                # Create new due payment record if new amount > 0
+                if new_due_amount > 0:
+                    DuePayment.objects.create(
+                        customer=customer,
+                        order=instance,
+                        amount=new_due_amount,
+                        payment_type="due",
+                        due_date=validated_data.get("due_date", instance.due_date),
+                        notes=f"Due amount from order #{instance.order_number}",
+                        user=self.context["request"].user,
+                    )
+        
         return instance
