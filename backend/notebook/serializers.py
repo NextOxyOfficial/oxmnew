@@ -93,8 +93,8 @@ class NotebookCreateUpdateSerializer(serializers.ModelSerializer):
         return cleaned_tags
     
     def create(self, validated_data):
-        """Create notebook with current user as creator"""
-        validated_data['created_by'] = self.context['request'].user
+        """Create notebook - user assignment handled in view"""
+        # Don't set created_by here - let the view handle it in perform_create
         return super().create(validated_data)
 
 

@@ -39,9 +39,37 @@ class NotebookViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Set current user as notebook creator"""
         from django.contrib.auth.models import User
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"Request user: {self.request.user}")
+        logger.info(f"Is authenticated: {self.request.user.is_authenticated}")
+        logger.info(f"User type: {type(self.request.user)}")
+        
         # For testing: use authenticated user or fallback to testuser
-        user = self.request.user if self.request.user.is_authenticated else User.objects.get(username='testuser')
-        serializer.save(created_by=user)
+        if self.request.user.is_authenticated:
+            user = self.request.user
+            logger.info(f"Using authenticated user: {user}")
+        else:
+            try:
+                user = User.objects.get(username='testuser')
+                logger.info(f"Using testuser: {user}")
+            except User.DoesNotExist:
+                # Create testuser if it doesn't exist
+                logger.info("Creating testuser")
+                user = User.objects.create_user(
+                    username='testuser',
+                    email='test@example.com',
+                    password='testpass123'
+                )
+        
+        logger.info(f"Final user for creation: {user} (type: {type(user)})")
+        
+        # Ensure we have a valid User instance, not AnonymousUser
+        if user and hasattr(user, 'id') and user.id:
+            serializer.save(created_by=user)
+        else:
+            raise ValueError(f"Unable to determine user for notebook creation. User: {user}")
     
     @action(detail=True, methods=['post'])
     def toggle_pin(self, request, pk=None):

@@ -43,18 +43,39 @@ class NotebookAPI {
   }
 
   private async handleResponse(response: Response) {
+    console.log('Response status:', response.status);
+    console.log('Response status text:', response.statusText);
+    console.log('Response URL:', response.url);
+    
     if (!response.ok) {
       let errorMessage = `HTTP ${response.status}`;
+      let errorDetails = '';
+      
       try {
         const errorData = await response.json();
+        console.log('Error response data:', errorData);
         errorMessage = errorData.detail || errorData.message || errorMessage;
+        
+        // Add more specific error details
+        if (errorData.errors) {
+          errorDetails = Object.entries(errorData.errors)
+            .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+            .join('; ');
+        }
       } catch (parseError) {
+        console.log('Failed to parse error response:', parseError);
         // If JSON parsing fails, use status text
         errorMessage = response.statusText || errorMessage;
       }
-      throw new Error(errorMessage);
+      
+      const fullError = errorDetails ? `${errorMessage} (${errorDetails})` : errorMessage;
+      console.error('API Error:', fullError);
+      throw new Error(fullError);
     }
-    return response.json();
+    
+    const data = await response.json();
+    console.log('Success response data:', data);
+    return data;
   }
 
   async getNotebooks(): Promise<Notebook[]> {
@@ -93,12 +114,27 @@ class NotebookAPI {
   }
 
   async createNotebook(data: NotebookCreateData): Promise<Notebook> {
-    const response = await fetch(`${API_BASE_URL}/notebooks/`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
-    return this.handleResponse(response);
+    console.log('Creating notebook with data:', data);
+    console.log('API URL:', `${API_BASE_URL}/notebooks/`);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/notebooks/`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      
+      console.log('Create notebook response:', response);
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('Create notebook error:', error);
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Unable to connect to the server. Please check if the backend is running and accessible.');
+      }
+      
+      throw error;
+    }
   }
 
   async updateNotebook(id: number, data: Partial<NotebookCreateData>): Promise<Notebook> {

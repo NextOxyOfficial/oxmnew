@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, FileText, Edit3, Eye, NotebookPen } from "lucide-react";
+import { Plus, X, FileText, Edit3, Eye, NotebookPen, Crown, Lock } from "lucide-react";
 import { notebookAPI, Notebook as APINotebook, NotebookCreateData } from "@/services/notebookAPI";
+import { useSubscription } from "@/hooks/useSubscription";
 
 // Interface for notebook data
 interface Notebook {
@@ -17,11 +18,13 @@ interface Notebook {
 
 export default function NotebookPage() {
   const router = useRouter();
+  const { isPro, isFree, subscriptionStatus, isLoading: subscriptionLoading } = useSubscription();
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newNotebook, setNewNotebook] = useState({
     name: '',
@@ -115,7 +118,11 @@ export default function NotebookPage() {
         is_pinned: false
       };
 
+      console.log('Creating notebook with data:', createData);
+      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api');
+      
       const apiNotebook = await notebookAPI.createNotebook(createData);
+      console.log('API response:', apiNotebook);
       
       // Convert to local format and add to list
       const localNotebook: Notebook = {
@@ -128,15 +135,32 @@ export default function NotebookPage() {
       };
       
       setNotebooks(prev => [localNotebook, ...prev]);
-      console.log('Notebook created in database:', localNotebook.name);
+      console.log('Notebook created successfully:', localNotebook.name);
       
       // Reset form and close modal
       setNewNotebook({ name: '', description: '', tags: '' });
       setShowCreateModal(false);
       
     } catch (error) {
-      console.error('Error creating notebook:', error);
-      alert("Failed to create notebook. Please check your connection to the database.");
+      console.error('Detailed error creating notebook:', error);
+      
+      let errorMessage = "Failed to create notebook. ";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage += "Unable to connect to the server. Please check if the backend is running.";
+        } else if (error.message.includes('404')) {
+          errorMessage += "API endpoint not found. Please check the server configuration.";
+        } else if (error.message.includes('500')) {
+          errorMessage += "Server error occurred. Please check the backend logs.";
+        } else {
+          errorMessage += error.message;
+        }
+      } else {
+        errorMessage += "Unknown error occurred.";
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsCreating(false);
     }
@@ -145,6 +169,21 @@ export default function NotebookPage() {
   const handleCloseCreateModal = () => {
     setNewNotebook({ name: '', description: '', tags: '' });
     setShowCreateModal(false);
+  };
+
+  // Handle create notebook button click with subscription check
+  const handleCreateClick = () => {
+    if (isFree) {
+      setShowProModal(true);
+    } else if (isPro) {
+      setShowCreateModal(true);
+    }
+  };
+
+  // Handle navigation to subscriptions page
+  const handleUpgradeClick = () => {
+    setShowProModal(false);
+    router.push('/dashboard/subscriptions');
   };
 
   // Handle delete notebook
@@ -245,12 +284,7 @@ export default function NotebookPage() {
                 Create and manage simple notes with titles and descriptions
               </p>
             </div>
-            <div className="text-right">
-              <div className="px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg">
-                <p className="text-slate-300 text-sm font-medium">Total Notes</p>
-                <p className="text-2xl font-bold text-blue-400">{totalNotebooks}</p>
-              </div>
-            </div>
+            
           </div>
         </div>
 
@@ -259,11 +293,15 @@ export default function NotebookPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Create Notebook Button */}
             <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg cursor-pointer whitespace-nowrap flex items-center space-x-2"
+              onClick={handleCreateClick}
+              className={`px-4 py-2 text-white text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 shadow-lg cursor-pointer whitespace-nowrap flex items-center space-x-2 ${
+                isFree 
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 focus:ring-amber-500' 
+                  : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:ring-blue-500'
+              }`}
             >
-              <Plus className="w-4 h-4" />
-              <span>Create New Note</span>
+              {isFree ? <Crown className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              <span>{isFree ? 'Create New Note (Pro)' : 'Create New Note'}</span>
             </button>
             
             {/* Search */}
@@ -456,6 +494,83 @@ export default function NotebookPage() {
                     {isCreating ? 'Creating...' : 'Create Notebook'}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pro Subscription Required Modal */}
+        {showProModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800/95 rounded-xl border border-slate-700/50 shadow-2xl max-w-md w-full mx-auto">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-lg">
+                    <Crown className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-slate-100">Pro Feature</h2>
+                </div>
+                <button 
+                  onClick={() => setShowProModal(false)}
+                  className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4 text-slate-400" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-full flex items-center justify-center mb-4">
+                  <Lock className="w-8 h-8 text-amber-400" />
+                </div>
+                
+                <h3 className="text-xl font-semibold text-slate-100">
+                  Upgrade to Pro Required
+                </h3>
+                
+                <p className="text-slate-300 leading-relaxed">
+                  Creating new notebooks is a Pro feature. Upgrade your subscription to unlock unlimited notebook creation and advanced features.
+                </p>
+
+                <div className="bg-slate-700/30 rounded-lg p-4 text-left">
+                  <h4 className="text-sm font-semibold text-amber-400 mb-2">Pro Features Include:</h4>
+                  <ul className="text-sm text-slate-300 space-y-1">
+                    <li className="flex items-center space-x-2">
+                      <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                      <span>Unlimited notebook creation</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                      <span>Advanced editing features</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                      <span>Premium templates</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                      <span>Priority support</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex space-x-3 p-4 border-t border-slate-700/50">
+                <button
+                  onClick={() => setShowProModal(false)}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 bg-slate-700/30 hover:bg-slate-700/50 rounded-lg transition-all duration-200 cursor-pointer"
+                >
+                  Maybe Later
+                </button>
+                <button
+                  onClick={handleUpgradeClick}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-medium rounded-lg hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all duration-200 shadow-lg cursor-pointer flex items-center justify-center space-x-2"
+                >
+                  <Crown className="w-4 h-4" />
+                  <span>Upgrade to Pro</span>
+                </button>
               </div>
             </div>
           </div>

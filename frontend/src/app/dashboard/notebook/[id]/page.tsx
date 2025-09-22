@@ -43,11 +43,28 @@ export default function NotebookViewPage() {
 
   // Helper function for consistent date formatting
   const formatDate = (dateString: string) => {
-    if (!mounted) return '';
+    if (!mounted || !dateString) return '';
+    
     try {
-      return new Date(dateString).toLocaleDateString();
-    } catch {
-      return dateString;
+      // Handle different date formats from the API
+      const date = new Date(dateString);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return 'Invalid Date';
+      }
+      
+      // Format the date consistently
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return dateString; // Fallback to original string
     }
   };
 
@@ -61,6 +78,8 @@ export default function NotebookViewPage() {
 
         const apiNotebook = await notebookAPI.getNotebook(notebookId);
         console.log('Received notebook:', apiNotebook);
+        console.log('Created at:', apiNotebook.created_at, 'Type:', typeof apiNotebook.created_at);
+        console.log('Updated at:', apiNotebook.updated_at, 'Type:', typeof apiNotebook.updated_at);
         
         setNotebook(apiNotebook);
         setEditForm({
@@ -100,7 +119,16 @@ export default function NotebookViewPage() {
       const updatedNotebook = await notebookAPI.updateNotebook(notebook.id, updateData);
       console.log('Updated notebook:', updatedNotebook);
       
-      setNotebook(updatedNotebook);
+      // Merge the updated data with the existing notebook to preserve all fields
+      const mergedNotebook = {
+        ...notebook, // Keep original data
+        ...updatedNotebook, // Override with updated data
+        // Ensure essential fields are preserved if missing from update response
+        created_at: updatedNotebook.created_at || notebook.created_at,
+        created_by_username: updatedNotebook.created_by_username || notebook.created_by_username,
+      };
+      
+      setNotebook(mergedNotebook);
       setLastSaved(new Date());
       setIsEditing(false);
       
@@ -210,33 +238,6 @@ export default function NotebookViewPage() {
                 Last saved: {lastSaved.toLocaleTimeString()}
               </span>
             )}
-            
-            {!isEditing ? (
-              <button
-                onClick={handleEdit}
-                className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-lg hover:bg-blue-600/30 hover:text-blue-200 transition-all duration-200 flex items-center space-x-2 cursor-pointer"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span>Edit</span>
-              </button>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={handleCancel}
-                  className="px-4 py-2 text-slate-400 hover:text-slate-300 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="px-4 py-2 bg-green-600/20 border border-green-500/30 text-green-300 rounded-lg hover:bg-green-600/30 hover:text-green-200 transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{isSaving ? 'Saving...' : 'Save'}</span>
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -244,9 +245,6 @@ export default function NotebookViewPage() {
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg p-6 space-y-6">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Notebook Title
-            </label>
             {isEditing ? (
               <input
                 type="text"
@@ -269,21 +267,21 @@ export default function NotebookViewPage() {
               <Calendar className="w-4 h-4" />
               <div>
                 <span className="text-xs text-slate-500">Created</span>
-                <p className="text-sm">{formatDate(notebook.created_at)}</p>
+                <p className="text-sm">{notebook.created_at ? formatDate(notebook.created_at) : 'Unknown'}</p>
               </div>
             </div>
             <div className="flex items-center space-x-2 text-slate-400">
               <Calendar className="w-4 h-4" />
               <div>
                 <span className="text-xs text-slate-500">Updated</span>
-                <p className="text-sm">{formatDate(notebook.updated_at)}</p>
+                <p className="text-sm">{notebook.updated_at ? formatDate(notebook.updated_at) : 'Unknown'}</p>
               </div>
             </div>
             <div className="flex items-center space-x-2 text-slate-400">
               <User className="w-4 h-4" />
               <div>
                 <span className="text-xs text-slate-500">Created by</span>
-                <p className="text-sm">{notebook.created_by_username}</p>
+                <p className="text-sm">{notebook.created_by_username || 'Unknown'}</p>
               </div>
             </div>
           </div>
@@ -342,6 +340,36 @@ export default function NotebookViewPage() {
                 ) : (
                   <p className="text-slate-500 italic">No description available</p>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end items-center space-x-3 pt-4">
+            {!isEditing ? (
+              <button
+                onClick={handleEdit}
+                className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-lg hover:bg-blue-600/30 hover:text-blue-200 transition-all duration-200 flex items-center space-x-2 cursor-pointer"
+              >
+                <Edit3 className="w-4 h-4" />
+                <span>Edit</span>
+              </button>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleCancel}
+                  className="px-4 py-2 text-slate-400 hover:text-slate-300 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-green-600/20 border border-green-500/30 text-green-300 rounded-lg hover:bg-green-600/30 hover:text-green-200 transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Saving...' : 'Save'}</span>
+                </button>
               </div>
             )}
           </div>
