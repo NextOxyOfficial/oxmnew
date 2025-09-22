@@ -156,7 +156,7 @@ export default function DueBookPage() {
   // Fetch user profile
   const fetchUserProfile = useCallback(async () => {
     try {
-      const data = await ApiService.get("/accounts/profile/");
+      const data = await ApiService.get("/auth/profile/");
       setUserProfile(data);
     } catch (error) {
       console.error("Error fetching user profile:", error);
