@@ -204,6 +204,64 @@ export default function SalesIncentive({ orderForm, setOrderForm, employees, isE
                 </div>
               </div>
             )}
+
+            {/* Profit Summary - Internal Details */}
+            {orderForm.total > 0 && (
+              <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-3 mt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-slate-400">
+                    Total Buy Price:
+                  </span>
+                  <span className="text-sm text-red-400">
+                    {formatCurrency(orderForm.total_buy_price)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-slate-400">
+                    Total Sell Price:
+                  </span>
+                  <span className="text-sm text-blue-400">
+                    {formatCurrency(orderForm.total_sell_price)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mb-2 pt-2 border-t border-slate-700/30">
+                  <span className="text-sm text-slate-400">
+                    Gross Profit:
+                  </span>
+                  <span className="text-sm text-green-400">
+                    {formatCurrency(orderForm.gross_profit)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-slate-400">
+                    Incentive:
+                  </span>
+                  <span className="text-sm text-orange-400">
+                    -{formatCurrency(orderForm.incentive_amount)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
+                  <span className="text-sm text-slate-300">
+                    {orderForm.net_profit < 0
+                      ? "Net Loss:"
+                      : "Net Profit:"}
+                  </span>
+                  <span
+                    className={`text-sm font-semibold ${
+                      orderForm.net_profit < 0
+                        ? "text-red-400"
+                        : "text-green-400"
+                    }`}
+                  >
+                    {orderForm.net_profit < 0
+                      ? formatCurrency(
+                          Math.abs(orderForm.net_profit)
+                        )
+                      : formatCurrency(orderForm.net_profit)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
