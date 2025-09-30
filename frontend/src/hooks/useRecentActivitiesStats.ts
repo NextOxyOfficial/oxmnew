@@ -24,35 +24,50 @@ export function useRecentActivitiesStats(sales: Sale[]): RecentActivitiesStats {
     console.log("Recent Activities Stats - Raw sales data:", sales);
 
     const totalBuyPrice = sales.reduce((total, sale) => {
-      // Use total_buy_price if available (for multi-item orders), otherwise calculate from single item
-      const buyPrice =
-        parseFloat(sale.total_buy_price?.toString() || "0") ||
-        parseFloat(sale.buy_price?.toString() || "0") *
+      // Prioritize total_buy_price from Order model (for multi-item orders)
+      const buyPrice = parseFloat(sale.total_buy_price?.toString() || "0");
+      
+      // Fallback to calculated value for single-item backward compatibility
+      if (buyPrice === 0) {
+        const fallbackBuyPrice = parseFloat(sale.buy_price?.toString() || "0") *
           parseFloat(sale.quantity?.toString() || "0");
-      console.log(
-        `Sale ${sale.id}: total_buy_price=${sale.total_buy_price}, calculated=${
-          sale.buy_price * sale.quantity
-        }, using=${buyPrice}`
-      );
+        console.log(
+          `Sale ${sale.id}: using fallback buy price calculation: ${sale.buy_price} × ${sale.quantity} = ${fallbackBuyPrice}`
+        );
+        return total + fallbackBuyPrice;
+      }
+      
+      console.log(`Sale ${sale.id}: using total_buy_price=${buyPrice}`);
       return total + buyPrice;
     }, 0);
 
     const totalSellPrice = sales.reduce((total, sale) => {
-      const amount = parseFloat(sale.total_amount?.toString() || "0");
-      console.log(
-        `Sale ${sale.id}: total_amount=${sale.total_amount}, parsed=${amount}`
-      );
-      return total + amount;
+      // Prioritize total_sell_price from Order model
+      const sellPrice = parseFloat(sale.total_sell_price?.toString() || "0");
+      
+      // Fallback to total_amount for backward compatibility
+      if (sellPrice === 0) {
+        const fallbackSellPrice = parseFloat(sale.total_amount?.toString() || "0");
+        console.log(`Sale ${sale.id}: using fallback total_amount=${fallbackSellPrice}`);
+        return total + fallbackSellPrice;
+      }
+      
+      console.log(`Sale ${sale.id}: using total_sell_price=${sellPrice}`);
+      return total + sellPrice;
     }, 0);
 
     const totalProfit = sales.reduce((total, sale) => {
-      // Use gross_profit if available (for multi-item orders), otherwise use profit
-      const profit =
-        parseFloat(sale.gross_profit?.toString() || "0") ||
-        parseFloat(sale.profit?.toString() || "0");
-      console.log(
-        `Sale ${sale.id}: gross_profit=${sale.gross_profit}, profit=${sale.profit}, using=${profit}`
-      );
+      // Prioritize gross_profit from Order model (most accurate for multi-item orders)
+      const profit = parseFloat(sale.gross_profit?.toString() || "0");
+      
+      // Fallback to old profit field for backward compatibility
+      if (profit === 0) {
+        const fallbackProfit = parseFloat(sale.profit?.toString() || "0");
+        console.log(`Sale ${sale.id}: using fallback profit=${fallbackProfit}`);
+        return total + fallbackProfit;
+      }
+      
+      console.log(`Sale ${sale.id}: using gross_profit=${profit}`);
       return total + profit;
     }, 0);
 

@@ -678,7 +678,7 @@ export default function DashboardPage() {
                       )}
                     </p>
                     <p className="text-xs text-red-500 opacity-80">
-                      Total revenue from recent sales
+                      Total revenue
                     </p>
                   </div>
                 </div>

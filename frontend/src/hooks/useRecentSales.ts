@@ -89,13 +89,16 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
           date_filter?: string;
           start_date?: string;
           end_date?: string;
+          _t?: number; // Cache buster
         } = {
           ordering: "-sale_date",
           page_size: limit,
+          _t: Date.now(), // Add timestamp to prevent caching
         };
 
         // Add date filters if provided
         if (filters?.dateFilter) {
+          // Use the backend's date_filter parameter for preset filters
           params.date_filter = filters.dateFilter;
         }
         if (filters?.startDate) {
@@ -105,11 +108,20 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
           params.end_date = filters.endDate;
         }
 
+        console.log("=== RECENT SALES DEBUG ===");
+        console.log("Input filters received:", filters);
         console.log("Fetching sales with params:", params);
-        console.log("Fetching sales with params:", params);
-        const salesData = await ApiService.getSales(params);
+        console.log("API endpoint will be: /sales/ with params:", params);
+        
+        const salesData = await ApiService.getProductSalesWithPagination(params);
+        
         console.log("Sales data received:", salesData);
-        console.log("Sales data received:", salesData);
+        console.log("Number of sales returned:", salesData?.results?.length || salesData?.length || 0);
+        console.log("Sales dates in response:", salesData?.results?.map((s: any) => ({
+          id: s.id, 
+          sale_date: s.sale_date || s.created_at,
+          order_number: s.order_number
+        })) || []);
 
         // Extract results from the paginated response
         const salesResults = salesData.results || salesData;

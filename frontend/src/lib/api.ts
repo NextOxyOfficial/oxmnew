@@ -264,6 +264,15 @@ export class ApiService {
       isFormData: options.body instanceof FormData
     });
 
+    // Special logging for sales endpoint
+    if (endpoint.includes('/sales/')) {
+      console.log('🔍 SALES API CALL:', {
+        fullUrl: url,
+        endpoint: endpoint,
+        queryParams: endpoint.includes('?') ? endpoint.split('?')[1] : 'none'
+      });
+    }
+
     const headers: HeadersInit = {};
 
     // Only set Content-Type for non-FormData requests
@@ -1699,6 +1708,7 @@ export class ApiService {
     search?: string;
     customer?: string;
     ordering?: string;
+    date_filter?: string;
     start_date?: string;
     end_date?: string;
   }) {
