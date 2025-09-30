@@ -5,7 +5,7 @@ import { ApiService } from "@/lib/api";
 import { Order, OrderItem } from "@/types/order";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Printer, ArrowLeft, Download } from "lucide-react";
+import { Printer, Download } from "lucide-react";
 
 interface InvoiceData {
   order: Order;
@@ -29,18 +29,7 @@ export default function InvoicePage() {
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(true);
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    router.back();
-  };
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      closeModal();
-    }
-  };
+  // Removed modal state and close handlers since invoice opens in new tab
 
   useEffect(() => {
     const fetchInvoiceData = async () => {
@@ -348,29 +337,8 @@ export default function InvoicePage() {
       `}</style>
 
       <div className="min-h-screen bg-gray-100 print:bg-white print:min-h-0">
-        {/* Modal Backdrop */}
-        {isModalOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-            onClick={handleBackdropClick}
-          >
-            {/* Modal Content */}
-            <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
-              {/* Modal Header */}
-              <div className="print:hidden bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-800">Invoice #{order.id}</h2>
-                <button
-                  onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
-                >
-                  ×
-                </button>
-              </div>
-
-              {/* Modal Body - Scrollable */}
-              <div className="overflow-auto max-h-[calc(90vh-200px)]">
-                {/* Invoice Content */}
-                <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0">
+        {/* Invoice Content - Direct display without modal */}
+        <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-5xl mx-auto">
                   {/* Header Section */}
                   <div className="px-8 py-2 print:px-6 print:py-2">
             <div className="flex justify-between items-start mb-6">
@@ -578,30 +546,26 @@ export default function InvoicePage() {
                 </div>
               </div>
             </div>
-          </div>
-                </div>
-              </div>
 
-              {/* Modal Footer - Action Buttons */}
-              <div className="print:hidden bg-gray-50 px-6 py-4 border-t flex justify-center gap-4">
-                <button
-                  onClick={handleDownloadPDF}
-                  className="flex items-center gap-2 px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  Download PDF
-                </button>
-                <button
-                  onClick={handlePrint}
-                  className="flex items-center gap-2 px-6 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-                >
-                  <Printer className="w-4 h-4" />
-                  Print Invoice
-                </button>
-              </div>
+            {/* Action Buttons Footer */}
+            <div className="print:hidden bg-gray-50 px-6 py-4 border-t flex justify-center gap-4">
+              <button
+                onClick={handleDownloadPDF}
+                className="flex items-center gap-2 px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Download PDF
+              </button>
+              <button
+                onClick={handlePrint}
+                className="flex items-center gap-2 px-6 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
+              >
+                <Printer className="w-4 h-4" />
+                Print Invoice
+              </button>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </>
   );

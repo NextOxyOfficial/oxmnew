@@ -175,8 +175,9 @@ export default function DashboardPage() {
   };
 
   const handleViewInvoice = (saleId: number) => {
-    setIsNavigating(true);
-    router.push(`/dashboard/orders/invoice/${saleId}`);
+    // Open invoice in new tab
+    const invoiceUrl = `/dashboard/orders/invoice/${saleId}`;
+    window.open(invoiceUrl, '_blank');
   };
 
   const handleCreateMainAccount = async () => {

@@ -38,10 +38,12 @@ const OrdersList: React.FC<OrdersListProps> = ({
   const router = useRouter();
   console.log("OrdersList re-rendered");
 
-  // Navigate to invoice page
+  // Navigate to invoice page in new tab
   const handleViewInvoice = (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/dashboard/orders/invoice/${order.id}`);
+    // Open invoice in new tab
+    const invoiceUrl = `/dashboard/orders/invoice/${order.id}`;
+    window.open(invoiceUrl, '_blank');
   };
 
   // Print invoice by navigating to invoice page

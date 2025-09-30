@@ -669,8 +669,9 @@ export default function OrdersPage() {
   const handleViewInvoice = useCallback(
     (order: Order, event: React.MouseEvent) => {
       event.stopPropagation(); // Prevent order click event
-      setSelectedOrder(order);
-      setShowInvoicePopup(true);
+      // Open invoice in new tab instead of popup
+      const invoiceUrl = `/dashboard/orders/invoice/${order.id}`;
+      window.open(invoiceUrl, '_blank');
     },
     []
   );
