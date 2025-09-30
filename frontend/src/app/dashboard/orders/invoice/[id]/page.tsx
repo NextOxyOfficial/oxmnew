@@ -154,12 +154,6 @@ export default function InvoicePage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-500 mb-4">Error</h1>
           <p className="text-gray-600">{error || "Invoice not found"}</p>
-          <button
-            onClick={() => router.back()}
-            className="mt-4 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600"
-          >
-            Go Back
-          </button>
         </div>
       </div>
     );
@@ -336,7 +330,7 @@ export default function InvoicePage() {
         }
       `}</style>
 
-      <div className="min-h-screen bg-gray-100 print:bg-white print:min-h-0">
+      <div className="min-h-screen bg-gray-800 print:bg-white print:min-h-0">
         {/* Invoice Content - Direct display without modal */}
         <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-5xl mx-auto">
                   {/* Header Section */}
