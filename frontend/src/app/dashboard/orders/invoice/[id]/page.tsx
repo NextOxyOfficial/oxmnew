@@ -285,6 +285,8 @@ export default function InvoicePage() {
             left: 0;
             top: 0;
             width: 100%;
+            padding: 0 !important;
+            margin: 0 !important;
           }
           
           /* Hide browser chrome and website elements */
@@ -319,23 +321,36 @@ export default function InvoicePage() {
           .print\\:max-w-none { max-width: none !important; }
           .print\\:mx-0 { margin-left: 0 !important; margin-right: 0 !important; }
           .print\\:min-h-0 { min-height: 0 !important; }
+          .print\\:py-0 { padding-top: 0 !important; padding-bottom: 0 !important; }
+          .print\\:pt-0 { padding-top: 0 !important; }
+          .print\\:mt-0 { margin-top: 0 !important; }
+          .print\\:py-1 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+          .print\\:px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+          .print\\:mb-1 { margin-bottom: 0.25rem !important; }
+          .print\\:mb-2 { margin-bottom: 0.5rem !important; }
           
           /* Page settings */
           @page { 
-            margin: 0.5in;
+            margin: 0.1in 0.5in 0.5in 0.5in;
             size: A4;
+          }
+          
+          /* Eliminate top spacing completely */
+          .invoice-content {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
           }
           
           .page-break { page-break-after: always; }
         }
       `}</style>
 
-      <div className="min-h-screen bg-gray-800 print:bg-white print:min-h-0">
+      <div className="min-h-screen bg-gray-800 print:bg-white print:min-h-0 print:p-0">
         {/* Invoice Content - Direct display without modal */}
-        <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-5xl mx-auto">
+        <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-5xl mx-auto print:p-0">
                   {/* Header Section */}
-                  <div className="px-8 py-2 print:px-6 print:py-2">
-            <div className="flex justify-between items-start mb-6">
+                  <div className="px-8 py-2 print:px-2 print:py-0 print:pt-0">
+            <div className="flex justify-between items-start mb-6 print:mb-2 print:mt-0">
               {/* Company Logo */}
               <div className="flex items-start gap-4">
                 {userProfile?.store_logo ? (
@@ -421,7 +436,7 @@ export default function InvoicePage() {
           </div>
 
           {/* Invoice Table */}
-          <div className="px-8 print:px-6">
+          <div className="px-8 print:px-2">
             <div className="">
               {/* Table Header */}
               <div className="bg-gray-800 print:bg-gray-300 text-white print:text-black border border-gray-300 print:border-black">
@@ -496,11 +511,11 @@ export default function InvoicePage() {
           </div>
 
           {/* Bottom Section */}
-          <div className="px-8 py-4 print:px-6 print:py-2">
+          <div className="px-8 py-4 print:px-2 print:py-1">
             <div className="flex justify-between">
               {/* Thank you message on the left */}
               <div className="w-1/2">
-                <div className="text-sm mt-4 text-gray-600 print:text-black">
+                <div className="text-sm mt-4 print:mt-1 text-gray-600 print:text-black">
                   <p>
                     Thank you for choosing our services!
                   </p>
