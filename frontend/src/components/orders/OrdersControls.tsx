@@ -27,7 +27,6 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
   onSortChange,
   onAddOrder,
 }) => {
-  console.log("OrdersControls re-rendered");
   return (
     <div className="flex flex-col gap-4 mb-6">
       <h3 className="text-xl font-bold text-slate-200">Sales History</h3>
@@ -89,10 +88,12 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
         <div className="relative flex-1 min-w-0">
           <input
             type="text"
-            placeholder="Search sales, customers..."
+            placeholder="Search sales, customers... (Type #123 for order number)"
             value={searchInput}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-10 pr-10 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
+            className={`bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pr-20 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
+              searchInput.trim().startsWith('#') ? 'pl-24' : 'pl-10'
+            }`}
           />
           <svg
             className="w-5 h-5 text-gray-400 absolute left-3 top-2.5"
@@ -107,6 +108,43 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
           </svg>
+          
+          {/* Search type indicator */}
+          {searchInput.trim().startsWith('#') && (
+            <div className="absolute left-10 top-1.5">
+              <span className="text-xs text-cyan-400 font-medium bg-cyan-400/10 px-1.5 py-1 rounded border border-cyan-400/20 whitespace-nowrap">
+                Order #
+              </span>
+            </div>
+          )}
+          
+          {/* Quick tip */}
+          {!searchInput.trim() && (
+            <div className="absolute right-12 top-2.5">
+              <div className="group relative">
+                <svg
+                  className="w-4 h-4 text-gray-500 hover:text-cyan-400 cursor-help"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div className="absolute right-0 top-6 hidden group-hover:block z-10 w-48 p-2 bg-slate-800 border border-slate-700 rounded-lg shadow-lg text-xs text-slate-300">
+                  <p className="font-medium text-cyan-400 mb-1">Search Tips:</p>
+                  <p>• Type <span className="text-cyan-400">#123</span> to search by order number</p>
+                  <p>• Search by customer name or phone</p>
+                  <p>• Search by product name</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Search loading indicator */}
           {(searchInput !== searchTerm || isSearching) && (
             <div className="absolute right-3 top-2.5">
@@ -184,7 +222,7 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
 };
 
 export default React.memo(OrdersControls, (prevProps, nextProps) => {
-  // Only re-render if these specific props change
+  // Return true if props are the same (don't re-render), false if different (re-render)
   return (
     prevProps.searchInput === nextProps.searchInput &&
     prevProps.searchTerm === nextProps.searchTerm &&

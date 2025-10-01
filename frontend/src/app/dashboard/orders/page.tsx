@@ -35,7 +35,6 @@ interface ProductSale {
 }
 
 export default function OrdersPage() {
-  console.log("OrdersPage main component re-rendered");
   const router = useRouter();
   const searchParams = useSearchParams();
   const formatCurrency = useCurrencyFormatter();
@@ -228,7 +227,7 @@ export default function OrdersPage() {
           updateOrdersUrlParams({ search: searchInput, page: 1 });
         }
       }
-    }, 500); // 500ms delay
+    }, 300); // Reduced from 500ms to 300ms for more responsive feel
 
     return () => clearTimeout(debounceTimer);
   }, [searchInput, activeTab]); // Removed searchTerm from dependency to avoid loops
@@ -399,7 +398,15 @@ export default function OrdersPage() {
 
       // Add search if exists
       if (searchTerm.trim()) {
-        params.search = searchTerm.trim();
+        // If search starts with #, remove it for order number search
+        let processedSearch = searchTerm.trim();
+        if (processedSearch.startsWith('#')) {
+          processedSearch = processedSearch.substring(1).trim();
+          console.log(`🔍 Order number search: "${searchTerm}" -> "${processedSearch}"`);
+        }
+        if (processedSearch) {
+          params.search = processedSearch;
+        }
       }
 
       // Add customer filter if not "all"
@@ -436,7 +443,9 @@ export default function OrdersPage() {
         }
       }
 
+      console.log('🚀 Fetching orders with params:', params);
       const ordersData = await ApiService.getProductSalesWithPagination(params);
+      console.log('📊 API Response:', ordersData);
 
       // Handle paginated response
       if (
@@ -458,6 +467,7 @@ export default function OrdersPage() {
     } catch (error) {
       console.error("Error fetching orders:", error);
       setError("Failed to load orders");
+      setOrders([]); // Clear orders on error
     } finally {
       setIsLoading(false);
       setIsSearching(false);
@@ -1466,6 +1476,7 @@ export default function OrdersPage() {
                   orders={orders}
                   totalItems={totalItems}
                   isSearching={isSearching}
+                  searchInput={searchInput}
                   isSendingSms={isSendingSms}
                   onOrderClick={handleOrderClick}
                   onCustomerClick={handleCustomerClick}

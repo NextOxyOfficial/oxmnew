@@ -9,6 +9,7 @@ interface OrdersListProps {
   orders: Order[];
   totalItems: number;
   isSearching: boolean;
+  searchInput?: string; // Add searchInput to highlight matches
   isSendingSms?: number | null; // ID of the order currently sending SMS
   onOrderClick: (order: Order) => void;
   onCustomerClick: (order: Order, event: React.MouseEvent) => void; // Added customer navigation
@@ -24,6 +25,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
   orders,
   totalItems,
   isSearching,
+  searchInput,
   isSendingSms,
   onOrderClick,
   onCustomerClick,
@@ -36,7 +38,30 @@ const OrdersList: React.FC<OrdersListProps> = ({
 }) => {
   const formatCurrency = useCurrencyFormatter();
   const router = useRouter();
-  console.log("OrdersList re-rendered");
+
+  // Check if search is for order number
+  const isOrderNumberSearch = searchInput?.trim().startsWith('#');
+  const searchOrderNumber = isOrderNumberSearch ? searchInput?.substring(1).trim() : '';
+
+  // Function to highlight order number if it matches search
+  const highlightOrderNumber = (orderNumber: string | number) => {
+    const orderNumStr = orderNumber.toString();
+    if (isOrderNumberSearch && searchOrderNumber && orderNumStr.includes(searchOrderNumber)) {
+      const index = orderNumStr.indexOf(searchOrderNumber);
+      const before = orderNumStr.substring(0, index);
+      const match = orderNumStr.substring(index, index + searchOrderNumber.length);
+      const after = orderNumStr.substring(index + searchOrderNumber.length);
+      
+      return (
+        <>
+          {before}
+          <span className="bg-cyan-400/20 text-cyan-300 font-semibold">{match}</span>
+          {after}
+        </>
+      );
+    }
+    return orderNumStr;
+  };
 
   // Navigate to invoice page in new tab
   const handleViewInvoice = (order: Order, e: React.MouseEvent) => {
@@ -234,7 +259,9 @@ const OrdersList: React.FC<OrdersListProps> = ({
                 </svg>
                 <div>
                   <p className="text-xs text-slate-400">Invoice</p>
-                  <p className="text-sm text-slate-300">#{order.id}</p>
+                  <p className="text-sm text-slate-300">
+                    #{highlightOrderNumber(order.order_number || order.id)}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -523,6 +550,7 @@ export default React.memo(OrdersList, (prevProps, nextProps) => {
     prevProps.orders === nextProps.orders &&
     prevProps.totalItems === nextProps.totalItems &&
     prevProps.isSearching === nextProps.isSearching &&
+    prevProps.searchInput === nextProps.searchInput &&
     prevProps.isSendingSms === nextProps.isSendingSms
     // Don't compare functions as they should be memoized with useCallback
   );
