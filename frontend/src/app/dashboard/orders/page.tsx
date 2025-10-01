@@ -670,7 +670,7 @@ export default function OrdersPage() {
     (order: Order, event: React.MouseEvent) => {
       event.stopPropagation(); // Prevent order click event
       // Open invoice in new tab instead of popup
-      const invoiceUrl = `/dashboard/orders/invoice/${order.id}`;
+      const invoiceUrl = `/invoice/${order.id}`;
       window.open(invoiceUrl, '_blank');
     },
     []

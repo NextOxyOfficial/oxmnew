@@ -412,7 +412,7 @@ export default function CustomerDetailsPage() {
 
   const handleViewInvoice = (order: Order) => {
     // Navigate to the dedicated invoice page
-    router.push(`/dashboard/orders/invoice/${order.id}`);
+    window.open(`/invoice/${order.id}`, '_blank');
   };
 
   const handleShowTransaction = () => {

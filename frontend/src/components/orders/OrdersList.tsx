@@ -42,7 +42,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
   const handleViewInvoice = (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
     // Open invoice in new tab
-    const invoiceUrl = `/dashboard/orders/invoice/${order.id}`;
+    const invoiceUrl = `/invoice/${order.id}`;
     window.open(invoiceUrl, '_blank');
   };
 
@@ -50,7 +50,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
   const handlePrintInvoice = (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
     // Open invoice page in new tab for printing
-    window.open(`/dashboard/orders/invoice/${order.id}`, '_blank');
+    window.open(`/invoice/${order.id}`, '_blank');
   };
 
   // Format date

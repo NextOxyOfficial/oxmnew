@@ -331,12 +331,18 @@ export default function InvoicePage() {
           
           /* Page settings */
           @page { 
-            margin: 0.1in 0.5in 0.5in 0.5in;
+            margin: 0 0.5in 0.5in 0.5in;
             size: A4;
           }
           
           /* Eliminate top spacing completely */
           .invoice-content {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          /* Remove any top margins from first elements */
+          .invoice-content > div:first-child {
             margin-top: 0 !important;
             padding-top: 0 !important;
           }
@@ -345,9 +351,8 @@ export default function InvoicePage() {
         }
       `}</style>
 
-      <div className="min-h-screen bg-gray-800 print:bg-white print:min-h-0 print:p-0">
-        {/* Invoice Content - Direct display without modal */}
-        <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-5xl mx-auto print:p-0">
+      {/* Invoice Content - Clean document layout without dashboard styling */}
+      <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-5xl mx-auto print:p-0">
                   {/* Header Section */}
                   <div className="px-8 py-2 print:px-2 print:py-0 print:pt-0">
             <div className="flex justify-between items-start mb-6 print:mb-2 print:mt-0">
@@ -575,7 +580,6 @@ export default function InvoicePage() {
             </div>
           </div>
         </div>
-      </div>
     </>
   );
 }
