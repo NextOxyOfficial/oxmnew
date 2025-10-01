@@ -92,7 +92,11 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
           _t?: number; // Cache buster
         } = {
           ordering: "-sale_date",
-          page_size: limit,
+          // When date filtering is applied, get all results within the range
+          // Otherwise, limit to recent transactions for performance
+          page_size: (filters?.dateFilter && filters.dateFilter !== 'all') || 
+                    filters?.startDate || 
+                    filters?.endDate ? 500 : limit,
           _t: Date.now(), // Add timestamp to prevent caching
         };
 
@@ -110,6 +114,7 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
 
         console.log("=== RECENT SALES DEBUG ===");
         console.log("Input filters received:", filters);
+        console.log("Using page_size:", params.page_size, filters?.dateFilter ? `(expanded for date filter: ${filters.dateFilter})` : "(default limit)");
         console.log("Fetching sales with params:", params);
         console.log("API endpoint will be: /sales/ with params:", params);
         
