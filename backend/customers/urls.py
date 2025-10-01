@@ -27,6 +27,36 @@ urlpatterns = [
         name="customer-orders",
     ),
     path(
+        "customers/<int:customer_id>/due-payments/",
+        views.customer_due_payments,
+        name="customer-due-payments",
+    ),
+    path(
+        "customers/<int:customer_id>/gifts/",
+        views.customer_gifts,
+        name="customer-gifts",
+    ),
+    path(
+        "customers/<int:customer_id>/achievements/",
+        views.customer_achievements,
+        name="customer-achievements",
+    ),
+    path(
+        "customers/<int:customer_id>/due-payments/",
+        views.customer_due_payments,
+        name="customer-due-payments",
+    ),
+    path(
+        "customers/<int:customer_id>/gifts/",
+        views.customer_gifts,
+        name="customer-gifts",
+    ),
+    path(
+        "customers/<int:customer_id>/achievements/",
+        views.customer_achievements,
+        name="customer-achievements",
+    ),
+    path(
         "customers/statistics/", views.customer_statistics, name="customer-statistics"
     ),
     # Customer Gift URLs

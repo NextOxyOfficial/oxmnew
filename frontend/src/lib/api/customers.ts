@@ -608,4 +608,74 @@ export const customersAPI = {
 
     return response.json();
   },
+
+  // Paginated customer-specific endpoints
+  getCustomerDuePayments: async (params: {
+    customer_id: number;
+    page?: number;
+    page_size?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.page_size) queryParams.append("page_size", params.page_size.toString());
+
+    const response = await fetch(
+      `${API_BASE_URL}/customers/${params.customer_id}/due-payments/?${queryParams}`,
+      {
+        headers: customersAPI.getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch customer due payments");
+    }
+
+    return response.json();
+  },
+
+  getCustomerGiftsPaginated: async (params: {
+    customer_id: number;
+    page?: number;
+    page_size?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.page_size) queryParams.append("page_size", params.page_size.toString());
+
+    const response = await fetch(
+      `${API_BASE_URL}/customers/${params.customer_id}/gifts/?${queryParams}`,
+      {
+        headers: customersAPI.getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch customer gifts");
+    }
+
+    return response.json();
+  },
+
+  getCustomerAchievements: async (params: {
+    customer_id: number;
+    page?: number;
+    page_size?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.page_size) queryParams.append("page_size", params.page_size.toString());
+
+    const response = await fetch(
+      `${API_BASE_URL}/customers/${params.customer_id}/achievements/?${queryParams}`,
+      {
+        headers: customersAPI.getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch customer achievements");
+    }
+
+    return response.json();
+  },
 };

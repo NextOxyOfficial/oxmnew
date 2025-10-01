@@ -9,6 +9,7 @@ import {
   customersAPI,
 } from "@/lib/api/customers";
 import { calculateSmsSegments } from "@/lib/utils/sms";
+import Pagination from "@/components/ui/Pagination";
 import {
   ArrowLeft,
   DollarSign,
@@ -151,6 +152,33 @@ export default function CustomerDetailsPage() {
 
   // Pagination state for orders
   const [ordersPagination, setOrdersPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: 10,
+    totalCount: 0,
+    isLoading: false,
+  });
+
+  // Pagination state for due payments
+  const [duePaymentsPagination, setDuePaymentsPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: 10,
+    totalCount: 0,
+    isLoading: false,
+  });
+
+  // Pagination state for gifts
+  const [giftsPagination, setGiftsPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: 10,
+    totalCount: 0,
+    isLoading: false,
+  });
+
+  // Pagination state for achievements
+  const [achievementsPagination, setAchievementsPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     pageSize: 10,
@@ -310,6 +338,210 @@ export default function CustomerDetailsPage() {
     fetchOrdersWithPagination(1, newPageSize);
   };
 
+  // Function to fetch due payments with pagination
+  const fetchDuePaymentsWithPagination = async (page: number = 1, pageSize: number = 10) => {
+    try {
+      setDuePaymentsPagination(prev => ({ ...prev, isLoading: true }));
+      
+      const customerId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || "1");
+      
+      const response = await customersAPI.getCustomerDuePayments({
+        customer_id: customerId,
+        page,
+        page_size: pageSize,
+      });
+
+      console.log("Paginated due payments response:", response);
+
+      if (response && typeof response === "object" && "results" in response) {
+        const paginatedData = response as {
+          results: any[];
+          count: number;
+          total_pages: number;
+          current_page: number;
+          page_size: number;
+        };
+
+        const formattedDuePayments = paginatedData.results.map((payment: any) => ({
+          id: payment.id,
+          order_id: payment.order || null,
+          order_number: payment.order_number || null,
+          amount: payment.amount,
+          due_date: payment.due_date,
+          type: payment.payment_type as "due" | "advance",
+          notes: payment.notes,
+          created_at: payment.created_at,
+        }));
+
+        setDuePayments(formattedDuePayments);
+        setDuePaymentsPagination({
+          currentPage: paginatedData.current_page,
+          totalPages: paginatedData.total_pages,
+          pageSize: paginatedData.page_size,
+          totalCount: paginatedData.count,
+          isLoading: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching due payments:", error);
+      setDuePaymentsPagination(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  // Function to fetch gifts with pagination
+  const fetchGiftsWithPagination = async (page: number = 1, pageSize: number = 10) => {
+    try {
+      setGiftsPagination(prev => ({ ...prev, isLoading: true }));
+      
+      const customerId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || "1");
+      
+      const response = await customersAPI.getCustomerGiftsPaginated({
+        customer_id: customerId,
+        page,
+        page_size: pageSize,
+      });
+
+      console.log("Paginated gifts response:", response);
+
+      if (response && typeof response === "object" && "results" in response) {
+        const paginatedData = response as {
+          results: any[];
+          count: number;
+          total_pages: number;
+          current_page: number;
+          page_size: number;
+        };
+
+        const formattedGifts = paginatedData.results.map((gift: any) => ({
+          id: gift.id,
+          name: gift.gift_name,
+          description: gift.description || "",
+          date_given: gift.created_at,
+          value: gift.value,
+          status: gift.status as "active" | "used" | "expired",
+        }));
+
+        setGifts(formattedGifts);
+        setGiftsPagination({
+          currentPage: paginatedData.current_page,
+          totalPages: paginatedData.total_pages,
+          pageSize: paginatedData.page_size,
+          totalCount: paginatedData.count,
+          isLoading: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching gifts:", error);
+      setGiftsPagination(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  // Function to fetch achievements with pagination
+  const fetchAchievementsWithPagination = async (page: number = 1, pageSize: number = 10) => {
+    try {
+      setAchievementsPagination(prev => ({ ...prev, isLoading: true }));
+      
+      const customerId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || "1");
+      
+      const response = await customersAPI.getCustomerAchievements({
+        customer_id: customerId,
+        page,
+        page_size: pageSize,
+      });
+
+      console.log("Paginated achievements response:", response);
+
+      if (response && typeof response === "object" && "results" in response) {
+        const paginatedData = response as {
+          results: any[];
+          count: number;
+          total_pages: number;
+          current_page: number;
+          page_size: number;
+        };
+
+        const formattedAchievements = paginatedData.results.map((achievement: any) => ({
+          id: achievement.id,
+          title: achievement.achievement_name,
+          description: achievement.notes || "Achievement earned",
+          icon: "🏆",
+          date_earned: achievement.earned_date,
+          points: achievement.achievement_points,
+        }));
+
+        setAchievements(formattedAchievements);
+        setAchievementsPagination({
+          currentPage: paginatedData.current_page,
+          totalPages: paginatedData.total_pages,
+          pageSize: paginatedData.page_size,
+          totalCount: paginatedData.count,
+          isLoading: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      setAchievementsPagination(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  // Pagination handlers for due payments
+  const handleDuePaymentsPageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= duePaymentsPagination.totalPages) {
+      fetchDuePaymentsWithPagination(newPage, duePaymentsPagination.pageSize);
+    }
+  };
+
+  const handleDuePaymentsPageSizeChange = (newPageSize: number) => {
+    fetchDuePaymentsWithPagination(1, newPageSize);
+  };
+
+  // Pagination handlers for gifts
+  const handleGiftsPageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= giftsPagination.totalPages) {
+      fetchGiftsWithPagination(newPage, giftsPagination.pageSize);
+    }
+  };
+
+  const handleGiftsPageSizeChange = (newPageSize: number) => {
+    fetchGiftsWithPagination(1, newPageSize);
+  };
+
+  // Pagination handlers for achievements
+  const handleAchievementsPageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= achievementsPagination.totalPages) {
+      fetchAchievementsWithPagination(newPage, achievementsPagination.pageSize);
+    }
+  };
+
+  const handleAchievementsPageSizeChange = (newPageSize: number) => {
+    fetchAchievementsWithPagination(1, newPageSize);
+  };
+
+  // Handle tab change and fetch data if needed
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    
+    const customerId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || "1");
+    
+    // Fetch paginated data when switching to specific tabs
+    switch (newTab) {
+      case "orders":
+        if (orders.length === 0 || ordersPagination.currentPage === 1) {
+          fetchOrdersWithPagination(1, ordersPagination.pageSize);
+        }
+        break;
+      case "due-payments":
+        fetchDuePaymentsWithPagination(1, duePaymentsPagination.pageSize);
+        break;
+      case "gifts":
+        fetchGiftsWithPagination(1, giftsPagination.pageSize);
+        break;
+      case "achievements":
+        fetchAchievementsWithPagination(1, achievementsPagination.pageSize);
+        break;
+    }
+  };
+
   useEffect(() => {
     const getCustomerId = () => {
       return Array.isArray(params.id) ? params.id[0] : params.id;
@@ -338,60 +570,10 @@ export default function CustomerDetailsPage() {
         // Fetch orders for this customer with pagination
         await fetchOrdersWithPagination(1, 10);
 
-        // Fetch due payments for this customer
-        const duePaymentsData = await customersAPI.getDuePayments(customerId);
-        console.log("Raw due payments data:", duePaymentsData);
-        // Handle both array and paginated response
-        let duePayments: any[] = [];
-        if (Array.isArray(duePaymentsData)) {
-          duePayments = duePaymentsData;
-        } else if (duePaymentsData && typeof duePaymentsData === "object") {
-          duePayments =
-            (duePaymentsData as { results?: any[]; data?: any[] }).results ||
-            (duePaymentsData as { results?: any[]; data?: any[] }).data ||
-            [];
-        }
-        const formattedDuePayments = duePayments
-          .map((payment: any) => ({
-            id: payment.id,
-            order_id: payment.order || null, // Use null instead of 0 for no order
-            order_number: payment.order_number || null,
-            amount: payment.amount,
-            due_date: payment.due_date,
-            type: payment.payment_type as "due" | "advance",
-            notes: payment.notes,
-            created_at: payment.created_at,
-          }))
-          .sort((a: any, b: any) => {
-            // Sort by created_at in descending order (newest first)
-            const dateA = new Date(a.created_at).getTime();
-            const dateB = new Date(b.created_at).getTime();
-            return dateB - dateA;
-          });
-        setDuePayments(formattedDuePayments);
-
-        // Fetch gifts for this customer
-        const giftsData = await customersAPI.getCustomerGifts(customerId);
-        console.log("Raw gifts data:", giftsData);
-        // Handle both array and paginated response
-        let gifts: any[] = [];
-        if (Array.isArray(giftsData)) {
-          gifts = giftsData;
-        } else if (giftsData && typeof giftsData === "object") {
-          gifts =
-            (giftsData as { results?: any[]; data?: any[] }).results ||
-            (giftsData as { results?: any[]; data?: any[] }).data ||
-            [];
-        }
-        const formattedGifts = gifts.map((gift: any) => ({
-          id: gift.id,
-          name: gift.gift_name,
-          description: gift.description || "",
-          date_given: gift.created_at,
-          value: gift.value,
-          status: gift.status as "active" | "used" | "expired",
-        }));
-        setGifts(formattedGifts);
+        // Initialize other data as empty - they will be loaded when tabs are activated
+        setDuePayments([]);
+        setGifts([]);
+        setAchievements([]);
 
         // Fetch available gifts and levels
         const availableGiftsData = await customersAPI.getAvailableGifts();
@@ -1455,13 +1637,7 @@ export default function CustomerDetailsPage() {
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => {
-                  setActiveTab(tab.key);
-                  // Refresh orders when switching to orders tab
-                  if (tab.key === "orders") {
-                    fetchOrdersWithPagination(1, ordersPagination.pageSize);
-                  }
-                }}
+                onClick={() => handleTabChange(tab.key)}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 flex items-center gap-2 cursor-pointer ${
                   activeTab === tab.key
                     ? "border-cyan-400 text-cyan-400"
@@ -1703,62 +1879,16 @@ export default function CustomerDetailsPage() {
                     </div>
 
                     {/* Pagination Controls */}
-                    {!ordersPagination.isLoading && orders.length > 0 && ordersPagination.totalPages > 1 && (
-                      <div className="flex items-center justify-between px-6 py-4 bg-white/5 border border-white/10 rounded-lg mt-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-300">
-                            Showing {((ordersPagination.currentPage - 1) * ordersPagination.pageSize) + 1} to{" "}
-                            {Math.min(ordersPagination.currentPage * ordersPagination.pageSize, ordersPagination.totalCount)} of{" "}
-                            {ordersPagination.totalCount} orders
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleOrdersPageChange(ordersPagination.currentPage - 1)}
-                            disabled={ordersPagination.currentPage <= 1}
-                            className="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 rounded-md hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            Previous
-                          </button>
-                          
-                          <div className="flex items-center gap-1">
-                            {Array.from({ length: Math.min(5, ordersPagination.totalPages) }, (_, i) => {
-                              let pageNum;
-                              if (ordersPagination.totalPages <= 5) {
-                                pageNum = i + 1;
-                              } else if (ordersPagination.currentPage <= 3) {
-                                pageNum = i + 1;
-                              } else if (ordersPagination.currentPage >= ordersPagination.totalPages - 2) {
-                                pageNum = ordersPagination.totalPages - 4 + i;
-                              } else {
-                                pageNum = ordersPagination.currentPage - 2 + i;
-                              }
-                              
-                              return (
-                                <button
-                                  key={pageNum}
-                                  onClick={() => handleOrdersPageChange(pageNum)}
-                                  className={`px-3 py-1 border rounded-md transition-colors ${
-                                    pageNum === ordersPagination.currentPage
-                                      ? "bg-cyan-500 border-cyan-500 text-white"
-                                      : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
-                                  }`}
-                                >
-                                  {pageNum}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          
-                          <button
-                            onClick={() => handleOrdersPageChange(ordersPagination.currentPage + 1)}
-                            disabled={ordersPagination.currentPage >= ordersPagination.totalPages}
-                            className="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 rounded-md hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
+                    {!ordersPagination.isLoading && orders.length > 0 && (
+                      <Pagination
+                        currentPage={ordersPagination.currentPage}
+                        totalPages={ordersPagination.totalPages}
+                        totalItems={ordersPagination.totalCount}
+                        itemsPerPage={ordersPagination.pageSize}
+                        onPageChange={handleOrdersPageChange}
+                        onPageSizeChange={handleOrdersPageSizeChange}
+                        className="mt-4"
+                      />
                     )}
                   </div>
                 </div>
@@ -1876,6 +2006,19 @@ export default function CustomerDetailsPage() {
                         })}
                       </div>
                     </div>
+
+                    {/* Pagination Controls for Due Payments */}
+                    {!duePaymentsPagination.isLoading && duePayments.length > 0 && (
+                      <Pagination
+                        currentPage={duePaymentsPagination.currentPage}
+                        totalPages={duePaymentsPagination.totalPages}
+                        totalItems={duePaymentsPagination.totalCount}
+                        itemsPerPage={duePaymentsPagination.pageSize}
+                        onPageChange={handleDuePaymentsPageChange}
+                        onPageSizeChange={handleDuePaymentsPageSizeChange}
+                        className="mt-4"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -2001,6 +2144,19 @@ export default function CustomerDetailsPage() {
                           ))}
                         </div>
                       )}
+
+                      {/* Pagination Controls for Gifts */}
+                      {!giftsPagination.isLoading && gifts.length > 0 && (
+                        <Pagination
+                          currentPage={giftsPagination.currentPage}
+                          totalPages={giftsPagination.totalPages}
+                          totalItems={giftsPagination.totalCount}
+                          itemsPerPage={giftsPagination.pageSize}
+                          onPageChange={handleGiftsPageChange}
+                          onPageSizeChange={handleGiftsPageSizeChange}
+                          className="mt-4"
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2115,6 +2271,19 @@ export default function CustomerDetailsPage() {
                             </div>
                           ))}
                         </div>
+                      )}
+
+                      {/* Pagination Controls for Achievements */}
+                      {!achievementsPagination.isLoading && achievements.length > 0 && (
+                        <Pagination
+                          currentPage={achievementsPagination.currentPage}
+                          totalPages={achievementsPagination.totalPages}
+                          totalItems={achievementsPagination.totalCount}
+                          itemsPerPage={achievementsPagination.pageSize}
+                          onPageChange={handleAchievementsPageChange}
+                          onPageSizeChange={handleAchievementsPageSizeChange}
+                          className="mt-4"
+                        />
                       )}
                     </div>
                   </div>

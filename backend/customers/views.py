@@ -552,6 +552,123 @@ def customer_orders(request, customer_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def customer_due_payments(request, customer_id):
+    """Get all due payments for a specific customer with pagination"""
+    try:
+        customer = Customer.objects.get(id=customer_id, user=request.user)
+
+        # Get pagination parameters
+        page = int(request.GET.get("page", 1))
+        page_size = int(request.GET.get("page_size", 10))
+
+        from django.core.paginator import Paginator
+
+        due_payments = DuePayment.objects.filter(
+            customer=customer, user=request.user
+        ).order_by("-created_at")
+
+        # Apply pagination
+        paginator = Paginator(due_payments, page_size)
+        page_obj = paginator.get_page(page)
+
+        serializer = DuePaymentSerializer(page_obj.object_list, many=True)
+        
+        return Response({
+            "results": serializer.data,
+            "count": paginator.count,
+            "next": page_obj.next_page_number() if page_obj.has_next() else None,
+            "previous": page_obj.previous_page_number() if page_obj.has_previous() else None,
+            "total_pages": paginator.num_pages,
+            "current_page": page,
+            "page_size": page_size
+        })
+
+    except Customer.DoesNotExist:
+        return Response(
+            {"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def customer_gifts(request, customer_id):
+    """Get all gifts for a specific customer with pagination"""
+    try:
+        customer = Customer.objects.get(id=customer_id, user=request.user)
+
+        # Get pagination parameters
+        page = int(request.GET.get("page", 1))
+        page_size = int(request.GET.get("page_size", 10))
+
+        from django.core.paginator import Paginator
+
+        customer_gifts = CustomerGift.objects.filter(
+            customer=customer, user=request.user
+        ).order_by("-created_at")
+
+        # Apply pagination
+        paginator = Paginator(customer_gifts, page_size)
+        page_obj = paginator.get_page(page)
+
+        serializer = CustomerGiftSerializer(page_obj.object_list, many=True)
+        
+        return Response({
+            "results": serializer.data,
+            "count": paginator.count,
+            "next": page_obj.next_page_number() if page_obj.has_next() else None,
+            "previous": page_obj.previous_page_number() if page_obj.has_previous() else None,
+            "total_pages": paginator.num_pages,
+            "current_page": page,
+            "page_size": page_size
+        })
+
+    except Customer.DoesNotExist:
+        return Response(
+            {"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def customer_achievements(request, customer_id):
+    """Get all achievements for a specific customer with pagination"""
+    try:
+        customer = Customer.objects.get(id=customer_id, user=request.user)
+
+        # Get pagination parameters
+        page = int(request.GET.get("page", 1))
+        page_size = int(request.GET.get("page_size", 10))
+
+        from django.core.paginator import Paginator
+
+        achievements = CustomerAchievement.objects.filter(
+            customer=customer, user=request.user
+        ).order_by("-earned_date")
+
+        # Apply pagination
+        paginator = Paginator(achievements, page_size)
+        page_obj = paginator.get_page(page)
+
+        serializer = CustomerAchievementSerializer(page_obj.object_list, many=True)
+        
+        return Response({
+            "results": serializer.data,
+            "count": paginator.count,
+            "next": page_obj.next_page_number() if page_obj.has_next() else None,
+            "previous": page_obj.previous_page_number() if page_obj.has_previous() else None,
+            "total_pages": paginator.num_pages,
+            "current_page": page,
+            "page_size": page_size
+        })
+
+    except Customer.DoesNotExist:
+        return Response(
+            {"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def duebook_customers(request):
     """Get customers with due payments for the duebook page"""
     try:
