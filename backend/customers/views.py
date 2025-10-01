@@ -511,20 +511,38 @@ def customer_summary(request, customer_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def customer_orders(request, customer_id):
-    """Get all orders for a specific customer"""
+    """Get all orders for a specific customer with pagination support"""
     try:
         customer = Customer.objects.get(id=customer_id, user=request.user)
+
+        # Get pagination parameters
+        page = int(request.GET.get("page", 1))
+        page_size = int(request.GET.get("page_size", 10))
 
         # Get orders from orders app
         from orders.models import Order
         from orders.serializers import OrderSerializer
+        from django.core.paginator import Paginator
 
         orders = Order.objects.filter(customer=customer, user=request.user).order_by(
             "-created_at"
         )
 
-        serializer = OrderSerializer(orders, many=True)
-        return Response(serializer.data)
+        # Apply pagination
+        paginator = Paginator(orders, page_size)
+        page_obj = paginator.get_page(page)
+
+        serializer = OrderSerializer(page_obj.object_list, many=True)
+        
+        return Response({
+            "results": serializer.data,
+            "count": paginator.count,
+            "next": page_obj.next_page_number() if page_obj.has_next() else None,
+            "previous": page_obj.previous_page_number() if page_obj.has_previous() else None,
+            "total_pages": paginator.num_pages,
+            "current_page": page,
+            "page_size": page_size
+        })
 
     except Customer.DoesNotExist:
         return Response(

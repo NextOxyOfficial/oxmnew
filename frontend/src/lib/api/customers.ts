@@ -300,11 +300,17 @@ export const customersAPI = {
     customer?: number;
     status?: string;
     ordering?: string;
-  }): Promise<Order[]> => {
+    page?: number;
+    page_size?: number;
+  }): Promise<Order[] | { results: Order[]; count: number; next: number | null; previous: number | null; total_pages: number; current_page: number; page_size: number }> => {
     // If customer ID is provided, use the customer-specific endpoint
     if (params?.customer) {
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append("page", params.page.toString());
+      if (params.page_size) queryParams.append("page_size", params.page_size.toString());
+      
       const response = await fetch(
-        `${API_BASE_URL}/customers/${params.customer}/orders/`,
+        `${API_BASE_URL}/customers/${params.customer}/orders/?${queryParams}`,
         {
           headers: customersAPI.getHeaders(),
         }

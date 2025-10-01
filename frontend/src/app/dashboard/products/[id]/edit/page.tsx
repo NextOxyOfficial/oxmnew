@@ -215,9 +215,9 @@ export default function EditProductPage() {
 
     if (!product?.has_variants) {
       // Convert empty strings to 0 for validation
-      const buyPrice = typeof formData.buyPrice === "number" ? formData.buyPrice : (formData.buyPrice === "" ? 0 : parseFloat(formData.buyPrice));
-      const sellPrice = typeof formData.sellPrice === "number" ? formData.sellPrice : (formData.sellPrice === "" ? 0 : parseFloat(formData.sellPrice));
-      const stock = typeof formData.stock === "number" ? formData.stock : (formData.stock === "" ? 0 : parseFloat(formData.stock));
+      const buyPrice = getNumericValue(formData.buyPrice);
+      const sellPrice = getNumericValue(formData.sellPrice);
+      const stock = getNumericValue(formData.stock);
 
       // Only validate prices if stock is required, or if prices are provided
       if (!formData.no_stock_required) {
@@ -278,9 +278,9 @@ export default function EditProductPage() {
       // Only include pricing data for non-variant products
       if (!product?.has_variants) {
         // Convert empty strings to 0 for API submission
-        const buyPrice = typeof formData.buyPrice === "number" ? formData.buyPrice : (formData.buyPrice === "" ? 0 : parseFloat(formData.buyPrice));
-        const sellPrice = typeof formData.sellPrice === "number" ? formData.sellPrice : (formData.sellPrice === "" ? 0 : parseFloat(formData.sellPrice));
-        const stock = typeof formData.stock === "number" ? formData.stock : (formData.stock === "" ? 0 : parseFloat(formData.stock));
+        const buyPrice = getNumericValue(formData.buyPrice);
+        const sellPrice = getNumericValue(formData.sellPrice);
+        const stock = getNumericValue(formData.stock);
         
         Object.assign(updateData, {
           buy_price: buyPrice,
@@ -708,27 +708,22 @@ export default function EditProductPage() {
 
             {/* Profit Display (only for non-variant products) */}
             {!product.has_variants &&
-              (typeof formData.buyPrice === "number" ? formData.buyPrice : parseFloat(formData.buyPrice || "0")) > 0 &&
-              (typeof formData.sellPrice === "number" ? formData.sellPrice : parseFloat(formData.sellPrice || "0")) > 0 && (
+              getNumericValue(formData.buyPrice) > 0 &&
+              getNumericValue(formData.sellPrice) > 0 && (
                 <div className="bg-gradient-to-br from-emerald-500/15 to-emerald-600/8 border border-emerald-500/25 rounded-lg p-4 backdrop-blur-sm">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-300">Profit per unit:</span>
                     <span
                       className={`font-bold ${
-                        (typeof formData.sellPrice === "number" ? formData.sellPrice : parseFloat(formData.sellPrice || "0")) - 
-                        (typeof formData.buyPrice === "number" ? formData.buyPrice : parseFloat(formData.buyPrice || "0")) > 0
+                        getNumericValue(formData.sellPrice) - getNumericValue(formData.buyPrice) > 0
                           ? "text-green-400"
-                          : (typeof formData.sellPrice === "number" ? formData.sellPrice : parseFloat(formData.sellPrice || "0")) - 
-                            (typeof formData.buyPrice === "number" ? formData.buyPrice : parseFloat(formData.buyPrice || "0")) < 0
+                          : getNumericValue(formData.sellPrice) - getNumericValue(formData.buyPrice) < 0
                           ? "text-red-400"
                           : "text-yellow-400"
                       }`}
                     >
                       {formatCurrency(
-                        Math.abs(
-                          (typeof formData.sellPrice === "number" ? formData.sellPrice : parseFloat(formData.sellPrice || "0")) - 
-                          (typeof formData.buyPrice === "number" ? formData.buyPrice : parseFloat(formData.buyPrice || "0"))
-                        )
+                        Math.abs(getNumericValue(formData.sellPrice) - getNumericValue(formData.buyPrice))
                       )}
                     </span>
                   </div>
@@ -738,20 +733,17 @@ export default function EditProductPage() {
                     </span>
                     <span
                       className={`text-sm ${
-                        (typeof formData.sellPrice === "number" ? formData.sellPrice : parseFloat(formData.sellPrice || "0")) - 
-                        (typeof formData.buyPrice === "number" ? formData.buyPrice : parseFloat(formData.buyPrice || "0")) > 0
+                        getNumericValue(formData.sellPrice) - getNumericValue(formData.buyPrice) > 0
                           ? "text-green-400/70"
-                          : (typeof formData.sellPrice === "number" ? formData.sellPrice : parseFloat(formData.sellPrice || "0")) - 
-                            (typeof formData.buyPrice === "number" ? formData.buyPrice : parseFloat(formData.buyPrice || "0")) < 0
+                          : getNumericValue(formData.sellPrice) - getNumericValue(formData.buyPrice) < 0
                           ? "text-red-400/70"
                           : "text-yellow-400/70"
                       }`}
                     >
-                      {(typeof formData.sellPrice === "number" ? formData.sellPrice : parseFloat(formData.sellPrice || "0")) > 0
+                      {getNumericValue(formData.sellPrice) > 0
                         ? (
-                            (((typeof formData.sellPrice === "number" ? formData.sellPrice : parseFloat(formData.sellPrice || "0")) - 
-                              (typeof formData.buyPrice === "number" ? formData.buyPrice : parseFloat(formData.buyPrice || "0"))) /
-                              (typeof formData.sellPrice === "number" ? formData.sellPrice : parseFloat(formData.sellPrice || "0"))) *
+                            ((getNumericValue(formData.sellPrice) - getNumericValue(formData.buyPrice)) /
+                              getNumericValue(formData.sellPrice)) *
                             100
                           ).toFixed(1)
                         : "0"}

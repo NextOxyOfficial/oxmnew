@@ -148,6 +148,15 @@ export default function CustomerDetailsPage() {
     phone: "",
     address: "",
   });
+
+  // Pagination state for orders
+  const [ordersPagination, setOrdersPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: 10,
+    totalCount: 0,
+    isLoading: false,
+  });
   const [redeemingGiftIds, setRedeemingGiftIds] = useState<Set<number>>(
     new Set()
   );
@@ -213,6 +222,94 @@ export default function CustomerDetailsPage() {
     }
   };
 
+  // Function to fetch orders with pagination
+  const fetchOrdersWithPagination = async (page: number = 1, pageSize: number = 10) => {
+    try {
+      setOrdersPagination(prev => ({ ...prev, isLoading: true }));
+      
+      const customerId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || "1");
+      
+      const ordersResponse = await customersAPI.getOrders({
+        customer: customerId,
+        page,
+        page_size: pageSize,
+      });
+
+      console.log("Paginated orders response:", ordersResponse);
+
+      // Handle paginated response
+      if (ordersResponse && typeof ordersResponse === "object" && "results" in ordersResponse) {
+        const paginatedData = ordersResponse as {
+          results: CustomerOrder[];
+          count: number;
+          total_pages: number;
+          current_page: number;
+          page_size: number;
+        };
+
+        const formattedOrders = paginatedData.results.map((order) => ({
+          id: order.id,
+          date: order.created_at,
+          total: order.total_amount,
+          status: order.status as "completed" | "pending" | "cancelled",
+          items: order.items_count,
+          order_number: order.order_number,
+          items_details: order.items,
+          customer_name: order.customer_name,
+          customer_phone: customer?.phone,
+          customer_email: customer?.email,
+        }));
+
+        setOrders(formattedOrders);
+        setOrdersPagination({
+          currentPage: paginatedData.current_page,
+          totalPages: paginatedData.total_pages,
+          pageSize: paginatedData.page_size,
+          totalCount: paginatedData.count,
+          isLoading: false,
+        });
+      } else {
+        // Fallback for non-paginated response (backward compatibility)
+        const ordersArray = Array.isArray(ordersResponse) ? ordersResponse : [];
+        const formattedOrders = ordersArray.map((order: CustomerOrder) => ({
+          id: order.id,
+          date: order.created_at,
+          total: order.total_amount,
+          status: order.status as "completed" | "pending" | "cancelled",
+          items: order.items_count,
+          order_number: order.order_number,
+          items_details: order.items,
+          customer_name: order.customer_name,
+          customer_phone: customer?.phone,
+          customer_email: customer?.email,
+        }));
+
+        setOrders(formattedOrders);
+        setOrdersPagination(prev => ({
+          ...prev,
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: formattedOrders.length,
+          isLoading: false,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      setOrdersPagination(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  // Pagination handlers
+  const handleOrdersPageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= ordersPagination.totalPages) {
+      fetchOrdersWithPagination(newPage, ordersPagination.pageSize);
+    }
+  };
+
+  const handleOrdersPageSizeChange = (newPageSize: number) => {
+    fetchOrdersWithPagination(1, newPageSize);
+  };
+
   useEffect(() => {
     const getCustomerId = () => {
       return Array.isArray(params.id) ? params.id[0] : params.id;
@@ -238,44 +335,8 @@ export default function CustomerDetailsPage() {
           setCustomerLevel(customerData.current_level);
         }
 
-        // Fetch orders for this customer
-        const ordersData = await customersAPI.getOrders({
-          customer: customerId,
-        });
-        console.log("Customer orders fetched:", ordersData);
-        // Handle both array and paginated response
-        let orders: CustomerOrder[] = [];
-        if (Array.isArray(ordersData)) {
-          orders = ordersData;
-        } else if (ordersData && typeof ordersData === "object") {
-          orders =
-            (
-              ordersData as {
-                results?: CustomerOrder[];
-                data?: CustomerOrder[];
-              }
-            ).results ||
-            (
-              ordersData as {
-                results?: CustomerOrder[];
-                data?: CustomerOrder[];
-              }
-            ).data ||
-            [];
-        }
-        const formattedOrders = orders.map((order) => ({
-          id: order.id,
-          date: order.created_at,
-          total: order.total_amount,
-          status: order.status as "completed" | "pending" | "cancelled",
-          items: order.items_count,
-          order_number: order.order_number,
-          items_details: order.items,
-          customer_name: customerData.name,
-          customer_phone: customerData.phone,
-          customer_email: customerData.email,
-        }));
-        setOrders(formattedOrders);
+        // Fetch orders for this customer with pagination
+        await fetchOrdersWithPagination(1, 10);
 
         // Fetch due payments for this customer
         const duePaymentsData = await customersAPI.getDuePayments(customerId);
@@ -1394,7 +1455,13 @@ export default function CustomerDetailsPage() {
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => {
+                  setActiveTab(tab.key);
+                  // Refresh orders when switching to orders tab
+                  if (tab.key === "orders") {
+                    fetchOrdersWithPagination(1, ordersPagination.pageSize);
+                  }
+                }}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 flex items-center gap-2 cursor-pointer ${
                   activeTab === tab.key
                     ? "border-cyan-400 text-cyan-400"
@@ -1530,9 +1597,29 @@ export default function CustomerDetailsPage() {
             {activeTab === "orders" && (
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-lg font-medium text-slate-100 mb-4">
-                    Purchase History
-                  </h4>
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-medium text-slate-100">
+                      Purchase History
+                    </h4>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-slate-300">Per page:</label>
+                        <select
+                          value={ordersPagination.pageSize}
+                          onChange={(e) => handleOrdersPageSizeChange(Number(e.target.value))}
+                          className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-slate-200 text-sm"
+                        >
+                          <option value={5}>5</option>
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </div>
+                      <div className="text-sm text-slate-300">
+                        Total: {ordersPagination.totalCount} orders
+                      </div>
+                    </div>
+                  </div>
                   <div className="max-w-4xl">
                     <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
                       {/* Table Header */}
@@ -1547,54 +1634,132 @@ export default function CustomerDetailsPage() {
 
                       {/* Table Body */}
                       <div className="divide-y divide-white/5">
-                        {orders.map((order) => (
-                          <div
-                            key={order.id}
-                            className="px-6 py-4 hover:bg-white/5 transition-colors"
-                          >
-                            <div className="grid grid-cols-8 gap-4 items-center">
-                              <div className="col-span-2">
-                                <p className="text-sm font-medium text-slate-100">
-                                  #{order.id}
-                                </p>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-sm text-slate-300">
-                                  {formatDate(order.date)}
-                                </p>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-sm font-semibold text-green-300">
-                                  {formatCurrency(order.total)}
-                                </p>
-                              </div>
-                              <div className="col-span-2">
-                                <div className="flex items-center space-x-2">
-                                  <button
-                                    onClick={() => handleViewInvoice(order)}
-                                    className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
-                                  >
-                                    <FileText className="w-4 h-4" />
-                                    <span>Invoice</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleSendSms(order)}
-                                    disabled={isSendingSms}
-                                    className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
-                                    title="Send SMS notification"
-                                  >
-                                    <MessageSquare className="w-4 h-4" />
-                                    <span>
-                                      {isSendingSms ? "Sending..." : "SMS"}
-                                    </span>
-                                  </button>
+                        {ordersPagination.isLoading ? (
+                          <div className="px-6 py-8 text-center text-slate-400">
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+                              <span className="ml-2">Loading orders...</span>
+                            </div>
+                          </div>
+                        ) : orders.length === 0 ? (
+                          <div className="px-6 py-8 text-center text-slate-400">
+                            <ShoppingBag className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-slate-400 mb-2">
+                              No Orders Yet
+                            </h3>
+                            <p className="text-slate-500">
+                              This customer hasn't placed any orders yet.
+                            </p>
+                          </div>
+                        ) : (
+                          orders.map((order) => (
+                            <div
+                              key={order.id}
+                              className="px-6 py-4 hover:bg-white/5 transition-colors"
+                            >
+                              <div className="grid grid-cols-8 gap-4 items-center">
+                                <div className="col-span-2">
+                                  <p className="text-sm font-medium text-slate-100">
+                                    #{order.id}
+                                  </p>
+                                </div>
+                                <div className="col-span-2">
+                                  <p className="text-sm text-slate-300">
+                                    {formatDate(order.date)}
+                                  </p>
+                                </div>
+                                <div className="col-span-2">
+                                  <p className="text-sm font-semibold text-green-300">
+                                    {formatCurrency(order.total)}
+                                  </p>
+                                </div>
+                                <div className="col-span-2">
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={() => handleViewInvoice(order)}
+                                      className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      <span>Invoice</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleSendSms(order)}
+                                      disabled={isSendingSms}
+                                      className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
+                                      title="Send SMS notification"
+                                    >
+                                      <MessageSquare className="w-4 h-4" />
+                                      <span>
+                                        {isSendingSms ? "Sending..." : "SMS"}
+                                      </span>
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                        )}
                       </div>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {!ordersPagination.isLoading && orders.length > 0 && ordersPagination.totalPages > 1 && (
+                      <div className="flex items-center justify-between px-6 py-4 bg-white/5 border border-white/10 rounded-lg mt-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-slate-300">
+                            Showing {((ordersPagination.currentPage - 1) * ordersPagination.pageSize) + 1} to{" "}
+                            {Math.min(ordersPagination.currentPage * ordersPagination.pageSize, ordersPagination.totalCount)} of{" "}
+                            {ordersPagination.totalCount} orders
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOrdersPageChange(ordersPagination.currentPage - 1)}
+                            disabled={ordersPagination.currentPage <= 1}
+                            className="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 rounded-md hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Previous
+                          </button>
+                          
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, ordersPagination.totalPages) }, (_, i) => {
+                              let pageNum;
+                              if (ordersPagination.totalPages <= 5) {
+                                pageNum = i + 1;
+                              } else if (ordersPagination.currentPage <= 3) {
+                                pageNum = i + 1;
+                              } else if (ordersPagination.currentPage >= ordersPagination.totalPages - 2) {
+                                pageNum = ordersPagination.totalPages - 4 + i;
+                              } else {
+                                pageNum = ordersPagination.currentPage - 2 + i;
+                              }
+                              
+                              return (
+                                <button
+                                  key={pageNum}
+                                  onClick={() => handleOrdersPageChange(pageNum)}
+                                  className={`px-3 py-1 border rounded-md transition-colors ${
+                                    pageNum === ordersPagination.currentPage
+                                      ? "bg-cyan-500 border-cyan-500 text-white"
+                                      : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          
+                          <button
+                            onClick={() => handleOrdersPageChange(ordersPagination.currentPage + 1)}
+                            disabled={ordersPagination.currentPage >= ordersPagination.totalPages}
+                            className="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 rounded-md hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
