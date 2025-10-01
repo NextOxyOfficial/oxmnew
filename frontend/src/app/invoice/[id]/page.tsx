@@ -407,7 +407,7 @@ export default function InvoicePage() {
             </div>
 
             {/* Company and Customer Info */}
-            <div className="flex justify-between px-2">
+            <div className="flex justify-between mb-3 px-2">
               {/* Company Details */}
               <div>
                 <div className="text-sm text-gray-600 print:text-black space-y-1">
