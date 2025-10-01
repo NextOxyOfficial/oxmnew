@@ -642,7 +642,7 @@ export default function DashboardPage() {
                       )}
                     </p>
                     <p className="text-xs text-green-500 opacity-80">
-                      {recentActivitiesStats.salesCount} recent sales
+                      {recentActivitiesStats.salesCount} sales
                     </p>
                   </div>
                 </div>

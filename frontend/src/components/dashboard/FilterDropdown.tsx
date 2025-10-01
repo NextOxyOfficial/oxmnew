@@ -27,6 +27,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
     { value: "last_week", label: "Last Week" },
     { value: "this_month", label: "This Month" },
     { value: "last_month", label: "Last Month" },
+    { value: "all_time", label: "All Time" },
     { value: "custom", label: "Custom Date Range" },
   ];
 

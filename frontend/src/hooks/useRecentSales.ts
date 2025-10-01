@@ -92,17 +92,19 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
           _t?: number; // Cache buster
         } = {
           ordering: "-sale_date",
-          // When date filtering is applied, get all results within the range
-          // Otherwise, limit to recent transactions for performance
-          page_size: (filters?.dateFilter && filters.dateFilter !== 'all') || 
+          // When date filtering is applied, get more results within the range
+          // For all_time filter, get even more results to show everything
+          page_size: filters?.dateFilter === 'all_time' ? 1000 :
+                    (filters?.dateFilter && filters.dateFilter !== 'all') || 
                     filters?.startDate || 
                     filters?.endDate ? 500 : limit,
           _t: Date.now(), // Add timestamp to prevent caching
         };
 
         // Add date filters if provided
-        if (filters?.dateFilter) {
+        if (filters?.dateFilter && filters.dateFilter !== 'all_time') {
           // Use the backend's date_filter parameter for preset filters
+          // Don't send all_time to backend - let it return all records
           params.date_filter = filters.dateFilter;
         }
         if (filters?.startDate) {
@@ -115,6 +117,7 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
         console.log("=== RECENT SALES DEBUG ===");
         console.log("Input filters received:", filters);
         console.log("Using page_size:", params.page_size, filters?.dateFilter ? `(expanded for date filter: ${filters.dateFilter})` : "(default limit)");
+        console.log("Date filter processing:", filters?.dateFilter === 'all_time' ? 'all_time detected - not sending to backend' : `sending ${filters?.dateFilter} to backend`);
         console.log("Fetching sales with params:", params);
         console.log("API endpoint will be: /sales/ with params:", params);
         
@@ -131,15 +134,22 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
         // Extract results from the paginated response
         const salesResults = salesData.results || salesData;
 
-        // Sort by sale date (most recent first) and limit to specified number
+        // Sort by sale date (most recent first)
         const sortedSales = salesResults
           .sort(
             (a: Sale, b: Sale) =>
               new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime()
-          )
-          .slice(0, limit);
+          );
 
-        setRecentSales(sortedSales);
+        // Only slice to limit if no filters are applied (default view)
+        const finalSales = (filters?.dateFilter || filters?.startDate || filters?.endDate) 
+          ? sortedSales 
+          : sortedSales.slice(0, limit);
+
+        console.log("Final sales count after processing:", finalSales.length);
+        console.log("Filter applied:", !!filters?.dateFilter, "Date range:", !!filters?.startDate, !!filters?.endDate);
+
+        setRecentSales(finalSales);
       } catch (error) {
         console.error("Error fetching recent sales:", error);
         setSalesError("Failed to load recent sales");
