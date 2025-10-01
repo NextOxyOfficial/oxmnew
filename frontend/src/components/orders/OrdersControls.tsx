@@ -88,7 +88,7 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
         <div className="relative flex-1 min-w-0">
           <input
             type="text"
-            placeholder="Search sales, customers... (Type #123 for order number)"
+            placeholder="Search orders, customers... (Type #110 for order ID, #0010 for order number)"
             value={searchInput}
             onChange={(e) => onSearchChange(e.target.value)}
             className={`bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pr-20 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
@@ -137,7 +137,8 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
                 </svg>
                 <div className="absolute right-0 top-6 hidden group-hover:block z-10 w-48 p-2 bg-slate-800 border border-slate-700 rounded-lg shadow-lg text-xs text-slate-300">
                   <p className="font-medium text-cyan-400 mb-1">Search Tips:</p>
-                  <p>• Type <span className="text-cyan-400">#123</span> to search by order number</p>
+                  <p>• Type <span className="text-cyan-400">#110</span> to search by order ID</p>
+                  <p>• Type <span className="text-cyan-400">#0010</span> to search by order number</p>
                   <p>• Search by customer name or phone</p>
                   <p>• Search by product name</p>
                 </div>
