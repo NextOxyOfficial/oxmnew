@@ -36,6 +36,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = [
+        "id",
         "customer_name",
         "customer_phone",
         "items__product__name",
