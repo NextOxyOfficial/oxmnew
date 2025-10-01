@@ -992,8 +992,8 @@ export default function EditOrderPage() {
                       <div className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1 md:flex-[2] relative">
                           <label className="block text-xs font-medium text-slate-400 mb-1">Product Search (Click product name to add to order)</label>
-                          <ProductSearchInput ref={productSearchInputRef} value={productSearch} onChange={handleProductSearch} onFocus={handleSearchFocus} onClear={handleSearchClear} isSearching={isSearchingProducts} isLoading={isLoadingProducts} />
-                          <ProductDropdown isOpen={isProductDropdownOpen} searchQuery={productSearch} searchResults={searchResults} isLoading={isLoadingProducts} isSearching={isSearchingProducts} onProductSelect={(id) => handleProductSelect(String(id))} onClose={handleDropdownClose} highlightText={highlightText} />
+                          <ProductSearchInput ref={productSearchInputRef} value={productSearch} onChange={handleSearchChange} onFocus={handleSearchFocus} onClear={handleSearchClear} isSearching={isSearchingProducts} isLoading={isLoadingProducts} />
+                          <ProductDropdown isOpen={isProductDropdownOpen} searchQuery={productSearch} searchResults={searchResults} isLoading={isLoadingProducts} isSearching={isSearchingProducts} onProductSelect={handleProductSelect} onClose={handleDropdownClose} highlightText={highlightText} />
                         </div>
                         <div className="md:col-span-3">
                           <button onClick={addItemToOrder} disabled={!selectedProduct || newItem.quantity <= 0} className={`w-full px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${selectedProduct && newItem.quantity > 0 ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500" : "bg-slate-700/50 text-slate-400 cursor-not-allowed"}`}>Add Item</button>
