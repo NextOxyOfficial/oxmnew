@@ -553,6 +553,71 @@ export default function BankAccountPage() {
     }
   };
 
+  // Handle export transactions
+  const handleExportTransactions = async () => {
+    if (!account) return;
+    
+    try {
+      setLoading(true);
+      
+      // Prepare filters for the export
+      const exportFilters: Record<string, string> = {
+        account_id: account.id,
+      };
+      
+      // Add active filters
+      if (filters.type && filters.type !== "all") {
+        exportFilters.type = filters.type;
+      }
+      if (filters.status && filters.status !== "all") {
+        exportFilters.status = filters.status;
+      }
+      if (filters.verified_by && filters.verified_by !== "all") {
+        exportFilters.verified_by = filters.verified_by;
+      }
+      if (filters.date_from) {
+        exportFilters.date_from = filters.date_from;
+      }
+      if (filters.date_to) {
+        exportFilters.date_to = filters.date_to;
+      }
+      if (filters.search) {
+        exportFilters.search = filters.search;
+      }
+      
+      // Get the blob from the API
+      const blob = await ApiService.exportTransactionsXLSX(exportFilters);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename
+      let filename = `${account.name}_transactions`;
+      if (filters.date_from && filters.date_to) {
+        filename += `_${filters.date_from}_to_${filters.date_to}`;
+      } else if (filters.date_from) {
+        filename += `_from_${filters.date_from}`;
+      } else if (filters.date_to) {
+        filename += `_to_${filters.date_to}`;
+      }
+      filename += '.xlsx';
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error("Error exporting transactions:", error);
+      setError("Failed to export transactions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle filter changes
   const handleFilterChange = (newFilters: Partial<TransactionFilters>) => {
     setFilters({ ...filters, ...newFilters });
@@ -1134,7 +1199,24 @@ export default function BankAccountPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
+              {/* Export Button */}
+              <div className="mb-4 flex justify-end">
+                <button
+                  onClick={handleExportTransactions}
+                  disabled={loading}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
+                  <span>Export to XLSX</span>
+                </button>
+              </div>
+              
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-800/50 border-b border-slate-700/50">
                   <tr>
@@ -1251,6 +1333,7 @@ export default function BankAccountPage() {
                   </div>
                 </div>
               )}
+            </div>
             </div>
           )}
         </div>

@@ -797,6 +797,40 @@ export class ApiService {
     return this.get(`/banking/transactions/dashboard_stats/${queryParams}`);
   }
 
+  static async exportTransactionsXLSX(filters?: Record<string, string>) {
+    // Build filtered params without 'all' placeholders
+    const buildParams = (base?: Record<string, string>) => {
+      const params = new URLSearchParams();
+      if (!base) return params;
+      Object.entries(base).forEach(([key, value]) => {
+        if (!value) return;
+        if (value === "all") return;
+        params.append(key, value);
+      });
+      return params;
+    };
+
+    const params = buildParams(filters);
+    const queryString = params.toString();
+    const endpoint = `/banking/transactions/export_xlsx/${queryString ? `?${queryString}` : ""}`;
+    
+    const response = await fetch(
+      `${API_BASE_URL}${endpoint}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Token ${AuthToken.get()}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to export transactions");
+    }
+
+    return response.blob();
+  }
+
   // Categories methods
   static async getCategories() {
     try {

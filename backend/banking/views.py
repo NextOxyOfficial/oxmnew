@@ -416,6 +416,150 @@ class TransactionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"])
+    def export_xlsx(self, request):
+        """Export transactions to XLSX file"""
+        from django.http import HttpResponse
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+        import io
+        
+        # Get filtered transactions using the same logic as other endpoints
+        transactions = self.get_queryset()
+        
+        # Apply filtering
+        transaction_type = request.query_params.get("type")
+        status_filter = request.query_params.get("status")
+        date_from = request.query_params.get("date_from")
+        date_to = request.query_params.get("date_to")
+        search = request.query_params.get("search")
+        account_id = request.query_params.get("account_id")
+        verified_by = request.query_params.get("verified_by")
+
+        if transaction_type and transaction_type != "all":
+            transactions = transactions.filter(type=transaction_type)
+        if status_filter and status_filter != "all":
+            transactions = transactions.filter(status=status_filter)
+        if date_from:
+            transactions = transactions.filter(date__gte=date_from)
+        if date_to:
+            from datetime import datetime, time
+            try:
+                end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
+                end_datetime = datetime.combine(end_date, time(23, 59, 59))
+                transactions = transactions.filter(date__lte=end_datetime)
+            except ValueError:
+                transactions = transactions.filter(date__lte=date_to)
+        if search:
+            transactions = transactions.filter(
+                Q(purpose__icontains=search) | Q(reference_number__icontains=search)
+            )
+        if account_id:
+            transactions = transactions.filter(account_id=account_id)
+        if verified_by and verified_by != "all":
+            transactions = transactions.filter(verified_by=verified_by)
+
+        # Create workbook and worksheet
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Transaction Statement"
+        
+        # Define header style
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Headers
+        headers = [
+            "Date", "Reference Number", "Type", "Amount", "Purpose", 
+            "Status", "Verified By", "Account", "Running Balance"
+        ]
+        
+        # Add headers
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # Add data rows with running balance calculation
+        account_balance = 0
+        if account_id:
+            try:
+                account = BankAccount.objects.get(id=account_id)
+                account_balance = float(account.balance)
+            except BankAccount.DoesNotExist:
+                pass
+        
+        # Sort transactions by date (oldest first) for proper running balance
+        sorted_transactions = transactions.order_by('date')
+        running_balance = account_balance
+        
+        # Calculate starting balance (work backwards from current balance)
+        for transaction in sorted_transactions.filter(status="verified"):
+            if transaction.type == "credit":
+                running_balance -= float(transaction.amount)
+            else:
+                running_balance += float(transaction.amount)
+        
+        # Now add rows with forward calculation
+        row = 2
+        for transaction in sorted_transactions:
+            if transaction.status == "verified":
+                if transaction.type == "credit":
+                    running_balance += float(transaction.amount)
+                else:
+                    running_balance -= float(transaction.amount)
+            
+            ws.cell(row=row, column=1, value=transaction.date.strftime("%Y-%m-%d %H:%M:%S"))
+            ws.cell(row=row, column=2, value=transaction.reference_number)
+            ws.cell(row=row, column=3, value=transaction.get_type_display())
+            ws.cell(row=row, column=4, value=float(transaction.amount))
+            ws.cell(row=row, column=5, value=transaction.purpose)
+            ws.cell(row=row, column=6, value=transaction.get_status_display())
+            ws.cell(row=row, column=7, value=transaction.verified_by.name if transaction.verified_by else "N/A")
+            ws.cell(row=row, column=8, value=transaction.account.name)
+            ws.cell(row=row, column=9, value=running_balance if transaction.status == "verified" else "N/A")
+            row += 1
+        
+        # Auto-adjust column widths
+        for col in range(1, len(headers) + 1):
+            max_length = 0
+            column = get_column_letter(col)
+            for cell in ws[column]:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2) * 1.2
+            ws.column_dimensions[column].width = adjusted_width
+        
+        # Save to bytes
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        # Create response
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+        # Generate filename with date range if specified
+        filename = "transaction_statement"
+        if date_from and date_to:
+            filename += f"_{date_from}_to_{date_to}"
+        elif date_from:
+            filename += f"_from_{date_from}"
+        elif date_to:
+            filename += f"_to_{date_to}"
+        filename += ".xlsx"
+        
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    @action(detail=False, methods=["get"])
     def dashboard_stats(self, request):
         """Get dashboard statistics for transactions"""
         account_id = request.query_params.get("account_id")
