@@ -29,7 +29,7 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-    "168.231.119.200",
+    "51.222.138.167",
     "oxymanager.com",
     "www.oxymanager.com",
 ]
