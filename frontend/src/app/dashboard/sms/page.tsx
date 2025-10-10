@@ -463,7 +463,7 @@ export default function SmsPage() {
 							<div className="text-left">
 								<div className="font-semibold text-sm">History</div>
 								<div className={`text-xs ${tab === "history" ? "text-cyan-400" : "text-slate-500"}`}>
-									{isLoading ? "Loading..." : historyData ? `${historyData.count || 0} total` : "0 total"}
+									{isLoading ? "Loading..." : `${historyData?.count || 0} total`}
 								</div>
 							</div>
 							{tab === "history" && (

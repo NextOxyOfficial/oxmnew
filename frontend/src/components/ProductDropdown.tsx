@@ -80,9 +80,9 @@ const ProductDropdown = memo<ProductDropdownProps>(
                   background: rgb(100 116 139);
                 }
               `}</style>
-              {searchResults.map((product) => (
+              {searchResults.map((product, index) => (
                 <div
-                  key={product.id}
+                  key={`${product.id}-${index}`}
                   onClick={() => {
                     onProductSelect(
                       product.id.toString(),
