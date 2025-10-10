@@ -201,9 +201,12 @@ class EmployeeAPI {
     employeeId: number,
     data: CreateIncentiveData
   ): Promise<Incentive> {
-    return this.fetchAPI(`/employees/${employeeId}/incentives/`, {
+    return this.fetchAPI(`/incentives/`, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        employee: employeeId
+      }),
     });
   }
 

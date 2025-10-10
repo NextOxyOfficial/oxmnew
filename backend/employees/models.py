@@ -129,6 +129,11 @@ class Incentive(models.Model):
 
     class Meta:
         ordering = ['-date_awarded']
+        indexes = [
+            models.Index(fields=['employee', '-date_awarded']),
+            models.Index(fields=['employee', 'status']),
+            models.Index(fields=['status', '-date_awarded']),
+        ]
 
     def __str__(self):
         return f"{self.title} - {self.amount}"
@@ -151,6 +156,9 @@ class IncentiveWithdrawal(models.Model):
 
     class Meta:
         ordering = ['-withdrawal_date']
+        indexes = [
+            models.Index(fields=['employee', '-withdrawal_date']),
+        ]
 
     def __str__(self):
         return f"{self.employee.name} - {self.amount} withdrawn on {self.withdrawal_date.strftime('%Y-%m-%d')}"

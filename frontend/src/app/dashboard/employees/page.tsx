@@ -58,6 +58,11 @@ export default function EmployeesPage() {
   // Incentives state
   const [incentives, setIncentives] = useState<Incentive[]>([]);
   const [isLoadingIncentives, setIsLoadingIncentives] = useState(true);
+  const [incentivesPagination, setIncentivesPagination] = useState({
+    hasNext: false,
+    currentPage: 1,
+    isLoadingMore: false,
+  });
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'employees' | 'incentives'>('employees');
@@ -69,6 +74,11 @@ export default function EmployeesPage() {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<IncentiveWithdrawal[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyPagination, setHistoryPagination] = useState({
+    hasNext: false,
+    currentPage: 1,
+    isLoadingMore: false,
+  });
 
   // Ensure component is mounted before rendering dates
   useEffect(() => {
@@ -168,27 +178,43 @@ export default function EmployeesPage() {
   }, []);
 
   // Fetch incentives from backend
-  const fetchIncentives = async () => {
+  const fetchIncentives = async (page: number = 1, append: boolean = false) => {
     try {
-      setIsLoadingIncentives(true);
-      console.log("Fetching incentives data...");
-      const data = await ApiService.getIncentives();
+      if (!append) setIsLoadingIncentives(true);
+      else setIncentivesPagination(prev => ({ ...prev, isLoadingMore: true }));
+      
+      console.log("Fetching incentives data...", { page });
+      const data = await ApiService.getIncentives({ page, page_size: 10 });
       console.log("Incentives fetched successfully:", data);
       
       // Handle different response formats
       if (Array.isArray(data)) {
-        setIncentives(data);
+        setIncentives(append ? [...incentives, ...data] : data);
+        setIncentivesPagination({ hasNext: false, currentPage: page, isLoadingMore: false });
       } else if (data && data.results && Array.isArray(data.results)) {
-        setIncentives(data.results);
+        setIncentives(append ? [...incentives, ...data.results] : data.results);
+        setIncentivesPagination({
+          hasNext: !!data.next,
+          currentPage: page,
+          isLoadingMore: false,
+        });
       } else {
         console.error("Unexpected incentives response format:", data);
-        setIncentives([]);
+        if (!append) setIncentives([]);
+        setIncentivesPagination({ hasNext: false, currentPage: page, isLoadingMore: false });
       }
     } catch (err) {
       console.error("Error fetching incentives:", err);
-      setIncentives([]);
+      if (!append) setIncentives([]);
+      setIncentivesPagination(prev => ({ ...prev, isLoadingMore: false }));
     } finally {
       setIsLoadingIncentives(false);
+    }
+  };
+
+  const loadMoreIncentives = () => {
+    if (!incentivesPagination.isLoadingMore && incentivesPagination.hasNext) {
+      fetchIncentives(incentivesPagination.currentPage + 1, true);
     }
   };
 
@@ -478,18 +504,41 @@ export default function EmployeesPage() {
   };
 
   // Fetch withdrawal history
-  const fetchWithdrawalHistory = async () => {
+  const fetchWithdrawalHistory = async (page: number = 1, append: boolean = false) => {
     if (employees.length === 0) return;
     
     try {
-      setIsLoadingHistory(true);
+      if (!append) setIsLoadingHistory(true);
+      else setHistoryPagination(prev => ({ ...prev, isLoadingMore: true }));
+      
       const employeeId = employees[0].id; // Replace with actual logged-in employee
-      const history = await ApiService.getWithdrawalHistory(employeeId);
-      setWithdrawalHistory(history.results || []);
+      const history = await ApiService.getWithdrawalHistory(employeeId, { 
+        page, 
+        page_size: 10 
+      });
+      
+      if (Array.isArray(history)) {
+        setWithdrawalHistory(append ? [...withdrawalHistory, ...history] : history);
+        setHistoryPagination({ hasNext: false, currentPage: page, isLoadingMore: false });
+      } else if (history && history.results) {
+        setWithdrawalHistory(append ? [...withdrawalHistory, ...history.results] : history.results);
+        setHistoryPagination({
+          hasNext: !!history.next,
+          currentPage: page,
+          isLoadingMore: false,
+        });
+      }
     } catch (error) {
       console.error("Error fetching withdrawal history:", error);
+      setHistoryPagination(prev => ({ ...prev, isLoadingMore: false }));
     } finally {
       setIsLoadingHistory(false);
+    }
+  };
+
+  const loadMoreHistory = () => {
+    if (!historyPagination.isLoadingMore && historyPagination.hasNext) {
+      fetchWithdrawalHistory(historyPagination.currentPage + 1, true);
     }
   };
 
@@ -1484,6 +1533,31 @@ export default function EmployeesPage() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Load More Incentives Button */}
+                  {incentivesPagination.hasNext && (
+                    <div className="pt-4">
+                      <button
+                        onClick={loadMoreIncentives}
+                        disabled={incentivesPagination.isLoadingMore}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-slate-300 hover:text-slate-100 font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {incentivesPagination.isLoadingMore ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+                            <span>Loading More Incentives...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                            <span>Load More Incentives</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1536,6 +1610,31 @@ export default function EmployeesPage() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Load More History Button */}
+                  {historyPagination.hasNext && (
+                    <div className="pt-4">
+                      <button
+                        onClick={loadMoreHistory}
+                        disabled={historyPagination.isLoadingMore}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-slate-300 hover:text-slate-100 font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {historyPagination.isLoadingMore ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+                            <span>Loading More History...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                            <span>Load More History</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

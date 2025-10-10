@@ -28,6 +28,11 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
   const [isDeletingIncentive, setIsDeletingIncentive] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [historyPagination, setHistoryPagination] = useState({
+    hasNext: false,
+    currentPage: 1,
+    isLoadingMore: false,
+  });
   
   const [newIncentive, setNewIncentive] = useState({
     title: "",
@@ -118,26 +123,46 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
   };
 
   // Fetch withdrawal history
-  useEffect(() => {
-    const fetchWithdrawalHistory = async () => {
-      try {
-        setIsLoadingHistory(true);
-        const data = await ApiService.getWithdrawalHistory(parseInt(employeeId));
-        if (Array.isArray(data)) {
-          setWithdrawalHistory(data);
-        } else if (data && data.results && Array.isArray(data.results)) {
-          setWithdrawalHistory(data.results);
-        } else {
-          setWithdrawalHistory([]);
-        }
-      } catch (error) {
-        console.error("Error fetching withdrawal history:", error);
+  const fetchWithdrawalHistory = async (page: number = 1, append: boolean = false) => {
+    try {
+      if (!append) setIsLoadingHistory(true);
+      else setHistoryPagination(prev => ({ ...prev, isLoadingMore: true }));
+      
+      const data = await ApiService.getWithdrawalHistory(parseInt(employeeId), { 
+        page, 
+        page_size: 10 
+      });
+      
+      if (Array.isArray(data)) {
+        setWithdrawalHistory(append ? [...withdrawalHistory, ...data] : data);
+        setHistoryPagination({ hasNext: false, currentPage: page, isLoadingMore: false });
+      } else if (data && data.results && Array.isArray(data.results)) {
+        setWithdrawalHistory(append ? [...withdrawalHistory, ...data.results] : data.results);
+        setHistoryPagination({ 
+          hasNext: !!data.next, 
+          currentPage: page, 
+          isLoadingMore: false 
+        });
+      } else {
         setWithdrawalHistory([]);
-      } finally {
-        setIsLoadingHistory(false);
+        setHistoryPagination({ hasNext: false, currentPage: page, isLoadingMore: false });
       }
-    };
+    } catch (error) {
+      console.error("Error fetching withdrawal history:", error);
+      if (!append) setWithdrawalHistory([]);
+      setHistoryPagination(prev => ({ ...prev, isLoadingMore: false }));
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
+  const loadMoreHistory = () => {
+    if (!historyPagination.isLoadingMore && historyPagination.hasNext) {
+      fetchWithdrawalHistory(historyPagination.currentPage + 1, true);
+    }
+  };
+
+  useEffect(() => {
     fetchWithdrawalHistory();
   }, [employeeId]);
 
@@ -182,13 +207,8 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
         onRefresh();
       }
 
-      // Refresh withdrawal history
-      const historyData = await ApiService.getWithdrawalHistory(parseInt(employeeId));
-      if (Array.isArray(historyData)) {
-        setWithdrawalHistory(historyData);
-      } else if (historyData && historyData.results) {
-        setWithdrawalHistory(historyData.results);
-      }
+      // Refresh withdrawal history from first page
+      await fetchWithdrawalHistory(1, false);
     } catch (error) {
       console.error("Error processing withdrawal:", error);
       alert("Failed to process withdrawal. Please try again.");
@@ -396,6 +416,31 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
                     </div>
                   ))}
                 </div>
+
+                {/* Load More Button */}
+                {historyPagination.hasNext && (
+                  <div className="p-4 bg-white/5 border-t border-white/10">
+                    <button
+                      onClick={loadMoreHistory}
+                      disabled={historyPagination.isLoadingMore}
+                      className="w-full px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {historyPagination.isLoadingMore ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-purple-300 border-t-transparent rounded-full animate-spin"></div>
+                          <span>Loading More...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                          </svg>
+                          <span>Load More History</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="p-8 text-center">

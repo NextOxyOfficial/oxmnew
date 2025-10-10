@@ -671,8 +671,14 @@ export class ApiService {
   }
 
   // Incentive methods
-  static async getIncentives() {
-    return this.get("/incentives/");
+  static async getIncentives(params?: { page?: number; employee?: number; page_size?: number }) {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.employee) queryParams.append('employee', params.employee.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    
+    const url = queryParams.toString() ? `/incentives/?${queryParams.toString()}` : '/incentives/';
+    return this.get(url);
   }
 
   static async createIncentive(incentiveData: {
@@ -693,10 +699,13 @@ export class ApiService {
     return this.post(`/incentives/withdraw-from-employee/${employeeId}/`, withdrawalData);
   }
 
-  static async getWithdrawalHistory(employeeId?: number) {
-    const url = employeeId 
-      ? `/incentive-withdrawals/?employee=${employeeId}`
-      : `/incentive-withdrawals/`;
+  static async getWithdrawalHistory(employeeId?: number, params?: { page?: number; page_size?: number }) {
+    const queryParams = new URLSearchParams();
+    if (employeeId) queryParams.append('employee', employeeId.toString());
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    
+    const url = queryParams.toString() ? `/incentive-withdrawals/?${queryParams.toString()}` : '/incentive-withdrawals/';
     return this.get(url);
   }
 
