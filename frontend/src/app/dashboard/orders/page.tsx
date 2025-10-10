@@ -81,6 +81,11 @@ export default function OrdersPage() {
   const [productSortBy, setProductSortBy] = useState("last_sold");
   const [isSearchingProducts, setIsSearchingProducts] = useState(false);
   
+  // Product date filtering state
+  const [productDateFilter, setProductDateFilter] = useState("today");
+  const [productStartDate, setProductStartDate] = useState("");
+  const [productEndDate, setProductEndDate] = useState("");
+  
   // Product pagination state
   const [productCurrentPage, setProductCurrentPage] = useState(1);
   const [productPageSize, setProductPageSize] = useState(50);
@@ -302,6 +307,13 @@ export default function OrdersPage() {
     setUrlParamsInitialized(true);
   }, []); // Run only once on mount
 
+  // Initialize product date filter to today
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    setProductStartDate(today);
+    setProductEndDate(today);
+  }, []);
+
   // Handle URL parameter changes for browser navigation (back/forward)
   useEffect(() => {
     // Skip the initial mount since we handle it in the setup effect
@@ -493,6 +505,34 @@ export default function OrdersPage() {
         params.search = productSearchTerm.trim();
       }
 
+      // Add date filtering based on selected filter
+      if (productDateFilter === "today") {
+        const today = new Date().toISOString().split('T')[0];
+        params.start_date = today;
+        params.end_date = today;
+      } else if (productDateFilter === "yesterday") {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        params.start_date = yesterdayStr;
+        params.end_date = yesterdayStr;
+      } else if (productDateFilter === "last_7_days") {
+        const endDate = new Date().toISOString().split('T')[0];
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 6);
+        params.start_date = startDate.toISOString().split('T')[0];
+        params.end_date = endDate;
+      } else if (productDateFilter === "last_30_days") {
+        const endDate = new Date().toISOString().split('T')[0];
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 29);
+        params.start_date = startDate.toISOString().split('T')[0];
+        params.end_date = endDate;
+      } else if (productDateFilter === "custom") {
+        if (productStartDate) params.start_date = productStartDate;
+        if (productEndDate) params.end_date = productEndDate;
+      }
+
       // Map sort to backend ordering
       switch (productSortBy) {
         case "total_quantity":
@@ -514,17 +554,62 @@ export default function OrdersPage() {
           params.ordering = "-total_quantity";
       }
 
-      const response = await ApiService.getProductSalesSummary(params);
+      // Use getSales API with date filtering instead of getProductSalesSummary
+      const response = await ApiService.getSales(params);
 
-      if (response && typeof response === "object" && "results" in response) {
-        setProductSales(response.results || []);
-        setProductTotalItems(response.count || 0);
-        setProductTotalPages(Math.ceil((response.count || 0) / productPageSize));
-      } else if (Array.isArray(response)) {
-        // non-paginated fallback
-        setProductSales(response);
-        setProductTotalItems(response.length);
-        setProductTotalPages(Math.ceil(response.length / productPageSize));
+      // Process sales data to create product summary
+      if (response && response.results) {
+        const productSalesMap = new Map<string, ProductSale>();
+        
+        response.results.forEach((sale: any) => {
+          const key = sale.variant_id ? `${sale.product_id}_${sale.variant_id}` : `${sale.product_id}`;
+          const productName = sale.product_name || "Unknown Product";
+          const variantDisplay = sale.variant_details || "";
+          const quantity = parseInt(sale.quantity) || 1;
+          const revenue = parseFloat(sale.unit_price) * quantity || 0;
+          const buyPrice = parseFloat(sale.buy_price) * quantity || 0;
+          const profit = revenue - buyPrice;
+          
+          if (productSalesMap.has(key)) {
+            const existing = productSalesMap.get(key)!;
+            existing.total_quantity += quantity;
+            existing.total_revenue += revenue;
+            existing.total_buy_price += buyPrice;
+            existing.total_profit += profit;
+            existing.sales_count += 1;
+            existing.avg_unit_price = existing.total_revenue / existing.total_quantity;
+            existing.avg_buy_price = existing.total_buy_price / existing.total_quantity;
+            existing.profit_margin = existing.total_revenue > 0 ? (existing.total_profit / existing.total_revenue) * 100 : 0;
+            // Update last sold date if this sale is more recent
+            if (new Date(sale.created_at) > new Date(existing.last_sold)) {
+              existing.last_sold = sale.created_at;
+              existing.last_sold_customer = sale.customer_name;
+            }
+          } else {
+            productSalesMap.set(key, {
+              id: productSalesMap.size + 1,
+              product_id: sale.product_id,
+              variant_id: sale.variant_id,
+              product_name: productName,
+              variant_display: variantDisplay,
+              total_quantity: quantity,
+              total_revenue: revenue,
+              total_profit: profit,
+              profit_margin: revenue > 0 ? (profit / revenue) * 100 : 0,
+              last_sold: sale.created_at,
+              last_sold_customer: sale.customer_name,
+              avg_unit_price: revenue / quantity,
+              avg_buy_price: buyPrice / quantity,
+              total_buy_price: buyPrice,
+              sales_count: 1,
+            });
+          }
+        });
+
+        const processedSales = Array.from(productSalesMap.values());
+        setProductSales(processedSales);
+        setProductTotalItems(processedSales.length);
+        setProductTotalPages(Math.ceil(processedSales.length / productPageSize));
       } else {
         setProductSales([]);
         setProductTotalItems(0);
@@ -539,7 +624,7 @@ export default function OrdersPage() {
       setIsLoadingProducts(false);
       setIsSearchingProducts(false);
     }
-  }, [activeTab, productCurrentPage, productPageSize, productSearchTerm, productSortBy, productSales.length]);
+  }, [activeTab, productCurrentPage, productPageSize, productSearchTerm, productSortBy, productDateFilter, productStartDate, productEndDate, productSales.length]);
 
   // Fetch orders when dependencies change
   useEffect(() => {
@@ -950,6 +1035,24 @@ export default function OrdersPage() {
     setProductSortBy(value);
     setProductCurrentPage(1); // Reset to first page when sorting
     updateProductsUrlParams({ sort: value, page: 1 });
+  }, []);
+
+  const handleProductDateFilterChange = useCallback((filter: string) => {
+    setProductDateFilter(filter);
+    setProductCurrentPage(1); // Reset to first page when changing filter
+    
+    // Set default dates for predefined filters
+    if (filter === "today") {
+      const today = new Date().toISOString().split('T')[0];
+      setProductStartDate(today);
+      setProductEndDate(today);
+    } else if (filter === "yesterday") {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      setProductStartDate(yesterdayStr);
+      setProductEndDate(yesterdayStr);
+    }
   }, []);
 
   const handleTabChange = useCallback((tab: "orders" | "products") => {
@@ -1507,6 +1610,89 @@ export default function OrdersPage() {
             <>
               {/* Product Sales Controls */}
               <div className="sm:p-4 p-2 flex-shrink-0 border-b border-slate-700/50">
+                {/* Date Filter Controls */}
+                <div className="mb-4 p-3 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                  <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <h3 className="text-sm font-medium text-slate-200">Date Filter</h3>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleProductDateFilterChange("today")}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          productDateFilter === "today"
+                            ? "bg-cyan-500 text-white"
+                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                        }`}
+                      >
+                        Today
+                      </button>
+                      <button
+                        onClick={() => handleProductDateFilterChange("yesterday")}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          productDateFilter === "yesterday"
+                            ? "bg-cyan-500 text-white"
+                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                        }`}
+                      >
+                        Yesterday
+                      </button>
+                      <button
+                        onClick={() => handleProductDateFilterChange("last_7_days")}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          productDateFilter === "last_7_days"
+                            ? "bg-cyan-500 text-white"
+                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                        }`}
+                      >
+                        Last 7 Days
+                      </button>
+                      <button
+                        onClick={() => handleProductDateFilterChange("last_30_days")}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          productDateFilter === "last_30_days"
+                            ? "bg-cyan-500 text-white"
+                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                        }`}
+                      >
+                        Last 30 Days
+                      </button>
+                      <button
+                        onClick={() => handleProductDateFilterChange("custom")}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          productDateFilter === "custom"
+                            ? "bg-cyan-500 text-white"
+                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                        }`}
+                      >
+                        Custom Range
+                      </button>
+                    </div>
+
+                    {productDateFilter === "custom" && (
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="date"
+                          value={productStartDate}
+                          onChange={(e) => setProductStartDate(e.target.value)}
+                          className="bg-slate-700 border border-slate-600 rounded-md px-3 py-1.5 text-white text-sm"
+                        />
+                        <span className="text-slate-400">to</span>
+                        <input
+                          type="date"
+                          value={productEndDate}
+                          onChange={(e) => setProductEndDate(e.target.value)}
+                          className="bg-slate-700 border border-slate-600 rounded-md px-3 py-1.5 text-white text-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                   <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-1">
                     {/* Search Input */}
