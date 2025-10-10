@@ -157,11 +157,20 @@ export default function SmsPage() {
 		if (tab === "custom") {
 			lines = contactsText.split("\n").filter(Boolean);
 		} else if (tab === "customers") {
-			lines = customers.map((c) => `${c.phone}, ${c.name}`);
+			// Only include customers with valid phone numbers
+			lines = customers
+				.filter((c) => c.phone && c.phone.trim() !== "")
+				.map((c) => `${c.phone}, ${c.name}`);
 		} else if (tab === "employees") {
-			lines = employees.map((e) => `${e.phone}, ${e.name}`);
+			// Only include employees with valid phone numbers
+			lines = employees
+				.filter((e) => e.phone && e.phone.trim() !== "")
+				.map((e) => `${e.phone}, ${e.name}`);
 		} else if (tab === "suppliers") {
-			lines = suppliers.map((s) => `${s.phone}, ${s.name}`);
+			// Only include suppliers with valid phone numbers
+			lines = suppliers
+				.filter((s) => s.phone && s.phone.trim() !== "")
+				.map((s) => `${s.phone}, ${s.name}`);
 		}
 		setContactsText(lines.join("\n"));
 	// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -397,7 +406,6 @@ export default function SmsPage() {
 							<div className="text-left">
 								<div className="font-semibold text-sm">All Customers</div>
 								<div className={`text-xs ${tab === "customers" ? "text-purple-400" : "text-slate-500"}`}>
-									{isLoading ? "Loading..." : `${customers.length} contacts`}
 								</div>
 							</div>
 							{tab === "customers" && (
@@ -417,7 +425,6 @@ export default function SmsPage() {
 							<div className="text-left">
 								<div className="font-semibold text-sm">All Employees</div>
 								<div className={`text-xs ${tab === "employees" ? "text-green-400" : "text-slate-500"}`}>
-									{isLoading ? "Loading..." : `${employees.length} contacts`}
 								</div>
 							</div>
 							{tab === "employees" && (
@@ -437,7 +444,6 @@ export default function SmsPage() {
 							<div className="text-left">
 								<div className="font-semibold text-sm">All Suppliers</div>
 								<div className={`text-xs ${tab === "suppliers" ? "text-orange-400" : "text-slate-500"}`}>
-									{isLoading ? "Loading..." : `${suppliers.length} contacts`}
 								</div>
 							</div>
 							{tab === "suppliers" && (
@@ -466,6 +472,21 @@ export default function SmsPage() {
 						</button>
 					</div>
 				</div>
+				
+				{/* Info Message for filtered contacts */}
+				{tab !== "history" && tab !== "custom" && (
+					<div className="px-4 py-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+						<p className="text-xs text-blue-300">
+							<span className="font-semibold">ℹ️ Note:</span> Only contacts with valid phone numbers are shown. 
+							{tab === "customers" && customers.length > customers.filter(c => c.phone && c.phone.trim() !== "").length && 
+								` ${customers.length - customers.filter(c => c.phone && c.phone.trim() !== "").length} customer(s) excluded due to missing phone numbers.`}
+							{tab === "employees" && employees.length > employees.filter(e => e.phone && e.phone.trim() !== "").length && 
+								` ${employees.length - employees.filter(e => e.phone && e.phone.trim() !== "").length} employee(s) excluded due to missing phone numbers.`}
+							{tab === "suppliers" && suppliers.length > suppliers.filter(s => s.phone && s.phone.trim() !== "").length && 
+								` ${suppliers.length - suppliers.filter(s => s.phone && s.phone.trim() !== "").length} supplier(s) excluded due to missing phone numbers.`}
+						</p>
+					</div>
+				)}
 			</div>
 
 			{/* Main Form */}
