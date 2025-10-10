@@ -1744,9 +1744,19 @@ def smsSend(request):
     phone = data.get("phone", "").strip()
     message = data.get("message", "").strip()
 
+    # Validate phone number and message
     if not phone or not message:
         return Response(
             {"success": False, "error": "Phone number and message are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    # Validate phone number format - must contain only digits and be at least 10 characters
+    # Remove common separators for validation
+    phone_digits = re.sub(r'[\s\-\(\)\+]', '', phone)
+    if not phone_digits.isdigit() or len(phone_digits) < 10:
+        return Response(
+            {"success": False, "error": f"Invalid phone number format: {phone}. Phone number must contain at least 10 digits."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 

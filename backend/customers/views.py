@@ -310,6 +310,7 @@ def redeem_points(request, customer_id):
 def send_sms(request, customer_id):
     """Send SMS to customer"""
     from subscription.models import SMSSentHistory, UserSMSCredit
+    import re
 
     try:
         customer = Customer.objects.get(id=customer_id, user=request.user)
@@ -318,6 +319,21 @@ def send_sms(request, customer_id):
         if not message:
             return Response(
                 {"success": False, "message": "Message is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        # Validate customer has a phone number
+        if not customer.phone or not customer.phone.strip():
+            return Response(
+                {"success": False, "message": f"Customer {customer.name} does not have a phone number."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        # Validate phone number format
+        phone_digits = re.sub(r'[\s\-\(\)\+]', '', customer.phone)
+        if not phone_digits.isdigit() or len(phone_digits) < 10:
+            return Response(
+                {"success": False, "message": f"Customer {customer.name} has an invalid phone number: {customer.phone}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
