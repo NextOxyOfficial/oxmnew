@@ -157,10 +157,14 @@ class DuePaymentListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["customer", "payment_type", "status"]
-    ordering = ["due_date"]
+    ordering_fields = ["due_date", "created_at", "amount"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
-        return DuePayment.objects.filter(user=self.request.user)
+        queryset = DuePayment.objects.filter(user=self.request.user).select_related(
+            "customer", "order"
+        )
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

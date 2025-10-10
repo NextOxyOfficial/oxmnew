@@ -45,11 +45,24 @@ export default function DueBookPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [totalDueAmount, setTotalDueAmount] = useState(0);
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'customers' | 'history'>('customers');
+
   // SMS Composer state
   const [showSmsComposer, setShowSmsComposer] = useState(false);
   const [smsCustomer, setSmsCustomer] = useState<DueCustomer | null>(null);
   const [smsMessage, setSmsMessage] = useState("");
   const [isSendingSms, setIsSendingSms] = useState(false);
+
+  // Due History state
+  const [dueHistory, setDueHistory] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyPagination, setHistoryPagination] = useState({
+    hasNext: false,
+    currentPage: 1,
+    isLoadingMore: false,
+  });
 
   // User profile state for store name
   const [userProfile, setUserProfile] = useState<{
@@ -184,6 +197,66 @@ export default function DueBookPage() {
     }
   }, [searchTerm]);
 
+  // Fetch due payment history
+  const fetchDueHistory = useCallback(async (page: number = 1, append: boolean = false) => {
+    try {
+      if (!append) {
+        setIsLoadingHistory(true);
+        setHistoryError(null);
+      } else {
+        setHistoryPagination(prev => ({ ...prev, isLoadingMore: true }));
+      }
+
+      console.log('Fetching due history - Page:', page);
+      const response = await ApiService.get(`/due-payments/?page=${page}&page_size=20`);
+      console.log('Due history response:', response);
+      
+      if (response.results) {
+        setDueHistory(prev => append ? [...prev, ...response.results] : response.results);
+        setHistoryPagination({
+          hasNext: !!response.next,
+          currentPage: page,
+          isLoadingMore: false,
+        });
+        setHistoryError(null);
+      } else if (Array.isArray(response)) {
+        setDueHistory(prev => append ? [...prev, ...response] : response);
+        setHistoryPagination({
+          hasNext: false,
+          currentPage: page,
+          isLoadingMore: false,
+        });
+        setHistoryError(null);
+      } else {
+        // Unexpected response format
+        console.warn('Unexpected response format:', response);
+        setHistoryError('Received unexpected data format from server');
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch due history:", error);
+      console.error("Error details:", error.message, error.details);
+      const errorMessage = error.message || 'Failed to load payment history';
+      setHistoryError(errorMessage);
+      if (!append) {
+        setDueHistory([]);
+      }
+      setHistoryPagination({
+        hasNext: false,
+        currentPage: 1,
+        isLoadingMore: false,
+      });
+    } finally {
+      if (!append) setIsLoadingHistory(false);
+      else setHistoryPagination(prev => ({ ...prev, isLoadingMore: false }));
+    }
+  }, []); // Remove dueHistory from dependencies
+
+  const loadMoreHistory = () => {
+    if (!historyPagination.isLoadingMore && historyPagination.hasNext) {
+      fetchDueHistory(historyPagination.currentPage + 1, true);
+    }
+  };
+
   // Initial load
   useEffect(() => {
     if (isMounted) {
@@ -191,6 +264,14 @@ export default function DueBookPage() {
       fetchDueCustomers();
     }
   }, [isMounted, fetchUserProfile, fetchDueCustomers]);
+
+  // Fetch history when tab changes
+  useEffect(() => {
+    if (isMounted && activeTab === 'history') {
+      console.log('Tab switched to history, fetching data...');
+      fetchDueHistory();
+    }
+  }, [isMounted, activeTab]); // Only depend on activeTab, not fetchDueHistory
 
   // Apply filters whenever data or filter criteria change (with small debounce for smoother UX)
   useEffect(() => {
@@ -450,44 +531,59 @@ export default function DueBookPage() {
         <p className="text-slate-400 mt-1">Manage customer due payments</p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="flex flex-wrap gap-3 mb-6 max-w-4xl">
-        {/* Customers with Due */}
-        <div className="bg-gradient-to-br from-blue-500/10 to-cyan-600/10 border border-blue-500/30 rounded-lg p-3 min-w-[200px]">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-300/80 text-sm">Customers with Due</p>
-              <p className="text-xl font-bold text-white mt-1">
-                {dueCustomers.length}
-              </p>
-            </div>
-            <User className="h-7 w-7 text-blue-400" />
-          </div>
-        </div>
-
-        {/* Total Due Amount */}
-        <div className="bg-gradient-to-br from-red-500/10 to-pink-600/10 border border-red-500/30 rounded-lg p-3 min-w-[200px]">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-red-300/80 text-sm">Total Due Amount</p>
-              <p className="text-xl font-bold text-red-400 mt-1">
-                {formatCurrency(getTotalDue())}
-              </p>
-            </div>
-            <DollarSign className="h-7 w-7 text-red-400" />
-          </div>
+      {/* Tabs */}
+      <div className="mb-6">
+        <div className="border-b border-slate-700">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('customers')}
+              className={`
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                ${activeTab === 'customers'
+                  ? 'border-cyan-500 text-cyan-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300'
+                }
+              `}
+            >
+              <div className="flex items-center space-x-2">
+                <User className="w-4 h-4" />
+                <span>Due Customers</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                ${activeTab === 'history'
+                  ? 'border-cyan-500 text-cyan-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300'
+                }
+              `}
+            >
+              <div className="flex items-center space-x-2">
+                <FileText className="w-4 h-4" />
+                <span>Due & Payment History</span>
+              </div>
+            </button>
+          </nav>
         </div>
       </div>
 
-      {/* Due Customers List */}
-      <div className="max-w-7xl">
-        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
-          <div className="p-4 border-b border-slate-700/50">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-slate-100">
-                Due Customers List
-              </h3>
-            </div>
+      {/* Due Customers Tab */}
+      {activeTab === 'customers' && (
+        <div className="max-w-7xl">
+          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-hidden">
+            <div className="p-6 border-b border-slate-700/50">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-slate-100 mb-1">
+                    Due Customers
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    {filteredCustomers.length} customers with outstanding dues
+                  </p>
+                </div>
+              </div>
 
             <div className="flex items-center justify-between">
               <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-3">
@@ -710,6 +806,237 @@ export default function DueBookPage() {
           )}
         </div>
       </div>
+      )}
+
+      {/* Due & Payment History Tab */}
+      {activeTab === 'history' && (
+        <div className="max-w-7xl space-y-6">
+          {/* Current Balance Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-slate-800/50 border border-red-500/30 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-red-400 text-xs font-medium uppercase tracking-wide">Outstanding Due</p>
+                  <p className="text-2xl font-bold text-slate-100 mt-2">
+                    {formatCurrency(
+                      dueHistory
+                        .filter((p: any) => p.payment_type === 'due' && p.status !== 'paid')
+                        .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0)
+                    )}
+                  </p>
+                </div>
+                <div className="p-3 bg-red-500/10 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-red-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 border border-green-500/30 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-400 text-xs font-medium uppercase tracking-wide">Total Paid</p>
+                  <p className="text-2xl font-bold text-slate-100 mt-2">
+                    {formatCurrency(
+                      dueHistory
+                        .filter((p: any) => p.status === 'paid')
+                        .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0)
+                    )}
+                  </p>
+                </div>
+                <div className="p-3 bg-green-500/10 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-green-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 border border-cyan-500/30 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-cyan-400 text-xs font-medium uppercase tracking-wide">Total Records</p>
+                  <p className="text-2xl font-bold text-slate-100 mt-2">
+                    {dueHistory.length}
+                  </p>
+                </div>
+                <div className="p-3 bg-cyan-500/10 rounded-lg">
+                  <FileText className="h-6 w-6 text-cyan-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-hidden">
+            <div className="p-6 border-b border-slate-700/50">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-100 mb-1">
+                  Payment History
+                </h3>
+                <p className="text-sm text-slate-400">
+                  Complete history of all due payments and transactions
+                </p>
+              </div>
+            </div>
+
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-slate-400">Loading payment history...</p>
+                </div>
+              </div>
+            ) : historyError ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg mb-4 inline-block">
+                    <FileText className="h-12 w-12 text-red-400 mx-auto mb-3" />
+                    <h3 className="text-base font-medium text-red-400 mb-2">
+                      Failed to Load History
+                    </h3>
+                    <p className="text-sm text-slate-400 mb-4 max-w-md">
+                      {historyError}
+                    </p>
+                    <button
+                      onClick={() => fetchDueHistory(1, false)}
+                      className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-300 rounded-lg transition-colors text-sm font-medium"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : dueHistory && dueHistory.length > 0 ? (
+              <>
+                {/* Table Header */}
+                <div className="px-6 py-3 bg-slate-800/50 border-b border-slate-700/50">
+                  <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                    <div className="col-span-2">Date</div>
+                    <div className="col-span-2">Customer</div>
+                    <div className="col-span-2">Order ID</div>
+                    <div className="col-span-1">Type</div>
+                    <div className="col-span-2">Amount</div>
+                    <div className="col-span-2">Status</div>
+                    <div className="col-span-1">Actions</div>
+                  </div>
+                </div>
+
+                {/* Table Body */}
+                <div className="divide-y divide-slate-700/30">
+                  {dueHistory.map((payment: any) => (
+                    <div
+                      key={payment.id}
+                      className="px-6 py-4 hover:bg-slate-800/30 transition-colors"
+                    >
+                      <div className="grid grid-cols-12 gap-4 items-center">
+                        <div className="col-span-2">
+                          <p className="text-sm text-slate-300">
+                            {payment.due_date ? formatDate(payment.due_date) : formatDate(payment.created_at)}
+                          </p>
+                        </div>
+                        <div className="col-span-2">
+                          <Link
+                            href={`/dashboard/customers/${payment.customer}`}
+                            className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                          >
+                            {payment.customer_name || `Customer #${payment.customer}`}
+                          </Link>
+                        </div>
+                        <div className="col-span-2">
+                          {payment.order ? (
+                            <Link
+                              href={`/dashboard/orders/${payment.order}`}
+                              className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                            >
+                              #{payment.order}
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-slate-500">-</span>
+                          )}
+                        </div>
+                        <div className="col-span-1">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            payment.payment_type === 'due' 
+                              ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                              : 'bg-green-500/20 text-green-400 border border-green-500/30'
+                          }`}>
+                            {payment.payment_type}
+                          </span>
+                        </div>
+                        <div className="col-span-2">
+                          <p className={`text-sm font-semibold ${
+                            payment.payment_type === 'due' ? 'text-red-300' : 'text-green-300'
+                          }`}>
+                            {formatCurrency(Math.abs(payment.amount))}
+                          </p>
+                        </div>
+                        <div className="col-span-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            payment.status === 'paid' 
+                              ? 'bg-green-500/20 text-green-400'
+                              : payment.status === 'partially_paid'
+                              ? 'bg-yellow-500/20 text-yellow-400'
+                              : payment.status === 'overdue'
+                              ? 'bg-red-500/20 text-red-400'
+                              : 'bg-blue-500/20 text-blue-400'
+                          }`}>
+                            {payment.status}
+                          </span>
+                        </div>
+                        <div className="col-span-1">
+                          <Link
+                            href={`/dashboard/customers/${payment.customer}`}
+                            className="flex items-center text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                        </div>
+                      </div>
+                      {payment.notes && (
+                        <div className="mt-2 text-xs text-slate-500">
+                          Note: {payment.notes}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Load More Button */}
+                {historyPagination.hasNext && (
+                  <div className="p-4 border-t border-slate-700/50 bg-slate-800/20">
+                    <button
+                      onClick={loadMoreHistory}
+                      disabled={historyPagination.isLoadingMore}
+                      className="w-full px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-slate-100 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-slate-600/50"
+                    >
+                      {historyPagination.isLoadingMore ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+                          <span>Loading More...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                          </svg>
+                          <span>Load More History</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                <h3 className="text-base font-medium text-slate-400 mb-2">
+                  No Payment History Found
+                </h3>
+                <p className="text-sm text-slate-500">
+                  Payment history will appear here once transactions are recorded.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* SMS Composer Modal */}
       {showSmsComposer && smsCustomer && (
