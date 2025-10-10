@@ -2,10 +2,11 @@
 
 import { useCurrency, useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import employeeAPI from "@/lib/employeeAPI";
-import { CreateEmployeeData, Employee } from "@/types/employee";
+import { ApiService } from "@/lib/api";
+import { CreateEmployeeData, Employee, Incentive, IncentiveWithdrawal } from "@/types/employee";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Download, Plus, X } from "lucide-react";
+import { Download, Plus, X, TrendingDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -53,6 +54,21 @@ export default function EmployeesPage() {
     hasNextPage: false,
     isLoadingMore: false,
   });
+
+  // Incentives state
+  const [incentives, setIncentives] = useState<Incentive[]>([]);
+  const [isLoadingIncentives, setIsLoadingIncentives] = useState(true);
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'employees' | 'incentives'>('employees');
+  
+  // Withdrawal state
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [withdrawalReason, setWithdrawalReason] = useState('');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawalHistory, setWithdrawalHistory] = useState<IncentiveWithdrawal[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Ensure component is mounted before rendering dates
   useEffect(() => {
@@ -151,6 +167,35 @@ export default function EmployeesPage() {
     fetchEmployees();
   }, []);
 
+  // Fetch incentives from backend
+  const fetchIncentives = async () => {
+    try {
+      setIsLoadingIncentives(true);
+      console.log("Fetching incentives data...");
+      const data = await ApiService.getIncentives();
+      console.log("Incentives fetched successfully:", data);
+      
+      // Handle different response formats
+      if (Array.isArray(data)) {
+        setIncentives(data);
+      } else if (data && data.results && Array.isArray(data.results)) {
+        setIncentives(data.results);
+      } else {
+        console.error("Unexpected incentives response format:", data);
+        setIncentives([]);
+      }
+    } catch (err) {
+      console.error("Error fetching incentives:", err);
+      setIncentives([]);
+    } finally {
+      setIsLoadingIncentives(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchIncentives();
+  }, []);
+
   const loadMoreEmployees = async () => {
     if (!employeesPagination.next || employeesPagination.isLoadingMore) {
       return;
@@ -198,9 +243,11 @@ export default function EmployeesPage() {
   const activeEmployees = safeEmployees.filter(
     (e) => e.status === "active"
   ).length;
-  const averageSalary =
-    safeEmployees.reduce((sum, emp) => sum + emp.salary, 0) /
-      safeEmployees.length || 0;
+  const totalSalary = safeEmployees.reduce((sum, emp) => sum + emp.salary, 0);
+  
+  // Calculate total incentives
+  const safeIncentives = Array.isArray(incentives) ? incentives : [];
+  const totalIncentives = safeIncentives.reduce((sum, incentive) => sum + incentive.amount, 0);
 
   // Get unique departments for filter
   const departments = Array.from(
@@ -365,6 +412,94 @@ export default function EmployeesPage() {
     setShowCreateModal(false);
   };
 
+  // Handle incentive withdrawal
+  const handleWithdrawTotal = () => {
+    setWithdrawalAmount('');
+    setWithdrawalReason('');
+    setShowWithdrawModal(true);
+  };
+
+  const processWithdrawal = async () => {
+    const amount = parseFloat(withdrawalAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid withdrawal amount greater than 0");
+      return;
+    }
+
+    const totalAvailable = incentives
+      .filter(inc => inc.status === 'paid' && inc.amount > 0)
+      .reduce((sum, inc) => sum + inc.amount, 0);
+
+    if (amount > totalAvailable) {
+      alert("Withdrawal amount cannot exceed the total available balance");
+      return;
+    }
+
+    try {
+      setIsWithdrawing(true);
+
+      // Get the logged-in user (assuming we're using the current user's ID)
+      // For now, we'll use the first employee's ID as placeholder
+      // In a real app, you'd get this from auth context
+      const employeeId = employees.length > 0 ? employees[0].id : null;
+      
+      if (!employeeId) {
+        alert("No employee found for withdrawal");
+        return;
+      }
+
+      await ApiService.withdrawFromEmployee(employeeId, {
+        amount: amount,
+        reason: withdrawalReason || `Incentive withdrawal of ${formatCurrency(amount)}`
+      });
+
+      // Refresh incentives and withdrawal history
+      await fetchIncentives();
+      await fetchWithdrawalHistory();
+
+      // Close modal and reset state
+      setShowWithdrawModal(false);
+      setWithdrawalAmount('');
+      setWithdrawalReason('');
+
+      alert(`Successfully withdrew ${formatCurrency(amount)} from your incentives`);
+    } catch (error) {
+      console.error("Error processing withdrawal:", error);
+      alert("Failed to process withdrawal. Please try again.");
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
+  const cancelWithdrawal = () => {
+    setShowWithdrawModal(false);
+    setWithdrawalAmount('');
+    setWithdrawalReason('');
+  };
+
+  // Fetch withdrawal history
+  const fetchWithdrawalHistory = async () => {
+    if (employees.length === 0) return;
+    
+    try {
+      setIsLoadingHistory(true);
+      const employeeId = employees[0].id; // Replace with actual logged-in employee
+      const history = await ApiService.getWithdrawalHistory(employeeId);
+      setWithdrawalHistory(history.results || []);
+    } catch (error) {
+      console.error("Error fetching withdrawal history:", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  // Load withdrawal history when incentives are loaded
+  useEffect(() => {
+    if (activeTab === 'incentives' && !isLoadingIncentives && incentives.length > 0) {
+      fetchWithdrawalHistory();
+    }
+  }, [activeTab, isLoadingIncentives, incentives.length]);
+
   // Filter and sort employees - ensure employees is always an array
   const safeEmployeesForFilter = Array.isArray(employees) ? employees : [];
   const filteredEmployees = safeEmployeesForFilter
@@ -516,10 +651,6 @@ export default function EmployeesPage() {
       (sum, emp) => sum + emp.salary,
       0
     );
-    const averageSalary =
-      filteredEmployees.length > 0
-        ? Math.round(totalSalary / filteredEmployees.length)
-        : 0;
 
     // Add footer with summary and credits
     const finalY = (doc as any).lastAutoTable.finalY || 40;
@@ -534,7 +665,7 @@ export default function EmployeesPage() {
     // Add summary text in one line
     const summaryText = `Total Employees: ${
       filteredEmployees.length
-    }    Total Monthly Salary: $${totalSalary.toLocaleString()}    Average Salary: $${averageSalary.toLocaleString()}`;
+    }    Total Monthly Salary: $${totalSalary.toLocaleString()}    Total Incentives: $${totalIncentives.toLocaleString()}`;
     doc.text(summaryText, 14, summaryY);
 
     // Credits at bottom right
@@ -613,7 +744,7 @@ export default function EmployeesPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {/* Total Employees */}
           <div className="bg-gradient-to-br from-cyan-500/15 to-cyan-600/8 border border-cyan-500/25 rounded-lg p-2.5 backdrop-blur-sm">
             <div className="flex items-center space-x-2">
@@ -678,7 +809,7 @@ export default function EmployeesPage() {
             </div>
           </div>
 
-          {/* Average Salary */}
+          {/* Total Salary */}
           <div className="bg-gradient-to-br from-yellow-500/15 to-yellow-600/8 border border-yellow-500/25 rounded-lg p-2.5 backdrop-blur-sm">
             <div className="flex items-center space-x-2">
               <div className="rounded-md bg-yellow-500/20 p-1.5">
@@ -698,20 +829,79 @@ export default function EmployeesPage() {
               </div>
               <div>
                 <p className="text-sm text-yellow-300 font-medium">
-                  Avg Salary
+                  Total Salary
                 </p>
                 <p className="text-base font-bold text-yellow-400">
-                  {formatCurrency(averageSalary)}
+                  {formatCurrency(totalSalary)}
                 </p>
                 <p className="text-xs text-yellow-500 opacity-80">
-                  Per employee
+                  All employees
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Incentives */}
+          <div className="bg-gradient-to-br from-purple-500/15 to-purple-600/8 border border-purple-500/25 rounded-lg p-2.5 backdrop-blur-sm">
+            <div className="flex items-center space-x-2">
+              <div className="rounded-md bg-purple-500/20 p-1.5">
+                <svg
+                  className="h-7 w-7 text-purple-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                  />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-purple-300 font-medium">
+                  Total Incentives
+                </p>
+                <p className="text-base font-bold text-purple-400">
+                  {isLoadingIncentives ? "Loading..." : formatCurrency(totalIncentives)}
+                </p>
+                <p className="text-xs text-purple-500 opacity-80">
+                  All employee rewards
                 </p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg p-6 mb-6">
+          <div className="flex space-x-1">
+            <button
+              onClick={() => setActiveTab('employees')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeTab === 'employees'
+                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              Employees
+            </button>
+            <button
+              onClick={() => setActiveTab('incentives')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeTab === 'incentives'
+                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              Incentives
+            </button>
+          </div>
+        </div>
+
         {/* Controls and Filters */}
+        {activeTab === 'employees' && (
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg p-6 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Left side - Add Employee Button and Search */}
@@ -1193,6 +1383,164 @@ export default function EmployeesPage() {
             )}
           </div>
         </div>
+        )}
+
+        {/* Incentives Tab Content */}
+        {activeTab === 'incentives' && (
+          <div className="space-y-6">
+            {/* Total Available Balance Card */}
+            {!isLoadingIncentives && incentives.length > 0 && (() => {
+              const totalAvailableForWithdrawal = incentives
+                .filter(inc => inc.status === 'paid' && inc.amount > 0)
+                .reduce((sum, inc) => sum + inc.amount, 0);
+              
+              return (
+                <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-xl shadow-lg p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <TrendingDown className="w-6 h-6 text-purple-400" />
+                        <h3 className="text-lg font-semibold text-slate-100">
+                          Total Available for Withdrawal
+                        </h3>
+                      </div>
+                      <p className="text-slate-400 text-sm mb-4">
+                        Withdraw from all your paid incentives at once
+                      </p>
+                      <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
+                        {formatCurrency(totalAvailableForWithdrawal)}
+                      </div>
+                    </div>
+                    <div>
+                      <button
+                        onClick={handleWithdrawTotal}
+                        disabled={totalAvailableForWithdrawal <= 0}
+                        className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium rounded-lg hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <TrendingDown className="w-5 h-5" />
+                        Withdraw Amount
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Incentives List */}
+            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-slate-100 mb-2">Your Incentives</h2>
+                <p className="text-slate-400 text-sm">View all your incentive details and status</p>
+              </div>
+
+              {isLoadingIncentives ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-slate-400">Loading incentives...</p>
+                  </div>
+                </div>
+              ) : incentives.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-slate-400 mb-4">
+                    <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-slate-200 mb-2">No Incentives Found</h3>
+                  <p className="text-slate-400">There are no incentives available at the moment.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {incentives.map((incentive) => (
+                    <div key={incentive.id} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-lg font-medium text-slate-100 truncate">{incentive.title}</h3>
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              incentive.status === 'paid' 
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                : incentive.status === 'approved'
+                                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                            }`}>
+                              {incentive.status}
+                            </span>
+                          </div>
+                          <p className="text-slate-400 text-sm mb-2">{incentive.description}</p>
+                          <div className="flex flex-wrap gap-4 text-sm">
+                            <span className="text-slate-400">
+                              Type: <span className="text-slate-300 capitalize">{incentive.type}</span>
+                            </span>
+                            <span className="text-slate-400">
+                              Date: <span className="text-slate-300">{formatDate(incentive.date_awarded)}</span>
+                            </span>
+                            <span className="text-slate-400">
+                              Amount: <span className="text-purple-400 font-semibold">{formatCurrency(incentive.amount)}</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Withdrawal History */}
+            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-slate-100 mb-2">Withdrawal History</h2>
+                <p className="text-slate-400 text-sm">View your past incentive withdrawals</p>
+              </div>
+
+              {isLoadingHistory ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-slate-400">Loading withdrawal history...</p>
+                  </div>
+                </div>
+              ) : withdrawalHistory.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-slate-400 mb-2">No withdrawal history yet.</p>
+                  <p className="text-slate-500 text-sm">
+                    Withdrawals will appear here once you make them.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {withdrawalHistory.map((withdrawal) => (
+                    <div
+                      key={withdrawal.id}
+                      className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/70 transition-colors"
+                    >
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-100 mb-1">
+                            {formatDate(withdrawal.withdrawal_date)}
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            {withdrawal.reason || 'Incentive withdrawal'}
+                          </p>
+                          {withdrawal.notes && (
+                            <p className="text-xs text-slate-500 mt-1">{withdrawal.notes}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-purple-400">
+                            {formatCurrency(withdrawal.amount)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && employeeToDelete && (
@@ -1395,6 +1743,102 @@ export default function EmployeesPage() {
                     className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
                   >
                     {isCreating ? "Creating..." : "Add Employee"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Withdrawal Modal */}
+        {showWithdrawModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="min-h-full flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+                  <h3 className="text-lg font-semibold text-slate-100">
+                    Withdraw from Incentives
+                  </h3>
+                  <button
+                    onClick={cancelWithdrawal}
+                    className="text-slate-400 hover:text-slate-200 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-4">
+                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 mb-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 text-sm">Total Available Balance:</span>
+                      <span className="text-purple-400 font-semibold">
+                        {formatCurrency(
+                          incentives
+                            .filter(inc => inc.status === 'paid' && inc.amount > 0)
+                            .reduce((sum, inc) => sum + inc.amount, 0)
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="withdrawalAmount" className="block text-sm font-medium text-slate-300 mb-2">
+                      Withdrawal Amount
+                    </label>
+                    <input
+                      type="number"
+                      id="withdrawalAmount"
+                      value={withdrawalAmount}
+                      onChange={(e) => setWithdrawalAmount(e.target.value)}
+                      placeholder="Enter amount to withdraw"
+                      min="0"
+                      max={incentives
+                        .filter(inc => inc.status === 'paid' && inc.amount > 0)
+                        .reduce((sum, inc) => sum + inc.amount, 0)}
+                      step="0.01"
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 text-slate-100 placeholder-slate-400"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Maximum: {formatCurrency(
+                        incentives
+                          .filter(inc => inc.status === 'paid' && inc.amount > 0)
+                          .reduce((sum, inc) => sum + inc.amount, 0)
+                      )}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="withdrawalReason" className="block text-sm font-medium text-slate-300 mb-2">
+                      Reason (Optional)
+                    </label>
+                    <textarea
+                      id="withdrawalReason"
+                      value={withdrawalReason}
+                      onChange={(e) => setWithdrawalReason(e.target.value)}
+                      placeholder="Enter reason for withdrawal (optional)"
+                      rows={3}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 text-slate-100 placeholder-slate-400 resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex space-x-3 p-6 border-t border-slate-700/50">
+                  <button
+                    onClick={cancelWithdrawal}
+                    disabled={isWithdrawing}
+                    className="flex-1 px-4 py-2 bg-slate-800/50 border border-slate-700/50 text-slate-300 rounded-lg hover:bg-slate-700/50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={processWithdrawal}
+                    disabled={isWithdrawing || !withdrawalAmount || parseFloat(withdrawalAmount) <= 0}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
+                  >
+                    {isWithdrawing ? "Processing..." : "Withdraw"}
                   </button>
                 </div>
               </div>

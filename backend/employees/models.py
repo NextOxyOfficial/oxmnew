@@ -134,6 +134,28 @@ class Incentive(models.Model):
         return f"{self.title} - {self.amount}"
 
 
+class IncentiveWithdrawal(models.Model):
+    """Track all incentive withdrawals for an employee"""
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name='incentive_withdrawals')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[
+                                 MinValueValidator(Decimal('0.01'))])
+    withdrawal_date = models.DateTimeField(auto_now_add=True)
+    reason = models.TextField(blank=True, null=True)
+    
+    # Optional: Track which incentives were affected
+    notes = models.TextField(blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-withdrawal_date']
+
+    def __str__(self):
+        return f"{self.employee.name} - {self.amount} withdrawn on {self.withdrawal_date.strftime('%Y-%m-%d')}"
+
+
 class SalaryRecord(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),

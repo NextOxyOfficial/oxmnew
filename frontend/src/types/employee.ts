@@ -47,6 +47,18 @@ export interface Incentive {
   updated_at: string;
 }
 
+export interface IncentiveWithdrawal {
+  id: number;
+  employee: number;
+  employee_name: string;
+  amount: number;
+  withdrawal_date: string;
+  reason?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SalaryRecord {
   id: number;
   employee: number;

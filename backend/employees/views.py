@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db.models import Avg
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -16,6 +17,7 @@ from .models import (
     Document,
     Employee,
     Incentive,
+    IncentiveWithdrawal,
     PaymentInformation,
     SalaryRecord,
     Task,
@@ -26,6 +28,7 @@ from .serializers import (
     EmployeeListSerializer,
     EmployeeSerializer,
     IncentiveSerializer,
+    IncentiveWithdrawalSerializer,
     PaymentInformationSerializer,
     SalaryRecordSerializer,
     TaskSerializer,
@@ -277,6 +280,117 @@ class IncentiveViewSet(viewsets.ModelViewSet):
         incentive.status = "paid"
         incentive.save()
         return Response({"message": "Incentive marked as paid"})
+
+    @action(detail=False, methods=["post"], url_path='withdraw-from-employee/(?P<employee_id>[^/.]+)')
+    def withdraw_from_employee(self, request, employee_id=None):
+        """Withdraw amount from employee's total available incentives"""
+        try:
+            employee = Employee.objects.get(id=employee_id)
+        except Employee.DoesNotExist:
+            return Response(
+                {"error": "Employee not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get withdrawal amount
+        withdrawal_amount = request.data.get("amount")
+        if not withdrawal_amount:
+            return Response(
+                {"error": "Withdrawal amount is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            withdrawal_amount = Decimal(str(withdrawal_amount))
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "Invalid withdrawal amount"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate withdrawal amount
+        if withdrawal_amount <= 0:
+            return Response(
+                {"error": "Withdrawal amount must be greater than 0"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Calculate total available incentives (only from paid incentives)
+        paid_incentives = Incentive.objects.filter(
+            employee=employee,
+            status='paid',
+            amount__gt=0
+        ).order_by('date_awarded')
+        
+        total_available = sum(inc.amount for inc in paid_incentives)
+        
+        if withdrawal_amount > total_available:
+            return Response(
+                {
+                    "error": f"Withdrawal amount (${withdrawal_amount}) exceeds total available incentives (${total_available})",
+                    "total_available": float(total_available)
+                }, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Deduct from incentives (oldest first)
+        remaining_to_withdraw = withdrawal_amount
+        affected_incentives = []
+        
+        for incentive in paid_incentives:
+            if remaining_to_withdraw <= 0:
+                break
+            
+            if incentive.amount >= remaining_to_withdraw:
+                # This incentive can cover the remaining amount
+                incentive.amount -= remaining_to_withdraw
+                affected_incentives.append(f"{incentive.title}: ${remaining_to_withdraw}")
+                remaining_to_withdraw = 0
+            else:
+                # Take all from this incentive and continue
+                affected_incentives.append(f"{incentive.title}: ${incentive.amount}")
+                remaining_to_withdraw -= incentive.amount
+                incentive.amount = 0
+            
+            incentive.save()
+        
+        # Create withdrawal record
+        withdrawal_reason = request.data.get("reason", "Incentive withdrawal")
+        withdrawal_notes = ', '.join(affected_incentives)
+        
+        withdrawal_record = IncentiveWithdrawal.objects.create(
+            employee=employee,
+            amount=withdrawal_amount,
+            reason=withdrawal_reason,
+            notes=withdrawal_notes
+        )
+        
+        # Calculate new total available
+        new_total_available = sum(inc.amount for inc in Incentive.objects.filter(
+            employee=employee,
+            status='paid',
+            amount__gt=0
+        ))
+        
+        return Response({
+            "message": f"Successfully withdrew ${withdrawal_amount}",
+            "withdrawn_amount": float(withdrawal_amount),
+            "previous_total": float(total_available),
+            "remaining_total": float(new_total_available),
+            "withdrawal_id": withdrawal_record.id,
+            "affected_incentives": affected_incentives
+        })
+
+
+class IncentiveWithdrawalViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for viewing incentive withdrawal history"""
+    queryset = IncentiveWithdrawal.objects.all()
+    serializer_class = IncentiveWithdrawalSerializer
+    permission_classes = [AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ["employee"]
+    ordering_fields = ["withdrawal_date", "amount"]
+    ordering = ["-withdrawal_date"]
 
 
 class SalaryRecordViewSet(viewsets.ModelViewSet):

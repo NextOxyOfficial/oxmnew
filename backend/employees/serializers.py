@@ -4,6 +4,7 @@ from .models import (
     Document,
     Employee,
     Incentive,
+    IncentiveWithdrawal,
     PaymentInformation,
     SalaryRecord,
     Task,
@@ -21,6 +22,15 @@ class IncentiveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Incentive
         fields = "__all__"
+
+
+class IncentiveWithdrawalSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.name', read_only=True)
+    
+    class Meta:
+        model = IncentiveWithdrawal
+        fields = "__all__"
+        extra_kwargs = {"employee": {"read_only": True}}
 
 
 class SalaryRecordSerializer(serializers.ModelSerializer):

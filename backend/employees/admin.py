@@ -4,6 +4,7 @@ from .models import (
     Document,
     Employee,
     Incentive,
+    IncentiveWithdrawal,
     PaymentInformation,
     SalaryRecord,
     Task,
@@ -90,6 +91,14 @@ class TaskAdmin(admin.ModelAdmin):
     list_filter = ["priority", "status", "assigned_date", "due_date"]
     search_fields = ["title", "employee__name", "assigned_by", "project"]
     readonly_fields = ["assigned_date", "completed_date", "created_at", "updated_at"]
+
+
+@admin.register(IncentiveWithdrawal)
+class IncentiveWithdrawalAdmin(admin.ModelAdmin):
+    list_display = ["employee", "amount", "withdrawal_date", "reason"]
+    list_filter = ["withdrawal_date"]
+    search_fields = ["employee__name", "reason"]
+    readonly_fields = ["withdrawal_date", "created_at", "updated_at"]
 
 
 @admin.register(Document)

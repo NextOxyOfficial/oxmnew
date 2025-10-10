@@ -671,6 +671,10 @@ export class ApiService {
   }
 
   // Incentive methods
+  static async getIncentives() {
+    return this.get("/incentives/");
+  }
+
   static async createIncentive(incentiveData: {
     employee: number;
     title: string;
@@ -680,6 +684,20 @@ export class ApiService {
     status?: "pending" | "approved" | "paid";
   }) {
     return this.post("/incentives/", incentiveData);
+  }
+
+  static async withdrawFromEmployee(employeeId: number, withdrawalData: {
+    amount: number;
+    reason?: string;
+  }) {
+    return this.post(`/incentives/withdraw-from-employee/${employeeId}/`, withdrawalData);
+  }
+
+  static async getWithdrawalHistory(employeeId?: number) {
+    const url = employeeId 
+      ? `/incentive-withdrawals/?employee=${employeeId}`
+      : `/incentive-withdrawals/`;
+    return this.get(url);
   }
 
   // Banking methods
