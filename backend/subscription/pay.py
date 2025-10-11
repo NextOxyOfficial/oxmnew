@@ -5,6 +5,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from shurjopay_plugin import *
 from django.conf import settings
+import os
+
+# Use absolute path for log directory to avoid permission issues
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SHURJOPAY_LOG = os.path.join(BASE_DIR, "logs", "shurjopay_live.log")
 
 engine = ShurjopayPlugin(
     ShurjoPayConfigModel(
@@ -14,7 +19,7 @@ engine = ShurjopayPlugin(
         SP_RETURN=settings.SP_RETURN,
         SP_CANCEL=settings.SP_CANCEL,
         SP_PREFIX=settings.SP_PREFIX,
-        SP_LOGDIR="./shurjopay_live.log",
+        SP_LOGDIR=SHURJOPAY_LOG,
     )
 )
 
