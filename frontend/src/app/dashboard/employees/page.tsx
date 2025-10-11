@@ -157,9 +157,26 @@ export default function EmployeesPage() {
         }
 
         setEmployees(employeesData);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching employees:", err);
-        setError("Failed to load employees. Please try again.");
+        console.error("Error details:", err.message, err.response?.data);
+        
+        // Handle 401 Unauthorized - Invalid Token
+        if (err.response?.status === 401) {
+          console.warn("⚠️ Invalid authentication token detected. Clearing token...");
+          
+          // Clear invalid token
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('auth_token');
+          }
+          
+          // Redirect to login page
+          window.location.href = '/login';
+          return; // Exit early
+        }
+        
+        const errorMessage = err.response?.data?.error || err.message || "Failed to load employees. Please try again.";
+        setError(errorMessage);
         // Set empty array on error to prevent filter issues
         setEmployees([]);
         setEmployeesPagination({

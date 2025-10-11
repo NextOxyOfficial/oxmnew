@@ -41,10 +41,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         Employee.objects.all()
     )  # Default queryset (will be filtered by get_queryset)
     permission_classes = [AllowAny]  # Allow unauthenticated access for testing
-    authentication_classes = [
-        CSRFExemptTokenAuthentication,
-        SessionAuthentication,
-    ]  # Support both session and CSRF-exempt token auth
+    authentication_classes = []  # Disable authentication for testing - allows requests without token
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -69,7 +66,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 demo_user = User.objects.get(username="testuser")
                 return Employee.objects.filter(user=demo_user)
             except User.DoesNotExist:
-                return Employee.objects.none()
+                # If testuser doesn't exist, return all employees for demo
+                return Employee.objects.all()
 
     def get_permissions(self):
         """
@@ -260,6 +258,7 @@ class IncentiveViewSet(viewsets.ModelViewSet):
     queryset = Incentive.objects.all()
     serializer_class = IncentiveSerializer
     permission_classes = [AllowAny]  # Allow unauthenticated access for testing
+    authentication_classes = []  # Disable authentication for testing
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["employee", "type", "status"]
     ordering_fields = ["date_awarded", "amount"]
@@ -387,6 +386,7 @@ class IncentiveWithdrawalViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = IncentiveWithdrawal.objects.all()
     serializer_class = IncentiveWithdrawalSerializer
     permission_classes = [AllowAny]
+    authentication_classes = []  # Disable authentication for testing
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["employee"]
     ordering_fields = ["withdrawal_date", "amount"]
