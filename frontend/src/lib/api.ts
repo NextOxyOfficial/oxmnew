@@ -1796,29 +1796,6 @@ export class ApiService {
     return this.get("/sales/stats/");
   }
 
-  static async getProductSalesSummary(params?: {
-    page?: number;
-    page_size?: number;
-    search?: string;
-    ordering?: string;
-    date_filter?: string;
-    start_date?: string;
-    end_date?: string;
-  }) {
-  let endpoint = "/sales/product_summary/";
-
-    if (params && Object.keys(params).length > 0) {
-      const searchParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          searchParams.append(key, value.toString());
-        }
-      });
-      endpoint += `?${searchParams.toString()}`;
-    }
-
-    return this.get(endpoint);
-  }
 
   static async createProductSale(saleData: {
     product: number;
@@ -2343,6 +2320,30 @@ export class ApiService {
 
   static async getSalesStatistics() {
     return this.get("/sales/statistics/");
+  }
+
+  static async getProductSalesSummary(params?: {
+    search?: string;
+    ordering?: string;
+    page?: number;
+    page_size?: number;
+    date_filter?: string;
+    start_date?: string;
+    end_date?: string;
+  }) {
+    let endpoint = "/orders/product_summary/";
+
+    if (params && Object.keys(params).length > 0) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, value.toString());
+        }
+      });
+      endpoint += `?${searchParams.toString()}`;
+    }
+
+    return this.get(endpoint);
   }
 
   // Payment gateway methods

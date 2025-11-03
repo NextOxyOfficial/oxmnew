@@ -160,10 +160,11 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
     [limit]
   );
 
-  useEffect(() => {
-    // Load initial data - dashboard will override with filter if needed
-    fetchRecentSales();
-  }, [fetchRecentSales]);
+  // Removed auto-fetch on mount - let the parent component control when to fetch
+  // This prevents race conditions with filter initialization
+  // useEffect(() => {
+  //   fetchRecentSales();
+  // }, [fetchRecentSales]);
 
   return {
     recentSales,

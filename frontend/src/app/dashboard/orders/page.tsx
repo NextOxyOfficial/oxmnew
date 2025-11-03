@@ -82,7 +82,7 @@ export default function OrdersPage() {
   const [isSearchingProducts, setIsSearchingProducts] = useState(false);
   
   // Product date filtering state
-  const [productDateFilter, setProductDateFilter] = useState("today");
+  const [productDateFilter, setProductDateFilter] = useState("last_30_days");
   const [productStartDate, setProductStartDate] = useState("");
   const [productEndDate, setProductEndDate] = useState("");
   
@@ -554,62 +554,14 @@ export default function OrdersPage() {
           params.ordering = "-total_quantity";
       }
 
-      // Use getSales API with date filtering instead of getProductSalesSummary
-      const response = await ApiService.getSales(params);
+      // Use the product_summary endpoint which aggregates sold products
+      const response = await ApiService.getProductSalesSummary(params);
 
-      // Process sales data to create product summary
+      // The backend already returns aggregated data
       if (response && response.results) {
-        const productSalesMap = new Map<string, ProductSale>();
-        
-        response.results.forEach((sale: any) => {
-          const key = sale.variant_id ? `${sale.product_id}_${sale.variant_id}` : `${sale.product_id}`;
-          const productName = sale.product_name || "Unknown Product";
-          const variantDisplay = sale.variant_details || "";
-          const quantity = parseInt(sale.quantity) || 1;
-          const revenue = parseFloat(sale.unit_price) * quantity || 0;
-          const buyPrice = parseFloat(sale.buy_price) * quantity || 0;
-          const profit = revenue - buyPrice;
-          
-          if (productSalesMap.has(key)) {
-            const existing = productSalesMap.get(key)!;
-            existing.total_quantity += quantity;
-            existing.total_revenue += revenue;
-            existing.total_buy_price += buyPrice;
-            existing.total_profit += profit;
-            existing.sales_count += 1;
-            existing.avg_unit_price = existing.total_revenue / existing.total_quantity;
-            existing.avg_buy_price = existing.total_buy_price / existing.total_quantity;
-            existing.profit_margin = existing.total_revenue > 0 ? (existing.total_profit / existing.total_revenue) * 100 : 0;
-            // Update last sold date if this sale is more recent
-            if (new Date(sale.created_at) > new Date(existing.last_sold)) {
-              existing.last_sold = sale.created_at;
-              existing.last_sold_customer = sale.customer_name;
-            }
-          } else {
-            productSalesMap.set(key, {
-              id: productSalesMap.size + 1,
-              product_id: sale.product_id,
-              variant_id: sale.variant_id,
-              product_name: productName,
-              variant_display: variantDisplay,
-              total_quantity: quantity,
-              total_revenue: revenue,
-              total_profit: profit,
-              profit_margin: revenue > 0 ? (profit / revenue) * 100 : 0,
-              last_sold: sale.created_at,
-              last_sold_customer: sale.customer_name,
-              avg_unit_price: revenue / quantity,
-              avg_buy_price: buyPrice / quantity,
-              total_buy_price: buyPrice,
-              sales_count: 1,
-            });
-          }
-        });
-
-        const processedSales = Array.from(productSalesMap.values());
-        setProductSales(processedSales);
-        setProductTotalItems(processedSales.length);
-        setProductTotalPages(Math.ceil(processedSales.length / productPageSize));
+        setProductSales(response.results);
+        setProductTotalItems(response.count || response.results.length);
+        setProductTotalPages(Math.ceil((response.count || response.results.length) / productPageSize));
       } else {
         setProductSales([]);
         setProductTotalItems(0);

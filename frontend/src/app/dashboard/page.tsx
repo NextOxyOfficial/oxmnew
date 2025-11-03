@@ -112,6 +112,12 @@ export default function DashboardPage() {
     endDate: new Date(),
   });
 
+  // Apply initial filter on mount
+  useEffect(() => {
+    console.log("Dashboard: Applying initial filter:", currentFilter);
+    fetchSalesWithFilter({ dateFilter: currentFilter });
+  }, []); // Empty dependency array - only run once on mount
+
   // Filter handling functions
   const handleFilterChange = (filter: string, label: string) => {
     console.log("Dashboard: Filter changing to:", filter, label);
