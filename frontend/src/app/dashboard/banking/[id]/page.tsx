@@ -249,16 +249,30 @@ export default function BankAccountPage() {
       const accounts = await ApiService.getBankAccounts();
       console.log("All accounts:", accounts);
       
+      // Check if no accounts exist at all
+      if (!accounts || accounts.length === 0) {
+        setError("No bank accounts found. Your Main account should be created automatically. Please refresh the page or contact support.");
+        setLoading(false);
+        return;
+      }
+      
       // Store all accounts for tabs
       setAllAccounts(accounts);
       
       const account = accounts.find((acc: BankAccount) => 
-        acc.account_number === id || acc.id === id
+        acc.account_number === id || acc.id === id || acc.id.toString() === id
       );
       
       console.log("Found account:", account);
       
       if (!account) {
+        // If specific account not found but accounts exist, redirect to first account
+        if (accounts.length > 0) {
+          const firstAccount = accounts[0];
+          console.log("Redirecting to first available account:", firstAccount.id);
+          router.push(`/dashboard/banking/${firstAccount.id}`);
+          return;
+        }
         setError("Bank account not found");
         return;
       }
