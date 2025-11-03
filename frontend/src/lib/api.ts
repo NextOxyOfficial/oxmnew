@@ -775,30 +775,19 @@ export class ApiService {
       return params;
     };
 
-    // Prefer global transactions endpoint filtered by account to avoid nested pk resolution issues
-    try {
-      const params = buildParams(filters);
-      params.set("account", accountId);
-      const queryString = params.toString();
-      const endpoint = `/banking/transactions/${queryString ? `?${queryString}` : ""}`;
-      const response = await this.get(endpoint);
-      if (response && typeof response === 'object' && 'results' in response) {
-        return response as PaginatedTransactions;
-      }
-      return Array.isArray(response) ? response : [];
-    } catch (primaryErr: any) {
-      // Fallback to nested endpoint
-      console.warn("Global transactions endpoint failed, trying nested endpoint:", primaryErr?.message || primaryErr);
-      let endpoint = `/banking/accounts/${accountId}/transactions/`;
-      const queryParams = buildParams(filters);
-      const queryString = queryParams.toString();
-      endpoint = `${endpoint}${queryString ? `?${queryString}` : ""}`;
-      const response = await this.get(endpoint);
-      if (response && typeof response === 'object' && 'results' in response) {
-        return response as PaginatedTransactions;
-      }
-      return Array.isArray(response) ? response : [];
+    // Use the nested endpoint with proper date filtering support
+    let endpoint = `/banking/accounts/${accountId}/transactions/`;
+    const queryParams = buildParams(filters);
+    const queryString = queryParams.toString();
+    endpoint = `${endpoint}${queryString ? `?${queryString}` : ""}`;
+    
+    console.log("🌐 API endpoint:", endpoint);
+    
+    const response = await this.get(endpoint);
+    if (response && typeof response === 'object' && 'results' in response) {
+      return response as PaginatedTransactions;
     }
+    return Array.isArray(response) ? response : [];
   }
 
   static async createTransaction(transactionData: {

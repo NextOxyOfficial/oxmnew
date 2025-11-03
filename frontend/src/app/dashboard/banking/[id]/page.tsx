@@ -294,12 +294,21 @@ export default function BankAccountPage() {
       console.log("Current filters:", filters);
       console.log("Current page:", currentPage);
       
-      const response = await ApiService.getAccountTransactions(accountId, {
+      // Build params, excluding empty values and "all" placeholders
+      const params: Record<string, string> = {
         page: currentPage.toString(),
-        ...Object.fromEntries(
-          Object.entries(filters).map(([key, value]) => [key, value || ""])
-        ),
+      };
+      
+      // Only add non-empty filter values
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && value !== "all" && value !== "") {
+          params[key] = value;
+        }
       });
+      
+      console.log("API params being sent:", params);
+      
+      const response = await ApiService.getAccountTransactions(accountId, params);
       
       console.log("Transactions API response:", response);
       
@@ -369,66 +378,6 @@ export default function BankAccountPage() {
 
   // Debounce search term into filters.search
   useEffect(() => {
-    const t = setTimeout(() => {
-      setFilters((prev) => ({ ...prev, search: searchTerm.trim() }));
-      setCurrentPage(1);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [searchTerm]);
-
-  // Map dateRange to date_from/date_to
-  useEffect(() => {
-    const toYmd = (d: Date) => d.toISOString().slice(0, 10);
-    let date_from = "";
-    let date_to = "";
-    const now = new Date();
-    switch (dateRange) {
-      case "today":
-        date_from = toYmd(now);
-        date_to = toYmd(now);
-        break;
-      case "week": {
-        const start = new Date(now);
-        start.setDate(now.getDate() - 7);
-        date_from = toYmd(start);
-        date_to = toYmd(now);
-        break;
-      }
-      case "month": {
-        const start = new Date(now);
-        start.setMonth(now.getMonth() - 1);
-        date_from = toYmd(start);
-        date_to = toYmd(now);
-        break;
-      }
-      case "3months": {
-        const start = new Date(now);
-        start.setMonth(now.getMonth() - 3);
-        date_from = toYmd(start);
-        date_to = toYmd(now);
-        break;
-      }
-      case "custom":
-        date_from = customStartDate || "";
-        date_to = customEndDate || "";
-        break;
-      default:
-        date_from = "";
-        date_to = "";
-    }
-    setFilters((prev) => ({ ...prev, date_from, date_to }));
-    setCurrentPage(1);
-  }, [dateRange, customStartDate, customEndDate]);
-
-  // Reload transactions when filters/page/account change
-  useEffect(() => {
-    if (account?.id) {
-      loadTransactions(account.id);
-    }
-  }, [account?.id, currentPage, filters, loadTransactions]);
-
-  // Sync searchTerm into filters.search with debounce
-  useEffect(() => {
     const handler = setTimeout(() => {
       setFilters((prev) => ({ ...prev, search: searchTerm.trim() }));
       setCurrentPage(1);
@@ -438,17 +387,29 @@ export default function BankAccountPage() {
 
   // Map dateRange to date_from/date_to filter values
   useEffect(() => {
+    console.log("📅 Date range useEffect triggered. dateRange:", dateRange);
+    
     const toDateString = (d: Date) => d.toISOString().slice(0, 10);
     let date_from = "";
     let date_to = "";
 
     const now = new Date();
     const end = new Date(now);
+    
     // Ensure end date includes the day (backend may add time)
     switch (dateRange) {
       case "today": {
         date_from = toDateString(now);
         date_to = toDateString(now);
+        console.log("  ➡️ Today selected:", { date_from, date_to });
+        break;
+      }
+      case "yesterday": {
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        date_from = toDateString(yesterday);
+        date_to = toDateString(yesterday);
+        console.log("  ➡️ Yesterday selected:", { date_from, date_to });
         break;
       }
       case "week": {
@@ -456,6 +417,7 @@ export default function BankAccountPage() {
         start.setDate(now.getDate() - 7);
         date_from = toDateString(start);
         date_to = toDateString(end);
+        console.log("  ➡️ Last Week selected:", { date_from, date_to });
         break;
       }
       case "month": {
@@ -463,6 +425,7 @@ export default function BankAccountPage() {
         start.setMonth(now.getMonth() - 1);
         date_from = toDateString(start);
         date_to = toDateString(end);
+        console.log("  ➡️ Last Month selected:", { date_from, date_to });
         break;
       }
       case "3months": {
@@ -470,28 +433,44 @@ export default function BankAccountPage() {
         start.setMonth(now.getMonth() - 3);
         date_from = toDateString(start);
         date_to = toDateString(end);
+        console.log("  ➡️ Last 3 Months selected:", { date_from, date_to });
         break;
       }
       case "custom": {
         date_from = customStartDate || "";
         date_to = customEndDate || "";
+        console.log("  ➡️ Custom range selected:", { date_from, date_to });
         break;
       }
       default: {
         // all
         date_from = "";
         date_to = "";
+        console.log("  ➡️ All Time selected (no date filter)");
       }
     }
 
-    setFilters((prev) => ({ ...prev, date_from, date_to }));
+    console.log("  ✅ Setting filters with:", { date_from, date_to });
+    setFilters((prev) => {
+      const newFilters = { ...prev, date_from, date_to };
+      console.log("  ✅ New filters state:", newFilters);
+      return newFilters;
+    });
     setCurrentPage(1);
   }, [dateRange, customStartDate, customEndDate]);
 
-  // Auto-reload transactions when filters or page changes and account is set
+  // Reload transactions when filters/page/account change
   useEffect(() => {
+    console.log("🔄 Transaction reload useEffect triggered");
+    console.log("  - account?.id:", account?.id);
+    console.log("  - currentPage:", currentPage);
+    console.log("  - filters:", filters);
+    
     if (account?.id) {
+      console.log("  ✅ Calling loadTransactions...");
       loadTransactions(account.id);
+    } else {
+      console.log("  ⚠️ No account ID, skipping load");
     }
   }, [account?.id, currentPage, filters, loadTransactions]);
 
@@ -1089,6 +1068,9 @@ export default function BankAccountPage() {
                         </option>
                         <option value="today" className="bg-slate-800">
                           Today
+                        </option>
+                        <option value="yesterday" className="bg-slate-800">
+                          Yesterday
                         </option>
                         <option value="week" className="bg-slate-800">
                           Last Week
