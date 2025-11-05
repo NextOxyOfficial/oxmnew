@@ -4,6 +4,8 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import ClientOnly from "@/components/ClientOnly";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import "@/lib/chunkErrorHandler";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,17 +34,19 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <ClientOnly
-          fallback={
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            </div>
-          }
-        >
-          <AuthProvider>
-            <CurrencyProvider>{children}</CurrencyProvider>
-          </AuthProvider>
-        </ClientOnly>
+        <ErrorBoundary>
+          <ClientOnly
+            fallback={
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            }
+          >
+            <AuthProvider>
+              <CurrencyProvider>{children}</CurrencyProvider>
+            </AuthProvider>
+          </ClientOnly>
+        </ErrorBoundary>
       </body>
     </html>
   );

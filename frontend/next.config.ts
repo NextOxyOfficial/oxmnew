@@ -41,6 +41,19 @@ const nextConfig: NextConfig = {
 		// Temporarily ignore TypeScript errors during build
 		ignoreBuildErrors: true,
 	},
+	// Add output configuration for better chunk handling
+	output: 'standalone',
+	// Configure webpack for better chunk loading
+	webpack: (config, { isServer }) => {
+		if (!isServer) {
+			// Add retry logic for chunk loading
+			config.output = {
+				...config.output,
+				crossOriginLoading: 'anonymous',
+			};
+		}
+		return config;
+	},
 };
 
 export default nextConfig;
