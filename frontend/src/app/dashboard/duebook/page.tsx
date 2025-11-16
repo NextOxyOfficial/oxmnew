@@ -748,14 +748,23 @@ export default function DueBookPage() {
                       </div>
                       <div className="col-span-3">
                         <div className="space-y-1">
-                          <div className="flex items-center space-x-1 text-xs text-slate-300">
-                            <Mail className="h-3 w-3 text-slate-400" />
-                            <span>{customer.email}</span>
-                          </div>
-                          <div className="flex items-center space-x-1 text-xs text-slate-300">
-                            <Phone className="h-3 w-3 text-slate-400" />
-                            <span>{customer.phone}</span>
-                          </div>
+                          {customer.email && (
+                            <div className="flex items-center space-x-1 text-xs text-slate-300">
+                              <Mail className="h-3 w-3 text-slate-400" />
+                              <span>{customer.email}</span>
+                            </div>
+                          )}
+                          {customer.phone && (
+                            <div className="flex items-center space-x-1 text-xs text-slate-300">
+                              <Phone className="h-3 w-3 text-slate-400" />
+                              <span>{customer.phone}</span>
+                            </div>
+                          )}
+                          {!customer.email && !customer.phone && (
+                            <div className="text-xs text-slate-500 italic">
+                              No contact info
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="col-span-2">

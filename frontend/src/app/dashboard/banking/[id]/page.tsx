@@ -278,7 +278,7 @@ export default function BankAccountPage() {
       }
       
       setAccount(account);
-      await loadTransactions(account.id);
+      // Don't load transactions here - let the useEffect handle it
     } catch (error) {
       console.error("Error loading account:", error);
       setError("Failed to load account details");
@@ -288,19 +288,19 @@ export default function BankAccountPage() {
   }, [isAuthenticated, id]);
 
   // Load transactions for the account
-  const loadTransactions = useCallback(async (accountId: string) => {
+  const loadTransactions = useCallback(async (accountId: string, currentFilters: TransactionFilters, page: number) => {
     try {
       console.log("Loading transactions for account:", accountId);
-      console.log("Current filters:", filters);
-      console.log("Current page:", currentPage);
+      console.log("Current filters:", currentFilters);
+      console.log("Current page:", page);
       
       // Build params, excluding empty values and "all" placeholders
       const params: Record<string, string> = {
-        page: currentPage.toString(),
+        page: page.toString(),
       };
       
       // Only add non-empty filter values
-      Object.entries(filters).forEach(([key, value]) => {
+      Object.entries(currentFilters).forEach(([key, value]) => {
         if (value && value !== "all" && value !== "") {
           params[key] = value;
         }
@@ -345,11 +345,16 @@ export default function BankAccountPage() {
 
       setTransactions(transactionsWithBalance);
       setTotalPages(Math.ceil(totalCount / 20));
+      setError(null); // Clear any previous errors on success
     } catch (error) {
       console.error("Error loading transactions:", error);
-      setError("Failed to load transactions");
+      // Show more specific error message
+      const errorMessage = error instanceof Error ? error.message : "Failed to load transactions";
+      console.error("Detailed error:", errorMessage);
+      setError(errorMessage);
+      // Don't clear transactions on error - keep showing previous results
     }
-  }, [currentPage, filters, account?.balance]);
+  }, [account?.balance]);
 
   // Handle switching to a different account tab
   const switchToAccount = useCallback((accountId: string, accountNumber?: string) => {
@@ -468,7 +473,7 @@ export default function BankAccountPage() {
     
     if (account?.id) {
       console.log("  ✅ Calling loadTransactions...");
-      loadTransactions(account.id);
+      loadTransactions(account.id, filters, currentPage);
     } else {
       console.log("  ⚠️ No account ID, skipping load");
     }
@@ -1002,7 +1007,7 @@ export default function BankAccountPage() {
                       <div className="relative flex-1 min-w-0">
                         <input
                           type="text"
-                          placeholder="Search transactions..."
+                          placeholder="Search by purpose or reference number..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pl-9 pr-3 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"

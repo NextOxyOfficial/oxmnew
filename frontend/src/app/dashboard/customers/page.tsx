@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { ApiService } from "@/lib/api";
@@ -35,9 +35,12 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState(""); // What user types
+  const [searchTerm, setSearchTerm] = useState(""); // Debounced search term for filtering
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortBy, setSortBy] = useState("name");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
@@ -70,6 +73,19 @@ export default function CustomersPage() {
       return "Invalid Date";
     }
   };
+
+  // Debounced search - wait 500ms after user stops typing
+  useEffect(() => {
+    setIsSearching(true);
+    const debounceTimer = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setIsSearching(false);
+    }, 500);
+
+    return () => {
+      clearTimeout(debounceTimer);
+    };
+  }, [searchInput]);
 
   // Fetch customers from API
   useEffect(() => {
@@ -105,7 +121,7 @@ export default function CustomersPage() {
     };
 
     fetchCustomers();
-  }, [searchTerm, filterStatus, sortBy]);
+  }, [filterStatus, sortBy]);
 
   const handleCreateCustomer = async (
     customerData: Omit<
@@ -451,7 +467,9 @@ export default function CustomersPage() {
               <div className="flex-1 max-w-md">
                 <div className="relative">
                   <svg
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5"
+                    className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 ${
+                      searchFocused ? "text-cyan-400" : "text-slate-400"
+                    }`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -465,12 +483,43 @@ export default function CustomersPage() {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Search customers..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm pl-10 pr-4"
+                    placeholder="Search by name, email, or phone..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setSearchFocused(false)}
+                    className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-slate-100 placeholder-slate-400 text-sm pl-10 pr-10 transition-all duration-200"
                   />
+                  {/* Loading spinner while searching */}
+                  {isSearching && searchInput && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                  {/* Clear button */}
+                  {searchInput && !isSearching && (
+                    <button
+                      onClick={() => {
+                        setSearchInput("");
+                        setSearchTerm("");
+                      }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                      title="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
+                {searchTerm && !isSearching && (
+                  <div className="mt-1 text-xs text-slate-400">
+                    Found {filteredCustomers.length} customer{filteredCustomers.length !== 1 ? 's' : ''}
+                  </div>
+                )}
+                {isSearching && searchInput && (
+                  <div className="mt-1 text-xs text-cyan-400 flex items-center gap-1">
+                    <span>Searching...</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -523,9 +572,44 @@ export default function CustomersPage() {
 
           {/* Customer List */}
           <div className="mt-6">
-            {/* Mobile Card Layout */}
-            <div className="block lg:hidden space-y-4">
-              {filteredCustomers.map((customer) => (
+            {filteredCustomers.length === 0 ? (
+              <div className="text-center py-12">
+                <svg
+                  className="mx-auto h-12 w-12 text-slate-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <h3 className="mt-4 text-lg font-medium text-slate-300">
+                  {searchTerm || filterStatus !== "all" ? "No customers found" : "No customers yet"}
+                </h3>
+                <p className="mt-2 text-sm text-slate-400">
+                  {searchTerm || filterStatus !== "all"
+                    ? "Try adjusting your search or filters"
+                    : "Get started by adding your first customer"}
+                </p>
+                {!searchTerm && filterStatus === "all" && (
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="mt-4 px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 shadow-lg cursor-pointer inline-flex items-center space-x-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Your First Customer</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Mobile Card Layout */}
+                <div className="block lg:hidden space-y-4">
+                  {filteredCustomers.map((customer) => (
                 <div
                   key={customer.id}
                   className="p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200"
@@ -536,8 +620,9 @@ export default function CustomersPage() {
                         onClick={() => handleViewCustomer(customer)}
                         className="text-left w-full group"
                       >
-                        <h4 className="text-slate-100 font-medium line-clamp-1 leading-tight group-hover:text-cyan-400 cursor-pointer transition-colors">
-                          {customer.name}
+                        <h4 className="text-slate-100 font-medium line-clamp-1 leading-tight group-hover:text-cyan-400 cursor-pointer transition-colors flex items-center gap-2">
+                          <span className="text-slate-500 text-xs font-normal">#{customer.id}</span>
+                          <span>{customer.name?.trim() || 'Unnamed Customer'}</span>
                         </h4>
                       </button>
                       <p className="text-slate-400 text-sm mt-1">
@@ -708,8 +793,9 @@ export default function CustomersPage() {
                           onClick={() => handleViewCustomer(customer)}
                           className="text-left group w-full"
                         >
-                          <div className="text-sm font-medium text-slate-100 group-hover:text-cyan-400 cursor-pointer transition-colors">
-                            {customer.name}
+                          <div className="text-sm font-medium text-slate-100 group-hover:text-cyan-400 cursor-pointer transition-colors flex items-center gap-2">
+                            <span className="text-slate-500 text-xs font-normal">#{customer.id}</span>
+                            <span>{customer.name?.trim() || 'Unnamed Customer'}</span>
                           </div>
                           <div className="text-xs text-slate-400 mt-1">
                             Customer since {formatDate(customer.created_at)}
@@ -849,31 +935,7 @@ export default function CustomersPage() {
                 </tbody>
               </table>
             </div>
-
-            {/* No customers found */}
-            {filteredCustomers.length === 0 && (
-              <div className="text-center py-12">
-                <svg
-                  className="w-12 h-12 text-gray-400 mx-auto mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-                  />
-                </svg>
-                <h3 className="text-lg font-semibold text-slate-300 mb-2">
-                  No customers found
-                </h3>
-                <p className="text-slate-400 mb-4">
-                  Try adjusting your search criteria or check back later for new
-                  customers.
-                </p>
-              </div>
+              </>
             )}
           </div>
         </div>

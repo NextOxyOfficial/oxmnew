@@ -140,19 +140,34 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         print(f"🏦 Fetching transactions for account {pk}")
         print(f"🔍 Query params: {dict(request.query_params)}")
         
+        # Use direct lookup instead of get_object() to avoid queryset issues
         try:
-            account = self.get_object()
+            # First check if account exists
+            account = BankAccount.objects.get(id=pk, is_active=True)
             print(f"✅ Found account: {account.name} (ID: {account.id})")
+            
+            # Then check if user has permission to access it
+            if not request.user.is_staff and not request.user.is_superuser:
+                if account.owner != request.user:
+                    print(f"❌ Permission denied: User {request.user.username} doesn't own account {pk}")
+                    return Response(
+                        {"error": f"You don't have permission to access this account."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            
         except BankAccount.DoesNotExist:
+            print(f"❌ Account {pk} does not exist")
             return Response(
-                {"error": f"Bank account with ID {pk} not found or you don't have permission to access it."},
+                {"error": f"Bank account with ID {pk} not found."},
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            print(f"Error retrieving account {pk}: {str(e)}")
+            print(f"❌ Error retrieving account {pk}: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return Response(
-                {"error": f"Account with ID {pk} not found or access denied."},
-                status=status.HTTP_404_NOT_FOUND
+                {"error": f"Error accessing account: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             
         transactions = account.transactions.all().order_by('-date', '-updated_at')

@@ -427,28 +427,31 @@ export default function AddOrderPage() {
         return;
       }
       
+      // Type guard: productToAdd is now guaranteed to be defined
+      const product = productToAdd;
+      
       // If product was found in search results but not in main products array,
       // add it to the main products array for future reference
       if (!productFromMain && productFromSearch) {
-        setProducts(prev => [...prev, productFromSearch]);
+        setProducts(prev => [...prev, product]);
       }
 
       // Check stock availability - skip for products that don't require stock tracking
       let availableStock = 0;
       const requestedQuantity = 1; // Default quantity when clicking on product
 
-      if (productToAdd.has_variants) {
+      if (product.has_variants) {
         // For products with variants, we'll use the first available variant
-        const firstVariant = productToAdd.variants?.[0];
+        const firstVariant = product.variants?.[0];
         if (firstVariant) {
           availableStock = firstVariant.stock || 0;
         }
       } else {
-        availableStock = productToAdd.stock || 0;
+        availableStock = product.stock || 0;
       }
 
       // Only check stock if the product requires stock tracking
-      const requiresStockTracking = !productToAdd.no_stock_required;
+      const requiresStockTracking = !product.no_stock_required;
       if (requiresStockTracking && availableStock <= 0) {
         setError("Product is out of stock");
         setProductSearch("");
@@ -459,7 +462,7 @@ export default function AddOrderPage() {
       // Check if the same product already exists in the order
       const existingItemIndex = orderForm.items.findIndex(
         (item) => item.product === parseInt(productId) && 
-        (!productToAdd.has_variants || item.variant === productToAdd.variants?.[0]?.id)
+        (!product.has_variants || item.variant === product.variants?.[0]?.id)
       );
 
       if (existingItemIndex >= 0) {
@@ -500,13 +503,13 @@ export default function AddOrderPage() {
         let buyPrice = 0;
         let selectedVariant = null;
 
-        if (productToAdd.has_variants && productToAdd.variants?.[0]) {
-          selectedVariant = productToAdd.variants[0];
+        if (product.has_variants && product.variants?.[0]) {
+          selectedVariant = product.variants[0];
           unitPrice = selectedVariant.sell_price || 0;
           buyPrice = selectedVariant.buy_price || 0;
         } else {
-          unitPrice = productToAdd.sell_price || 0;
-          buyPrice = productToAdd.buy_price || 0;
+          unitPrice = product.sell_price || 0;
+          buyPrice = product.buy_price || 0;
         }
 
         const item: OrderItem = {
@@ -517,7 +520,7 @@ export default function AddOrderPage() {
           unit_price: unitPrice,
           buy_price: buyPrice,
           total: requestedQuantity * unitPrice,
-          product_name: productToAdd.name,
+          product_name: product.name,
           variant_details: selectedVariant
             ? `${selectedVariant.color} - ${selectedVariant.size}${
                 selectedVariant.custom_variant
@@ -1362,9 +1365,10 @@ export default function AddOrderPage() {
                                         {customer.email || "No email"} •{" "}
                                         {customer.phone || "No phone"}
                                       </div>
-                                      {customer.previous_due &&
+                                      {customer.previous_due !== undefined &&
+                                        customer.previous_due !== null &&
                                         customer.previous_due > 0 && (
-                                          <div className="text-red-400 text-xs">
+                                          <div className="text-red-400 text-xs mt-1">
                                             Previous Due:{" "}
                                             {formatCurrency(
                                               customer.previous_due
@@ -2275,7 +2279,7 @@ export default function AddOrderPage() {
                                   setIsEmployeeDropdownOpen(true);
                                 }}
                                 onFocus={() => setIsEmployeeDropdownOpen(true)}
-                                className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 text-sm transition-all duration-200"
+                                className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text"
                               />
                               {/* Clear button */}
                               {employeeSearch && (
