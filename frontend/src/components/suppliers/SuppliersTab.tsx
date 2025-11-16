@@ -69,6 +69,17 @@ export default function SuppliersTab({
   onLoadMore,
 }: SuppliersTabProps) {
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
+  const [searchInput, setSearchInput] = useState(""); // Immediate input
+  const [searchTerm, setSearchTerm] = useState(""); // Debounced search
+
+  // Debounce search input for smooth UX
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setSearchTerm(searchInput);
+    }, 400); // Consistent 400ms debounce for optimal UX
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchInput]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -82,30 +93,90 @@ export default function SuppliersTab({
     return () => document.removeEventListener("click", handleClickOutside);
   }, [activeDropdown]);
 
+  // Filter suppliers based on search term
+  const filteredSuppliers = suppliers.filter((supplier) => {
+    if (!searchTerm.trim()) return true;
+    const search = searchTerm.toLowerCase();
+    return (
+      supplier.name.toLowerCase().includes(search) ||
+      supplier.email?.toLowerCase().includes(search) ||
+      supplier.phone.includes(search) ||
+      supplier.address.toLowerCase().includes(search)
+    );
+  });
+
   return (
     <div className="space-y-6">
-      {/* Header with Create Button */}
-      <div className="flex justify-between items-center">
+      {/* Header with Search and Create Button */}
+      <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
         <h4 className="text-lg font-medium text-slate-100">Suppliers</h4>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center gap-2 cursor-pointer"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
+        
+        <div className="flex gap-3 items-center">
+          {/* Search Input */}
+          <div className="relative flex-1 sm:w-64">
+            <svg
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search suppliers..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
             />
-          </svg>
-          Add Supplier
-        </button>
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors cursor-pointer"
+                title="Clear search"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center gap-2 cursor-pointer whitespace-nowrap"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add Supplier
+          </button>
+        </div>
       </div>
 
       {/* Create Supplier Form Modal */}
@@ -247,8 +318,33 @@ export default function SuppliersTab({
       )}
 
       {/* Suppliers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {suppliers.map((supplier) => (
+      {filteredSuppliers.length === 0 ? (
+        <div className="text-center py-12">
+          <svg
+            className="w-16 h-16 text-slate-600 mx-auto mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <h3 className="text-lg font-medium text-slate-400 mb-2">
+            {searchTerm ? "No suppliers found" : "No suppliers yet"}
+          </h3>
+          <p className="text-slate-500">
+            {searchTerm
+              ? `No suppliers match "${searchTerm}"`
+              : "Add your first supplier to get started"}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredSuppliers.map((supplier) => (
           <div
             key={supplier.id}
             className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/50 transition-colors duration-200 relative"
@@ -480,8 +576,16 @@ export default function SuppliersTab({
               </div>
             </div>
           </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Search Results Count */}
+      {searchTerm && filteredSuppliers.length > 0 && (
+        <div className="text-sm text-slate-400">
+          Found {filteredSuppliers.length} supplier{filteredSuppliers.length !== 1 ? 's' : ''} matching "{searchTerm}"
+        </div>
+      )}
 
       {/* Load More Button */}
       {hasNextPage && (
@@ -519,7 +623,7 @@ export default function SuppliersTab({
       )}
 
       {/* Total Count */}
-      {totalCount > 0 && (
+      {totalCount > 0 && !searchTerm && (
         <div className="mt-4 text-center text-sm text-slate-400">
           Showing {suppliers.length} of {totalCount} suppliers
         </div>

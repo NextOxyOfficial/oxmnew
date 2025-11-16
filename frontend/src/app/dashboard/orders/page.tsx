@@ -232,7 +232,7 @@ export default function OrdersPage() {
           updateOrdersUrlParams({ search: searchInput, page: 1 });
         }
       }
-    }, 300); // Reduced from 500ms to 300ms for more responsive feel
+    }, 400); // Consistent 400ms debounce for optimal UX
 
     return () => clearTimeout(debounceTimer);
   }, [searchInput, activeTab]); // Removed searchTerm from dependency to avoid loops
@@ -247,7 +247,7 @@ export default function OrdersPage() {
           updateProductsUrlParams({ search: productSearchInput, page: 1 });
         }
       }
-    }, 500);
+    }, 400); // Consistent 400ms debounce for optimal UX
 
     return () => clearTimeout(debounceTimer);
   }, [productSearchInput, activeTab]); // Removed productSearchTerm from dependency to avoid loops

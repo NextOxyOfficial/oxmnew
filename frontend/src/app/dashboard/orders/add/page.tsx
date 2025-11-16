@@ -113,6 +113,7 @@ export default function AddOrderPage() {
     null
   );
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerSearchInput, setCustomerSearchInput] = useState(""); // Separate state for debouncing
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [isSalesIncentiveOpen, setIsSalesIncentiveOpen] = useState(false);
@@ -218,6 +219,15 @@ export default function AddOrderPage() {
       return () => clearTimeout(timer);
     }
   }, [isProductDropdownOpen, productSearch]);
+
+  // Debounce customer search input for smoother UX
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setCustomerSearch(customerSearchInput);
+    }, 400); // Consistent 400ms debounce for optimal UX
+
+    return () => clearTimeout(debounceTimer);
+  }, [customerSearchInput]);
 
   const fetchProducts = async () => {
     try {
@@ -333,7 +343,7 @@ export default function AddOrderPage() {
         
         // Execute search with abort signal
         searchProducts(query, controller.signal);
-      }, 500); // Increased delay to 500ms for better debouncing
+      }, 400); // Consistent 400ms debounce for optimal UX
 
       setSearchTimeout(timeout);
     },
@@ -1262,9 +1272,9 @@ export default function AddOrderPage() {
                           <input
                             type="text"
                             placeholder="Search and select customer (minimum 2 characters)..."
-                            value={customerSearch}
+                            value={customerSearchInput}
                             onChange={(e) => {
-                              setCustomerSearch(e.target.value);
+                              setCustomerSearchInput(e.target.value);
                               // Only open dropdown if user has typed at least 2 characters
                               if (e.target.value.trim().length >= 2) {
                                 setIsCustomerDropdownOpen(true);
@@ -1274,7 +1284,7 @@ export default function AddOrderPage() {
                             }}
                             onFocus={() => {
                               // Only open dropdown on focus if user has already typed at least 2 characters
-                              if (customerSearch.trim().length >= 2) {
+                              if (customerSearchInput.trim().length >= 2) {
                                 setIsCustomerDropdownOpen(true);
                               }
                             }}
@@ -1286,11 +1296,12 @@ export default function AddOrderPage() {
                             }`}
                           />
                           {/* Clear button */}
-                          {customerSearch && (
+                          {customerSearchInput && (
                             <button
                               type="button"
                               onClick={() => {
                                 setCustomerSearch("");
+                                setCustomerSearchInput("");
                                 setSelectedCustomerId(null);
                                 setIsCustomerDropdownOpen(false);
                                 setOrderForm((prev) => ({

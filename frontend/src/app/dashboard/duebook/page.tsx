@@ -273,7 +273,7 @@ export default function DueBookPage() {
     }
   }, [isMounted, activeTab]); // Only depend on activeTab, not fetchDueHistory
 
-  // Apply filters whenever data or filter criteria change (with small debounce for smoother UX)
+  // Apply filters whenever data or filter criteria change (with debounce for smoother UX)
   useEffect(() => {
     const filterTimer = setTimeout(() => {
       if (dueCustomers.length > 0) {
@@ -290,7 +290,7 @@ export default function DueBookPage() {
         setFilteredCustomers([]);
         setTotalDueAmount(0);
       }
-    }, 50); // Small delay to prevent rapid re-filtering
+    }, 200); // Optimized filter timing for smooth UX
 
     return () => clearTimeout(filterTimer);
   }, [dueCustomers, applyFilters]);
@@ -300,12 +300,13 @@ export default function DueBookPage() {
     if (isMounted) {
       const debounceTimer = setTimeout(() => {
         fetchDueCustomers();
-      }, 300); // Debounce search
+      }, 400); // Standardized debounce to 400ms for consistent UX
 
       return () => clearTimeout(debounceTimer);
     }
   }, [searchTerm, isMounted, fetchDueCustomers]);
 
+// ... (rest of the code remains the same)
   const formatCurrencyDynamic = useCurrencyFormatter();
 
   const formatCurrency = (amount: number) => {
