@@ -1084,15 +1084,16 @@ export default function OrdersPage() {
       }
 
       // Create Excel data directly from the API response
+      // Convert string values to numbers before using toFixed
       const excelData = salesData.map((product: ProductSale) => ({
         'Product Name': product.product_name || 'Unknown Product',
         'Variant': product.variant_display || '',
-        'Total Sold': product.total_quantity || 0,
-        'Sell Price': (product.avg_unit_price || 0).toFixed(2),
-        'Buy Price': (product.avg_buy_price || 0).toFixed(2),
-        'Total Revenue': (product.total_revenue || 0).toFixed(2),
-        'Total Profit': (product.total_profit || 0).toFixed(2),
-        'Profit Margin (%)': (product.profit_margin || 0).toFixed(2),
+        'Total Sold': Number(product.total_quantity) || 0,
+        'Sell Price': Number(product.avg_unit_price || 0).toFixed(2),
+        'Buy Price': Number(product.avg_buy_price || 0).toFixed(2),
+        'Total Revenue': Number(product.total_revenue || 0).toFixed(2),
+        'Total Profit': Number(product.total_profit || 0).toFixed(2),
+        'Profit Margin (%)': Number(product.profit_margin || 0).toFixed(2),
         'Available Stock': product.available_stock ?? product.stock_remaining ?? 'N/A',
         'Last Sold': product.last_sold ? new Date(product.last_sold).toLocaleDateString() : 'N/A',
       }));
