@@ -1046,10 +1046,10 @@ export default function OrdersPage() {
       setIsExporting(true);
       console.log("Starting export with dates:", exportStartDate, exportEndDate);
       
-      // Fetch product sales data with date filtering
+      // Use the same endpoint as the products tab (getProductSalesSummary)
       const params: any = {
-        page_size: 1000, // Get all data for export
-        ordering: "-created_at", // Use created_at for ordering
+        page_size: 10000, // Get all data for export
+        ordering: "-total_quantity",
       };
 
       if (exportStartDate) {
@@ -1062,125 +1062,39 @@ export default function OrdersPage() {
       }
 
       console.log("Export API params:", params);
-      const response = await ApiService.getProductSalesWithPagination(params);
+      // Use the product summary endpoint - same as what the products tab uses
+      const response = await ApiService.getProductSalesSummary(params);
       console.log("Export API response:", response);
       
-      let allOrders: Order[] = [];
+      let salesData: ProductSale[] = [];
       if (response && typeof response === "object" && "results" in response) {
-        allOrders = response.results || [];
+        salesData = response.results || [];
       } else if (Array.isArray(response)) {
-        allOrders = response;
+        salesData = response;
       } else {
         console.error("Unexpected response format:", response);
         throw new Error("Invalid response format from API");
       }
 
-      console.log("Processing", allOrders.length, "orders for export");
+      console.log("Processing", salesData.length, "products for export");
 
-      if (allOrders.length === 0) {
+      if (salesData.length === 0) {
         alert("No data found for the selected date range");
         return;
       }
 
-      // Process data similar to fetchProductSales
-      const productSummaryMap = new Map<string, ProductSale>();
-      
-      allOrders.forEach((order: Order) => {
-        if (order.items && order.items.length > 0) {
-          order.items.forEach((item: any) => {
-            const variantInfo = item.variant_details || '';
-            const key = `${item.product_name || 'Unknown'}-${variantInfo}`;
-            const existing = productSummaryMap.get(key);
-            
-            if (existing) {
-              existing.total_quantity += item.quantity || 0;
-              existing.total_revenue += item.total_price || 0;
-              existing.total_profit += (item.total_price || 0) - ((item.buy_price || 0) * (item.quantity || 0));
-              existing.total_buy_price += (item.buy_price || 0) * (item.quantity || 0);
-              existing.sales_count += 1;
-              if (new Date(order.sale_date) > new Date(existing.last_sold)) {
-                existing.last_sold = order.sale_date;
-              }
-            } else {
-              const totalPrice = item.total_price || 0;
-              const buyPrice = (item.buy_price || 0) * (item.quantity || 0);
-              const profit = totalPrice - buyPrice;
-              
-              productSummaryMap.set(key, {
-                id: Math.random(),
-                product_name: item.product_name || 'Unknown Product',
-                variant_display: variantInfo,
-                total_quantity: item.quantity || 0,
-                total_revenue: totalPrice,
-                total_profit: profit,
-                profit_margin: totalPrice > 0 ? (profit / totalPrice) * 100 : 0,
-                last_sold: order.sale_date,
-                avg_unit_price: item.unit_price || 0,
-                avg_buy_price: item.buy_price || 0,
-                total_buy_price: buyPrice,
-                sales_count: 1,
-                stock_remaining: undefined,
-                available_stock: undefined,
-              });
-            }
-          });
-        } else {
-          // Process legacy orders
-          const variantInfo = order.variant ? `${order.variant.color || ''} ${order.variant.size || ''} ${order.variant.custom_variant || ''}`.trim() : '';
-          const key = `${order.product_name || 'Unknown'}-${variantInfo}`;
-          const existing = productSummaryMap.get(key);
-          
-          const profit = (order.total_amount || 0) - ((order.buy_price || 0) * (order.quantity || 0));
-          
-          if (existing) {
-            existing.total_quantity += order.quantity || 0;
-            existing.total_revenue += order.total_amount || 0;
-            existing.total_profit += profit;
-            existing.total_buy_price += (order.buy_price || 0) * (order.quantity || 0);
-            existing.sales_count += 1;
-            if (new Date(order.sale_date) > new Date(existing.last_sold)) {
-              existing.last_sold = order.sale_date;
-            }
-          } else {
-            productSummaryMap.set(key, {
-              id: order.id,
-              product_name: order.product_name || 'Unknown Product',
-              variant_display: variantInfo || undefined,
-              total_quantity: order.quantity || 0,
-              total_revenue: order.total_amount || 0,
-              total_profit: profit,
-              profit_margin: (order.total_amount || 0) > 0 ? (profit / (order.total_amount || 0)) * 100 : 0,
-              last_sold: order.sale_date,
-              avg_unit_price: order.unit_price || 0,
-              avg_buy_price: order.buy_price || 0,
-              total_buy_price: (order.buy_price || 0) * (order.quantity || 0),
-              sales_count: 1,
-              stock_remaining: undefined,
-              available_stock: undefined,
-            });
-          }
-        }
-      });
-
-      // Calculate final averages
-      const salesData = Array.from(productSummaryMap.values()).map(product => ({
-        ...product,
-        avg_unit_price: product.total_quantity > 0 ? product.total_revenue / product.total_quantity : 0,
-        avg_buy_price: product.total_quantity > 0 ? product.total_buy_price / product.total_quantity : 0,
-        profit_margin: product.total_revenue > 0 ? (product.total_profit / product.total_revenue) * 100 : 0,
-      }));
-
-      // Create Excel data
-      const excelData = salesData.map(product => ({
-        'Product Name': product.product_name,
+      // Create Excel data directly from the API response
+      const excelData = salesData.map((product: ProductSale) => ({
+        'Product Name': product.product_name || 'Unknown Product',
         'Variant': product.variant_display || '',
-        'Total Sold': product.total_quantity,
-        'Sell Price': product.avg_unit_price.toFixed(2),
-        'Buy Price': product.avg_buy_price.toFixed(2),
-        'Total Revenue': product.total_revenue.toFixed(2),
-        'Total Profit': product.total_profit.toFixed(2),
-        'Profit Margin (%)': product.profit_margin.toFixed(2),
-        'Last Sold': new Date(product.last_sold).toLocaleDateString(),
+        'Total Sold': product.total_quantity || 0,
+        'Sell Price': (product.avg_unit_price || 0).toFixed(2),
+        'Buy Price': (product.avg_buy_price || 0).toFixed(2),
+        'Total Revenue': (product.total_revenue || 0).toFixed(2),
+        'Total Profit': (product.total_profit || 0).toFixed(2),
+        'Profit Margin (%)': (product.profit_margin || 0).toFixed(2),
+        'Available Stock': product.available_stock ?? product.stock_remaining ?? 'N/A',
+        'Last Sold': product.last_sold ? new Date(product.last_sold).toLocaleDateString() : 'N/A',
       }));
 
       // Convert to CSV and download
