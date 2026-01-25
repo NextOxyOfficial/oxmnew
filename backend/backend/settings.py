@@ -279,3 +279,4 @@ SP_CANCEL = "http://oxymanager.com/dashboard/subscriptions"
 # SP_RETURN = "http://localhost:3000/dashboard/verify-payment"
 # SP_CANCEL = "http://localhost:3000/dashboard/subscriptions"
 SP_PREFIX = "OXMPAY_"
+ 
