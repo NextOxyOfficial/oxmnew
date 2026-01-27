@@ -1,5 +1,6 @@
 import json
 import os
+from decimal import Decimal, InvalidOperation
 
 import requests
 from django.conf import settings
@@ -331,13 +332,23 @@ def makePayment(request):
             or "127.0.0.1"
         )
 
+        amount_str = str(amount)
+        try:
+            amount_dec = Decimal(str(amount))
+            if amount_dec == amount_dec.to_integral_value():
+                amount_str = str(int(amount_dec))
+            else:
+                amount_str = format(amount_dec.quantize(Decimal("0.01")), "f")
+        except (InvalidOperation, TypeError, ValueError):
+            amount_str = str(amount)
+
         payload = {
             "prefix": settings.SP_PREFIX,
             "token": token,
             "return_url": settings.SP_RETURN,
             "cancel_url": settings.SP_CANCEL,
             "store_id": str(store_id),
-            "amount": amount,
+            "amount": amount_str,
             "order_id": order_id,
             "currency": currency,
             "customer_name": customer_name,
