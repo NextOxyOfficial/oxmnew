@@ -1,11 +1,16 @@
-from django.shortcuts import render
+import json
+import os
+
+from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from shurjopay_plugin import *
-from django.conf import settings
-import os
+
+from .models import PaymentTransaction, SMSPackage, SubscriptionPlan, UserSMSCredit, UserSubscription
 
 # Use absolute path for log directory to avoid permission issues
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,7 +47,7 @@ def verifyPayment(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
     oid = request.query_params.get("sp_order_id")
-    
+
     try:
         payment_details = engine.verify_payment(oid)
 
@@ -53,6 +58,145 @@ def verifyPayment(request):
                 {"error": "Payment details could not be serialized."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+        shurjopay_message = payment_details_dict.get("shurjopay_message")
+        if not shurjopay_message and isinstance(payment_details_dict.get("data"), dict):
+            shurjopay_message = payment_details_dict.get("data", {}).get("shurjopay_message")
+
+        is_successful = (
+            shurjopay_message == "Success"
+            or payment_details_dict.get("payment_verification_status") is True
+            or payment_details_dict.get("bank_status") == "Completed"
+        )
+
+        gateway_customer_order_id = payment_details_dict.get("customer_order_id") or payment_details_dict.get(
+            "order_id"
+        )
+
+        amount = (
+            payment_details_dict.get("amount")
+            or payment_details_dict.get("payable_amount")
+            or payment_details_dict.get("received_amount")
+        )
+        currency = payment_details_dict.get("currency") or ""
+
+        payment_type = "unknown"
+
+        credits_added = None
+        total_credits = None
+        applied = False
+        application_error = None
+
+        with transaction.atomic():
+            txn = (
+                PaymentTransaction.objects.select_for_update()
+                .filter(user=request.user, sp_order_id=oid)
+                .first()
+            )
+            if not txn and gateway_customer_order_id:
+                txn = (
+                    PaymentTransaction.objects.select_for_update()
+                    .filter(user=request.user, customer_order_id=gateway_customer_order_id)
+                    .first()
+                )
+
+            if not txn:
+                txn = PaymentTransaction.objects.create(
+                    user=request.user,
+                    customer_order_id=gateway_customer_order_id or oid,
+                )
+
+            canonical_customer_order_id = txn.customer_order_id
+
+            payment_type = "unknown"
+            if isinstance(canonical_customer_order_id, str):
+                if canonical_customer_order_id.startswith("SUB-"):
+                    payment_type = "subscription"
+                elif canonical_customer_order_id.startswith("SMS-"):
+                    payment_type = "sms_package"
+
+            txn.sp_order_id = oid
+            txn.payment_type = payment_type
+            txn.is_successful = is_successful
+            if amount is not None:
+                try:
+                    txn.amount = amount
+                except Exception:
+                    pass
+            txn.currency = currency
+            txn.raw_response = json.dumps(payment_details_dict, default=str)
+
+            if is_successful and not txn.is_applied:
+                if payment_type == "subscription":
+                    plan_slug = None
+                    if isinstance(canonical_customer_order_id, str):
+                        parts = canonical_customer_order_id.split("-")
+                        if len(parts) >= 2:
+                            plan_slug = parts[1].lower()
+
+                    try:
+                        if plan_slug:
+                            plan = SubscriptionPlan.objects.get(name__iexact=plan_slug)
+                        else:
+                            plan = SubscriptionPlan.objects.get(name__iexact="pro")
+
+                        user_subscription, created = UserSubscription.objects.get_or_create(
+                            user=request.user,
+                            defaults={
+                                "plan": plan,
+                                "active": True,
+                            },
+                        )
+                        if not created:
+                            user_subscription.plan = plan
+                            user_subscription.active = True
+                            user_subscription.save()
+
+                        txn.is_applied = True
+                        txn.applied_at = timezone.now()
+                        applied = True
+                    except SubscriptionPlan.DoesNotExist:
+                        application_error = "Subscription plan not found"
+
+                elif payment_type == "sms_package":
+                    package_id = None
+                    if isinstance(canonical_customer_order_id, str):
+                        parts = canonical_customer_order_id.split("-")
+                        if len(parts) >= 2:
+                            try:
+                                package_id = int(parts[1])
+                            except Exception:
+                                package_id = None
+
+                    if package_id is not None:
+                        try:
+                            sms_package = SMSPackage.objects.get(id=package_id)
+                            user_sms_credit, _ = UserSMSCredit.objects.get_or_create(
+                                user=request.user,
+                                defaults={"credits": 0},
+                            )
+                            user_sms_credit.credits += sms_package.sms_count
+                            user_sms_credit.save()
+                            credits_added = sms_package.sms_count
+                            total_credits = user_sms_credit.credits
+
+                            txn.is_applied = True
+                            txn.applied_at = timezone.now()
+                            applied = True
+                        except SMSPackage.DoesNotExist:
+                            application_error = "SMS package not found"
+
+            txn.save()
+
+        payment_details_dict["customer_order_id"] = txn.customer_order_id
+        payment_details_dict["payment_type"] = payment_type
+        payment_details_dict["applied"] = applied or (txn.is_applied if txn else False)
+        if application_error:
+            payment_details_dict["application_error"] = application_error
+        if credits_added is not None:
+            payment_details_dict["credits_added"] = credits_added
+        if total_credits is not None:
+            payment_details_dict["total_credits"] = total_credits
 
         return Response(payment_details_dict, status=status.HTTP_200_OK)
     except Exception as e:
@@ -95,6 +239,25 @@ def makePayment(request):
         customer_city = request.query_params.get("customer_city")
         customer_post_code = request.query_params.get("customer_post_code")
 
+        payment_type = "unknown"
+        if isinstance(order_id, str):
+            if order_id.startswith("SUB-"):
+                payment_type = "subscription"
+            elif order_id.startswith("SMS-"):
+                payment_type = "sms_package"
+
+        PaymentTransaction.objects.get_or_create(
+            user=request.user,
+            customer_order_id=order_id,
+            defaults={
+                "payment_type": payment_type,
+                "currency": currency or "",
+                "raw_response": "",
+                "is_successful": False,
+                "is_applied": False,
+            },
+        )
+
         # Creating the payment request model
         model = PaymentRequestModel(
             amount=amount,
@@ -118,6 +281,23 @@ def makePayment(request):
                 {"error": "Payment details could not be serialized."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+        sp_order_id = None
+        for key in ["sp_order_id", "shurjopay_order_id", "order_id"]:
+            if payment_details_dict.get(key):
+                sp_order_id = payment_details_dict.get(key)
+                break
+        if not sp_order_id and isinstance(payment_details_dict.get("data"), dict):
+            for key in ["sp_order_id", "shurjopay_order_id", "order_id"]:
+                if payment_details_dict.get("data", {}).get(key):
+                    sp_order_id = payment_details_dict.get("data", {}).get(key)
+                    break
+
+        if sp_order_id:
+            PaymentTransaction.objects.filter(
+                user=request.user,
+                customer_order_id=order_id,
+            ).update(sp_order_id=sp_order_id)
 
         return Response(payment_details_dict, status=status.HTTP_200_OK)
 

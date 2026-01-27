@@ -187,141 +187,41 @@ export default function SubscriptionsPage() {
             // Use customer_order_id or fallback to orderId parameter
             const actualOrderId = response.customer_order_id || orderId;
 
-            if (actualOrderId.startsWith("SUB-")) {
-              const pendingPlan = localStorage.getItem(
-                "pending_subscription_plan"
+            const paymentType =
+              response.payment_type ||
+              (actualOrderId.startsWith("SUB-")
+                ? "subscription"
+                : actualOrderId.startsWith("SMS-")
+                ? "sms_package"
+                : "unknown");
+
+            const applied = response.applied === true;
+
+            if (paymentType === "subscription") {
+              setSuccessMessage(
+                applied
+                  ? "🎉 Your subscription is now active."
+                  : "Payment verified successfully. Subscription activation is pending."
               );
-              if (pendingPlan) {
-                try {
-                  setIsUpdatingPlan(true);
-
-                  const upgradeResponse = await ApiService.upgradeSubscription(
-                    pendingPlan
-                  );
-
-                  if (upgradeResponse && upgradeResponse.success) {
-                    localStorage.removeItem("pending_subscription_plan");
-
-                    setSuccessMessage(
-                      pendingPlan === "pro"
-                        ? "🎉 Congratulations! Your Pro subscription is now active. You now have access to all premium features!"
-                        : `Successfully upgraded to ${
-                            pendingPlan.charAt(0).toUpperCase() +
-                            pendingPlan.slice(1)
-                          } plan!`
-                    );
-                    setShowSuccessMessage(true);
-                    setCurrentPlan(pendingPlan);
-
-                    await new Promise((resolve) => setTimeout(resolve, 2000));
-                    await refreshSubscriptionData();
-                  } else {
-                    setShowError(true);
-                  }
-                } catch (upgradeError) {
-                  console.error(
-                    "Failed to upgrade subscription after payment:",
-                    upgradeError
-                  );
-                  setShowError(true);
-                } finally {
-                  setIsUpdatingPlan(false);
-                }
-              }
+              setShowSuccessMessage(true);
+            } else if (paymentType === "sms_package") {
+              const creditsAdded =
+                typeof response.credits_added === "number" ? response.credits_added : 0;
+              setSuccessMessage(
+                applied
+                  ? `✅ SMS package purchased successfully! ${creditsAdded.toLocaleString()} SMS credits have been added to your account.`
+                  : "Payment verified successfully. SMS credits will be added shortly."
+              );
+              setShowSuccessMessage(true);
+            } else {
+              setSuccessMessage("Payment verified successfully!");
+              setShowSuccessMessage(true);
             }
 
-            if (actualOrderId.startsWith("SMS-")) {
-              const pendingPackageId = localStorage.getItem(
-                "pending_sms_package"
-              );
-              console.log("SMS order processing:", {
-                actualOrderId,
-                pendingPackageId,
-                localStorageKeys: Object.keys(localStorage),
-                localStorage: {
-                  pending_sms_package: localStorage.getItem(
-                    "pending_sms_package"
-                  ),
-                  pending_subscription_plan: localStorage.getItem(
-                    "pending_subscription_plan"
-                  ),
-                },
-              });
-
-              if (pendingPackageId) {
-                try {
-                  console.log(
-                    "Processing SMS package purchase for package ID:",
-                    pendingPackageId
-                  );
-
-                  const purchaseResponse = await ApiService.purchaseSmsPackage(
-                    parseInt(pendingPackageId)
-                  );
-
-                  console.log(
-                    "SMS package purchase response:",
-                    purchaseResponse
-                  );
-
-                  if (purchaseResponse && purchaseResponse.success !== false) {
-                    localStorage.removeItem("pending_sms_package");
-
-                    // Show success message with package details
-                    const packageData = smsPackages.find(
-                      (pkg) => pkg.id === parseInt(pendingPackageId)
-                    );
-                    const creditsAdded =
-                      purchaseResponse.credits_added ||
-                      packageData?.sms_count ||
-                      packageData?.sms ||
-                      0;
-
-                    setSuccessMessage(
-                      `✅ SMS package purchased successfully! ${creditsAdded.toLocaleString()} SMS credits have been added to your account.`
-                    );
-                    setShowSuccessMessage(true);
-
-                    // Wait a moment for backend to process, then refresh user data
-                    setTimeout(async () => {
-                      try {
-                        // Trigger a refresh of user profile data in AuthContext
-                        await refreshProfile();
-                        await refreshSubscriptionData();
-
-                        console.log("User data refreshed after SMS purchase");
-                      } catch (refreshError) {
-                        console.error(
-                          "Failed to refresh user data:",
-                          refreshError
-                        );
-                        // Don't reload on error, user can manually refresh
-                      }
-                    }, 1500);
-                  } else {
-                    console.error(
-                      "SMS package purchase failed:",
-                      purchaseResponse
-                    );
-                    setShowError(true);
-                  }
-                } catch (purchaseError) {
-                  console.error(
-                    "Failed to add SMS credits after payment:",
-                    purchaseError
-                  );
-                  setShowError(true);
-                }
-              } else {
-                console.error(
-                  "No pending SMS package ID found in localStorage"
-                );
-                // Don't show error for this - might be a refresh or different scenario
-                console.log(
-                  "No pending SMS package found - this might be expected"
-                );
-              }
-            }
+            setIsUpdatingPlan(true);
+            await refreshProfile();
+            await refreshSubscriptionData();
+            setIsUpdatingPlan(false);
 
             const url = new URL(window.location.href);
             url.searchParams.delete("order_id");
@@ -333,20 +233,14 @@ export default function SubscriptionsPage() {
               isSuccessful,
             });
             setShowError(true);
-            localStorage.removeItem("pending_subscription_plan");
-            localStorage.removeItem("pending_sms_package");
           }
         } else if (response && response.error) {
           console.error("Payment verification failed:", response.error);
           setShowError(true);
-          localStorage.removeItem("pending_subscription_plan");
-          localStorage.removeItem("pending_sms_package");
         }
       } catch (error) {
         console.error("Error verifying payment:", error);
         setShowError(true);
-        localStorage.removeItem("pending_subscription_plan");
-        localStorage.removeItem("pending_sms_package");
       } finally {
         setPaymentVerificationLoader(false);
       }
@@ -354,9 +248,8 @@ export default function SubscriptionsPage() {
     [
       refreshSubscriptionData,
       refreshProfile,
-      smsPackages,
-      setCurrentPlan,
       setIsUpdatingPlan,
+      setCurrentPlan,
       setPaymentVerificationLoader,
       setShowError,
       setShowSuccessMessage,
@@ -534,8 +427,6 @@ export default function SubscriptionsPage() {
       )}`;
 
       // Store the package ID for later use after payment verification
-      localStorage.setItem("pending_sms_package", packageId.toString());
-
       // Get validated customer information from profile
       const firstName = user!.first_name!;
       const lastName = user!.last_name || "";
@@ -590,7 +481,6 @@ export default function SubscriptionsPage() {
 
       console.error("Error message:", errorMessage);
       alert(`Payment Error: ${errorMessage}`);
-      localStorage.removeItem("pending_sms_package");
     } finally {
       setIsSmsPaymentLoading(false);
     }
@@ -619,8 +509,6 @@ export default function SubscriptionsPage() {
       )}`;
 
       // Store the plan name for later use after payment verification
-      localStorage.setItem("pending_subscription_plan", planName);
-
       // Get validated customer information from profile
       const firstName = user!.first_name!;
       const lastName = user!.last_name || "";
@@ -677,7 +565,6 @@ export default function SubscriptionsPage() {
 
       // Show more specific error message
       alert(`Payment Error: ${errorMessage}`);
-      localStorage.removeItem("pending_subscription_plan");
     } finally {
       setIsSubscriptionPaymentLoading(false);
     }
@@ -766,7 +653,7 @@ export default function SubscriptionsPage() {
             } ${
               currentPlan === plan.name
                 ? currentPlan === "pro"
-                  ? "ring-2 ring-gradient-to-r from-green-400 to-green-500 bg-gradient-to-br from-green-500/10 to-green-600/10"
+                  ? "ring-2 ring-green-500 bg-gradient-to-br from-green-500/10 to-green-600/10"
                   : "ring-2 ring-green-500"
                 : ""
             }`}

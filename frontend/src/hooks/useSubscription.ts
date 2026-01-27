@@ -19,7 +19,7 @@ interface SubscriptionData {
 }
 
 export function useSubscription() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, profile } = useAuth();
   const [subscriptionStatus, setSubscriptionStatus] = useState<'free' | 'pro'>('free');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export function useSubscription() {
 
   useEffect(() => {
     fetchSubscription();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, profile]);
 
   return {
     subscriptionStatus,

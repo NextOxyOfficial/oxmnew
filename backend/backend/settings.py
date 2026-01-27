@@ -273,10 +273,10 @@ SP_USERNAME = "lyriczsoft"
 SP_PASSWORD = "lyrikskdzprvz&ud"
 SP_ENDPOINT = "https://engine.shurjopayment.com"
 # for live
-SP_RETURN = "http://oxymanager.com/dashboard/verify-payment"
-SP_CANCEL = "http://oxymanager.com/dashboard/subscriptions"
-# for development
-# SP_RETURN = "http://localhost:3000/dashboard/verify-payment"
-# SP_CANCEL = "http://localhost:3000/dashboard/subscriptions"
+if DEBUG:
+    SP_RETURN = config("SP_RETURN", default="http://localhost:3000/dashboard/verify-payment")
+    SP_CANCEL = config("SP_CANCEL", default="http://localhost:3000/dashboard/subscriptions")
+else:
+    SP_RETURN = config("SP_RETURN", default="http://oxymanager.com/dashboard/verify-payment")
+    SP_CANCEL = config("SP_CANCEL", default="http://oxymanager.com/dashboard/subscriptions")
 SP_PREFIX = "OXMPAY_"
- 

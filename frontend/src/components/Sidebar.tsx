@@ -4,7 +4,6 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
-import { ApiService } from "@/lib/api";
 import {
   Activity,
   Command,
@@ -55,7 +54,7 @@ export default function Sidebar({
   networkStatus = 78,
   smsCredits: initialSmsCredits = 1250
 }: SidebarProps) {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, profile } = useAuth();
   const { subscriptionStatus, isPro, isLoading: subscriptionLoading } = useSubscription();
   const [smsCredits, setSmsCredits] = useState<number | null>(null);
 
@@ -64,16 +63,12 @@ export default function Sidebar({
       setSmsCredits(null);
       return;
     }
-    async function fetchSmsCredits() {
-      try {
-        const data = await ApiService.get("/get-my-sms-credits/");
-        setSmsCredits(typeof data.credits === "number" ? data.credits : 0);
-      } catch {
-        setSmsCredits(0);
-      }
+    if (profile && typeof profile.sms_credits === "number") {
+      setSmsCredits(profile.sms_credits);
+    } else {
+      setSmsCredits(0);
     }
-    fetchSmsCredits();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, profile]);
 
   // Component for dynamic subscription badge
   const SubscriptionBadge = () => {
@@ -152,7 +147,7 @@ export default function Sidebar({
                     <div>
                       <div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
                       <div className="flex items-center gap-2">
-                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
+                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : isAuthenticated ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
                         <Link href="/dashboard/subscriptions">
                           <ShoppingCart className="h-4 w-4 text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors" />
                         </Link>
@@ -191,7 +186,7 @@ export default function Sidebar({
                     <div>
                       <div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
                       <div className="flex items-center gap-2">
-                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
+                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : isAuthenticated ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
                         <Link href="/dashboard/subscriptions">
                           <ShoppingCart className="h-4 w-4 text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors" />
                         </Link>

@@ -5,14 +5,6 @@ import { ApiService } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-interface PaymentData {
-  accountName?: string;
-  initialBalance?: number;
-  planId?: number;
-  packageId?: number;
-  subscriptionId?: number;
-}
-
 interface VerificationResult {
   success: boolean;
   message: string;
@@ -23,7 +15,7 @@ interface VerificationResult {
 export default function VerifyPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<VerificationResult | null>(null);
 
@@ -78,36 +70,22 @@ export default function VerifyPaymentPage() {
 
       // Determine payment type based on order ID prefix
       console.log("Determining payment type for order ID:", actualOrderId);
-      let paymentType = "";
+      const paymentType =
+        verifyResponse.payment_type ||
+        (actualOrderId.startsWith("SUB-")
+          ? "subscription"
+          : actualOrderId.startsWith("SMS-")
+          ? "sms_package"
+          : actualOrderId.startsWith("BANK-")
+          ? "banking_plan"
+          : "unknown");
+
+      const applied = verifyResponse.applied === true;
+
       let activationResult = null;
 
-      if (actualOrderId.startsWith("SUB-")) {
-        console.log("Detected subscription payment");
-        paymentType = "subscription";
-        // Handle subscription activation
-        const pendingSubscription = localStorage.getItem("pendingSubscription");
-        if (pendingSubscription) {
-          const subData = JSON.parse(pendingSubscription);
-          activationResult = await ApiService.upgradeSubscription(
-            subData.subscriptionId
-          );
-          localStorage.removeItem("pendingSubscription");
-        }
-      } else if (actualOrderId.startsWith("SMS-")) {
-        console.log("Detected SMS package payment");
-        paymentType = "sms_package";
-        // Handle SMS package activation
-        const pendingSmsPackage = localStorage.getItem("pendingSmsPackage");
-        if (pendingSmsPackage) {
-          const smsData = JSON.parse(pendingSmsPackage);
-          activationResult = await ApiService.purchaseSmsPackage(
-            smsData.packageId
-          );
-          localStorage.removeItem("pendingSmsPackage");
-        }
-      } else if (actualOrderId.startsWith("BANK-")) {
+      if (actualOrderId.startsWith("BANK-")) {
         console.log("Detected banking plan payment");
-        paymentType = "banking_plan";
         console.log(
           "Processing banking plan payment for order:",
           actualOrderId
@@ -237,43 +215,64 @@ export default function VerifyPaymentPage() {
           }
         }
       } else {
-        console.log("Unknown payment type for order ID:", actualOrderId);
-        console.log(
-          "Order ID does not match any known prefixes (SUB-, SMS-, BANK-)"
-        );
-        paymentType = "unknown";
+        console.log("Non-banking payment type:", paymentType);
       }
 
       // Set final result
       console.log("Setting final result. activationResult:", activationResult);
       console.log("Payment type:", paymentType);
 
-      if (activationResult && activationResult.success) {
-        console.log("Case 1: Activation successful");
+      if (paymentType === "banking_plan") {
+        if (activationResult && activationResult.success) {
+          console.log("Banking activation successful");
+          setResult({
+            success: true,
+            message: "Payment verified successfully! Your banking plan has been activated.",
+            orderId: actualOrderId,
+            paymentType,
+          });
+        } else if (activationResult && !activationResult.success) {
+          console.log("Banking activation failed");
+          setResult({
+            success: false,
+            message:
+              activationResult.message ||
+              "Payment verified but banking plan activation failed.",
+            orderId: actualOrderId,
+            paymentType,
+          });
+        } else {
+          setResult({
+            success: true,
+            message: "Payment verified successfully!",
+            orderId: actualOrderId,
+            paymentType,
+          });
+        }
+      } else if (paymentType === "subscription") {
+        await refreshProfile();
         setResult({
           success: true,
-          message: `Payment verified successfully! Your ${paymentType.replace(
-            "_",
-            " "
-          )} has been activated.`,
+          message: applied
+            ? "Payment verified successfully! Your subscription is now active."
+            : "Payment verified successfully. Subscription activation is pending.",
           orderId: actualOrderId,
           paymentType,
         });
-      } else if (activationResult && !activationResult.success) {
-        console.log("Case 2: Activation failed");
+      } else if (paymentType === "sms_package") {
+        await refreshProfile();
+        const creditsAdded =
+          typeof verifyResponse.credits_added === "number" ? verifyResponse.credits_added : 0;
         setResult({
-          success: false,
-          message:
-            activationResult.message ||
-            `Payment verified but ${paymentType.replace(
-              "_",
-              " "
-            )} activation failed.`,
+          success: true,
+          message: applied
+            ? `Payment verified successfully! ${creditsAdded.toLocaleString()} SMS credits have been added to your account.`
+            : "Payment verified successfully. SMS credits will be added shortly.",
           orderId: actualOrderId,
           paymentType,
         });
       } else {
-        console.log("Case 3: No activation result, showing general success");
+        await refreshProfile();
         setResult({
           success: true,
           message: "Payment verified successfully!",
@@ -291,7 +290,7 @@ export default function VerifyPaymentPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchParams]);
+  }, [refreshProfile, searchParams]);
 
   useEffect(() => {
     if (user) {
