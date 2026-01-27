@@ -421,8 +421,15 @@ export default function SubscriptionsPage() {
       console.log("User:", user);
       console.log("Profile:", profile);
 
+      const minPayableAmount = 10;
+      const qty =
+        packagePrice > 0
+          ? Math.max(1, Math.ceil(minPayableAmount / packagePrice))
+          : 1;
+      const totalAmount = Math.round(packagePrice * qty * 100) / 100;
+
       // Generate a unique order ID using timestamp
-      const uniqueOrderId = `SMS-${packageId}-${Date.now()}-${Math.floor(
+      const uniqueOrderId = `SMS-${packageId}-Q${qty}-${Date.now()}-${Math.floor(
         Math.random() * 1000
       )}`;
 
@@ -436,7 +443,7 @@ export default function SubscriptionsPage() {
       const zip = profile!.post_code!;
 
       const paymentData = {
-        amount: packagePrice,
+        amount: totalAmount,
         order_id: uniqueOrderId,
         currency: "BDT",
         customer_name: `${firstName} ${lastName}`.trim(),

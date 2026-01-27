@@ -162,6 +162,7 @@ def verifyPayment(request):
 
                 elif payment_type == "sms_package":
                     package_id = None
+                    qty = 1
                     if isinstance(canonical_customer_order_id, str):
                         parts = canonical_customer_order_id.split("-")
                         if len(parts) >= 2:
@@ -170,6 +171,15 @@ def verifyPayment(request):
                             except Exception:
                                 package_id = None
 
+                        for part in parts:
+                            if isinstance(part, str) and len(part) >= 2 and part[0].lower() == "q":
+                                try:
+                                    parsed_qty = int(part[1:])
+                                    if parsed_qty > 0:
+                                        qty = parsed_qty
+                                except Exception:
+                                    pass
+
                     if package_id is not None:
                         try:
                             sms_package = SMSPackage.objects.get(id=package_id)
@@ -177,9 +187,10 @@ def verifyPayment(request):
                                 user=request.user,
                                 defaults={"credits": 0},
                             )
-                            user_sms_credit.credits += sms_package.sms_count
+                            add_credits = sms_package.sms_count * max(qty, 1)
+                            user_sms_credit.credits += add_credits
                             user_sms_credit.save()
-                            credits_added = sms_package.sms_count
+                            credits_added = add_credits
                             total_credits = user_sms_credit.credits
 
                             txn.is_applied = True
@@ -260,170 +271,36 @@ def makePayment(request):
             },
         )
 
-        # Creating the payment request model
-        model = PaymentRequestModel(
-            amount=amount,
-            order_id=order_id,
-            currency=currency,
-            customer_name=customer_name,
-            customer_address=customer_address,
-            customer_phone=customer_phone,
-            customer_city=customer_city,
-            customer_post_code=customer_post_code,
-        )
+        payment_details_dict = None
+        plugin_error = None
+        try:
+            model = PaymentRequestModel(
+                amount=amount,
+                order_id=order_id,
+                currency=currency,
+                customer_name=customer_name,
+                customer_address=customer_address,
+                customer_phone=customer_phone,
+                customer_city=customer_city,
+                customer_post_code=customer_post_code,
+            )
+            payment_details = engine.make_payment(model)
+            if hasattr(payment_details, "__dict__"):
+                payment_details_dict = payment_details.__dict__
+            elif isinstance(payment_details, dict):
+                payment_details_dict = payment_details
+        except Exception as e:
+            plugin_error = e
+            payment_details_dict = None
 
         sp_endpoint = settings.SP_ENDPOINT.rstrip("/")
         base_api_url = sp_endpoint if sp_endpoint.endswith("/api") else f"{sp_endpoint}/api"
-        token_res = requests.post(
-            f"{base_api_url}/get_token",
-            json={
-                "username": settings.SP_USERNAME,
-                "password": settings.SP_PASSWORD,
-            },
-            timeout=30,
-        )
 
-        try:
-            token_data = token_res.json()
-        except Exception:
-            token_data = {"raw": token_res.text}
-
-        token = None
-        if isinstance(token_data, dict):
-            token = token_data.get("token")
-
-        if not token:
+        if payment_details_dict is None:
             return Response(
                 {
-                    "error": "Payment gateway token error",
-                    "gateway_status_code": token_res.status_code,
-                    "gateway_response": token_data,
-                },
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        execute_url = None
-        store_id = None
-        token_type = "Bearer"
-        if isinstance(token_data, dict):
-            execute_url = token_data.get("execute_url")
-            store_id = token_data.get("store_id")
-            token_type = token_data.get("token_type") or "Bearer"
-
-        if isinstance(token_type, str) and token_type.lower() == "bearer":
-            token_type = "Bearer"
-
-        if store_id is None:
-            return Response(
-                {
-                    "error": "Payment gateway token response missing store_id",
-                    "gateway_status_code": token_res.status_code,
-                    "gateway_response": token_data,
-                },
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        if not execute_url:
-            execute_url = f"{base_api_url}/secret-pay"
-
-        client_ip = (
-            (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",")[0].strip()
-            or request.META.get("REMOTE_ADDR")
-            or "127.0.0.1"
-        )
-
-        amount_str = str(amount)
-        try:
-            amount_dec = Decimal(str(amount))
-            if amount_dec == amount_dec.to_integral_value():
-                amount_str = str(int(amount_dec))
-            else:
-                amount_str = format(amount_dec.quantize(Decimal("0.01")), "f")
-        except (InvalidOperation, TypeError, ValueError):
-            amount_str = str(amount)
-
-        payload = {
-            "prefix": settings.SP_PREFIX,
-            "token": token,
-            "return_url": settings.SP_RETURN,
-            "cancel_url": settings.SP_CANCEL,
-            "store_id": str(store_id),
-            "amount": amount_str,
-            "order_id": order_id,
-            "currency": currency,
-            "customer_name": customer_name,
-            "customer_address": customer_address,
-            "customer_phone": customer_phone,
-            "customer_city": customer_city,
-            "customer_post_code": customer_post_code,
-            "client_ip": client_ip,
-        }
-
-        headers = {
-            "Authorization": f"{token_type} {token}",
-        }
-
-        multipart_payload = {
-            key: (None, "" if value is None else str(value)) for key, value in payload.items()
-        }
-        pay_res = requests.post(
-            execute_url,
-            files=multipart_payload,
-            headers=headers,
-            timeout=30,
-        )
-        try:
-            payment_details_dict = pay_res.json()
-        except Exception:
-            payment_details_dict = {"raw": pay_res.text}
-
-        if not isinstance(payment_details_dict, dict):
-            return Response(
-                {
-                    "error": "Payment gateway returned unexpected response",
-                    "gateway_response": payment_details_dict,
-                },
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        checkout_url = None
-        for key in ["checkout_url", "redirect_url", "redirectUrl", "payment_url"]:
-            if payment_details_dict.get(key):
-                checkout_url = payment_details_dict.get(key)
-                break
-        if not checkout_url and isinstance(payment_details_dict.get("data"), dict):
-            for key in ["checkout_url", "redirect_url", "redirectUrl", "payment_url"]:
-                if payment_details_dict.get("data", {}).get(key):
-                    checkout_url = payment_details_dict.get("data", {}).get(key)
-                    break
-
-        if not checkout_url:
-            gateway_msg = None
-            for key in ["message", "sp_message", "sp_massage", "error", "errors"]:
-                if payment_details_dict.get(key):
-                    gateway_msg = payment_details_dict.get(key)
-                    break
-            if not gateway_msg and isinstance(payment_details_dict.get("data"), dict):
-                for key in ["message", "sp_message", "sp_massage", "error", "errors"]:
-                    if payment_details_dict.get("data", {}).get(key):
-                        gateway_msg = payment_details_dict.get("data", {}).get(key)
-                        break
-
-            sp_code = payment_details_dict.get("sp_code")
-            if sp_code is None and isinstance(payment_details_dict.get("data"), dict):
-                sp_code = payment_details_dict.get("data", {}).get("sp_code")
-
-            error_msg = "Payment gateway did not return checkout_url"
-            if sp_code is not None:
-                error_msg = f"{error_msg} (sp_code={sp_code})"
-            if gateway_msg:
-                error_msg = f"{error_msg}: {gateway_msg}"
-
-            return Response(
-                {
-                    "error": error_msg,
-                    "gateway_status_code": pay_res.status_code,
-                    "gateway_response": payment_details_dict,
+                    "error": "Payment initiation failed",
+                    "exception": f"{type(plugin_error).__name__}: {str(plugin_error)}" if plugin_error else "Unknown",
                 },
                 status=status.HTTP_502_BAD_GATEWAY,
             )
@@ -455,6 +332,26 @@ def makePayment(request):
         print(f"Request params: {dict(request.query_params)}")
         
         # More specific error messages based on the error type
+        if isinstance(e, KeyError):
+            missing_key = None
+            try:
+                if e.args:
+                    missing_key = e.args[0]
+            except Exception:
+                missing_key = None
+
+            if missing_key == "checkout_url" or str(e) == "'checkout_url'":
+                msg = "Payment gateway did not return checkout_url"
+            else:
+                msg = f"Payment gateway response missing required field: {missing_key or str(e)}"
+            return Response(
+                {
+                    "error": msg,
+                    "exception": f"KeyError({missing_key or str(e)})",
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
         error_message = str(e)
         if "ShurjoPay" in error_message or "SP_" in error_message:
             error_message = "Payment gateway configuration error. Please contact support."
