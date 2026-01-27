@@ -30,6 +30,7 @@ class ProductAdmin(admin.ModelAdmin):
         "name",
         "category",
         "supplier",
+        "user",
         "has_variants",
         "total_stock",
         "profit_margin",
@@ -62,6 +63,7 @@ class ProductAdmin(admin.ModelAdmin):
                     "product_code",
                     "category",
                     "supplier",
+                    "user",
                     "location",
                     "details",
                 )
@@ -81,7 +83,7 @@ class ProductAdmin(admin.ModelAdmin):
                 "classes": ("collapse",),
             },
         ),
-        ("Meta", {"fields": ("user", "is_active"), "classes": ("collapse",)}),
+        ("Meta", {"fields": ("is_active",), "classes": ("collapse",)}),
     )
 
     inlines = [ProductVariantInline, ProductPhotoInline]
