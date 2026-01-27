@@ -1,6 +1,7 @@
 import json
 import os
 
+import requests
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -270,16 +271,150 @@ def makePayment(request):
             customer_post_code=customer_post_code,
         )
 
-        # Making the payment
-        payment_details = engine.make_payment(model)
+        sp_endpoint = settings.SP_ENDPOINT.rstrip("/")
+        base_api_url = sp_endpoint if sp_endpoint.endswith("/api") else f"{sp_endpoint}/api"
+        token_res = requests.post(
+            f"{base_api_url}/get_token",
+            json={
+                "username": settings.SP_USERNAME,
+                "password": settings.SP_PASSWORD,
+            },
+            timeout=30,
+        )
 
-        # Convert the payment details to a dictionary
-        if hasattr(payment_details, "__dict__"):
-            payment_details_dict = payment_details.__dict__
-        else:
+        try:
+            token_data = token_res.json()
+        except Exception:
+            token_data = {"raw": token_res.text}
+
+        token = None
+        if isinstance(token_data, dict):
+            token = token_data.get("token")
+
+        if not token:
             return Response(
-                {"error": "Payment details could not be serialized."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {
+                    "error": "Payment gateway token error",
+                    "gateway_status_code": token_res.status_code,
+                    "gateway_response": token_data,
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        execute_url = None
+        store_id = None
+        token_type = "Bearer"
+        if isinstance(token_data, dict):
+            execute_url = token_data.get("execute_url")
+            store_id = token_data.get("store_id")
+            token_type = token_data.get("token_type") or "Bearer"
+
+        if isinstance(token_type, str) and token_type.lower() == "bearer":
+            token_type = "Bearer"
+
+        if store_id is None:
+            return Response(
+                {
+                    "error": "Payment gateway token response missing store_id",
+                    "gateway_status_code": token_res.status_code,
+                    "gateway_response": token_data,
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if not execute_url:
+            execute_url = f"{base_api_url}/secret-pay"
+
+        client_ip = (
+            (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",")[0].strip()
+            or request.META.get("REMOTE_ADDR")
+            or "127.0.0.1"
+        )
+
+        payload = {
+            "prefix": settings.SP_PREFIX,
+            "token": token,
+            "return_url": settings.SP_RETURN,
+            "cancel_url": settings.SP_CANCEL,
+            "store_id": str(store_id),
+            "amount": amount,
+            "order_id": order_id,
+            "currency": currency,
+            "customer_name": customer_name,
+            "customer_address": customer_address,
+            "customer_phone": customer_phone,
+            "customer_city": customer_city,
+            "customer_post_code": customer_post_code,
+            "client_ip": client_ip,
+        }
+
+        headers = {
+            "Authorization": f"{token_type} {token}",
+        }
+
+        multipart_payload = {
+            key: (None, "" if value is None else str(value)) for key, value in payload.items()
+        }
+        pay_res = requests.post(
+            execute_url,
+            files=multipart_payload,
+            headers=headers,
+            timeout=30,
+        )
+        try:
+            payment_details_dict = pay_res.json()
+        except Exception:
+            payment_details_dict = {"raw": pay_res.text}
+
+        if not isinstance(payment_details_dict, dict):
+            return Response(
+                {
+                    "error": "Payment gateway returned unexpected response",
+                    "gateway_response": payment_details_dict,
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        checkout_url = None
+        for key in ["checkout_url", "redirect_url", "redirectUrl", "payment_url"]:
+            if payment_details_dict.get(key):
+                checkout_url = payment_details_dict.get(key)
+                break
+        if not checkout_url and isinstance(payment_details_dict.get("data"), dict):
+            for key in ["checkout_url", "redirect_url", "redirectUrl", "payment_url"]:
+                if payment_details_dict.get("data", {}).get(key):
+                    checkout_url = payment_details_dict.get("data", {}).get(key)
+                    break
+
+        if not checkout_url:
+            gateway_msg = None
+            for key in ["message", "sp_message", "sp_massage", "error", "errors"]:
+                if payment_details_dict.get(key):
+                    gateway_msg = payment_details_dict.get(key)
+                    break
+            if not gateway_msg and isinstance(payment_details_dict.get("data"), dict):
+                for key in ["message", "sp_message", "sp_massage", "error", "errors"]:
+                    if payment_details_dict.get("data", {}).get(key):
+                        gateway_msg = payment_details_dict.get("data", {}).get(key)
+                        break
+
+            sp_code = payment_details_dict.get("sp_code")
+            if sp_code is None and isinstance(payment_details_dict.get("data"), dict):
+                sp_code = payment_details_dict.get("data", {}).get("sp_code")
+
+            error_msg = "Payment gateway did not return checkout_url"
+            if sp_code is not None:
+                error_msg = f"{error_msg} (sp_code={sp_code})"
+            if gateway_msg:
+                error_msg = f"{error_msg}: {gateway_msg}"
+
+            return Response(
+                {
+                    "error": error_msg,
+                    "gateway_status_code": pay_res.status_code,
+                    "gateway_response": payment_details_dict,
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
             )
 
         sp_order_id = None
