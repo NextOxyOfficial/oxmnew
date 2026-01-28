@@ -14,7 +14,9 @@ def create_default_bank_account(sender, instance, created, **kwargs):
             name="Main",
             owner=instance,
             balance=0.00,
-            is_active=True
+            is_active=True,
+            activation_fee=0.00,
+            is_activated=True,
         )
 
 
@@ -29,5 +31,7 @@ def ensure_main_account_exists(sender, instance, **kwargs):
             name="Main",
             owner=instance,
             balance=0.00,
-            is_active=True
+            is_active=True,
+            activation_fee=0.00,
+            is_activated=True,
         )
