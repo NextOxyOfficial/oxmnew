@@ -143,7 +143,9 @@ interface Order {
   customer_name?: string;
   order_number: string;
   status:
+    | "draft"
     | "pending"
+    | "confirmed"
     | "processing"
     | "shipped"
     | "delivered"

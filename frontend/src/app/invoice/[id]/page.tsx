@@ -316,51 +316,45 @@ export default function InvoicePage() {
       {/* Invoice Content */}
       <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-4xl mx-auto my-6 print:my-0 shadow-xl rounded-lg print:rounded-none overflow-hidden">
         {/* Invoice Header with Logo */}
-        <div className="px-8 py-4 print:px-4 print:py-2 border-b-2 border-cyan-500 print:border-gray-400">
+        <div className="px-8 py-2 print:px-3 print:py-1 border-b-2 border-cyan-500 print:border-gray-400">
           <div className="flex justify-between items-center">
             {/* Company Logo */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               {userProfile?.store_logo ? (
-                <div className="w-32 h-20 flex items-center justify-center">
+                <div className="w-20 h-12 print:w-16 print:h-10 flex items-center justify-center">
                   <img src={userProfile.store_logo} alt="Logo" className="max-w-full max-h-full object-contain" />
                 </div>
               ) : (
-                <div className="w-24 h-24 bg-cyan-500 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-3xl">OX</span>
+                <div className="w-16 h-16 print:w-12 print:h-12 bg-cyan-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-xl print:text-lg">OX</span>
                 </div>
               )}
             </div>
 
-            {/* Invoice Number & Date */}
+            {/* Invoice Number */}
             <div className="text-right">
-              <p className="text-xl font-bold text-gray-800 mb-1">
+              <p className="text-lg print:text-base font-bold text-gray-800">
                 INVOICE <span className="text-cyan-600 print:text-gray-800">#{order.id}</span>
               </p>
-              <p className="text-sm text-gray-500">
-                {new Date(order.sale_date || new Date()).toLocaleDateString('en-US', {
-                  day: '2-digit', month: 'short', year: 'numeric'
-                })}
-              </p>
             </div>
-                    </div>
+          </div>
         </div>
 
         {/* Billing Info */}
-        <div className="px-8 py-5 print:px-4 print:py-3 bg-gray-50 print:bg-white border-b border-gray-200">
-          <div className="grid grid-cols-2 gap-8">
+        <div className="px-8 py-3 print:px-3 print:py-2 bg-gray-50 print:bg-white border-b border-gray-200">
+          <div className="grid grid-cols-2 gap-6 print:gap-4">
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">From</p>
-              <div className="text-sm text-gray-700 space-y-1">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">From</p>
+              <div className="text-sm print:text-xs text-gray-700 space-y-0.5">
                 <p className="font-semibold text-gray-900">{company.name}</p>
                 <p>{company.address}</p>
                 <p>{company.city}</p>
-                <p className="text-cyan-600 print:text-gray-800">{company.phone}</p>
-                <p className="text-cyan-600 print:text-gray-800">{company.email}</p>
+                <p className="text-cyan-600 print:text-gray-800">{company.phone}, {company.email}</p>
               </div>
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Bill To</p>
-              <div className="text-sm text-gray-700 space-y-1">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Bill To</p>
+              <div className="text-sm print:text-xs text-gray-700 space-y-0.5">
                 <p className="font-semibold text-gray-900">{order.customer_name || "Guest Customer"}</p>
                 {order.customer_address && order.customer_address !== "A Dummy Street Area, Location," && (
                   <p>{order.customer_address}</p>
@@ -375,7 +369,7 @@ export default function InvoicePage() {
           <div className="px-6 print:px-3 py-2">
             <div>
               {/* Table Header */}
-              <div className="bg-slate-700 print:bg-gray-200 text-white print:text-black">
+              <div className="bg-slate-700 print:bg-gray-200 text-white print:text-gray-700">
                 <div className="grid grid-cols-12 gap-0 text-xs font-medium">
                   <div className="col-span-1 py-2 text-center">
                     No.
@@ -400,33 +394,33 @@ export default function InvoicePage() {
                 order.items.map((item, index) => (
                   <div
                     key={item.id}
-                    className="grid grid-cols-12 gap-0 border-l border-r border-b border-gray-300 print:border-black"
+                    className="grid grid-cols-12 gap-0 border-l border-r border-b border-gray-300 print:border-gray-300"
                   >
-                    <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black flex items-center justify-center">
+                    <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-gray-600 border-r border-gray-300 print:border-gray-300 flex items-center justify-center">
                       {index + 1}
                     </div>
-                    <div className="col-span-6 px-1.5 py-1.5 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black">
+                    <div className="col-span-6 px-1.5 py-1.5 text-sm text-gray-600 print:text-gray-600 border-r border-gray-300 print:border-gray-300">
                       <div className="font-medium break-words">{item.product_name}</div>
                       {item.variant_details && (
-                        <div className="text-xs text-gray-500 print:text-gray-700 mt-1 break-words">
+                        <div className="text-xs text-gray-500 print:text-gray-500 mt-1 break-words">
                           {item.variant_details}
                         </div>
                       )}
                     </div>
-                    <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black flex items-center justify-center break-all">
+                    <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-gray-600 text-center border-r border-gray-300 print:border-gray-300 flex items-center justify-center break-all">
                       {item.quantity}
                     </div>
-                    <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black flex items-center justify-center break-all">
+                    <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-gray-600 text-center border-r border-gray-300 print:border-gray-300 flex items-center justify-center break-all">
                       {formatCurrency(item.unit_price)}
                     </div>
-                    <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-black text-right flex items-center justify-end break-all">
+                    <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-gray-600 text-right flex items-center justify-end break-all">
                       {formatCurrency(item.total_price || (item.quantity * item.unit_price))}
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="grid grid-cols-12 gap-0 border-l border-r border-b border-gray-300 print:border-black">
-                  <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black flex items-center justify-center">
+                  <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-gray-600 border-r border-gray-300 print:border-black flex items-center justify-center">
                     1
                   </div>
                   <div className="col-span-6 px-1.5 py-1.5 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black">
@@ -447,13 +441,18 @@ export default function InvoicePage() {
           </div>
 
           {/* Bottom Section */}
-          <div className="px-8 py-4 print:px-2 print:py-1">
+          <div className="px-8 py-2 print:px-2 print:py-1">
             <div className="flex justify-between">
               {/* Thank you message on the left */}
               <div className="w-1/2">
-                <div className="text-sm mt-4 print:mt-1 text-gray-600 print:text-black">
+                <div className="text-sm print:text-xs mt-2 print:mt-0.5 text-gray-600 space-y-1">
                   <p>
                     Thank you for choosing our services!
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(order.sale_date || new Date()).toLocaleDateString('en-US', {
+                      day: '2-digit', month: 'short', year: 'numeric'
+                    })}
                   </p>
                 </div>
               </div>
@@ -461,28 +460,28 @@ export default function InvoicePage() {
               {/* Totals */}
               <div className="w-1/3">
                 <div className="">
-                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-t border-b border-gray-300 print:border-black">
-                    <span className="text-sm text-gray-600 print:text-black">VAT {vatRate > 0 ? `(${vatRate}%)` : ''}</span>
-                    <span className="text-sm text-gray-600 print:text-black">
+                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-t border-b border-gray-300 print:border-gray-300">
+                    <span className="text-sm text-gray-600 print:text-gray-600">VAT {vatRate > 0 ? `(${vatRate}%)` : ''}</span>
+                    <span className="text-sm text-gray-600 print:text-gray-600">
                       {formatCurrency(vatAmount)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-black">
-                    <span className="text-sm text-gray-600 print:text-black">Discount</span>
-                    <span className="text-sm text-gray-600 print:text-black">
+                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-gray-300">
+                    <span className="text-sm text-gray-600 print:text-gray-600">Discount</span>
+                    <span className="text-sm text-gray-600 print:text-gray-600">
                       -{formatCurrency(discountAmount)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-black">
-                    <span className="text-sm text-gray-600 print:text-black">Due</span>
-                    <span className="text-sm text-gray-600 print:text-black">
+                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-gray-300">
+                    <span className="text-sm text-gray-600 print:text-gray-600">Due</span>
+                    <span className="text-sm text-gray-600 print:text-gray-600">
                       {formatCurrency(dueAmount)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-black bg-gray-800 text-white print:bg-gray-300 print:text-black font-semibold">
+                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-gray-300 bg-slate-700 text-white print:bg-gray-200 print:text-gray-700 font-semibold">
                     <span className="text-sm font-bold">TOTAL</span>
                     <span className="text-sm font-bold">
                       {formatCurrency(total)}
@@ -493,7 +492,7 @@ export default function InvoicePage() {
             </div>
           </div>
           {/* Website Credit */}
-          <div className="text-center py-3 border-t border-gray-200 bg-gray-50 print:bg-white">
+          <div className="text-center py-2 print:py-1 border-t border-gray-200 bg-gray-50 print:bg-white">
             <p className="text-xs text-gray-400">
               Powered by <span className="font-medium text-cyan-600 print:text-gray-600">OxyManager</span> • oxymanager.com
             </p>
