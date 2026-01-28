@@ -500,12 +500,14 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         # Set employee if provided
         if employee_id:
             try:
-                employee = Employee.objects.get(
-                    id=employee_id, user=self.context["request"].user
-                )
+                request_user = self.context["request"].user
+                if request_user.is_staff or request_user.is_superuser:
+                    employee = Employee.objects.get(id=employee_id)
+                else:
+                    employee = Employee.objects.get(id=employee_id, user=request_user)
                 validated_data["employee"] = employee
             except Employee.DoesNotExist:
-                pass  # Ignore invalid employee
+                raise serializers.ValidationError({"employee": "Invalid employee selection."})
 
         # Create order
         order = Order.objects.create(

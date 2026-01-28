@@ -95,12 +95,18 @@ class TransactionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Amount must be greater than zero.")
         return value
 
-    def validate(self, data):
-        # Allow negative balances - no balance check required
-        return data
-
 
 class TransactionCreateSerializer(serializers.ModelSerializer):
+    def validate(self, data):
+        request = self.context.get("request")
+        if request and not (request.user.is_staff or request.user.is_superuser):
+            verified_by = data.get("verified_by")
+            if verified_by is not None and verified_by.user_id != request.user.id:
+                raise serializers.ValidationError(
+                    {"verified_by": "Invalid employee selection."}
+                )
+        return data
+
     class Meta:
         model = Transaction
         fields = ["account", "type", "amount", "purpose", "verified_by", "status"]
