@@ -375,18 +375,18 @@ export default function InvoicePage() {
           <div className="px-6 print:px-3 py-2">
             <div>
               {/* Table Header */}
-              <div className="bg-slate-700 print:bg-gray-200 text-white print:text-black rounded-t-lg overflow-hidden">
+              <div className="bg-slate-700 print:bg-gray-200 text-white print:text-black">
                 <div className="grid grid-cols-12 gap-0 text-xs font-medium">
-                  <div className="col-span-1 py-2 text-center border-r border-slate-600 print:border-gray-300">
+                  <div className="col-span-1 py-2 text-center">
                     No.
                   </div>
-                  <div className="col-span-6 px-1.5 py-1.5 border-r border-gray-600 print:border-black">
+                  <div className="col-span-6 px-1.5 py-1.5">
                     Item Description
                   </div>
-                  <div className="col-span-1 py-1.5 text-center border-r border-gray-600 print:border-black">
+                  <div className="col-span-1 py-1.5 text-center">
                     Qty
                   </div>
-                  <div className="col-span-2 px-1.5 py-1.5 text-center border-r border-gray-600 print:border-black">
+                  <div className="col-span-2 px-1.5 py-1.5 text-center">
                     Price
                   </div>
                   <div className="col-span-2 px-1.5 py-1.5 text-right">
