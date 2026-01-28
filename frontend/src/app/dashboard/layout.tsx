@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
@@ -28,6 +29,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, loading, logout } = useAuth();
+  const { isPro } = useSubscription();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -122,7 +124,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: Diamond,
       current: pathname.startsWith("/dashboard/subscriptions"),
       category: "tools",
-      badge: "pro",
+      badge: isPro ? "pro" : undefined,
     },
     {
       name: "Settings",
