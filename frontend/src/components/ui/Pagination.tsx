@@ -101,7 +101,7 @@ const Pagination: React.FC<PaginationProps> = ({
       </div>
 
       {/* Pagination controls */}
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto max-w-full">
         {/* Previous button */}
         <button
           onClick={() => handlePageClick(currentPage - 1)}
@@ -112,7 +112,7 @@ const Pagination: React.FC<PaginationProps> = ({
         </button>
 
         {/* Page numbers */}
-        <div className="flex items-center space-x-1">
+        <div className="flex flex-wrap items-center justify-center gap-1 max-w-full">
           {visiblePages.map((page, index) => (
             <button
               key={index}

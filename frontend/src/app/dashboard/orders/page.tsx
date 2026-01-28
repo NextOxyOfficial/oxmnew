@@ -1541,7 +1541,7 @@ export default function OrdersPage() {
                     </div>
 
                     {productDateFilter === "custom" && (
-                      <div className="flex gap-2 items-center">
+                      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                         <input
                           type="date"
                           value={productStartDate}

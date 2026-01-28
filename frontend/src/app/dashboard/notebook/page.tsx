@@ -288,7 +288,7 @@ export default function NotebookPage() {
         </div>
 
         {/* Controls */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg p-6 mb-6">
+        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg py-4 px-2">
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Create Notebook Button */}
             <button

@@ -941,7 +941,7 @@ export default function EmployeesPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg p-6 mb-6">
+        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg py-4 px-2">
           <div className="flex space-x-1">
             <button
               onClick={() => setActiveTab('employees')}
@@ -968,7 +968,7 @@ export default function EmployeesPage() {
 
         {/* Controls and Filters */}
         {activeTab === 'employees' && (
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg p-6 mb-6">
+        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg py-4 px-2">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Left side - Add Employee Button and Search */}
             <div className="flex flex-col sm:flex-row gap-4 flex-1">
