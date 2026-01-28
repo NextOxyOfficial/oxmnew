@@ -110,7 +110,7 @@ export default function Header({
   
   return (
     <header className="bg-slate-950 border-b border-slate-800 relative z-50">
-      <div className="px-3 py-2 sm:px-4 lg:px-6">
+      <div className="px-[2px] py-2 sm:px-4 lg:px-6">
         <div className="flex items-center justify-between h-12">
           {/* Left Section - Logo & Breadcrumb */}
           <div className="flex items-center gap-4">
