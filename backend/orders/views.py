@@ -572,8 +572,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         order = self.get_object()
 
-        # Prevent adding items to completed or cancelled orders
-        if order.status in ["completed", "cancelled"]:
+        # Prevent adding items to cancelled orders
+        if order.status in ["cancelled"]:
             return Response(
                 {"error": f"Cannot add items to {order.status} orders"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -655,8 +655,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         order = self.get_object()
 
-        # Prevent removing items from completed or cancelled orders
-        if order.status in ["completed", "cancelled"]:
+        # Prevent removing items from cancelled orders
+        if order.status in ["cancelled"]:
             return Response(
                 {"error": f"Cannot remove items from {order.status} orders"},
                 status=status.HTTP_400_BAD_REQUEST,
