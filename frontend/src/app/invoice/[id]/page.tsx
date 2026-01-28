@@ -316,35 +316,33 @@ export default function InvoicePage() {
       {/* Invoice Content */}
       <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-4xl mx-auto my-6 print:my-0 shadow-xl rounded-lg print:rounded-none overflow-hidden">
         {/* Invoice Header with Logo */}
-        <div className="px-8 py-5 print:px-4 print:py-3 border-b-2 border-cyan-500 print:border-gray-400">
+        <div className="px-8 py-4 print:px-4 print:py-2 border-b-2 border-cyan-500 print:border-gray-400">
           <div className="flex justify-between items-center">
-            {/* Company Logo & Name */}
+            {/* Company Logo */}
             <div className="flex items-center gap-4">
               {userProfile?.store_logo ? (
-                <div className="w-14 h-14 flex items-center justify-center">
+                <div className="w-32 h-20 flex items-center justify-center">
                   <img src={userProfile.store_logo} alt="Logo" className="max-w-full max-h-full object-contain" />
                 </div>
               ) : (
-                <div className="w-12 h-12 bg-cyan-500 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">OX</span>
+                <div className="w-24 h-24 bg-cyan-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-3xl">OX</span>
                 </div>
               )}
-              
             </div>
 
             {/* Invoice Number & Date */}
             <div className="text-right">
-              <div className="inline-block bg-gray-100 print:bg-gray-100 px-4 py-2 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Invoice</p>
-                <p className="text-xl font-bold text-cyan-600 print:text-gray-800">#{order.id}</p>
-              </div>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-xl font-bold text-gray-800 mb-1">
+                INVOICE <span className="text-cyan-600 print:text-gray-800">#{order.id}</span>
+              </p>
+              <p className="text-sm text-gray-500">
                 {new Date(order.sale_date || new Date()).toLocaleDateString('en-US', {
                   day: '2-digit', month: 'short', year: 'numeric'
                 })}
               </p>
             </div>
-          </div>
+                    </div>
         </div>
 
         {/* Billing Info */}
@@ -356,8 +354,8 @@ export default function InvoicePage() {
                 <p className="font-semibold text-gray-900">{company.name}</p>
                 <p>{company.address}</p>
                 <p>{company.city}</p>
-                <p>{company.phone}</p>
-                <p>{company.email}</p>
+                <p className="text-cyan-600 print:text-gray-800">{company.phone}</p>
+                <p className="text-cyan-600 print:text-gray-800">{company.email}</p>
               </div>
             </div>
             <div>
@@ -373,7 +371,6 @@ export default function InvoicePage() {
             </div>
           </div>
         </div>
-
           {/* Invoice Table - Compact for A5 */}
           <div className="px-6 print:px-3 py-2">
             <div>
