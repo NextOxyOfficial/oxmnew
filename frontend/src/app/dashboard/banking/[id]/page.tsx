@@ -790,7 +790,7 @@ export default function BankAccountPage() {
           </div>
 
         {/* Account Tabs */}
-        {allAccounts.length > 1 && (
+        {(
           <div className="mb-6">
             <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
@@ -1202,14 +1202,7 @@ export default function BankAccountPage() {
           ) : (
             <div>
               {/* Export Button */}
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <button
-                  onClick={() => setShowAddTransactionModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Transaction</span>
-                </button>
+              <div className="mb-4 flex justify-end">
                 <button
                   onClick={handleExportTransactions}
                   disabled={loading}
