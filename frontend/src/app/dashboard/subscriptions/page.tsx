@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { ApiService } from "../../../lib/api";
 
@@ -100,6 +100,15 @@ export default function SubscriptionsPage() {
   const [paymentVerificationLoader, setPaymentVerificationLoader] =
     useState(false);
 
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyFilter, setHistoryFilter] = useState<
+    "all" | "subscription" | "sms_package"
+  >("all");
+
+  const verifiedOrderIdRef = useRef<string | null>(null);
+
   const { user, profile, refreshProfile } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -157,6 +166,32 @@ export default function SubscriptionsPage() {
     }
   }, [setCurrentPlan]);
 
+  const fetchPaymentHistory = useCallback(async () => {
+    try {
+      setIsLoadingHistory(true);
+      setHistoryError(null);
+      const response = await ApiService.getPaymentHistory({
+        payment_type: historyFilter === "all" ? undefined : historyFilter,
+        page_size: 50,
+        ordering: "-created_at",
+      });
+
+      if (response && Array.isArray(response.results)) {
+        setPaymentHistory(response.results);
+      } else if (Array.isArray(response)) {
+        setPaymentHistory(response);
+      } else {
+        setPaymentHistory([]);
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch payment history:", error);
+      setHistoryError(error?.message || "Failed to load purchase history");
+      setPaymentHistory([]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [historyFilter]);
+
   // Payment verification function
   const verifyPayment = useCallback(
     async (orderId: string) => {
@@ -206,7 +241,11 @@ export default function SubscriptionsPage() {
               setShowSuccessMessage(true);
             } else if (paymentType === "sms_package") {
               const creditsAdded =
-                typeof response.credits_added === "number" ? response.credits_added : 0;
+                typeof response.credits_added === "number"
+                  ? response.credits_added
+                  : typeof response.credits_added === "string"
+                  ? Number.parseInt(response.credits_added, 10) || 0
+                  : 0;
               setSuccessMessage(
                 applied
                   ? `✅ SMS package purchased successfully! ${creditsAdded.toLocaleString()} SMS credits have been added to your account.`
@@ -221,6 +260,7 @@ export default function SubscriptionsPage() {
             setIsUpdatingPlan(true);
             await refreshProfile();
             await refreshSubscriptionData();
+            await fetchPaymentHistory();
             setIsUpdatingPlan(false);
 
             const url = new URL(window.location.href);
@@ -246,6 +286,7 @@ export default function SubscriptionsPage() {
       }
     },
     [
+      fetchPaymentHistory,
       refreshSubscriptionData,
       refreshProfile,
       setIsUpdatingPlan,
@@ -261,7 +302,8 @@ export default function SubscriptionsPage() {
   // Check for payment verification on page load
   useEffect(() => {
     const orderId = searchParams.get("order_id");
-    if (orderId) {
+    if (orderId && verifiedOrderIdRef.current !== orderId) {
+      verifiedOrderIdRef.current = orderId;
       verifyPayment(orderId);
     }
   }, [searchParams, verifyPayment]);
@@ -371,6 +413,8 @@ export default function SubscriptionsPage() {
         } else {
           setCurrentPlan("free");
         }
+
+        await fetchPaymentHistory();
       } catch (error) {
         console.error("Failed to fetch subscription data:", error);
         setPlans([]);
@@ -381,7 +425,13 @@ export default function SubscriptionsPage() {
     };
 
     fetchData();
-  }, []);
+  }, [fetchPaymentHistory]);
+
+  useEffect(() => {
+    if (!loading) {
+      fetchPaymentHistory();
+    }
+  }, [fetchPaymentHistory, loading]);
 
   const handlePlanSelect = async (planName: string) => {
     if (planName === currentPlan) return;
@@ -804,6 +854,117 @@ export default function SubscriptionsPage() {
               </button>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="mt-12">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white">Purchase History</h3>
+            <select
+              value={historyFilter}
+              onChange={(e) =>
+                setHistoryFilter(
+                  e.target.value as "all" | "subscription" | "sms_package"
+                )
+              }
+              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            >
+              <option value="all">All</option>
+              <option value="subscription">Subscription</option>
+              <option value="sms_package">SMS</option>
+            </select>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm overflow-hidden">
+            {isLoadingHistory ? (
+              <div className="p-6 text-center text-slate-300">
+                Loading history...
+              </div>
+            ) : historyError ? (
+              <div className="p-6 text-center text-red-300">{historyError}</div>
+            ) : paymentHistory.length === 0 ? (
+              <div className="p-6 text-center text-slate-300">
+                No purchases found.
+              </div>
+            ) : (
+              <div className="w-full overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-black/20">
+                    <tr>
+                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
+                        Date
+                      </th>
+                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
+                        Type
+                      </th>
+                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
+                        Amount
+                      </th>
+                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
+                        Status
+                      </th>
+                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
+                        Order
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {paymentHistory.map((tx: any) => {
+                      const dateStr = tx.created_at
+                        ? new Date(tx.created_at).toLocaleString()
+                        : "-";
+                      const typeLabel =
+                        tx.payment_type === "subscription"
+                          ? "Subscription"
+                          : tx.payment_type === "sms_package"
+                          ? "SMS"
+                          : "Unknown";
+                      const amountStr =
+                        tx.amount !== null && tx.amount !== undefined
+                          ? `৳${Number(tx.amount).toLocaleString()}`
+                          : "-";
+                      const statusLabel = tx.is_applied
+                        ? "Applied"
+                        : tx.is_successful
+                        ? "Paid"
+                        : "Pending";
+                      const statusClass = tx.is_applied
+                        ? "text-green-300"
+                        : tx.is_successful
+                        ? "text-cyan-300"
+                        : "text-yellow-300";
+
+                      return (
+                        <tr
+                          key={tx.id}
+                          className="hover:bg-white/5 transition-colors"
+                        >
+                          <td className="text-sm text-slate-200 px-4 py-3 whitespace-nowrap">
+                            {dateStr}
+                          </td>
+                          <td className="text-sm text-slate-200 px-4 py-3 whitespace-nowrap">
+                            {typeLabel}
+                          </td>
+                          <td className="text-sm text-slate-200 px-4 py-3 whitespace-nowrap">
+                            {amountStr}
+                          </td>
+                          <td
+                            className={`text-sm px-4 py-3 whitespace-nowrap ${statusClass}`}
+                          >
+                            {statusLabel}
+                          </td>
+                          <td className="text-xs text-slate-300 px-4 py-3">
+                            {tx.customer_order_id || tx.sp_order_id || "-"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

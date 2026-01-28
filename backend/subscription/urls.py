@@ -19,6 +19,11 @@ urlpatterns = [
     path("purchase-sms-package/", views.purchase_sms_package, name="purchase-sms-package"),
     path("get-my-subscription/", views.get_my_subscription, name="get-my-subscription"),
     path("debug-auth/", views.debug_auth, name="debug-auth"),
+    path(
+        "payment-history/",
+        views.PaymentTransactionHistoryView.as_view(),
+        name="payment-history",
+    ),
     path("pay/", makePayment, name="make-payment"),
     path("verify-payment/", verifyPayment, name="verify-payment"),
 ]

@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 import requests
 from django.conf import settings
 from django.db import transaction
+from django.db import IntegrityError
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -61,19 +62,84 @@ def verifyPayment(request):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        shurjopay_message = payment_details_dict.get("shurjopay_message")
-        if not shurjopay_message and isinstance(payment_details_dict.get("data"), dict):
-            shurjopay_message = payment_details_dict.get("data", {}).get("shurjopay_message")
+        def _extract_str_candidates(obj, keys):
+            candidates = []
+            if not isinstance(obj, dict):
+                return candidates
+            for key in keys:
+                val = obj.get(key)
+                if isinstance(val, str) and val.strip():
+                    candidates.append(val.strip())
+            return candidates
+
+        message_candidates = _extract_str_candidates(
+            payment_details_dict,
+            [
+                "shurjopay_message",
+                "sp_message",
+                "message",
+                "msg",
+            ],
+        )
+        data_obj = payment_details_dict.get("data")
+        if isinstance(data_obj, dict):
+            message_candidates.extend(
+                _extract_str_candidates(
+                    data_obj,
+                    [
+                        "shurjopay_message",
+                        "sp_message",
+                        "message",
+                        "msg",
+                    ],
+                )
+            )
+
+        shurjopay_message = message_candidates[0] if message_candidates else None
+        msg_normalized = (str(shurjopay_message).strip().lower() if shurjopay_message else "")
 
         is_successful = (
-            shurjopay_message == "Success"
+            msg_normalized in {"success", "successful"}
             or payment_details_dict.get("payment_verification_status") is True
             or payment_details_dict.get("bank_status") == "Completed"
         )
 
-        gateway_customer_order_id = payment_details_dict.get("customer_order_id") or payment_details_dict.get(
-            "order_id"
+        order_id_candidates = _extract_str_candidates(
+            payment_details_dict,
+            [
+                "customer_order_id",
+                "merchant_invoice_no",
+                "merchant_invoice",
+                "invoice_no",
+                "invoice",
+                "order_id",
+            ],
         )
+        if isinstance(data_obj, dict):
+            order_id_candidates.extend(
+                _extract_str_candidates(
+                    data_obj,
+                    [
+                        "customer_order_id",
+                        "merchant_invoice_no",
+                        "merchant_invoice",
+                        "invoice_no",
+                        "invoice",
+                        "order_id",
+                    ],
+                )
+            )
+
+        gateway_customer_order_id = next(
+            (
+                c
+                for c in order_id_candidates
+                if isinstance(c, str) and c.startswith(("SUB-", "SMS-", "BANK-"))
+            ),
+            None,
+        )
+        if not gateway_customer_order_id:
+            gateway_customer_order_id = order_id_candidates[0] if order_id_candidates else None
 
         amount = (
             payment_details_dict.get("amount")
@@ -90,17 +156,24 @@ def verifyPayment(request):
         application_error = None
 
         with transaction.atomic():
-            txn = (
-                PaymentTransaction.objects.select_for_update()
-                .filter(user=request.user, sp_order_id=oid)
-                .first()
-            )
+            txn = PaymentTransaction.objects.select_for_update().filter(sp_order_id=oid).first()
+            if txn and txn.user_id != request.user.id:
+                return Response(
+                    {"error": "This payment does not belong to the authenticated user."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
             if not txn and gateway_customer_order_id:
                 txn = (
                     PaymentTransaction.objects.select_for_update()
-                    .filter(user=request.user, customer_order_id=gateway_customer_order_id)
+                    .filter(customer_order_id=gateway_customer_order_id)
                     .first()
                 )
+                if txn and txn.user_id != request.user.id:
+                    return Response(
+                        {"error": "This payment does not belong to the authenticated user."},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
 
             if not txn:
                 txn = PaymentTransaction.objects.create(
@@ -108,7 +181,29 @@ def verifyPayment(request):
                     customer_order_id=gateway_customer_order_id or oid,
                 )
 
+            original_customer_order_id = txn.customer_order_id
             canonical_customer_order_id = txn.customer_order_id
+            if (
+                gateway_customer_order_id
+                and isinstance(gateway_customer_order_id, str)
+                and gateway_customer_order_id != canonical_customer_order_id
+                and (
+                    gateway_customer_order_id.startswith("SUB-")
+                    or gateway_customer_order_id.startswith("SMS-")
+                )
+                and (
+                    not isinstance(canonical_customer_order_id, str)
+                    or not (
+                        canonical_customer_order_id.startswith("SUB-")
+                        or canonical_customer_order_id.startswith("SMS-")
+                    )
+                )
+            ):
+                try:
+                    txn.customer_order_id = gateway_customer_order_id
+                    canonical_customer_order_id = gateway_customer_order_id
+                except Exception:
+                    pass
 
             payment_type = "unknown"
             if isinstance(canonical_customer_order_id, str):
@@ -215,7 +310,14 @@ def verifyPayment(request):
                 except SMSPackage.DoesNotExist:
                     application_error = application_error or "SMS package not found"
 
-            txn.save()
+            try:
+                txn.save()
+            except IntegrityError:
+                try:
+                    txn.customer_order_id = original_customer_order_id
+                    txn.save()
+                except Exception:
+                    raise
 
         payment_details_dict["customer_order_id"] = txn.customer_order_id
         payment_details_dict["payment_type"] = payment_type
@@ -275,16 +377,23 @@ def makePayment(request):
             elif order_id.startswith("SMS-"):
                 payment_type = "sms_package"
 
+        defaults = {
+            "payment_type": payment_type,
+            "currency": currency or "",
+            "raw_response": "",
+            "is_successful": False,
+            "is_applied": False,
+        }
+        if amount is not None:
+            try:
+                defaults["amount"] = Decimal(str(amount))
+            except (InvalidOperation, TypeError, ValueError):
+                pass
+
         PaymentTransaction.objects.get_or_create(
             user=request.user,
             customer_order_id=order_id,
-            defaults={
-                "payment_type": payment_type,
-                "currency": currency or "",
-                "raw_response": "",
-                "is_successful": False,
-                "is_applied": False,
-            },
+            defaults=defaults,
         )
 
         payment_details_dict = None
@@ -322,15 +431,47 @@ def makePayment(request):
             )
 
         sp_order_id = None
-        for key in ["sp_order_id", "shurjopay_order_id", "order_id"]:
-            if payment_details_dict.get(key):
-                sp_order_id = payment_details_dict.get(key)
-                break
-        if not sp_order_id and isinstance(payment_details_dict.get("data"), dict):
-            for key in ["sp_order_id", "shurjopay_order_id", "order_id"]:
-                if payment_details_dict.get("data", {}).get(key):
-                    sp_order_id = payment_details_dict.get("data", {}).get(key)
-                    break
+        sp_candidate_keys = [
+            "sp_order_id",
+            "shurjopay_order_id",
+            "shurjopay_orderid",
+            "sporder_id",
+            "sporderid",
+            "spOrderId",
+            "spOrderID",
+            "order_id",
+        ]
+
+        def _extract_any_candidates(obj, keys):
+            candidates = []
+            if not isinstance(obj, dict):
+                return candidates
+            for key in keys:
+                val = obj.get(key)
+                if val is None:
+                    continue
+                sval = str(val).strip()
+                if sval:
+                    candidates.append(sval)
+            return candidates
+
+        sp_order_candidates = _extract_any_candidates(payment_details_dict, sp_candidate_keys)
+        data_obj = payment_details_dict.get("data")
+        if isinstance(data_obj, dict):
+            sp_order_candidates.extend(_extract_any_candidates(data_obj, sp_candidate_keys))
+
+        sp_order_id = next(
+            (
+                c
+                for c in sp_order_candidates
+                if c
+                and c != str(order_id)
+                and not c.startswith(("SUB-", "SMS-", "BANK-"))
+            ),
+            None,
+        )
+        if not sp_order_id:
+            sp_order_id = next((c for c in sp_order_candidates if c and c != str(order_id)), None)
 
         if sp_order_id:
             PaymentTransaction.objects.filter(
