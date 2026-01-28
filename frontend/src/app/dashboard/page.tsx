@@ -294,17 +294,17 @@ export default function DashboardPage() {
   }, []); // Empty dependency array to run only on mount
 
   return (
-    <div className="py-4 px-2 sm:p-6 lg:p-8 space-y-4">
+    <div className="py-4 px-1 sm:px-4 lg:px-6 sm:py-6 lg:py-8 space-y-4">
       {/* Welcome Message */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-lg sm:text-xl font-semibold text-white">Welcome to OxyManager 👋</h1>
           <p className="text-xs text-slate-500 mt-0.5">Here&apos;s your business overview for today</p>
         </div>
         <button
           onClick={handleNewOrder}
           disabled={isNavigating}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold rounded-lg transition-all text-sm"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold rounded-lg transition-all text-xs sm:text-sm whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
           <span>New Sale</span>
@@ -380,8 +380,8 @@ export default function DashboardPage() {
         <div className="xl:col-span-2 bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-800 overflow-hidden">
           {/* Section Header */}
           <div className="p-4 sm:p-6 border-b border-slate-800">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
                   <ShoppingCart className="w-5 h-5 text-cyan-400" />
                 </div>
@@ -390,13 +390,13 @@ export default function DashboardPage() {
                   <p className="text-xs text-slate-500">Filter: {currentFilterLabel}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <FilterDropdown
                   currentFilter={currentFilter}
                   currentFilterLabel={currentFilterLabel}
                   onFilterChange={handleFilterChange}
                   onCustomDateRange={handleCustomDateRange}
-                  isMobile={false}
+                  isMobile={true}
                 />
                 <button
                   onClick={refetchSales}

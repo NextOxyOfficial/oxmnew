@@ -61,17 +61,15 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
   };
 
   return (
-    <div className={`relative ${isMobile ? "flex-1" : ""}`} ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef}>
       <button
         className={`${
-          isMobile ? "w-full px-3 py-2 text-sm" : "px-4 py-2 text-sm"
-        } bg-white/3 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center ${
-          isMobile ? "justify-center" : ""
-        } cursor-pointer`}
+          isMobile ? "px-3 py-2 text-sm" : "px-4 py-2 text-sm"
+        } bg-white/3 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center justify-center cursor-pointer whitespace-nowrap`}
         onClick={toggleDropdown}
         type="button"
       >
-        <span>{currentFilterLabel}</span>
+        <span className="whitespace-nowrap">{currentFilterLabel}</span>
         <svg
           className="w-4 h-4 ml-2"
           fill="none"
@@ -89,14 +87,14 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
 
       {isOpen && (
         <div
-          className={`absolute ${isMobile ? "right-0" : "right-0"} mt-2 ${
-            isMobile ? "w-full" : "w-48"
+          className={`absolute right-0 mt-2 ${
+            isMobile ? "w-56 min-w-max" : "w-48"
           } bg-gray-800 rounded-lg border border-gray-700 shadow-lg z-10 py-1`}
         >
           {filterOptions.map((option) => (
             <button
               key={option.value}
-              className={`block w-full text-left px-4 py-2 text-sm transition-colors cursor-pointer ${
+              className={`block w-full text-left px-4 py-2 text-sm transition-colors cursor-pointer whitespace-nowrap ${
                 currentFilter === option.value
                   ? "text-blue-300 bg-blue-900/50"
                   : "text-white hover:bg-gray-700"
