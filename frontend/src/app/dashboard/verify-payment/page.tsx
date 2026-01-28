@@ -3,7 +3,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiService } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface VerificationResult {
   success: boolean;
@@ -19,25 +19,16 @@ export default function VerifyPaymentPage() {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<VerificationResult | null>(null);
 
-  const verifyPayment = useCallback(async () => {
+  const verifiedOrderIdRef = useRef<string | null>(null);
+
+  const verifyPayment = useCallback(async (spOrderId: string) => {
     try {
-      const orderId = searchParams.get("order_id");
-
-      if (!orderId) {
-        setResult({
-          success: false,
-          message: "No order ID found in URL parameters.",
-        });
-        setLoading(false);
-        return;
-      }
-
-      console.log("Verifying payment for order:", orderId);
-      console.log("Order ID type:", typeof orderId);
-      console.log("Order ID length:", orderId?.length);
+      console.log("Verifying payment for order:", spOrderId);
+      console.log("Order ID type:", typeof spOrderId);
+      console.log("Order ID length:", spOrderId?.length);
 
       // Verify payment with the backend
-      const verifyResponse = await ApiService.verifyPayment(orderId);
+      const verifyResponse = await ApiService.verifyPayment(spOrderId);
       console.log("Payment verification response:", verifyResponse);
 
       // Check for successful payment using the same logic as banking page
@@ -60,8 +51,8 @@ export default function VerifyPaymentPage() {
       console.log("Payment verification successful!");
 
       // Use the customer_order_id from the response if available, otherwise use the URL order_id
-      const actualOrderId = verifyResponse.customer_order_id || orderId;
-      console.log("Original order ID from URL:", orderId);
+      const actualOrderId = verifyResponse.customer_order_id || spOrderId;
+      console.log("Original order ID from URL:", spOrderId);
       console.log(
         "Customer order ID from response:",
         verifyResponse.customer_order_id
@@ -262,7 +253,11 @@ export default function VerifyPaymentPage() {
       } else if (paymentType === "sms_package") {
         await refreshProfile();
         const creditsAdded =
-          typeof verifyResponse.credits_added === "number" ? verifyResponse.credits_added : 0;
+          typeof verifyResponse.credits_added === "number"
+            ? verifyResponse.credits_added
+            : typeof verifyResponse.credits_added === "string"
+            ? Number.parseInt(verifyResponse.credits_added, 10) || 0
+            : 0;
         setResult({
           success: true,
           message: applied
@@ -290,19 +285,38 @@ export default function VerifyPaymentPage() {
     } finally {
       setLoading(false);
     }
-  }, [refreshProfile, searchParams]);
+  }, [refreshProfile]);
 
   useEffect(() => {
-    if (user) {
-      verifyPayment();
-    } else {
+    const spOrderId = searchParams.get("order_id");
+
+    if (!user) {
       setResult({
         success: false,
         message: "Please log in to verify your payment.",
       });
       setLoading(false);
+      return;
     }
-  }, [user, verifyPayment]);
+
+    if (!spOrderId) {
+      if (!result) {
+        setResult({
+          success: false,
+          message: "No order ID found in URL parameters.",
+        });
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (verifiedOrderIdRef.current === spOrderId) {
+      return;
+    }
+
+    verifiedOrderIdRef.current = spOrderId;
+    verifyPayment(spOrderId);
+  }, [result, searchParams, user, verifyPayment]);
 
   const handleReturnToDashboard = () => {
     // Check if it's a banking payment based on the order ID or result
@@ -317,7 +331,18 @@ export default function VerifyPaymentPage() {
   const handleRetry = () => {
     setLoading(true);
     setResult(null);
-    verifyPayment();
+    const spOrderId = searchParams.get("order_id");
+    if (!spOrderId) {
+      setResult({
+        success: false,
+        message: "No order ID found in URL parameters.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    verifiedOrderIdRef.current = null;
+    verifyPayment(spOrderId);
   };
 
   return (

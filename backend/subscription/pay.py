@@ -117,6 +117,25 @@ def verifyPayment(request):
                 elif canonical_customer_order_id.startswith("SMS-"):
                     payment_type = "sms_package"
 
+            sms_package_id = None
+            sms_qty = 1
+            if payment_type == "sms_package" and isinstance(canonical_customer_order_id, str):
+                parts = canonical_customer_order_id.split("-")
+                if len(parts) >= 2:
+                    try:
+                        sms_package_id = int(parts[1])
+                    except Exception:
+                        sms_package_id = None
+
+                for part in parts:
+                    if isinstance(part, str) and len(part) >= 2 and part[0].lower() == "q":
+                        try:
+                            parsed_qty = int(part[1:])
+                            if parsed_qty > 0:
+                                sms_qty = parsed_qty
+                        except Exception:
+                            pass
+
             txn.sp_order_id = oid
             txn.payment_type = payment_type
             txn.is_successful = is_successful
@@ -161,33 +180,14 @@ def verifyPayment(request):
                         application_error = "Subscription plan not found"
 
                 elif payment_type == "sms_package":
-                    package_id = None
-                    qty = 1
-                    if isinstance(canonical_customer_order_id, str):
-                        parts = canonical_customer_order_id.split("-")
-                        if len(parts) >= 2:
-                            try:
-                                package_id = int(parts[1])
-                            except Exception:
-                                package_id = None
-
-                        for part in parts:
-                            if isinstance(part, str) and len(part) >= 2 and part[0].lower() == "q":
-                                try:
-                                    parsed_qty = int(part[1:])
-                                    if parsed_qty > 0:
-                                        qty = parsed_qty
-                                except Exception:
-                                    pass
-
-                    if package_id is not None:
+                    if sms_package_id is not None:
                         try:
-                            sms_package = SMSPackage.objects.get(id=package_id)
+                            sms_package = SMSPackage.objects.get(id=sms_package_id)
                             user_sms_credit, _ = UserSMSCredit.objects.get_or_create(
                                 user=request.user,
                                 defaults={"credits": 0},
                             )
-                            add_credits = sms_package.sms_count * max(qty, 1)
+                            add_credits = sms_package.sms_count * max(sms_qty, 1)
                             user_sms_credit.credits += add_credits
                             user_sms_credit.save()
                             credits_added = add_credits
@@ -198,6 +198,22 @@ def verifyPayment(request):
                             applied = True
                         except SMSPackage.DoesNotExist:
                             application_error = "SMS package not found"
+
+            if (
+                is_successful
+                and payment_type == "sms_package"
+                and txn.is_applied
+                and credits_added is None
+                and sms_package_id is not None
+            ):
+                try:
+                    sms_package = SMSPackage.objects.get(id=sms_package_id)
+                    credits_added = sms_package.sms_count * max(sms_qty, 1)
+                    user_sms_credit = UserSMSCredit.objects.filter(user=request.user).first()
+                    if user_sms_credit:
+                        total_credits = user_sms_credit.credits
+                except SMSPackage.DoesNotExist:
+                    application_error = application_error or "SMS package not found"
 
             txn.save()
 

@@ -73,6 +73,8 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
   const [isLoadingSales, setIsLoadingSales] = useState(true);
   const [salesError, setSalesError] = useState<string | null>(null);
 
+  const MAX_PAGE_SIZE = 2000;
+
   const fetchRecentSales = useCallback(
     async (filters?: {
       dateFilter?: string;
@@ -94,10 +96,13 @@ export const useRecentSales = (limit: number = 5): UseRecentSalesReturn => {
           ordering: "-sale_date",
           // When date filtering is applied, get more results within the range
           // For all_time filter, get even more results to show everything
-          page_size: filters?.dateFilter === 'all_time' ? 1000 :
-                    (filters?.dateFilter && filters.dateFilter !== 'all') || 
-                    filters?.startDate || 
-                    filters?.endDate ? 500 : limit,
+          page_size: filters?.dateFilter === "all_time"
+            ? MAX_PAGE_SIZE
+            : (filters?.dateFilter && filters.dateFilter !== "all") ||
+              filters?.startDate ||
+              filters?.endDate
+            ? MAX_PAGE_SIZE
+            : limit,
           _t: Date.now(), // Add timestamp to prevent caching
         };
 
