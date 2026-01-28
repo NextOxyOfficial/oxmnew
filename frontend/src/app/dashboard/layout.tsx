@@ -200,8 +200,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [user, loading, router]);
 
-  // Show loading spinner during auth check
-  if (loading) {
+  // Show loading spinner during auth check or when redirecting
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <div className="text-center">
@@ -210,12 +210,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    // Redirect to login if not authenticated
-    router.push("/auth/login");
-    return null;
   }
 
   return (

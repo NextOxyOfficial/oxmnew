@@ -5,7 +5,8 @@ import { ApiService } from "@/lib/api";
 import { Order, OrderItem } from "@/types/order";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Printer, Download } from "lucide-react";
+import { Printer, Download, ArrowLeft, FileText, CheckCircle, Clock } from "lucide-react";
+import "./print-styles.css";
 
 interface InvoiceData {
   order: Order;
@@ -266,187 +267,120 @@ export default function InvoicePage() {
 
   return (
     <>
-      {/* Print Styles */}
-      <style jsx global>{`
-        @media print {
-          /* Hide everything first */
-          * {
-            visibility: hidden;
-          }
-          
-          /* Only show invoice content */
-          .invoice-content, .invoice-content * {
-            visibility: visible;
-          }
-          
-          /* Position invoice content to fill page */
-          .invoice-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-          
-          /* Hide browser chrome and website elements */
-          header, nav, footer, .header, .nav, .footer, 
-          [role="banner"], [role="navigation"], [role="contentinfo"],
-          .print\\:hidden,
-          /* Additional selectors for common website elements */
-          .navbar, .nav-bar, .navigation, .site-header, .site-footer,
-          .page-header, .page-footer, .main-nav, .main-navigation,
-          .top-bar, .bottom-bar, .sidebar, .menu {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          
-          /* Reset html and body for clean print */
-          html, body { 
-            -webkit-print-color-adjust: exact;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-            height: auto !important;
-            overflow: visible !important;
-          }
-          
-          /* Print-specific utilities */
-          .print\\:block { display: block !important; }
-          .print\\:text-black { color: black !important; }
-          .print\\:bg-white { background-color: white !important; }
-          .print\\:border-black { border-color: black !important; }
-          .print\\:bg-transparent { background-color: transparent !important; }
-          .print\\:shadow-none { box-shadow: none !important; }
-          .print\\:max-w-none { max-width: none !important; }
-          .print\\:mx-0 { margin-left: 0 !important; margin-right: 0 !important; }
-          .print\\:min-h-0 { min-height: 0 !important; }
-          .print\\:py-0 { padding-top: 0 !important; padding-bottom: 0 !important; }
-          .print\\:pt-0 { padding-top: 0 !important; }
-          .print\\:mt-0 { margin-top: 0 !important; }
-          .print\\:py-1 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
-          .print\\:px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
-          .print\\:mb-1 { margin-bottom: 0.25rem !important; }
-          .print\\:mb-2 { margin-bottom: 0.5rem !important; }
-          
-          /* Page settings */
-          @page { 
-            margin: 0 0.5in 0.5in 0.5in;
-            size: A4;
-          }
-          
-          /* Eliminate top spacing completely */
-          .invoice-content {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          
-          /* Remove any top margins from first elements */
-          .invoice-content > div:first-child {
-            margin-top: 0 !important;
-            padding-top: 0 !important;
-          }
-          
-          .page-break { page-break-after: always; }
-        }
-      `}</style>
+      {/* Action Bar - Screen Only */}
+      <div className="print:hidden bg-slate-900 border-b border-slate-800 sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-all"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-lg font-semibold text-white">Invoice #{order.id}</h1>
+              <p className="text-xs text-slate-500">
+                {new Date(order.sale_date || new Date()).toLocaleDateString('en-US', { 
+                  weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
+                })}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+              dueAmount > 0 
+                ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400' 
+                : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+            }`}>
+              {dueAmount > 0 ? <Clock className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
+              {dueAmount > 0 ? 'Pending' : 'Paid'}
+            </div>
+            <button
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg transition-all text-sm"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Download</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold rounded-lg transition-all text-sm"
+            >
+              <Printer className="w-4 h-4" />
+              <span className="hidden sm:inline">Print</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
-      {/* Invoice Content - Clean document layout without dashboard styling */}
-      <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-5xl mx-auto print:p-0">
-                  {/* Header Section */}
-                  <div className="px-8 py-2 print:px-2 print:py-0 print:pt-0">
-            <div className="flex justify-between items-start mb-6 print:mb-2 print:mt-0">
-              {/* Company Logo */}
-              <div className="flex items-start gap-4">
-                {userProfile?.store_logo ? (
-                  <div className="w-36 flex items-center justify-center">
-                    <img
-                      src={userProfile.store_logo}
-                      alt="Company Logo"
-                      className="max-w-full max-h-full object-contain"
-                      onError={(e) => {
-                        // Fallback to placeholder if logo fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const fallback = target.parentElement?.querySelector('.fallback-logo');
-                        if (fallback) {
-                          fallback.classList.remove('hidden');
-                        }
-                      }}
-                    />
-                    <div className="fallback-logo w-12 h-12 bg-gray-800 rounded hidden items-center justify-center print:bg-black">
-                      <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-12 h-12 bg-gray-800 rounded flex items-center justify-center print:bg-black">
-                    <div className="w-6 h-6 border-2 border-white rounded-sm"></div>
-                  </div>
-                )}
-              </div>
-
-              {/* Invoice Number and Date */}
-              <div className="text-center">
-                <span className="text-sm font-medium text-gray-800 print:text-black">Invoice # </span>
-                <span className="text-sm text-gray-600 print:text-black">
-                  {order.id}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-sm text-gray-600 print:text-black">
-                    {new Date(order.sale_date || new Date()).toLocaleDateString('en-US', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric'
-                    })}
-                  </div>
+      {/* Invoice Content */}
+      <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-4xl mx-auto my-6 print:my-0 shadow-xl rounded-lg print:rounded-none overflow-hidden">
+        {/* Invoice Header with Logo */}
+        <div className="px-8 py-5 print:px-4 print:py-3 border-b-2 border-cyan-500 print:border-gray-400">
+          <div className="flex justify-between items-center">
+            {/* Company Logo & Name */}
+            <div className="flex items-center gap-4">
+              {userProfile?.store_logo ? (
+                <div className="w-14 h-14 flex items-center justify-center">
+                  <img src={userProfile.store_logo} alt="Logo" className="max-w-full max-h-full object-contain" />
                 </div>
-              </div>
+              ) : (
+                <div className="w-12 h-12 bg-cyan-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">OX</span>
+                </div>
+              )}
+              
             </div>
 
-            {/* Company and Customer Info */}
-            <div className="flex justify-between mb-3 px-2">
-              {/* Company Details */}
-              <div>
-                <div className="text-sm text-gray-600 print:text-black space-y-1">
-                  <p className="font-medium">{company.name}</p>
-                  <p>{company.address}</p>
-                  <p>{company.city}</p>
-                  <p>{company.phone}, {company.email}</p>
-                </div>
+            {/* Invoice Number & Date */}
+            <div className="text-right">
+              <div className="inline-block bg-gray-100 print:bg-gray-100 px-4 py-2 rounded-lg border border-gray-200">
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Invoice</p>
+                <p className="text-xl font-bold text-cyan-600 print:text-gray-800">#{order.id}</p>
               </div>
+              <p className="text-sm text-gray-500 mt-2">
+                {new Date(order.sale_date || new Date()).toLocaleDateString('en-US', {
+                  day: '2-digit', month: 'short', year: 'numeric'
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
 
-              {/* Customer Details */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-800 print:text-black mb-2">
-                  Invoice to:
-                </h3>
-                <div className="text-sm text-gray-600 print:text-black space-y-1">
-                  <p className="font-medium">
-                    {order.customer_name || "Mr. Guest Customer"}
-                  </p>
-                  {order.customer_address && order.customer_address !== "A Dummy Street Area, Location," && (
-                    <p>{order.customer_address}</p>
-                  )}
-                  <p>
-                    {order.customer_phone && order.customer_email
-                      ? `${order.customer_phone}, ${order.customer_email}`
-                      : order.customer_phone || order.customer_email || "Lorem Ipsum, 123xx456x"}
-                  </p>
-                </div>
+        {/* Billing Info */}
+        <div className="px-8 py-5 print:px-4 print:py-3 bg-gray-50 print:bg-white border-b border-gray-200">
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">From</p>
+              <div className="text-sm text-gray-700 space-y-1">
+                <p className="font-semibold text-gray-900">{company.name}</p>
+                <p>{company.address}</p>
+                <p>{company.city}</p>
+                <p>{company.phone}</p>
+                <p>{company.email}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Bill To</p>
+              <div className="text-sm text-gray-700 space-y-1">
+                <p className="font-semibold text-gray-900">{order.customer_name || "Guest Customer"}</p>
+                {order.customer_address && order.customer_address !== "A Dummy Street Area, Location," && (
+                  <p>{order.customer_address}</p>
+                )}
+                {order.customer_phone && <p>{order.customer_phone}</p>}
+                {order.customer_email && <p>{order.customer_email}</p>}
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Invoice Table */}
-          <div className="px-8 print:px-2">
-            <div className="">
+          {/* Invoice Table - Compact for A5 */}
+          <div className="px-6 print:px-3 py-2">
+            <div>
               {/* Table Header */}
-              <div className="bg-gray-800 print:bg-gray-300 text-white print:text-black border border-gray-300 print:border-black">
-                <div className="grid grid-cols-12 gap-0 text-sm font-medium">
-                  <div className="col-span-1 py-1.5 text-center border-r border-gray-600 print:border-black">
+              <div className="bg-slate-700 print:bg-gray-200 text-white print:text-black rounded-t-lg overflow-hidden">
+                <div className="grid grid-cols-12 gap-0 text-xs font-medium">
+                  <div className="col-span-1 py-2 text-center border-r border-slate-600 print:border-gray-300">
                     No.
                   </div>
                   <div className="col-span-6 px-1.5 py-1.5 border-r border-gray-600 print:border-black">
@@ -560,24 +494,12 @@ export default function InvoicePage() {
                 </div>
               </div>
             </div>
-
-            {/* Action Buttons Footer */}
-            <div className="print:hidden bg-gray-50 px-6 py-4 border-t flex justify-center gap-4">
-              <button
-                onClick={handleDownloadPDF}
-                className="flex items-center gap-2 px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Download PDF
-              </button>
-              <button
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-6 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-              >
-                <Printer className="w-4 h-4" />
-                Print Invoice
-              </button>
-            </div>
+          </div>
+          {/* Website Credit */}
+          <div className="text-center py-3 border-t border-gray-200 bg-gray-50 print:bg-white">
+            <p className="text-xs text-gray-400">
+              Powered by <span className="font-medium text-cyan-600 print:text-gray-600">OxyManager</span> • oxymanager.com
+            </p>
           </div>
         </div>
     </>

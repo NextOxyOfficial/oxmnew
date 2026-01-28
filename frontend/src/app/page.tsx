@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import {
   Package,
   ShoppingCart,
@@ -28,7 +29,8 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
 
@@ -72,8 +74,8 @@ export default function Home() {
   ];
 
   const stats = [
-    { value: '10,000+', label: 'Active Businesses' },
-    { value: '৳50Cr+', label: 'Transactions Processed' },
+    { value: '10,00+', label: 'Active Businesses' },
+    { value: '৳11Cr+', label: 'Transactions Processed' },
     { value: '99.9%', label: 'Uptime Guarantee' },
     { value: '24/7', label: 'Customer Support' },
   ];
@@ -109,7 +111,7 @@ export default function Home() {
       period: '/মাস',
       description: 'ছোট ব্যবসার জন্য পারফেক্ট',
       features: [
-        'Up to 100 Products',
+        'Up to 25 Products',
         'Basic Inventory Management',
         'Sales & Order Tracking',
         'Customer Database',
@@ -121,7 +123,7 @@ export default function Home() {
     },
     {
       name: 'Pro',
-      price: '৯৯৯',
+      price: '৩৯৯',
       period: '/মাস',
       description: 'Growing businesses এর জন্য',
       features: [
@@ -201,12 +203,23 @@ export default function Home() {
               {loading ? (
                 <div className="animate-pulse h-10 w-24 bg-slate-800 rounded-lg"></div>
               ) : isAuthenticated ? (
-                <Link
-                  href="/dashboard"
-                  className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/25"
-                >
-                  Dashboard
-                </Link>
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/25"
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={() => {
+                      logout();
+                      router.push('/');
+                    }}
+                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold rounded-lg transition-all duration-300"
+                  >
+                    Logout
+                  </button>
+                </>
               ) : (
                 <>
                   <Link
@@ -245,9 +258,21 @@ export default function Home() {
               <a href="#faq" className="block text-slate-300 hover:text-white py-2">FAQ</a>
               <div className="pt-4 border-t border-slate-800 space-y-3">
                 {isAuthenticated ? (
-                  <Link href="/dashboard" className="block w-full text-center px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold rounded-lg">
-                    Dashboard
-                  </Link>
+                  <>
+                    <Link href="/dashboard" className="block w-full text-center px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold rounded-lg">
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        router.push('/');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-center px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold rounded-lg"
+                    >
+                      Logout
+                    </button>
+                  </>
                 ) : (
                   <>
                     <Link href="/auth/login" className="block w-full text-center text-slate-300 py-2">Sign in</Link>
@@ -324,6 +349,22 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-emerald-500" />
                 <span>Cancel anytime</span>
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-400">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <a href="tel:+8801234567890" className="hover:text-white transition-colors">+880 1234-567890</a>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <a href="mailto:support@oxymanager.com" className="hover:text-white transition-colors">support@oxymanager.com</a>
               </div>
             </div>
           </div>
@@ -663,9 +704,23 @@ export default function Home() {
                 </div>
                 <span className="text-lg font-bold">OxyManager</span>
               </div>
-              <p className="text-slate-400 text-sm">
+              <p className="text-slate-400 text-sm mb-4">
                 Complete business management solution for Bangladeshi businesses.
               </p>
+              <div className="space-y-2 text-sm text-slate-400">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  <a href="tel:+8801234567890" className="hover:text-white transition-colors">+880 1234-567890</a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <a href="mailto:support@oxymanager.com" className="hover:text-white transition-colors">support@oxymanager.com</a>
+                </div>
+              </div>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
@@ -684,18 +739,23 @@ export default function Home() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Support</h4>
+              <h4 className="font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-sm text-slate-400">
-                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy</a></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors">Terms & Conditions</Link></li>
+                <li><a href="mailto:support@oxymanager.com" className="hover:text-white transition-colors">Contact Support</a></li>
               </ul>
             </div>
           </div>
           <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-slate-400 text-sm">
-              &copy; {new Date().getFullYear()} OxyManager. All rights reserved.
-            </p>
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-slate-400 text-sm">
+              <p>&copy; {new Date().getFullYear()} OxyManager. All rights reserved.</p>
+              <div className="flex items-center gap-4">
+                <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+                <span className="hidden sm:inline">•</span>
+                <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+              </div>
+            </div>
             <div className="flex items-center gap-4">
               <a href="#" className="text-slate-400 hover:text-white transition-colors">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
