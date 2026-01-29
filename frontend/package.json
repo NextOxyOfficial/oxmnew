@@ -12,7 +12,7 @@
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.524.0",
-    "next": "15.5.7",
+    "next": "15.5.9",
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "xlsx": "^0.18.5"
@@ -25,7 +25,7 @@
     "@types/react-dom": "^19",
     "@types/xlsx": "^0.0.35",
     "eslint": "^9",
-    "eslint-config-next": "15.5.7",
+    "eslint-config-next": "15.5.9",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
