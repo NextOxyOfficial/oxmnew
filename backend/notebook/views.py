@@ -16,7 +16,7 @@ from .serializers import (
 
 class NotebookViewSet(viewsets.ModelViewSet):
     """ViewSet for managing notebooks"""
-    permission_classes = [permissions.AllowAny]  # Temporarily allow anonymous access for testing
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['name', 'description', 'tags']
     ordering_fields = ['created_at', 'updated_at', 'name']
@@ -24,8 +24,8 @@ class NotebookViewSet(viewsets.ModelViewSet):
     filterset_fields = ['is_active', 'is_pinned']
     
     def get_queryset(self):
-        """Return all notebooks for testing (normally would filter by user)"""
-        return Notebook.objects.all()  # Show all notebooks for testing
+        """Return notebooks for current user only"""
+        return Notebook.objects.filter(created_by=self.request.user)
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
@@ -38,38 +38,7 @@ class NotebookViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set current user as notebook creator"""
-        from django.contrib.auth.models import User
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        logger.info(f"Request user: {self.request.user}")
-        logger.info(f"Is authenticated: {self.request.user.is_authenticated}")
-        logger.info(f"User type: {type(self.request.user)}")
-        
-        # For testing: use authenticated user or fallback to testuser
-        if self.request.user.is_authenticated:
-            user = self.request.user
-            logger.info(f"Using authenticated user: {user}")
-        else:
-            try:
-                user = User.objects.get(username='testuser')
-                logger.info(f"Using testuser: {user}")
-            except User.DoesNotExist:
-                # Create testuser if it doesn't exist
-                logger.info("Creating testuser")
-                user = User.objects.create_user(
-                    username='testuser',
-                    email='test@example.com',
-                    password='testpass123'
-                )
-        
-        logger.info(f"Final user for creation: {user} (type: {type(user)})")
-        
-        # Ensure we have a valid User instance, not AnonymousUser
-        if user and hasattr(user, 'id') and user.id:
-            serializer.save(created_by=user)
-        else:
-            raise ValueError(f"Unable to determine user for notebook creation. User: {user}")
+        serializer.save(created_by=self.request.user)
     
     @action(detail=True, methods=['post'])
     def toggle_pin(self, request, pk=None):
