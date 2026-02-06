@@ -182,17 +182,17 @@ export default function ProductsTab({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h4 className="text-lg font-medium text-slate-100 mb-4">Products</h4>
+        <h4 className="text-base sm:text-lg font-medium text-slate-100 mb-4">Products</h4>
         {/* Filter by Supplier */}
         <div className="space-y-4 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="relative" ref={dropdownRef}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full min-w-0">
+            <div className="relative w-full sm:w-auto" ref={dropdownRef}>
               {/* ...existing dropdown code... */}
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer min-w-[200px] flex items-center justify-between"
+                className="w-full sm:min-w-[200px] px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer flex items-center justify-between"
               >
                 <span className="truncate">
                   {selectedProductSupplier === 'all' ? 'All Suppliers' : selectedProductSupplier}
@@ -227,7 +227,7 @@ export default function ProductsTab({
                       <button
                         key={supplier}
                         onClick={() => handleSupplierSelect(supplier)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors ${
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer truncate overflow-hidden whitespace-nowrap ${
                           selectedProductSupplier === supplier ? 'bg-slate-700/50 text-cyan-400' : 'text-slate-300'
                         }`}
                       >
@@ -247,7 +247,7 @@ export default function ProductsTab({
             {selectedProductSupplier !== 'all' && (
               <button
                 onClick={() => setSelectedProductSupplier('all')}
-                className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
+                className="self-start sm:self-auto px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
               >
                 Clear Filter
               </button>
@@ -259,7 +259,7 @@ export default function ProductsTab({
             <div className="text-sm text-slate-400 border-t border-slate-700/30 pt-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                  <span>Showing {totalProducts} products for {selectedProductSupplier}</span>
+                  <span className="break-words">Showing {totalProducts} products for {selectedProductSupplier}</span>
                   <span className="text-cyan-400">
                     Total Value: {formatCurrency(products.reduce((sum: number, product: BackendProduct) => sum + calculateProductValue(product), 0))}
                   </span>
@@ -315,12 +315,12 @@ export default function ProductsTab({
             ) : (
               <div className="space-y-3">
                 {getCurrentPageProducts().map((product) => (
-                  <div key={product.id} className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/50 transition-colors duration-200">
-                    <div className="flex items-center justify-between">
+                  <div key={product.id} className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 sm:p-4 hover:bg-slate-800/50 transition-colors duration-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       {/* Left side - Product Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h5 className="text-slate-100 font-medium text-sm">{product.name}</h5>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h5 className="text-slate-100 font-medium text-sm truncate">{product.name}</h5>
                           <span className="bg-slate-700/50 text-slate-300 px-2 py-1 rounded-md text-xs">
                             {product.category_name || 'No Category'}
                           </span>
@@ -331,10 +331,10 @@ export default function ProductsTab({
                           )}
                         </div>
                         
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs">
                           <div>
                             <span className="text-slate-400">Supplier</span>
-                            <p className="text-slate-100 font-medium">{product.supplier_name || 'No Supplier'}</p>
+                            <p className="text-slate-100 font-medium truncate">{product.supplier_name || 'No Supplier'}</p>
                           </div>
                           <div>
                             <span className="text-slate-400">Unit Price</span>
@@ -357,8 +357,8 @@ export default function ProductsTab({
                       </div>
 
                       {/* Right side - Stock Badge */}
-                      <div className="ml-6">
-                        <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 text-cyan-300 px-3 py-2 rounded-lg text-center">
+                      <div className="sm:ml-6 self-start sm:self-center">
+                        <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 text-cyan-300 px-3 py-2 rounded-lg text-center min-w-[80px]">
                           <div className="text-lg font-bold">
                             {product.has_variants ? (product.total_stock || 0) : product.stock}
                           </div>
@@ -371,12 +371,12 @@ export default function ProductsTab({
 
                 {/* Pagination Controls */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between border-t border-slate-700/30 pt-4 mt-6">
-                    <div className="text-sm text-slate-400">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-700/30 pt-4 mt-6">
+                    <div className="text-xs sm:text-sm text-slate-400">
                       Showing {((currentPage - 1) * productsPerPage) + 1} to {Math.min(currentPage * productsPerPage, totalProducts)} of {totalProducts} products
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                       {/* Previous Button */}
                       <button
                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -391,7 +391,7 @@ export default function ProductsTab({
                       </button>
 
                       {/* Page Numbers */}
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-nowrap">
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
                           // Show first page, last page, current page, and pages around current
                           const showPage = page === 1 || 

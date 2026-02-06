@@ -232,10 +232,10 @@ export default function PurchaseHistoryTab({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-lg font-medium text-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h4 className="text-base sm:text-lg font-medium text-slate-100">
             Purchase History
           </h4>
           <div className="flex items-center gap-2">
@@ -256,7 +256,7 @@ export default function PurchaseHistoryTab({
                   d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                 />
               </svg>
-              CSV
+              <span className="hidden sm:inline">CSV</span>
             </button>
             <button
               onClick={downloadPDF}
@@ -275,18 +275,18 @@ export default function PurchaseHistoryTab({
                   d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
                 />
               </svg>
-              PDF
+              <span className="hidden sm:inline">PDF</span>
             </button>
           </div>
         </div>
         {/* Filter by Supplier */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-4">
-            <div className="relative" ref={dropdownRef}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full min-w-0">
+            <div className="relative w-full sm:w-auto" ref={dropdownRef}>
               {/* ...existing dropdown code... */}
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer min-w-[200px] flex items-center justify-between"
+                className="w-full sm:min-w-[200px] px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer flex items-center justify-between"
               >
                 <span className="truncate">
                   {selectedSupplier === "all"
@@ -337,7 +337,7 @@ export default function PurchaseHistoryTab({
                       <button
                         key={supplier}
                         onClick={() => handleSupplierSelect(supplier)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer ${
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer truncate overflow-hidden whitespace-nowrap ${
                           selectedSupplier === supplier
                             ? "bg-slate-700/50 text-cyan-400"
                             : "text-slate-300"
@@ -359,7 +359,7 @@ export default function PurchaseHistoryTab({
             {selectedSupplier !== "all" && (
               <button
                 onClick={() => setSelectedSupplier("all")}
-                className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
+                className="self-start sm:self-auto px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
               >
                 Clear Filter
               </button>
@@ -385,26 +385,26 @@ export default function PurchaseHistoryTab({
           </div>
         </div>
 
-        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg overflow-hidden">
-          <table className="w-full">
+        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg overflow-x-auto max-w-full">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-slate-800/50">
               <tr>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
                   Date
                 </th>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
                   Supplier
                 </th>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
                   Products
                 </th>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
                   Amount
                 </th>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
                   Status
                 </th>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
                   Proof
                 </th>
               </tr>
@@ -415,21 +415,21 @@ export default function PurchaseHistoryTab({
                   key={purchase.id}
                   className="border-t border-slate-700/30 hover:bg-slate-800/30 transition-colors group"
                 >
-                  <td className="py-3 px-4 text-slate-100 text-sm">
+                  <td className="py-3 px-3 sm:px-4 text-slate-100 text-xs sm:text-sm whitespace-nowrap">
                     {formatDate(purchase.date)}
                   </td>
-                  <td className="py-3 px-4 text-slate-100 text-sm">
+                  <td className="py-3 px-3 sm:px-4 text-slate-100 text-xs sm:text-sm whitespace-nowrap">
                     {purchase.supplier.name}
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="text-slate-300 text-sm">
+                  <td className="py-3 px-3 sm:px-4">
+                    <div className="text-slate-300 text-xs sm:text-sm max-w-xs truncate">
                       {purchase.products}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-slate-100 font-medium text-sm">
+                  <td className="py-3 px-3 sm:px-4 text-slate-100 font-medium text-xs sm:text-sm whitespace-nowrap">
                     {formatCurrency(purchase.amount)}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3 sm:px-4">
                     {editingPurchaseId === purchase.id ? (
                       <div className="flex items-center gap-2">
                         <select
@@ -527,7 +527,7 @@ export default function PurchaseHistoryTab({
                       </div>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                     {purchase.proof_url ? (
                       <div className="flex items-center gap-2">
                         {purchase.proof_url.toLowerCase().includes(".pdf") ? (

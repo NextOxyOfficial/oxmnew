@@ -213,7 +213,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col">
+    <div className="min-h-screen bg-slate-900 flex flex-col overflow-x-hidden">
       {/* Sticky full width header */}
       <div className="sticky top-0 z-50">
         <Header
@@ -228,7 +228,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Content area with sidebar and main content */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-w-0">
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -240,9 +240,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         />
 
         {/* Main content */}
-        <div className="flex flex-col flex-1 lg:pl-64 relative">
+        <div className="flex flex-col flex-1 lg:pl-64 relative min-w-0">
           {/* Main Content */}
-          <main className="flex-1 bg-slate-900">{children}</main>
+          <main className="flex-1 bg-slate-900 min-w-0">{children}</main>
 
           <Footer />
         </div>

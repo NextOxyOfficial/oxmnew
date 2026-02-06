@@ -1368,7 +1368,7 @@ export default function OrdersPage() {
         )}
 
         {/* Tab Navigation */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg mx-2 sm:mx-0">
+        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg sm:mx-0">
           <div className="flex border-b border-slate-700/50 overflow-x-auto">
             <button
               onClick={() => handleTabChange("orders")}
