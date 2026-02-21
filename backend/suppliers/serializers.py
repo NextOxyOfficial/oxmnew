@@ -85,24 +85,18 @@ class PurchaseUpdateSerializer(serializers.ModelSerializer):
         fields = ['date', 'amount', 'status', 'products', 'notes', 'proof_document']
         
     def validate(self, data):
-        print(f"PurchaseUpdateSerializer.validate called with data: {data}")
         return super().validate(data)
-        
+
     def validate_status(self, value):
-        print(f"PurchaseUpdateSerializer.validate_status called with value: {value}")
         valid_statuses = ['pending', 'completed', 'cancelled']
         if value not in valid_statuses:
             raise serializers.ValidationError(f"Invalid status. Must be one of: {valid_statuses}")
         return value
-        
+
     def update(self, instance, validated_data):
-        print(f"PurchaseUpdateSerializer.update called with validated_data: {validated_data}")
-        # Update only the fields that are provided
         for attr, value in validated_data.items():
-            print(f"Setting {attr} = {value}")
             setattr(instance, attr, value)
         instance.save()
-        print(f"Purchase {instance.id} updated successfully")
         return instance
 
 

@@ -44,28 +44,20 @@ def build_absolute_url(request, relative_url):
     # Try to get SITE_URL from settings first
     if hasattr(settings, "SITE_URL") and settings.SITE_URL:
         base_url = settings.SITE_URL.rstrip("/")
-        print(f"🔗 Using SITE_URL from settings: {base_url}")
-    
+
     # If no SITE_URL, try to detect from request
     if not base_url and request:
-        # Check if request has the production domain
         host = request.get_host()
         if 'oxymanager.com' in host:
             base_url = f"https://{host}"
-            print(f"🔗 Detected production domain from request: {base_url}")
         else:
-            # Fallback to request.build_absolute_uri for localhost/dev
             base_url = request.build_absolute_uri("/").rstrip("/")
-            print(f"🔗 Using request.build_absolute_uri: {base_url}")
-    
+
     # Final fallback for production
     if not base_url:
         base_url = "https://oxymanager.com"
-        print(f"🔗 Using hardcoded production fallback: {base_url}")
-    
-    final_url = f"{base_url}{relative_url}"
-    print(f"🔗 Final URL constructed: {final_url}")
-    return final_url
+
+    return f"{base_url}{relative_url}"
 
 
 @api_view(["GET"])
@@ -225,7 +217,6 @@ def register(request):
                     "created_at": settings.created_at,
                     "updated_at": settings.updated_at,
                 },
-                "token": token.key,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -490,52 +481,42 @@ def upload_store_logo(request):
     Upload store logo
     """
     try:
-        print(f"📁 Store logo upload request from user: {request.user.username}")
-        print(f"📁 Files in request: {list(request.FILES.keys())}")
-        print(f"📁 Request method: {request.method}")
-        print(f"📁 Content type: {request.content_type}")
-        
         if "store_logo" not in request.FILES:
-            print("❌ No store_logo file in request")
             return Response(
                 {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         file = request.FILES["store_logo"]
-        print(f"📁 File details: name={file.name}, size={file.size}, content_type={file.content_type}")
-        
+
         # Validate file type
         allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
         if file.content_type not in allowed_types:
             return Response(
-                {"error": f"File type not allowed. Allowed types: {', '.join(allowed_types)}"}, 
+                {"error": f"File type not allowed. Allowed types: {', '.join(allowed_types)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Validate file size (10MB max)
-        max_size = 10 * 1024 * 1024  # 10MB
+        max_size = 10 * 1024 * 1024
         if file.size > max_size:
             return Response(
-                {"error": "File size too large. Maximum size is 10MB"}, 
+                {"error": "File size too large. Maximum size is 10MB"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         profile, created = UserProfile.objects.get_or_create(user=request.user)
-        print(f"📁 Profile {'created' if created else 'found'} for user: {request.user.username}")
-        
+
         # Delete old logo if exists
         if profile.store_logo:
             try:
                 old_logo_path = profile.store_logo.path
                 if os.path.exists(old_logo_path):
                     os.remove(old_logo_path)
-                    print(f"📁 Deleted old logo: {old_logo_path}")
-            except Exception as e:
-                print(f"⚠️ Could not delete old logo: {e}")
-        
+            except Exception:
+                pass
+
         profile.store_logo = file
         profile.save()
-        print(f"✅ Store logo saved successfully: {profile.store_logo.url}")
 
         return Response(
             {
@@ -546,9 +527,6 @@ def upload_store_logo(request):
         )
 
     except Exception as e:
-        print(f"❌ Store logo upload error: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -559,67 +537,52 @@ def upload_banner_image(request):
     Upload banner image
     """
     try:
-        print(f"📁 Banner image upload request from user: {request.user.username}")
-        print(f"📁 Files in request: {list(request.FILES.keys())}")
-        print(f"📁 Request method: {request.method}")
-        print(f"📁 Content type: {request.content_type}")
-        
         if "banner_image" not in request.FILES:
-            print("❌ No banner_image file in request")
             return Response(
                 {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         file = request.FILES["banner_image"]
-        print(f"📁 File details: name={file.name}, size={file.size}, content_type={file.content_type}")
-        
+
         # Validate file type
         allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
         if file.content_type not in allowed_types:
             return Response(
-                {"error": f"File type not allowed. Allowed types: {', '.join(allowed_types)}"}, 
+                {"error": f"File type not allowed. Allowed types: {', '.join(allowed_types)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Validate file size (10MB max)
-        max_size = 10 * 1024 * 1024  # 10MB
+        max_size = 10 * 1024 * 1024
         if file.size > max_size:
             return Response(
-                {"error": "File size too large. Maximum size is 10MB"}, 
+                {"error": "File size too large. Maximum size is 10MB"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         profile, created = UserProfile.objects.get_or_create(user=request.user)
-        print(f"📁 Profile {'created' if created else 'found'} for user: {request.user.username}")
-        
+
         # Delete old banner if exists
         if profile.banner_image:
             try:
                 old_banner_path = profile.banner_image.path
                 if os.path.exists(old_banner_path):
                     os.remove(old_banner_path)
-                    print(f"📁 Deleted old banner: {old_banner_path}")
-            except Exception as e:
-                print(f"⚠️ Could not delete old banner: {e}")
-        
+            except Exception:
+                pass
+
         profile.banner_image = file
         profile.save()
-        print(f"✅ Banner image saved successfully: {profile.banner_image.url}")
 
         return Response(
             {
                 "message": "Banner image uploaded successfully",
-                "banner_image_url": build_absolute_url(
-                    request, profile.banner_image.url
-                ),
+                "banner_image_url": build_absolute_url(request, profile.banner_image.url),
             },
             status=status.HTTP_200_OK,
         )
 
     except Exception as e:
-        print(f"❌ Banner image upload error: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1022,7 +985,7 @@ def request_password_reset(request):
             )
         except Exception as email_error:
             # Log the error but don't fail the request
-            print(f"Email sending failed: {email_error}")
+            pass  # noqa: email errors are non-fatal
 
         return Response(
             {"message": f"Password reset instructions have been sent to {user.email}"},
@@ -1783,8 +1746,6 @@ def smsSend(request):
         else:
             sms_count = (length + 152) // 153  # 153 chars per segment for multi-part GSM
     
-    print(f"SMS calculation: {length} chars, Unicode: {has_unicode_chars}, Segments: {sms_count}")
-
     # Check if user has sufficient SMS credits
     try:
         user_sms_credit = UserSMSCredit.objects.get(user=request.user)
@@ -1836,9 +1797,6 @@ def smsSend(request):
                 sms_count=sms_count,
             )
 
-            print(
-                f"SMS sent successfully. Deducted {sms_count} credits ({length} chars, Unicode: {has_unicode_chars}). Remaining: {user_sms_credit.credits}"
-            )
             return Response(
                 {
                     "success": True,
@@ -1868,7 +1826,6 @@ def smsSend(request):
             )
 
     except requests.exceptions.Timeout:
-        print("SMS API request timed out")
         SMSSentHistory.objects.create(
             user=request.user,
             recipient=phone,
@@ -1884,7 +1841,6 @@ def smsSend(request):
             status=status.HTTP_408_REQUEST_TIMEOUT,
         )
     except requests.exceptions.ConnectionError:
-        print("SMS API connection error")
         SMSSentHistory.objects.create(
             user=request.user,
             recipient=phone,
@@ -1900,7 +1856,6 @@ def smsSend(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
     except requests.exceptions.RequestException as e:
-        print(f"SMS API request failed: {str(e)}")
         SMSSentHistory.objects.create(
             user=request.user,
             recipient=phone,
@@ -2619,8 +2574,7 @@ def get_store_by_domain(request, domain):
                 online_products_queryset, many=True
             ).data
 
-        except Exception as e:
-            print(f"Error fetching online products: {e}")
+        except Exception:
             pass
 
         # Get user profile for store info

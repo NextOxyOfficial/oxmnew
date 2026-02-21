@@ -1,5 +1,7 @@
 # subscription/views.py
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from .models import (
     PaymentTransaction,
@@ -178,42 +180,47 @@ def add_sms_credits(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([IsAdminUser])
 def upgrade_subscription(request):
-    """Upgrade user subscription plan"""
+    """Upgrade user subscription plan - ADMIN ONLY.
+
+    Direct plan upgrades without payment are restricted to admins.
+    Regular users must go through the ShurjoPay payment flow (pay.py).
+    """
     plan_id = request.data.get('plan_id')
-    
+    user_id = request.data.get('user_id')
+
     if not plan_id:
         return Response({
             'success': False,
             'message': 'Plan ID is required'
         }, status=status.HTTP_400_BAD_REQUEST)
-    
+
     try:
-        # Get the plan (case-insensitive lookup)
+        from django.contrib.auth.models import User as AuthUser
+        target_user = AuthUser.objects.get(id=user_id) if user_id else request.user
+
         plan = SubscriptionPlan.objects.get(name__iexact=plan_id)
-        
-        # Get or create user subscription (only one subscription per user)
+
         user_subscription, created = UserSubscription.objects.get_or_create(
-            user=request.user,
+            user=target_user,
             defaults={
                 'plan': plan,
                 'active': True
             }
         )
-        
+
         if not created:
-            # Update existing subscription
             user_subscription.plan = plan
             user_subscription.active = True
             user_subscription.save()
-        
+
         return Response({
             'success': True,
             'message': f'Successfully upgraded to {plan.name} plan',
             'plan': plan.name
         }, status=status.HTTP_200_OK)
-        
+
     except SubscriptionPlan.DoesNotExist:
         return Response({
             'success': False,
@@ -226,38 +233,43 @@ def upgrade_subscription(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([IsAdminUser])
 def purchase_sms_package(request):
-    """Purchase SMS package and add credits to user account"""
+    """Manually add SMS credits for a user - ADMIN ONLY.
+
+    Direct credit grants without payment are restricted to admins.
+    Regular users must go through the ShurjoPay payment flow (pay.py verifyPayment).
+    """
     package_id = request.data.get('package_id')
-    
+    user_id = request.data.get('user_id')
+
     if not package_id:
         return Response({
             'success': False,
             'message': 'Package ID is required'
         }, status=status.HTTP_400_BAD_REQUEST)
-    
+
     try:
-        # Get the SMS package
+        from django.contrib.auth.models import User as AuthUser
+        target_user = AuthUser.objects.get(id=user_id) if user_id else request.user
+
         sms_package = SMSPackage.objects.get(id=package_id)
-        
-        # Get or create user SMS credits
+
         user_sms_credit, created = UserSMSCredit.objects.get_or_create(
-            user=request.user,
+            user=target_user,
             defaults={'credits': 0}
         )
-        
-        # Add credits from the package
+
         user_sms_credit.credits += sms_package.sms_count
         user_sms_credit.save()
-        
+
         return Response({
             'success': True,
-            'message': f'Successfully purchased {sms_package.sms_count} SMS credits',
+            'message': f'Successfully added {sms_package.sms_count} SMS credits',
             'credits_added': sms_package.sms_count,
             'total_credits': user_sms_credit.credits
         }, status=status.HTTP_200_OK)
-        
+
     except SMSPackage.DoesNotExist:
         return Response({
             'success': False,
@@ -316,13 +328,3 @@ def get_my_subscription(request):
             'message': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def debug_auth(request):
-    """Debug endpoint to check authentication"""
-    return Response({
-        'authenticated': request.user.is_authenticated,
-        'user': request.user.username if request.user.is_authenticated else None,
-        'token_header': request.META.get('HTTP_AUTHORIZATION', 'Not found'),
-        'success': True
-    })

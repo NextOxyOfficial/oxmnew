@@ -73,7 +73,7 @@ class RateLimitMixin:
         user_id = api_key_obj.user.id
 
         # Check hourly rate limit
-        hourly_key = f"api_rate_limit_hourly_{user_id}_{now.hour}"
+        hourly_key = f"api_rate_limit_hourly_{user_id}_{now.date()}_{now.hour}"
         hourly_count = cache.get(hourly_key, 0)
 
         if hourly_count >= api_key_obj.requests_per_hour:

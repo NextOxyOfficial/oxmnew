@@ -20,18 +20,7 @@ def create_default_bank_account(sender, instance, created, **kwargs):
         )
 
 
-@receiver(post_save, sender=User)
-def ensure_main_account_exists(sender, instance, **kwargs):
-    """
-    Ensure existing users have a Main account
-    This can be used for existing users who don't have a Main account yet
-    """
-    if not BankAccount.objects.filter(owner=instance, name="Main").exists():
-        BankAccount.objects.create(
-            name="Main",
-            owner=instance,
-            balance=0.00,
-            is_active=True,
-            activation_fee=0.00,
-            is_activated=True,
-        )
+# Note: ensure_main_account_exists was removed because it fired on every
+# User.save() (including profile updates), causing an unnecessary DB query
+# on each request. The BankAccountViewSet.ensure_main_account() method
+# handles the case for existing users who may be missing a Main account.

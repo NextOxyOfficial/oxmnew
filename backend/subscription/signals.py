@@ -17,8 +17,7 @@ def create_user_subscription(sender, instance, created, **kwargs):
                 plan=free_plan,
                 active=True
             )
-            print(f"Created free subscription for user: {instance.username}")
         except SubscriptionPlan.DoesNotExist:
-            print(f"Free plan not found. Could not create subscription for user: {instance.username}")
-        except Exception as e:
-            print(f"Error creating subscription for user {instance.username}: {e}")
+            pass
+        except Exception:
+            pass

@@ -245,11 +245,6 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         has_variants = data.get("has_variants", False)
         variants_data = data.get("colorSizeVariants", [])
 
-        print("=== SERIALIZER VALIDATION DEBUG ===")
-        print("has_variants:", has_variants)
-        print("variants_data type:", type(variants_data))
-        print("variants_data content:", variants_data)
-
         if has_variants:
             if not variants_data:
                 raise serializers.ValidationError(
@@ -258,15 +253,9 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
             # Validate each variant
             for i, variant_data in enumerate(variants_data):
-                print(f"Validating variant {i + 1}:", variant_data)
-
                 buy_price = variant_data.get("buyPrice", 0)
                 sell_price = variant_data.get("sellPrice", 0)
                 stock = variant_data.get("stock", 0)
-
-                print(
-                    f"Variant {i + 1} - buyPrice: {buy_price}, sellPrice: {sell_price}, stock: {stock}"
-                )
 
                 # Check if variant has at least one identifying field
                 color = variant_data.get("color", "").strip()
@@ -325,23 +314,16 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
     def validate_colorSizeVariants(self, value):
         """Validate colorSizeVariants JSON field"""
-        print("=== VALIDATING colorSizeVariants ===")
-        print("Type:", type(value))
-        print("Value:", value)
-
         if value is None:
             return value
 
         if not isinstance(value, list):
-            print("ERROR: colorSizeVariants is not a list")
             raise serializers.ValidationError("colorSizeVariants must be a list")
 
         # Ensure it's not a nested array
         if value and isinstance(value[0], list):
-            print("WARNING: Detected nested array, flattening...")
             value = value[0]
 
-        print("Final validated value:", value)
         return value
 
     def validate_category(self, value):
@@ -361,12 +343,6 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         variants_data = validated_data.pop("colorSizeVariants", [])
         photos_data = validated_data.pop("photos", [])
 
-        print("=== SERIALIZER CREATE DEBUG ===")
-        print("variants_data type:", type(variants_data))
-        print("variants_data content:", variants_data)
-        print("photos_data type:", type(photos_data))
-        print("validated_data:", validated_data)
-
         # Set user
         validated_data["user"] = self.context["request"].user
 
@@ -381,9 +357,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
         # Create variants if provided
         if product.has_variants and variants_data:
-            print(f"Creating {len(variants_data)} variants...")
             for i, variant_data in enumerate(variants_data):
-                print(f"Processing variant {i + 1}:", variant_data)
                 # Map frontend field names to backend field names
                 variant_create_data = {
                     "product": product,
@@ -402,7 +376,6 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                     k: v for k, v in variant_create_data.items() if v is not None
                 }
 
-                print("Creating variant with data:", variant_create_data)
                 ProductVariant.objects.create(**variant_create_data)
 
         # Create photos if provided

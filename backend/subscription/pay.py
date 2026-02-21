@@ -482,12 +482,6 @@ def makePayment(request):
         return Response(payment_details_dict, status=status.HTTP_200_OK)
 
     except Exception as e:
-        print("=== PAYMENT ERROR ===")
-        print(f"Error type: {type(e).__name__}")
-        print(f"Error message: {str(e)}")
-        print(f"Request user: {request.user}")
-        print(f"Request params: {dict(request.query_params)}")
-        
         # More specific error messages based on the error type
         if isinstance(e, KeyError):
             missing_key = None

@@ -517,17 +517,19 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
-        """Delete an order and restore stock"""
+        """Delete an order and restore stock (only if not already cancelled)"""
         order = self.get_object()
 
-        # Restore stock for all items before deleting
-        for item in order.items.all():
-            if item.variant:
-                item.variant.stock += item.quantity
-                item.variant.save()
-            else:
-                item.product.stock += item.quantity
-                item.product.save()
+        # Only restore stock if the order was NOT already cancelled
+        # (cancelled orders already had their stock restored by cancel_order)
+        if order.status != "cancelled":
+            for item in order.items.all():
+                if item.variant:
+                    item.variant.stock += item.quantity
+                    item.variant.save(update_fields=["stock"])
+                else:
+                    item.product.stock += item.quantity
+                    item.product.save(update_fields=["stock"])
 
         # Delete the order
         return super().destroy(request, *args, **kwargs)
@@ -603,37 +605,39 @@ class OrderViewSet(viewsets.ModelViewSet):
             quantity = int(item_data.get("quantity", 0))
 
             try:
-                product = Product.objects.get(id=product_id, user=request.user)
+                from django.db import transaction as db_transaction
+                with db_transaction.atomic():
+                    product = Product.objects.select_for_update().get(id=product_id, user=request.user)
 
-                # Check stock
-                if product.has_variants and variant_id:
-                    variant = product.variants.get(id=variant_id)
-                    if variant.stock < quantity:
-                        return Response(
-                            {
-                                "error": f"Insufficient stock. Available: {variant.stock}, Requested: {quantity}"
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                else:
-                    if product.stock < quantity:
-                        return Response(
-                            {
-                                "error": f"Insufficient stock. Available: {product.stock}, Requested: {quantity}"
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
+                    # Check stock
+                    if product.has_variants and variant_id:
+                        variant = product.variants.select_for_update().get(id=variant_id)
+                        if variant.stock < quantity:
+                            return Response(
+                                {
+                                    "error": f"Insufficient stock. Available: {variant.stock}, Requested: {quantity}"
+                                },
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
+                    else:
+                        if product.stock < quantity:
+                            return Response(
+                                {
+                                    "error": f"Insufficient stock. Available: {product.stock}, Requested: {quantity}"
+                                },
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
 
-                # Create the item
-                item = serializer.save()
+                    # Create the item
+                    item = serializer.save()
 
-                # Update stock
-                if product.has_variants and variant_id:
-                    variant.stock -= quantity
-                    variant.save()
-                else:
-                    product.stock -= quantity
-                    product.save()
+                    # Update stock
+                    if product.has_variants and variant_id:
+                        variant.stock -= quantity
+                        variant.save(update_fields=["stock"])
+                    else:
+                        product.stock -= quantity
+                        product.save(update_fields=["stock"])
 
                 # Return updated order with all items
                 order_serializer = OrderSerializer(order, context={"request": request})

@@ -5,7 +5,7 @@ import json
 import openpyxl
 import xlrd
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Max, Q, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
@@ -67,48 +67,30 @@ class ProductViewSet(viewsets.ModelViewSet):
         """Create a new product with custom handling for FormData"""
         data = request.data.copy()
 
-        print("=== BACKEND CREATE PRODUCT DEBUG ===")
-        print("Original request.data keys:", list(request.data.keys()))
-        print("Original request.FILES keys:", list(request.FILES.keys()))
-
         # Handle photos from FormData
         photos = []
 
-        # Check if photos are sent as a list with the same key
         if "photos" in request.FILES:
-            photos_files = request.FILES.getlist("photos")
-            photos.extend(photos_files)
-            print(f"Found {len(photos_files)} photos with key 'photos'")
+            photos.extend(request.FILES.getlist("photos"))
 
-        # Also check for photos with different keys (e.g., photos[0], photos[1], etc.)
         for key in request.FILES:
             if key.startswith("photos") and key != "photos":
                 photos.append(request.FILES[key])
-                print(f"Found photo with key '{key}'")
-
-        print(f"Total photos found: {len(photos)}")
 
         # Handle colorSizeVariants JSON string
         if "colorSizeVariants" in data and isinstance(data["colorSizeVariants"], str):
             try:
                 parsed_variants = json.loads(data["colorSizeVariants"])
 
-                # Handle case where the variants might be nested in another array
-                # This can happen if the data gets processed multiple times
                 if (
                     isinstance(parsed_variants, list)
                     and len(parsed_variants) == 1
                     and isinstance(parsed_variants[0], list)
                 ):
-                    print("Detected nested array in colorSizeVariants, flattening...")
                     parsed_variants = parsed_variants[0]
 
                 data["colorSizeVariants"] = parsed_variants
-                print("Parsed colorSizeVariants:", parsed_variants)
-                print("Type after parsing:", type(parsed_variants))
             except json.JSONDecodeError as e:
-                print("JSON decode error:", str(e))
-                print("Raw colorSizeVariants data:", repr(data["colorSizeVariants"]))
                 return Response(
                     {"error": f"Invalid colorSizeVariants JSON: {str(e)}"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -117,62 +99,29 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Convert string boolean values
         if "hasVariants" in data:
             data["hasVariants"] = data["hasVariants"] in ["true", "True", True]
-            print("Converted hasVariants:", data["hasVariants"])
         elif "has_variants" in data:
             data["has_variants"] = data["has_variants"] in ["true", "True", True]
-            print("Converted has_variants:", data["has_variants"])
 
-        # Convert no_stock_required boolean value
         if "no_stock_required" in data:
             data["no_stock_required"] = data["no_stock_required"] in ["true", "True", True]
-            print("Converted no_stock_required:", data["no_stock_required"])
 
         # Convert numeric fields - handle both snake_case and camelCase
         numeric_fields = ["buyPrice", "sellPrice", "stock", "buy_price", "sell_price"]
         for field in numeric_fields:
             if field in data and data[field]:
                 try:
-                    if field == "stock":
-                        data[field] = int(data[field])
-                    else:
-                        data[field] = float(data[field])
-                    print(f"Converted {field}:", data[field])
+                    data[field] = int(data[field]) if field == "stock" else float(data[field])
                 except (ValueError, TypeError):
                     data[field] = 0
-                    print(f"Failed to convert {field}, set to 0")
 
-        print(
-            "Final data for serializer:",
-            {k: v for k, v in data.items() if k != "photos"},
-        )
-        print("Photos in data:", len(photos))
-
-        # Debug colorSizeVariants specifically
-        if "colorSizeVariants" in data:
-            print("=== colorSizeVariants DEBUG ===")
-            print("Type:", type(data["colorSizeVariants"]))
-            print("Value:", data["colorSizeVariants"])
-            print("Is list?", isinstance(data["colorSizeVariants"], list))
-            if (
-                isinstance(data["colorSizeVariants"], list)
-                and data["colorSizeVariants"]
-            ):
-                print("First element type:", type(data["colorSizeVariants"][0]))
-                print("First element:", data["colorSizeVariants"][0])
-        else:
-            print("colorSizeVariants not in data")
-
-        # Don't add photos to data - handle them separately
-        # Remove any photos from data to avoid validation issues
+        # Remove photos from data to avoid validation issues
         if "photos" in data:
             del data["photos"]
 
-        # Prepare clean data for serializer to avoid QueryDict nesting issues
-        # Only include fields that are supported by the serializer
+        # Prepare clean data for serializer
         serializer_class = self.get_serializer_class()
         valid_fields = set(serializer_class.Meta.fields)
 
-        # Map snake_case field names to camelCase for the serializer
         field_mapping = {
             "buy_price": "buyPrice",
             "sell_price": "sellPrice",
@@ -183,45 +132,19 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         serializer_data = {}
         for key, value in data.items():
-            # Check if it's a direct valid field or needs mapping
             mapped_key = field_mapping.get(key, key)
-
-            if (
-                mapped_key in valid_fields or key == "colorSizeVariants"
-            ):  # colorSizeVariants is write_only
+            if mapped_key in valid_fields or key == "colorSizeVariants":
                 if key == "colorSizeVariants" and isinstance(value, list):
-                    # Ensure we pass the list directly, not nested
-                    if value and isinstance(value[0], list):
-                        print(
-                            "WARNING: Flattening nested colorSizeVariants before serializer"
-                        )
-                        serializer_data[key] = value[0]
-                    else:
-                        serializer_data[key] = value
+                    serializer_data[key] = value[0] if (value and isinstance(value[0], list)) else value
                 else:
-                    # Use the mapped key for the serializer
                     serializer_data[mapped_key] = value
-            else:
-                print(f"Skipping unknown field: {key}")
 
-        print("=== SERIALIZER INPUT DATA ===")
-        print("serializer_data:", serializer_data)
-        if "colorSizeVariants" in serializer_data:
-            print("colorSizeVariants type:", type(serializer_data["colorSizeVariants"]))
-            print("colorSizeVariants value:", serializer_data["colorSizeVariants"])
-
-        # Create serializer with clean data
         serializer = self.get_serializer(data=serializer_data)
-        print("Serializer data before validation:", serializer.initial_data)
 
         if serializer.is_valid():
-            print("Serializer is valid, proceeding to save")
-            # Save the product first
             product = serializer.save()
 
-            # Now handle photos separately
             if photos:
-                print(f"Creating {len(photos)} ProductPhoto objects")
                 for i, photo in enumerate(photos):
                     ProductPhoto.objects.create(product=product, image=photo, order=i)
 
@@ -229,8 +152,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 product, context={"request": request}
             )
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            print("Serializer validation errors:", serializer.errors)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["post"])
@@ -294,7 +216,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         for i, photo in enumerate(photos):
             # Get the current max order
             max_order = (
-                product.photos.aggregate(max_order=Sum("order"))["max_order"] or 0
+                product.photos.aggregate(max_order=Max("order"))["max_order"] or 0
             )
 
             photo_obj = ProductPhoto.objects.create(

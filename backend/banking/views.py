@@ -6,9 +6,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from employees.models import Employee
 from rest_framework import filters, generics, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from django.db.models import Sum
 
 from .models import BankAccount, BankingPlan, Transaction, UserBankingPlan
 from .serializers import (
@@ -142,45 +144,28 @@ class BankAccountViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def transactions(self, request, pk=None):
         """Get all transactions for a specific account with pagination"""
-        print(f"🏦 Fetching transactions for account {pk}")
-        print(f"🔍 Query params: {dict(request.query_params)}")
-        
-        # Use direct lookup instead of get_object() to avoid queryset issues
         try:
-            # First check if account exists
             account = BankAccount.objects.get(id=pk, is_active=True)
-            print(f"✅ Found account: {account.name} (ID: {account.id})")
-            
-            # Then check if user has permission to access it
+
             if not request.user.is_staff and not request.user.is_superuser:
                 if account.owner != request.user:
-                    print(f"❌ Permission denied: User {request.user.username} doesn't own account {pk}")
                     return Response(
-                        {"error": f"You don't have permission to access this account."},
+                        {"error": "You don't have permission to access this account."},
                         status=status.HTTP_403_FORBIDDEN
                     )
-            
+
         except BankAccount.DoesNotExist:
-            print(f"❌ Account {pk} does not exist")
             return Response(
                 {"error": f"Bank account with ID {pk} not found."},
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            print(f"❌ Error retrieving account {pk}: {type(e).__name__}: {str(e)}")
-            import traceback
-            traceback.print_exc()
             return Response(
                 {"error": f"Error accessing account: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            
+
         transactions = account.transactions.all().order_by('-date', '-updated_at')
-        print(f"📊 Total transactions in account: {transactions.count()}")
-        
-        # Show sample transaction purposes for debugging
-        sample_data = transactions.values('id', 'purpose', 'reference_number')[:5]
-        print(f"📝 Sample transaction data: {list(sample_data)}")
 
         # Apply filtering
         transaction_type = request.query_params.get("type")
@@ -197,29 +182,17 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         if date_from:
             transactions = transactions.filter(date__gte=date_from)
         if date_to:
-            # Include the entire end date by adding time 23:59:59
             from datetime import datetime, time
-
             try:
-                # Parse the date string and combine with end of day time
                 end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
                 end_datetime = datetime.combine(end_date, time(23, 59, 59))
                 transactions = transactions.filter(date__lte=end_datetime)
             except ValueError:
-                # Fallback to original behavior if date parsing fails
                 transactions = transactions.filter(date__lte=date_to)
         if search:
-            print(f"🔍 Search term: '{search}'")
-            print(f"📊 Total transactions before search: {transactions.count()}")
-            search_filter = Q(purpose__icontains=search) | Q(reference_number__icontains=search)
-            print(f"🔍 Search filter: {search_filter}")
-            transactions = transactions.filter(search_filter)
-            print(f"📊 Total transactions after search: {transactions.count()}")
-            
-            # Debug: Show some sample purposes to verify data
-            sample_purposes = transactions.values_list('purpose', flat=True)[:10]
-            print(f"📝 Sample purposes found: {list(sample_purposes)}")
-            
+            transactions = transactions.filter(
+                Q(purpose__icontains=search) | Q(reference_number__icontains=search)
+            )
         if verified_by and verified_by != "all":
             transactions = transactions.filter(verified_by=verified_by)
 
@@ -241,10 +214,12 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         account = self.get_object()
         verified_transactions = account.transactions.filter(status="verified")
 
-        total_credits = sum(
-            t.amount for t in verified_transactions.filter(type="credit")
+        agg = verified_transactions.aggregate(
+            total_credits=Sum("amount", filter=Q(type="credit")),
+            total_debits=Sum("amount", filter=Q(type="debit")),
         )
-        total_debits = sum(t.amount for t in verified_transactions.filter(type="debit"))
+        total_credits = agg["total_credits"] or 0
+        total_debits = agg["total_debits"] or 0
 
         return Response(
             {
@@ -294,12 +269,12 @@ class TransactionViewSet(viewsets.ModelViewSet):
         # Check if user owns the account (unless they're staff/admin)
         if not (self.request.user.is_staff or self.request.user.is_superuser):
             if account.owner != self.request.user:
-                raise PermissionError(
+                raise PermissionDenied(
                     "You can only create transactions for your own accounts"
                 )
 
         # Save the transaction - balance will be updated in the model's save method
-        transaction = serializer.save()
+        serializer.save()
 
     @action(detail=False, methods=["get"])
     def my_transactions(self, request):
@@ -503,25 +478,28 @@ class TransactionViewSet(viewsets.ModelViewSet):
             cell.alignment = header_alignment
         
         # Add data rows with running balance calculation
-        account_balance = 0
+        # To get the correct starting balance for the filtered date range,
+        # compute the balance from all verified transactions BEFORE date_from.
+        starting_balance = 0
         if account_id:
             try:
-                account = BankAccount.objects.get(id=account_id)
-                account_balance = float(account.balance)
+                account_obj = BankAccount.objects.get(id=account_id)
+                # Start from the account's full balance and subtract all
+                # verified transactions that are NOT in the filtered set.
+                all_verified = account_obj.transactions.filter(status="verified")
+                filtered_ids = set(transactions.filter(status="verified").values_list("id", flat=True))
+                pre_agg = all_verified.exclude(id__in=filtered_ids).aggregate(
+                    credits=Sum("amount", filter=Q(type="credit")),
+                    debits=Sum("amount", filter=Q(type="debit")),
+                )
+                starting_balance = float(pre_agg["credits"] or 0) - float(pre_agg["debits"] or 0)
             except BankAccount.DoesNotExist:
                 pass
-        
+
         # Sort transactions by date (oldest first) for proper running balance
         sorted_transactions = transactions.order_by('date')
-        running_balance = account_balance
-        
-        # Calculate starting balance (work backwards from current balance)
-        for transaction in sorted_transactions.filter(status="verified"):
-            if transaction.type == "credit":
-                running_balance -= float(transaction.amount)
-            else:
-                running_balance += float(transaction.amount)
-        
+        running_balance = starting_balance
+
         # Now add rows with forward calculation
         row = 2
         for transaction in sorted_transactions:
@@ -590,10 +568,12 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
         verified_transactions = transactions.filter(status="verified")
 
-        total_credits = sum(
-            t.amount for t in verified_transactions.filter(type="credit")
+        agg = verified_transactions.aggregate(
+            total_credits=Sum("amount", filter=Q(type="credit")),
+            total_debits=Sum("amount", filter=Q(type="debit")),
         )
-        total_debits = sum(t.amount for t in verified_transactions.filter(type="debit"))
+        total_credits = agg["total_credits"] or 0
+        total_debits = agg["total_debits"] or 0
 
         return Response(
             {
@@ -619,18 +599,12 @@ class BankingPlanListView(generics.ListAPIView):
 @permission_classes([IsAuthenticated])
 def activate_banking_plan(request):
     """Activate a banking plan for a user's account after successful payment"""
-    print("=== ACTIVATE BANKING PLAN CALLED ===")
-    print(f"Request method: {request.method}")
-    print(f"Request user: {request.user}")
-    print(f"Request data: {request.data}")
-
     account_id = request.data.get("account_id")
     plan_id = request.data.get("plan_id")
     payment_order_id = request.data.get("payment_order_id")
     payment_amount = request.data.get("payment_amount")
 
     if not all([account_id, plan_id, payment_order_id]):
-        print("=== MISSING REQUIRED PARAMETERS ===")
         return Response(
             {
                 "success": False,
@@ -639,40 +613,24 @@ def activate_banking_plan(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    print("=== ALL PARAMETERS PRESENT ===")
-    print(
-        f"account_id: {account_id}, plan_id: {plan_id}, payment_order_id: {payment_order_id}"
-    )
-
     try:
-        print("=== TRYING TO GET ACCOUNT AND PLAN ===")
-
         # First get the banking plan
         plan = BankingPlan.objects.get(id=plan_id, is_active=True)
-        print(f"Found plan: {plan}")
 
         # Try to get the specific account first
         account = None
         try:
             account = BankAccount.objects.get(id=account_id, owner=request.user)
-            print(f"Found existing account: {account}")
         except BankAccount.DoesNotExist:
-            print(f"Account with ID {account_id} not found. Creating new account...")
-
             # Check if user has any existing accounts
             user_accounts = BankAccount.objects.filter(owner=request.user)
             if user_accounts.exists():
-                # Use the first available account
                 account = user_accounts.first()
-                print(f"Using existing user account: {account}")
             else:
-                # Create a new account for banking plan activation
-                # Use a proper default name
                 account_name = f"{request.user.first_name or request.user.username}'s Banking Account"
                 account = BankAccount.objects.create(
                     owner=request.user, name=account_name, balance=0.00
                 )
-                print(f"Created new account: {account}")
 
         # Calculate expiry date based on plan period
         activated_at = timezone.now()
@@ -682,8 +640,6 @@ def activate_banking_plan(request):
             expires_at = activated_at + timedelta(days=365)
         else:
             expires_at = None
-
-        print(f"Calculated dates: activated_at={activated_at}, expires_at={expires_at}")
 
         # Create or update user banking plan
         user_plan, created = UserBankingPlan.objects.get_or_create(
@@ -711,22 +667,17 @@ def activate_banking_plan(request):
             user_plan.is_active = True
             user_plan.save()
 
-        print("=== ABOUT TO RETURN SUCCESS RESPONSE ===")
-        response_data = {
-            "success": True,
-            "message": f"Successfully activated {plan.name} {plan.period} plan for account {account.name}",
-            "plan": BankingPlanSerializer(plan).data,
-            "expires_at": expires_at,
-        }
-        print(f"Response data: {response_data}")
-
         return Response(
-            response_data,
+            {
+                "success": True,
+                "message": f"Successfully activated {plan.name} {plan.period} plan for account {account.name}",
+                "plan": BankingPlanSerializer(plan).data,
+                "expires_at": expires_at,
+            },
             status=status.HTTP_200_OK,
         )
 
     except BankAccount.DoesNotExist:
-        print("=== BANK ACCOUNT NOT FOUND ===")
         return Response(
             {
                 "success": False,
@@ -735,17 +686,11 @@ def activate_banking_plan(request):
             status=status.HTTP_404_NOT_FOUND,
         )
     except BankingPlan.DoesNotExist:
-        print("=== BANKING PLAN NOT FOUND ===")
         return Response(
             {"success": False, "message": "Banking plan not found"},
             status=status.HTTP_404_NOT_FOUND,
         )
     except Exception as e:
-        print(f"=== UNEXPECTED EXCEPTION: {str(e)} ===")
-        print(f"Exception type: {type(e)}")
-        import traceback
-
-        traceback.print_exc()
         return Response(
             {"success": False, "message": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -790,7 +735,6 @@ def test_banking_endpoint(request):
 @permission_classes([IsAuthenticated])
 def activate_banking_plan_v2(request):
     """Alternative activate banking plan function for testing"""
-    print("=== ACTIVATE BANKING PLAN V2 CALLED ===")
     return Response(
         {
             "success": True,

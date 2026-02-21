@@ -191,33 +191,43 @@ class Order(models.Model):
         super().save(*args, **kwargs)
 
     def generate_order_number(self):
-        """Generate a unique order number with proper race condition handling"""
+        """Generate a unique order number with proper race condition handling.
+
+        Uses SELECT FOR UPDATE on the highest existing order number for today
+        to prevent two concurrent transactions from generating the same number.
+        """
         from django.db import transaction
-        
+
         today = datetime.date.today()
         date_str = today.strftime('%Y%m%d')
-        
-        # Use atomic transaction to prevent race conditions
+        prefix = f"ORD{date_str}"
+
         with transaction.atomic():
-            # Start with count 1
-            count = 1
-            
-            # Keep incrementing until we find a unique order number
-            while True:
-                order_number = f"ORD{date_str}{count:04d}"
-                
-                # Check if this order number already exists
-                if not Order.objects.filter(order_number=order_number).exists():
-                    return order_number
-                
-                count += 1
-                
-                # Safety check to prevent infinite loop (very unlikely to reach)
-                if count > 9999:
-                    # If we somehow get more than 9999 orders in a day, use timestamp
-                    import time
-                    timestamp = str(int(time.time()))[-4:]
-                    return f"ORD{date_str}{timestamp}"
+            # Lock all existing orders with today's prefix so concurrent
+            # transactions must wait, preventing duplicate number generation.
+            existing = (
+                Order.objects.select_for_update()
+                .filter(order_number__startswith=prefix)
+                .order_by("-order_number")
+                .values_list("order_number", flat=True)
+                .first()
+            )
+
+            if existing:
+                try:
+                    last_count = int(existing[len(prefix):])
+                except (ValueError, IndexError):
+                    last_count = 0
+                count = last_count + 1
+            else:
+                count = 1
+
+            if count > 9999:
+                import time
+                timestamp = str(int(time.time()))[-4:]
+                return f"{prefix}{timestamp}"
+
+            return f"{prefix}{count:04d}"
 
 
 class OrderItem(models.Model):
@@ -285,12 +295,8 @@ class OrderItem(models.Model):
         # Buy prices are set only at order creation time and should not change for existing orders
 
         super().save(*args, **kwargs)
-
-        # Update order totals after saving item
-        if self.order_id:
-            self.order._recalculate_totals = True
-            self.order.calculate_totals()
-            self.order.save()
+        # Order totals are recalculated explicitly by the caller (serializer/view)
+        # to avoid N+1 saves when creating multiple items at once.
 
 
 class OrderPayment(models.Model):
@@ -372,5 +378,4 @@ class OrderStockMovement(models.Model):
 
     def __str__(self):
         variant_info = f" - {self.variant}" if self.variant else ""
-        return f"{self.get_movement_type_display()} - {self.product.name}{variant_info} - {self.quantity}"
         return f"{self.get_movement_type_display()} - {self.product.name}{variant_info} - {self.quantity}"
