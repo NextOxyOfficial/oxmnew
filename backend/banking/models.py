@@ -19,6 +19,8 @@ class BankAccount(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+    activation_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    is_activated = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["-created_at"]

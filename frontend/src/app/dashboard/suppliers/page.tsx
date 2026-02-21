@@ -908,8 +908,8 @@ export default function SuppliersPage() {
 
   return (
     <ClientOnly>
-      <div className="p-1 sm:p-6 space-y-6">
-        <div className="max-w-4xl">
+      <div className="w-full max-w-full overflow-x-hidden px-2 py-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="w-full">
           {/* Notification */}
           {notification.isVisible && (
             <div
@@ -959,14 +959,14 @@ export default function SuppliersPage() {
           )}
 
           {/* Tabs */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-            <div className="border-b border-slate-700/50">
-              <nav className="flex space-x-8 px-6 pt-6">
+          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-hidden">
+            <div className="border-b border-slate-700/50 overflow-x-auto scrollbar-hide max-w-full">
+              <nav className="flex flex-nowrap space-x-4 sm:space-x-8 px-3 sm:px-6 pt-4 sm:pt-6 min-w-max">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-all duration-200 cursor-pointer ${
+                    className={`py-2 px-2 border-b-2 font-medium text-sm transition-all duration-200 cursor-pointer whitespace-nowrap shrink-0 ${
                       activeTab === tab.id
                         ? "border-cyan-400 text-cyan-400"
                         : "border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300"

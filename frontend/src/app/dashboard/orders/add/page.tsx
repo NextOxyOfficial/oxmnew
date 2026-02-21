@@ -1226,9 +1226,42 @@ export default function AddOrderPage() {
         }
       `}</style>
       <div className={`min-h-screen bg-slate-900 ${isProductDropdownOpen ? 'dropdown-page' : ''}`}>
-        <div className="sm:p-6 p-1 space-y-6">
+        <div className="sm:p-6 p-2 space-y-6">
           <div className="max-w-7xl">
             {/* Page Header */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-700/50 relative overflow-hidden mb-6">
+              {/* Background decoration */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-blue-500/10 to-purple-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+              
+              <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => router.back()}
+                    className="p-2.5 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 rounded-xl text-slate-300 hover:text-white transition-all"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-emerald-400 font-medium uppercase tracking-wider">New Order</span>
+                    </div>
+                    <h1 className="text-xl sm:text-xl font-bold text-white">Create A Sale</h1>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="px-3 py-1.5 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-300">
+                    <span className="text-slate-500">Items:</span> <span className="font-semibold text-white">{orderForm.items.length}</span>
+                  </div>
+                  <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400">
+                    <span className="text-emerald-400/70">Total:</span> <span className="font-bold">{formatCurrency(orderForm.total)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Customer Info & Items */}
@@ -1236,28 +1269,13 @@ export default function AddOrderPage() {
               {/* Customer Information */}
               <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
                 <div className="sm:p-4 p-2">
-                  <div className="flex items-center gap-1 mb-4">
-                    <button
-                      onClick={() => router.back()}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <svg
-                        className="w-6 h-6 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 19l-7-7 7-7"
-                        />
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                      <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
-                    </button>
-                    <h3 className="text-lg font-semibold text-slate-200">
-                      Create A Sale
-                    </h3>
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-200">Customer Information</h3>
                   </div>
 
                   {/* Customer Selection Row */}
@@ -1572,9 +1590,15 @@ export default function AddOrderPage() {
               {/* Order Items */}
               <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-visible">
                 <div className="sm:p-4 p-2">
-                  <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                    Order Items
-                  </h3>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-200">Order Items</h3>
+                    <span className="ml-auto px-2 py-0.5 bg-slate-700/50 border border-slate-600 rounded text-xs text-slate-400">{orderForm.items.length} items</span>
+                  </div>
 
                   {/* Order Items List */}
                   <div className="mb-6">
@@ -1885,9 +1909,14 @@ export default function AddOrderPage() {
               {/* Bill Summary */}
               <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
                 <div className="sm:p-4 p-2">
-                  <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                    Bill Summary
-                  </h3>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                      <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-200">Bill Summary</h3>
+                  </div>
 
                   <div className="space-y-3">
                     {/* Subtotal */}

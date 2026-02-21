@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { ApiService } from "../../../lib/api";
 
@@ -100,6 +100,15 @@ export default function SubscriptionsPage() {
   const [paymentVerificationLoader, setPaymentVerificationLoader] =
     useState(false);
 
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyFilter, setHistoryFilter] = useState<
+    "all" | "subscription" | "sms_package"
+  >("all");
+
+  const verifiedOrderIdRef = useRef<string | null>(null);
+
   const { user, profile, refreshProfile } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -157,6 +166,32 @@ export default function SubscriptionsPage() {
     }
   }, [setCurrentPlan]);
 
+  const fetchPaymentHistory = useCallback(async () => {
+    try {
+      setIsLoadingHistory(true);
+      setHistoryError(null);
+      const response = await ApiService.getPaymentHistory({
+        payment_type: historyFilter === "all" ? undefined : historyFilter,
+        page_size: 50,
+        ordering: "-created_at",
+      });
+
+      if (response && Array.isArray(response.results)) {
+        setPaymentHistory(response.results);
+      } else if (Array.isArray(response)) {
+        setPaymentHistory(response);
+      } else {
+        setPaymentHistory([]);
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch payment history:", error);
+      setHistoryError(error?.message || "Failed to load purchase history");
+      setPaymentHistory([]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [historyFilter]);
+
   // Payment verification function
   const verifyPayment = useCallback(
     async (orderId: string) => {
@@ -187,141 +222,46 @@ export default function SubscriptionsPage() {
             // Use customer_order_id or fallback to orderId parameter
             const actualOrderId = response.customer_order_id || orderId;
 
-            if (actualOrderId.startsWith("SUB-")) {
-              const pendingPlan = localStorage.getItem(
-                "pending_subscription_plan"
+            const paymentType =
+              response.payment_type ||
+              (actualOrderId.startsWith("SUB-")
+                ? "subscription"
+                : actualOrderId.startsWith("SMS-")
+                ? "sms_package"
+                : "unknown");
+
+            const applied = response.applied === true;
+
+            if (paymentType === "subscription") {
+              setSuccessMessage(
+                applied
+                  ? "🎉 Your subscription is now active."
+                  : "Payment verified successfully. Subscription activation is pending."
               );
-              if (pendingPlan) {
-                try {
-                  setIsUpdatingPlan(true);
-
-                  const upgradeResponse = await ApiService.upgradeSubscription(
-                    pendingPlan
-                  );
-
-                  if (upgradeResponse && upgradeResponse.success) {
-                    localStorage.removeItem("pending_subscription_plan");
-
-                    setSuccessMessage(
-                      pendingPlan === "pro"
-                        ? "🎉 Congratulations! Your Pro subscription is now active. You now have access to all premium features!"
-                        : `Successfully upgraded to ${
-                            pendingPlan.charAt(0).toUpperCase() +
-                            pendingPlan.slice(1)
-                          } plan!`
-                    );
-                    setShowSuccessMessage(true);
-                    setCurrentPlan(pendingPlan);
-
-                    await new Promise((resolve) => setTimeout(resolve, 2000));
-                    await refreshSubscriptionData();
-                  } else {
-                    setShowError(true);
-                  }
-                } catch (upgradeError) {
-                  console.error(
-                    "Failed to upgrade subscription after payment:",
-                    upgradeError
-                  );
-                  setShowError(true);
-                } finally {
-                  setIsUpdatingPlan(false);
-                }
-              }
+              setShowSuccessMessage(true);
+            } else if (paymentType === "sms_package") {
+              const creditsAdded =
+                typeof response.credits_added === "number"
+                  ? response.credits_added
+                  : typeof response.credits_added === "string"
+                  ? Number.parseInt(response.credits_added, 10) || 0
+                  : 0;
+              setSuccessMessage(
+                applied
+                  ? `✅ SMS package purchased successfully! ${creditsAdded.toLocaleString()} SMS credits have been added to your account.`
+                  : "Payment verified successfully. SMS credits will be added shortly."
+              );
+              setShowSuccessMessage(true);
+            } else {
+              setSuccessMessage("Payment verified successfully!");
+              setShowSuccessMessage(true);
             }
 
-            if (actualOrderId.startsWith("SMS-")) {
-              const pendingPackageId = localStorage.getItem(
-                "pending_sms_package"
-              );
-              console.log("SMS order processing:", {
-                actualOrderId,
-                pendingPackageId,
-                localStorageKeys: Object.keys(localStorage),
-                localStorage: {
-                  pending_sms_package: localStorage.getItem(
-                    "pending_sms_package"
-                  ),
-                  pending_subscription_plan: localStorage.getItem(
-                    "pending_subscription_plan"
-                  ),
-                },
-              });
-
-              if (pendingPackageId) {
-                try {
-                  console.log(
-                    "Processing SMS package purchase for package ID:",
-                    pendingPackageId
-                  );
-
-                  const purchaseResponse = await ApiService.purchaseSmsPackage(
-                    parseInt(pendingPackageId)
-                  );
-
-                  console.log(
-                    "SMS package purchase response:",
-                    purchaseResponse
-                  );
-
-                  if (purchaseResponse && purchaseResponse.success !== false) {
-                    localStorage.removeItem("pending_sms_package");
-
-                    // Show success message with package details
-                    const packageData = smsPackages.find(
-                      (pkg) => pkg.id === parseInt(pendingPackageId)
-                    );
-                    const creditsAdded =
-                      purchaseResponse.credits_added ||
-                      packageData?.sms_count ||
-                      packageData?.sms ||
-                      0;
-
-                    setSuccessMessage(
-                      `✅ SMS package purchased successfully! ${creditsAdded.toLocaleString()} SMS credits have been added to your account.`
-                    );
-                    setShowSuccessMessage(true);
-
-                    // Wait a moment for backend to process, then refresh user data
-                    setTimeout(async () => {
-                      try {
-                        // Trigger a refresh of user profile data in AuthContext
-                        await refreshProfile();
-                        await refreshSubscriptionData();
-
-                        console.log("User data refreshed after SMS purchase");
-                      } catch (refreshError) {
-                        console.error(
-                          "Failed to refresh user data:",
-                          refreshError
-                        );
-                        // Don't reload on error, user can manually refresh
-                      }
-                    }, 1500);
-                  } else {
-                    console.error(
-                      "SMS package purchase failed:",
-                      purchaseResponse
-                    );
-                    setShowError(true);
-                  }
-                } catch (purchaseError) {
-                  console.error(
-                    "Failed to add SMS credits after payment:",
-                    purchaseError
-                  );
-                  setShowError(true);
-                }
-              } else {
-                console.error(
-                  "No pending SMS package ID found in localStorage"
-                );
-                // Don't show error for this - might be a refresh or different scenario
-                console.log(
-                  "No pending SMS package found - this might be expected"
-                );
-              }
-            }
+            setIsUpdatingPlan(true);
+            await refreshProfile();
+            await refreshSubscriptionData();
+            await fetchPaymentHistory();
+            setIsUpdatingPlan(false);
 
             const url = new URL(window.location.href);
             url.searchParams.delete("order_id");
@@ -333,30 +273,24 @@ export default function SubscriptionsPage() {
               isSuccessful,
             });
             setShowError(true);
-            localStorage.removeItem("pending_subscription_plan");
-            localStorage.removeItem("pending_sms_package");
           }
         } else if (response && response.error) {
           console.error("Payment verification failed:", response.error);
           setShowError(true);
-          localStorage.removeItem("pending_subscription_plan");
-          localStorage.removeItem("pending_sms_package");
         }
       } catch (error) {
         console.error("Error verifying payment:", error);
         setShowError(true);
-        localStorage.removeItem("pending_subscription_plan");
-        localStorage.removeItem("pending_sms_package");
       } finally {
         setPaymentVerificationLoader(false);
       }
     },
     [
+      fetchPaymentHistory,
       refreshSubscriptionData,
       refreshProfile,
-      smsPackages,
-      setCurrentPlan,
       setIsUpdatingPlan,
+      setCurrentPlan,
       setPaymentVerificationLoader,
       setShowError,
       setShowSuccessMessage,
@@ -368,7 +302,8 @@ export default function SubscriptionsPage() {
   // Check for payment verification on page load
   useEffect(() => {
     const orderId = searchParams.get("order_id");
-    if (orderId) {
+    if (orderId && verifiedOrderIdRef.current !== orderId) {
+      verifiedOrderIdRef.current = orderId;
       verifyPayment(orderId);
     }
   }, [searchParams, verifyPayment]);
@@ -478,6 +413,8 @@ export default function SubscriptionsPage() {
         } else {
           setCurrentPlan("free");
         }
+
+        await fetchPaymentHistory();
       } catch (error) {
         console.error("Failed to fetch subscription data:", error);
         setPlans([]);
@@ -488,7 +425,13 @@ export default function SubscriptionsPage() {
     };
 
     fetchData();
-  }, []);
+  }, [fetchPaymentHistory]);
+
+  useEffect(() => {
+    if (!loading) {
+      fetchPaymentHistory();
+    }
+  }, [fetchPaymentHistory, loading]);
 
   const handlePlanSelect = async (planName: string) => {
     if (planName === currentPlan) return;
@@ -528,14 +471,19 @@ export default function SubscriptionsPage() {
       console.log("User:", user);
       console.log("Profile:", profile);
 
+      const minPayableAmount = 10;
+      const qty =
+        packagePrice > 0
+          ? Math.max(1, Math.ceil(minPayableAmount / packagePrice))
+          : 1;
+      const totalAmount = Math.round(packagePrice * qty * 100) / 100;
+
       // Generate a unique order ID using timestamp
-      const uniqueOrderId = `SMS-${packageId}-${Date.now()}-${Math.floor(
+      const uniqueOrderId = `SMS-${packageId}-Q${qty}-${Date.now()}-${Math.floor(
         Math.random() * 1000
       )}`;
 
       // Store the package ID for later use after payment verification
-      localStorage.setItem("pending_sms_package", packageId.toString());
-
       // Get validated customer information from profile
       const firstName = user!.first_name!;
       const lastName = user!.last_name || "";
@@ -545,7 +493,7 @@ export default function SubscriptionsPage() {
       const zip = profile!.post_code!;
 
       const paymentData = {
-        amount: packagePrice,
+        amount: totalAmount,
         order_id: uniqueOrderId,
         currency: "BDT",
         customer_name: `${firstName} ${lastName}`.trim(),
@@ -590,7 +538,6 @@ export default function SubscriptionsPage() {
 
       console.error("Error message:", errorMessage);
       alert(`Payment Error: ${errorMessage}`);
-      localStorage.removeItem("pending_sms_package");
     } finally {
       setIsSmsPaymentLoading(false);
     }
@@ -619,8 +566,6 @@ export default function SubscriptionsPage() {
       )}`;
 
       // Store the plan name for later use after payment verification
-      localStorage.setItem("pending_subscription_plan", planName);
-
       // Get validated customer information from profile
       const firstName = user!.first_name!;
       const lastName = user!.last_name || "";
@@ -677,7 +622,6 @@ export default function SubscriptionsPage() {
 
       // Show more specific error message
       alert(`Payment Error: ${errorMessage}`);
-      localStorage.removeItem("pending_subscription_plan");
     } finally {
       setIsSubscriptionPaymentLoading(false);
     }
@@ -766,7 +710,7 @@ export default function SubscriptionsPage() {
             } ${
               currentPlan === plan.name
                 ? currentPlan === "pro"
-                  ? "ring-2 ring-gradient-to-r from-green-400 to-green-500 bg-gradient-to-br from-green-500/10 to-green-600/10"
+                  ? "ring-2 ring-green-500 bg-gradient-to-br from-green-500/10 to-green-600/10"
                   : "ring-2 ring-green-500"
                 : ""
             }`}
@@ -910,6 +854,117 @@ export default function SubscriptionsPage() {
               </button>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="mt-12">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white">Purchase History</h3>
+            <select
+              value={historyFilter}
+              onChange={(e) =>
+                setHistoryFilter(
+                  e.target.value as "all" | "subscription" | "sms_package"
+                )
+              }
+              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            >
+              <option value="all">All</option>
+              <option value="subscription">Subscription</option>
+              <option value="sms_package">SMS</option>
+            </select>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm overflow-hidden">
+            {isLoadingHistory ? (
+              <div className="p-6 text-center text-slate-300">
+                Loading history...
+              </div>
+            ) : historyError ? (
+              <div className="p-6 text-center text-red-300">{historyError}</div>
+            ) : paymentHistory.length === 0 ? (
+              <div className="p-6 text-center text-slate-300">
+                No purchases found.
+              </div>
+            ) : (
+              <div className="w-full overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-black/20">
+                    <tr>
+                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
+                        Date
+                      </th>
+                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
+                        Type
+                      </th>
+                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
+                        Amount
+                      </th>
+                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
+                        Status
+                      </th>
+                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
+                        Order
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {paymentHistory.map((tx: any) => {
+                      const dateStr = tx.created_at
+                        ? new Date(tx.created_at).toLocaleString()
+                        : "-";
+                      const typeLabel =
+                        tx.payment_type === "subscription"
+                          ? "Subscription"
+                          : tx.payment_type === "sms_package"
+                          ? "SMS"
+                          : "Unknown";
+                      const amountStr =
+                        tx.amount !== null && tx.amount !== undefined
+                          ? `৳${Number(tx.amount).toLocaleString()}`
+                          : "-";
+                      const statusLabel = tx.is_applied
+                        ? "Applied"
+                        : tx.is_successful
+                        ? "Paid"
+                        : "Pending";
+                      const statusClass = tx.is_applied
+                        ? "text-green-300"
+                        : tx.is_successful
+                        ? "text-cyan-300"
+                        : "text-yellow-300";
+
+                      return (
+                        <tr
+                          key={tx.id}
+                          className="hover:bg-white/5 transition-colors"
+                        >
+                          <td className="text-sm text-slate-200 px-4 py-3 whitespace-nowrap">
+                            {dateStr}
+                          </td>
+                          <td className="text-sm text-slate-200 px-4 py-3 whitespace-nowrap">
+                            {typeLabel}
+                          </td>
+                          <td className="text-sm text-slate-200 px-4 py-3 whitespace-nowrap">
+                            {amountStr}
+                          </td>
+                          <td
+                            className={`text-sm px-4 py-3 whitespace-nowrap ${statusClass}`}
+                          >
+                            {statusLabel}
+                          </td>
+                          <td className="text-xs text-slate-300 px-4 py-3">
+                            {tx.customer_order_id || tx.sp_order_id || "-"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

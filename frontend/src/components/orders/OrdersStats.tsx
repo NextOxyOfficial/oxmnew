@@ -40,7 +40,7 @@ const OrdersStats: React.FC<OrdersStatsProps> = ({
               />
             </svg>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm text-cyan-300 font-medium">Total Orders</p>
             {isStatsLoading ? (
               <div className="animate-pulse space-y-1">
@@ -49,7 +49,7 @@ const OrdersStats: React.FC<OrdersStatsProps> = ({
               </div>
             ) : (
               <>
-                <p className="text-base font-bold text-cyan-400">
+                <p className="text-base font-bold text-cyan-400 break-words leading-tight">
                   {overallStats.totalOrders}
                 </p>
                 <p className="text-xs text-cyan-500 opacity-80">
@@ -79,7 +79,7 @@ const OrdersStats: React.FC<OrdersStatsProps> = ({
               />
             </svg>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm text-green-300 font-medium">Total Revenue</p>
             {isStatsLoading ? (
               <div className="animate-pulse space-y-1">
@@ -88,7 +88,7 @@ const OrdersStats: React.FC<OrdersStatsProps> = ({
               </div>
             ) : (
               <>
-                <p className="text-base font-bold text-green-400">
+                <p className="text-base font-bold text-green-400 break-words leading-tight">
                   {formatCurrency(overallStats.totalRevenue || 0)}
                 </p>
                 <p className="text-xs text-green-500 opacity-80">
@@ -118,7 +118,7 @@ const OrdersStats: React.FC<OrdersStatsProps> = ({
               />
             </svg>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm text-blue-300 font-medium">Total Profit</p>
             {isStatsLoading ? (
               <div className="animate-pulse space-y-1">
@@ -127,7 +127,7 @@ const OrdersStats: React.FC<OrdersStatsProps> = ({
               </div>
             ) : (
               <>
-                <p className="text-base font-bold text-blue-400">
+                <p className="text-base font-bold text-blue-400 break-words leading-tight">
                   {formatCurrency(overallStats.totalProfit || 0)}
                 </p>
                 <p className="text-xs text-blue-500 opacity-80">
@@ -157,7 +157,7 @@ const OrdersStats: React.FC<OrdersStatsProps> = ({
               />
             </svg>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm text-yellow-300 font-medium">Today</p>
             {isStatsLoading ? (
               <div className="animate-pulse space-y-1">
@@ -166,7 +166,7 @@ const OrdersStats: React.FC<OrdersStatsProps> = ({
               </div>
             ) : (
               <>
-                <p className="text-base font-bold text-yellow-400">
+                <p className="text-base font-bold text-yellow-400 break-words leading-tight">
                   {overallStats.todaysOrders}
                 </p>
                 <p className="text-xs text-yellow-500 opacity-80">

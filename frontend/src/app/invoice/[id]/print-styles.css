@@ -1,0 +1,52 @@
+@media print {
+  /* Hide everything first */
+  * {
+    visibility: hidden;
+  }
+  
+  /* Only show invoice content */
+  .invoice-content, .invoice-content * {
+    visibility: visible;
+  }
+  
+  /* Position invoice content to fill page */
+  .invoice-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* Hide browser chrome and website elements */
+  header, nav, footer, .header, .nav, .footer, 
+  [role="banner"], [role="navigation"], [role="contentinfo"],
+  .print\:hidden,
+  .navbar, .nav-bar, .navigation, .site-header, .site-footer,
+  .page-header, .page-footer, .main-nav, .main-navigation,
+  .top-bar, .bottom-bar, .sidebar, .menu {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* Reset html and body for clean print */
+  html, body { 
+    -webkit-print-color-adjust: exact;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  /* Page settings */
+  @page { 
+    margin: 0 0.5in 0.5in 0.5in;
+    size: A4;
+  }
+  
+  .page-break { 
+    page-break-after: always; 
+  }
+}

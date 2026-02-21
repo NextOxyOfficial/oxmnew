@@ -1266,7 +1266,7 @@ export default function OrdersPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="sm:p-6 p-1 space-y-6">
+      <div className="px-1 sm:p-6 space-y-6">
         <div className="max-w-7xl">
           {/* Loading skeleton */}
           <div className="animate-pulse">
@@ -1292,7 +1292,7 @@ export default function OrdersPage() {
   // Error state
   if (error) {
     return (
-      <div className="sm:p-6 p-1 space-y-6">
+      <div className="px-1 sm:p-6 space-y-6">
         <div className="max-w-7xl">
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
             <h3 className="text-lg font-semibold text-red-400 mb-2">
@@ -1312,7 +1312,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="sm:p-6 p-1 space-y-6">
+    <div className="px-1 sm:p-6 space-y-6">
       <div className="max-w-7xl">
         {/* Page Header */}
         <OrdersHeader />
@@ -1366,19 +1366,19 @@ export default function OrdersPage() {
         )}
 
         {/* Tab Navigation */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-          <div className="flex border-b border-slate-700/50">
+        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg sm:mx-0">
+          <div className="flex border-b border-slate-700/50 overflow-x-auto">
             <button
               onClick={() => handleTabChange("orders")}
-              className={`px-6 py-3 text-sm font-medium transition-colors cursor-pointer ${
+              className={`px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap flex-shrink-0 ${
                 activeTab === "orders"
                   ? "text-cyan-400 border-b-2 border-cyan-400 bg-slate-800/50"
                   : "text-slate-400 hover:text-slate-300"
               }`}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <svg
-                  className="w-4 h-4"
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1395,15 +1395,15 @@ export default function OrdersPage() {
             </button>
             <button
               onClick={() => handleTabChange("products")}
-              className={`px-6 py-3 text-sm font-medium transition-colors cursor-pointer ${
+              className={`px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap flex-shrink-0 ${
                 activeTab === "products"
                   ? "text-cyan-400 border-b-2 border-cyan-400 bg-slate-800/50"
                   : "text-slate-400 hover:text-slate-300"
               }`}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <svg
-                  className="w-4 h-4"
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1423,7 +1423,7 @@ export default function OrdersPage() {
           {/* Tab Content */}
           {activeTab === "orders" ? (
             <>
-              <div className="sm:p-4 p-2 flex-shrink-0 border-b border-slate-700/50">
+              <div className="p-3 sm:p-4 flex-shrink-0 border-b border-slate-700/50">
                 <OrdersControls
                   searchInput={searchInput}
                   searchTerm={searchTerm}
@@ -1459,7 +1459,7 @@ export default function OrdersPage() {
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="p-4 border-t border-slate-700/50">
+                <div className="p-3 sm:p-4 border-t border-slate-700/50">
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -1474,18 +1474,18 @@ export default function OrdersPage() {
           ) : (
             <>
               {/* Product Sales Controls */}
-              <div className="sm:p-4 p-2 flex-shrink-0 border-b border-slate-700/50">
+              <div className="p-3 sm:p-4 flex-shrink-0 border-b border-slate-700/50">
                 {/* Date Filter Controls */}
-                <div className="mb-4 p-3 bg-slate-800/30 rounded-lg border border-slate-700/50">
-                  <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+                <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                  <div className="flex flex-col sm:flex-row lg:flex-row gap-3 sm:gap-4 items-start sm:items-center">
                     <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <h3 className="text-sm font-medium text-slate-200">Date Filter</h3>
+                      <h3 className="text-xs sm:text-sm font-medium text-slate-200">Date Filter</h3>
                     </div>
                     
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2 w-full sm:w-auto">
                       <button
                         onClick={() => handleProductDateFilterChange("all_time")}
                         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -1549,7 +1549,7 @@ export default function OrdersPage() {
                     </div>
 
                     {productDateFilter === "custom" && (
-                      <div className="flex gap-2 items-center">
+                      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                         <input
                           type="date"
                           value={productStartDate}

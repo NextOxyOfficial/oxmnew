@@ -109,15 +109,15 @@ export default function Header({
   // Removed old static declarations
   
   return (
-    <header className="bg-slate-900/98 backdrop-blur-xl border-b border-slate-700/50 shadow-xl relative z-50">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Left Section */}
-          <div className="flex items-center space-x-4">
+    <header className="bg-slate-950 border-b border-slate-800 relative z-50">
+      <div className="px-[2px] py-2 sm:px-4 lg:px-6">
+        <div className="flex items-center justify-between h-12">
+          {/* Left Section - Logo & Breadcrumb */}
+          <div className="flex items-center gap-4">
             {/* Mobile menu button */}
             <button
               onClick={onMenuClick}
-              className="lg:hidden rounded-lg p-2 inline-flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 cursor-pointer"
+              className="lg:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all cursor-pointer"
             >
               <span className="sr-only">Open sidebar</span>
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,110 +126,92 @@ export default function Header({
             </button>
             
             {/* Logo & Brand */}
-            <Link href="/dashboard" className="flex items-center group">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 via-cyan-500 to-blue-500 rounded-lg flex items-center justify-center mr-3 shadow-lg group-hover:shadow-cyan-500/25 transition-all duration-300">
-                <span className="text-slate-900 font-bold text-sm">OX</span>
+            <Link href="/dashboard" className="flex items-center gap-2.5">
+              <div className="w-7 h-7 bg-cyan-500 rounded-lg flex items-center justify-center">
+                <span className="text-slate-900 font-bold text-xs">OX</span>
               </div>
               <div className="hidden sm:block">
-                <span className="text-xl font-bold bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent">
-                  OxyManager
-                </span>
-                <div className="text-xs text-slate-500 font-medium">Business Suite</div>
+                <span className="text-base font-bold text-white">OxyManager</span>
+                <div className="text-[10px] text-slate-500 -mt-0.5">Business Suite</div>
               </div>
             </Link>
 
+            {/* Breadcrumb Separator */}
+            <div className="hidden lg:block h-5 w-px bg-slate-700"></div>
+
             {/* Breadcrumbs */}
-            <nav className="hidden lg:flex items-center space-x-1 text-sm ml-6 pl-6 border-l border-slate-700/50">
+            <nav className="hidden lg:flex items-center gap-1.5 text-sm">
               <Link 
                 href="/dashboard" 
-                className="flex items-center text-slate-400 hover:text-cyan-400 transition-colors px-2 py-1 rounded-md hover:bg-slate-800/40 cursor-pointer"
+                className="flex items-center gap-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
-                <Home className="h-4 w-4 mr-1" />
-                <span className="font-medium">Dashboard</span>
+                <Home className="h-3.5 w-3.5" />
+                <span>Dashboard</span>
               </Link>
               {breadcrumbs && breadcrumbs.map((item, index) => (
                 <React.Fragment key={`${item.name}-${index}`}>
-                  <ChevronRight className="h-4 w-4 text-slate-600" />
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
                   {item.href ? (
                     <Link 
                       href={item.href} 
-                      className="text-slate-400 hover:text-cyan-400 transition-colors px-2 py-1 rounded-md hover:bg-slate-800/40 font-medium cursor-pointer"
+                      className="text-slate-400 hover:text-white transition-colors cursor-pointer"
                     >
                       {item.name}
                     </Link>
                   ) : (
-                    <span className="text-slate-200 font-medium px-2 py-1 bg-slate-800/40 rounded-md">
-                      {item.name}
-                    </span>
+                    <span className="text-white">{item.name}</span>
                   )}
                 </React.Fragment>
               ))}
               {!breadcrumbs && pathname !== '/dashboard' && (
                 <>
-                  <ChevronRight className="h-4 w-4 text-slate-600" />
-                  <span className="text-slate-200 font-medium px-2 py-1 bg-slate-800/40 rounded-md">
-                    {title}
-                  </span>
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
+                  <span className="text-white">{title}</span>
                 </>
               )}
             </nav>
           </div>
           
           {/* Right Section */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Time & Date Display */}
-            <div className="hidden xl:flex items-center space-x-3 text-slate-400 border-r border-slate-700/50 pr-4">
-              <div className="flex items-center space-x-1">
-                <Clock className="h-4 w-4" />
-                <span className="text-sm font-mono">{currentTime}</span>
+            <div className="hidden md:flex items-center gap-4 text-slate-400 text-sm">
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                <span className="font-mono text-xs">{currentTime}</span>
               </div>
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-4 w-4" />
-                <span className="text-sm">{currentDate}</span>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                <span className="text-xs">{currentDate}</span>
               </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="hidden lg:flex items-center space-x-2 text-xs">
-              <div className="flex items-center space-x-1 bg-blue-500/10 text-blue-400 px-2 py-1 rounded-md border border-blue-500/20">
-                <Activity className="h-3 w-3" />
-                <span className="font-medium">Online</span>
-              </div>
+            {/* Online Status */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full">
+              <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+              <span className="text-emerald-400 text-xs font-medium">Online</span>
             </div>
 
             {/* Help Button */}
-            <Link
-              href="/dashboard/help"
-              className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors cursor-pointer"
-            >
-              <HelpCircle className="h-5 w-5" />
-            </Link>
-
-            {/* Theme Toggle */}
-            {onToggleDarkMode && (
-              <button
-                onClick={onToggleDarkMode}
-                className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors cursor-pointer"
-              >
-                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
-            )}
+            <button className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all cursor-pointer">
+              <HelpCircle className="h-4 w-4" />
+            </button>
 
             {/* User Menu */}
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-slate-800/50 transition-colors group cursor-pointer"
+                className="flex items-center gap-2 p-1 pr-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-full flex items-center justify-center text-slate-900 font-medium text-sm shadow-lg">
+                <div className="w-7 h-7 bg-cyan-500 rounded-full flex items-center justify-center text-slate-900 font-semibold text-xs">
                   {(user.first_name?.[0] || user.username[0]).toUpperCase()}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <div className="text-sm font-medium text-slate-200 group-hover:text-white">
+                  <div className="text-sm font-medium text-white leading-tight">
                     {user.first_name || user.username}
                   </div>
-                  <div className="text-xs text-slate-500 flex items-center gap-1">
-                    <Crown className={`h-3 w-3 ${isPro ? 'text-amber-400' : 'text-slate-500'}`} />
+                  <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                    <Crown className={`h-2.5 w-2.5 ${isPro ? 'text-amber-400' : 'text-slate-500'}`} />
                     {subscriptionLoading ? '...' : (isPro ? 'Pro Account' : 'Free Account')}
                   </div>
                 </div>

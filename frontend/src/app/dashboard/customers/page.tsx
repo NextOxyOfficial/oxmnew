@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { ApiService } from "@/lib/api";
+import Pagination from "@/components/ui/Pagination";
 
 // Customer type (simplified to match the main API)
 interface Customer {
@@ -35,6 +36,8 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchInput, setSearchInput] = useState(""); // What user types
   const [searchTerm, setSearchTerm] = useState(""); // Debounced search term for filtering
   const [filterStatus, setFilterStatus] = useState("all");
@@ -289,6 +292,22 @@ export default function CustomersPage() {
         })
     : [];
 
+  const totalItems = filteredCustomers.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus, sortBy]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(Math.max(prev, 1), totalPages));
+  }, [totalPages]);
+
+  const paginatedCustomers = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredCustomers.slice(start, start + itemsPerPage);
+  }, [filteredCustomers, currentPage, itemsPerPage]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -342,9 +361,18 @@ export default function CustomersPage() {
       <div className="max-w-7xl">
         {/* Page Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-            Customers
-          </h1>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Customers
+            </h1>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer whitespace-nowrap flex items-center space-x-2 ml-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Customer</span>
+            </button>
+          </div>
           <p className="text-gray-400 text-sm sm:text-base mt-2">
             Manage your customer relationships and track purchase history
           </p>
@@ -450,86 +478,14 @@ export default function CustomersPage() {
         </div>
 
         {/* Controls and Filters */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            {/* Left side - Add Customer Button and Search */}
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              {/* Add Customer Button */}
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer whitespace-nowrap flex items-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Customer</span>
-              </button>
-
-              {/* Search */}
-              <div className="flex-1 max-w-md">
-                <div className="relative">
-                  <svg
-                    className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 ${
-                      searchFocused ? "text-cyan-400" : "text-slate-400"
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                  <input
-                    type="text"
-                    placeholder="Search by name, email, or phone..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    onFocus={() => setSearchFocused(true)}
-                    onBlur={() => setSearchFocused(false)}
-                    className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-slate-100 placeholder-slate-400 text-sm pl-10 pr-10 transition-all duration-200"
-                  />
-                  {/* Loading spinner while searching */}
-                  {isSearching && searchInput && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  )}
-                  {/* Clear button */}
-                  {searchInput && !isSearching && (
-                    <button
-                      onClick={() => {
-                        setSearchInput("");
-                        setSearchTerm("");
-                      }}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
-                      title="Clear search"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                {searchTerm && !isSearching && (
-                  <div className="mt-1 text-xs text-slate-400">
-                    Found {filteredCustomers.length} customer{filteredCustomers.length !== 1 ? 's' : ''}
-                  </div>
-                )}
-                {isSearching && searchInput && (
-                  <div className="mt-1 text-xs text-cyan-400 flex items-center gap-1">
-                    <span>Searching...</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Filters and Sort */}
-            <div className="flex flex-wrap gap-3">
+        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg py-4 px-2">
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {/* Status Filter */}
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm min-w-[140px]"
+                className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
               >
                 <option value="all" className="bg-slate-800">
                   All Status
@@ -546,7 +502,7 @@ export default function CustomersPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm min-w-[180px]"
+                className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm"
               >
                 <option value="name" className="bg-slate-800">
                   Sort by Name
@@ -567,6 +523,65 @@ export default function CustomersPage() {
                   Recent Orders
                 </option>
               </select>
+            </div>
+
+            {/* Search */}
+            <div className="w-full">
+              <div className="relative">
+                <svg
+                  className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-200 ${
+                    searchFocused ? "text-cyan-400" : "text-slate-400"
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search by name, email, or phone..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
+                  className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-slate-100 placeholder-slate-400 text-sm pl-10 pr-10 transition-all duration-200"
+                />
+                {/* Loading spinner while searching */}
+                {isSearching && searchInput && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+                {/* Clear button */}
+                {searchInput && !isSearching && (
+                  <button
+                    onClick={() => {
+                      setSearchInput("");
+                      setSearchTerm("");
+                    }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                    title="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {searchTerm && !isSearching && (
+                <div className="mt-1 text-xs text-slate-400">
+                  Found {filteredCustomers.length} customer{filteredCustomers.length !== 1 ? "s" : ""}
+                </div>
+              )}
+              {isSearching && searchInput && (
+                <div className="mt-1 text-xs text-cyan-400 flex items-center gap-1">
+                  <span>Searching...</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -609,10 +624,10 @@ export default function CustomersPage() {
               <>
                 {/* Mobile Card Layout */}
                 <div className="block lg:hidden space-y-4">
-                  {filteredCustomers.map((customer) => (
+                  {paginatedCustomers.map((customer) => (
                 <div
                   key={customer.id}
-                  className="p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200"
+                  className="p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200 overflow-hidden"
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 min-w-0 pr-2">
@@ -625,10 +640,10 @@ export default function CustomersPage() {
                           <span>{customer.name?.trim() || 'Unnamed Customer'}</span>
                         </h4>
                       </button>
-                      <p className="text-slate-400 text-sm mt-1">
+                      <p className="text-slate-400 text-sm mt-1 break-all">
                         {customer.email}
                       </p>
-                      <p className="text-slate-400 text-sm">{customer.phone}</p>
+                      <p className="text-slate-400 text-sm break-all">{customer.phone}</p>
                     </div>
                     <div
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -783,7 +798,7 @@ export default function CustomersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCustomers.map((customer) => (
+                  {paginatedCustomers.map((customer) => (
                     <tr
                       key={customer.id}
                       className="border-b border-slate-700/30 hover:bg-slate-800/30 transition-colors"
@@ -938,6 +953,19 @@ export default function CustomersPage() {
               </>
             )}
           </div>
+
+          <Pagination
+            className="mt-6"
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(pageSize) => {
+              setItemsPerPage(pageSize);
+              setCurrentPage(1);
+            }}
+          />
         </div>
 
         {/* Delete Confirmation Modal */}

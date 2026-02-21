@@ -28,8 +28,8 @@ print_error() {
 }
 
 # Get production server IP/domain
-read -p "Enter your production server IP/domain (default: 168.231.119.200): " PRODUCTION_HOST
-PRODUCTION_HOST=${PRODUCTION_HOST:-168.231.119.200}
+read -p "Enter your production server IP/domain (default: 72.61.114.111): " PRODUCTION_HOST
+PRODUCTION_HOST=${PRODUCTION_HOST:-72.61.114.111}
 
 read -p "Enter your backend port (default: 8000): " BACKEND_PORT
 BACKEND_PORT=${BACKEND_PORT:-8000}

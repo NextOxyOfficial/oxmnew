@@ -118,7 +118,7 @@ export default function ProductList({
       )}
 
       {/* Mobile Card Layout */}
-      <div className="block lg:hidden space-y-4 p-2 sm:p-4">
+      <div className="block lg:hidden space-y-4 p-1 sm:p-4">
         {products.map((product) => (
           <div
             key={product.id}

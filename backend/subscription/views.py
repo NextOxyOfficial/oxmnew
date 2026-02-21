@@ -1,11 +1,23 @@
 # subscription/views.py
 from rest_framework import generics, permissions
 from rest_framework.response import Response
-from .models import SubscriptionPlan, SMSPackage, UserSubscription, UserSMSCredit, SMSSentHistory
+from .models import (
+    PaymentTransaction,
+    SMSPackage,
+    SMSSentHistory,
+    SubscriptionPlan,
+    UserSMSCredit,
+    UserSubscription,
+)
 from .serializers import (
     SubscriptionPlanSerializer, SMSPackageSerializer, 
-    UserSubscriptionSerializer, UserSMSCreditSerializer, SMSSentHistorySerializer
+    UserSubscriptionSerializer, UserSMSCreditSerializer, SMSSentHistorySerializer,
+    PaymentTransactionSerializer
 )
+
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
+from rest_framework.pagination import PageNumberPagination
 
 class SubscriptionPlanListView(generics.ListAPIView):
     queryset = SubscriptionPlan.objects.all()
@@ -79,6 +91,25 @@ class SMSSentHistoryListView(generics.ListAPIView):
             'has_next': page < total_pages,
             'has_previous': page > 1
         })
+
+
+class PaymentTransactionPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 200
+
+
+class PaymentTransactionHistoryView(generics.ListAPIView):
+    serializer_class = PaymentTransactionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = PaymentTransactionPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ["payment_type", "is_successful", "is_applied"]
+    ordering_fields = ["created_at", "applied_at", "amount"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        return PaymentTransaction.objects.filter(user=self.request.user)
 
 # Add credits endpoint for admin use only
 from rest_framework.decorators import api_view, permission_classes

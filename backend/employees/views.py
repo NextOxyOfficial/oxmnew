@@ -8,7 +8,7 @@ from rest_framework import filters, status, viewsets
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.authentication import CSRFExemptTokenAuthentication
@@ -40,8 +40,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = (
         Employee.objects.all()
     )  # Default queryset (will be filtered by get_queryset)
-    permission_classes = [AllowAny]  # Allow unauthenticated access for testing
-    authentication_classes = []  # Disable authentication for testing - allows requests without token
+    permission_classes = [IsAuthenticated]  # Allow unauthenticated access for testing
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -56,25 +55,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         """
         Filter employees to show only those belonging to the current user.
         """
-        if self.request.user.is_authenticated:
-            return Employee.objects.filter(user=self.request.user)
-        else:
-            # For demo purposes, if no authenticated user, try to get testuser
-            from django.contrib.auth.models import User
-
-            try:
-                demo_user = User.objects.get(username="testuser")
-                return Employee.objects.filter(user=demo_user)
-            except User.DoesNotExist:
-                # If testuser doesn't exist, return all employees for demo
-                return Employee.objects.all()
-
-    def get_permissions(self):
-        """
-        Instantiates and returns the list of permissions that this view requires.
-        """
-        # Allow creating employees without authentication for demo purposes
-        return [AllowAny()]
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return Employee.objects.all()
+        return Employee.objects.filter(user=user)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -84,24 +68,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return EmployeeSerializer
 
     def perform_create(self, serializer):
-        # Get the user from request, or use testuser for demo
-        user = self.request.user if self.request.user.is_authenticated else None
-
-        if not user:
-            # For demo purposes, use testuser as default
-            from django.contrib.auth.models import User
-
-            try:
-                user = User.objects.get(username="testuser")
-            except User.DoesNotExist:
-                # Create testuser if it doesn't exist
-                user = User.objects.create_user(
-                    username="testuser",
-                    email="test@example.com",
-                    password="testpass123",
-                )
-
-        employee = serializer.save(user=user)
+        employee = serializer.save(user=self.request.user)
         # Create default payment information
         PaymentInformation.objects.create(employee=employee)
 
@@ -257,12 +224,17 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 class IncentiveViewSet(viewsets.ModelViewSet):
     queryset = Incentive.objects.all()
     serializer_class = IncentiveSerializer
-    permission_classes = [AllowAny]  # Allow unauthenticated access for testing
-    authentication_classes = []  # Disable authentication for testing
+    permission_classes = [IsAuthenticated]  # Allow unauthenticated access for testing
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["employee", "type", "status"]
     ordering_fields = ["date_awarded", "amount"]
     ordering = ["-date_awarded"]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return Incentive.objects.all()
+        return Incentive.objects.filter(employee__user=user)
 
     @action(detail=True, methods=["post"])
     def approve(self, request, pk=None):
@@ -284,7 +256,10 @@ class IncentiveViewSet(viewsets.ModelViewSet):
     def withdraw_from_employee(self, request, employee_id=None):
         """Withdraw amount from employee's total available incentives"""
         try:
-            employee = Employee.objects.get(id=employee_id)
+            if request.user.is_staff or request.user.is_superuser:
+                employee = Employee.objects.get(id=employee_id)
+            else:
+                employee = Employee.objects.get(id=employee_id, user=request.user)
         except Employee.DoesNotExist:
             return Response(
                 {"error": "Employee not found"}, 
@@ -385,22 +360,33 @@ class IncentiveWithdrawalViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for viewing incentive withdrawal history"""
     queryset = IncentiveWithdrawal.objects.all()
     serializer_class = IncentiveWithdrawalSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []  # Disable authentication for testing
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["employee"]
     ordering_fields = ["withdrawal_date", "amount"]
     ordering = ["-withdrawal_date"]
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return IncentiveWithdrawal.objects.all()
+        return IncentiveWithdrawal.objects.filter(employee__user=user)
+
 
 class SalaryRecordViewSet(viewsets.ModelViewSet):
     queryset = SalaryRecord.objects.all()
     serializer_class = SalaryRecordSerializer
-    permission_classes = [AllowAny]  # Allow unauthenticated access for testing
+    permission_classes = [IsAuthenticated]  # Allow unauthenticated access for testing
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["employee", "year", "month", "status"]
     ordering_fields = ["year", "month", "payment_date"]
     ordering = ["-year", "-month"]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return SalaryRecord.objects.all()
+        return SalaryRecord.objects.filter(employee__user=user)
 
     @action(detail=True, methods=["post"])
     def mark_paid(self, request, pk=None):
@@ -414,11 +400,17 @@ class SalaryRecordViewSet(viewsets.ModelViewSet):
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
-    permission_classes = [AllowAny]  # Allow unauthenticated access for testing
+    permission_classes = [IsAuthenticated]  # Allow unauthenticated access for testing
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["employee", "status", "priority", "assigned_by"]
     ordering_fields = ["assigned_date", "due_date", "priority"]
     ordering = ["-assigned_date"]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return Task.objects.all()
+        return Task.objects.filter(employee__user=user)
 
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
@@ -451,12 +443,18 @@ class TaskViewSet(viewsets.ModelViewSet):
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
-    permission_classes = [AllowAny]  # Allow unauthenticated access for testing
+    permission_classes = [IsAuthenticated]  # Allow unauthenticated access for testing
     parser_classes = [MultiPartParser, FormParser]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["employee", "category"]
     ordering_fields = ["upload_date", "name"]
     ordering = ["-upload_date"]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return Document.objects.all()
+        return Document.objects.filter(employee__user=user)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -468,7 +466,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
         employee_id = self.request.data.get("employee")
         if employee_id:
             try:
-                employee = Employee.objects.get(id=employee_id)
+                if self.request.user.is_staff or self.request.user.is_superuser:
+                    employee = Employee.objects.get(id=employee_id)
+                else:
+                    employee = Employee.objects.get(id=employee_id, user=self.request.user)
                 serializer.save(employee=employee)
                 return
             except Employee.DoesNotExist:
@@ -481,6 +482,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
 class PaymentInformationViewSet(viewsets.ModelViewSet):
     queryset = PaymentInformation.objects.all()
     serializer_class = PaymentInformationSerializer
-    permission_classes = [AllowAny]  # Allow unauthenticated access for testing
+    permission_classes = [IsAuthenticated]  # Allow unauthenticated access for testing
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["employee", "payment_method", "pay_frequency"]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return PaymentInformation.objects.all()
+        return PaymentInformation.objects.filter(employee__user=user)

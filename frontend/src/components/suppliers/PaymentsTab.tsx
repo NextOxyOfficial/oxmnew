@@ -210,10 +210,10 @@ export default function PaymentsTab({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-lg font-medium text-slate-100">Payments</h4>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h4 className="text-base sm:text-lg font-medium text-slate-100">Payments</h4>
           <div className="flex items-center gap-2">
             <button
               onClick={downloadCSV}
@@ -222,7 +222,7 @@ export default function PaymentsTab({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              CSV
+              <span className="hidden sm:inline">CSV</span>
             </button>
             <button
               onClick={downloadPDF}
@@ -231,18 +231,18 @@ export default function PaymentsTab({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
-              PDF
+              <span className="hidden sm:inline">PDF</span>
             </button>
           </div>
         </div>
         {/* Filter by Supplier */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-4">
-            <div className="relative" ref={dropdownRef}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full min-w-0">
+            <div className="relative w-full sm:w-auto" ref={dropdownRef}>
               {/* ...existing dropdown code... */}
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer min-w-[200px] flex items-center justify-between"
+                className="w-full sm:min-w-[200px] px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer flex items-center justify-between"
               >
                 <span className="truncate">
                   {selectedPaymentSupplier === 'all' ? 'All Suppliers' : selectedPaymentSupplier}
@@ -267,7 +267,7 @@ export default function PaymentsTab({
                   <div className="max-h-48 overflow-y-auto">
                     <button
                       onClick={() => handleSupplierSelect('all')}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer ${
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer truncate overflow-hidden whitespace-nowrap ${
                         selectedPaymentSupplier === 'all' ? 'bg-slate-700/50 text-cyan-400' : 'text-slate-300'
                       }`}
                     >
@@ -277,7 +277,7 @@ export default function PaymentsTab({
                       <button
                         key={supplier}
                         onClick={() => handleSupplierSelect(supplier)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer ${
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer truncate overflow-hidden whitespace-nowrap ${
                           selectedPaymentSupplier === supplier ? 'bg-slate-700/50 text-cyan-400' : 'text-slate-300'
                         }`}
                       >
@@ -297,7 +297,7 @@ export default function PaymentsTab({
             {selectedPaymentSupplier !== 'all' && (
               <button
                 onClick={() => setSelectedPaymentSupplier('all')}
-                className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
+                className="self-start sm:self-auto px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
               >
                 Clear Filter
               </button>
@@ -317,36 +317,36 @@ export default function PaymentsTab({
           </div>
         </div>
 
-        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg overflow-hidden">
-          <table className="w-full">
+        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg overflow-x-auto max-w-full">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-slate-800/50">
               <tr>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">Supplier</th>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">Method</th>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">Reference</th>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">Amount</th>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">Status</th>
-                <th className="text-left text-slate-300 font-medium py-3 px-4 text-sm">Proof</th>
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">Supplier</th>
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">Method</th>
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">Reference</th>
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">Amount</th>
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">Status</th>
+                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">Proof</th>
               </tr>
             </thead>
             <tbody>
               {getFilteredPayments().map((payment) => (
                 <tr key={payment.id} className="border-t border-slate-700/30 hover:bg-slate-800/30 transition-colors group">
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3 sm:px-4">
                     <div className="space-y-1">
-                      <div className="text-slate-100 text-sm font-medium">{payment.supplier.name}</div>
-                      <div className="text-slate-400 text-xs">{formatDate(payment.date)}</div>
+                      <div className="text-slate-100 text-xs sm:text-sm font-medium whitespace-nowrap">{payment.supplier.name}</div>
+                      <div className="text-slate-400 text-xs whitespace-nowrap">{formatDate(payment.date)}</div>
                     </div>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3 sm:px-4">
                     <div className="flex items-center gap-2">
                       <span className="text-base">{getPaymentMethodIcon(payment.method)}</span>
-                      <span className="text-slate-300 capitalize text-sm">{payment.method.replace('_', ' ')}</span>
+                      <span className="text-slate-300 capitalize text-xs sm:text-sm whitespace-nowrap">{payment.method.replace('_', ' ')}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-slate-300 font-mono text-xs">{payment.reference}</td>
-                  <td className="py-3 px-4 text-slate-100 font-medium text-sm">{formatCurrency(payment.amount)}</td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3 sm:px-4 text-slate-300 font-mono text-xs whitespace-nowrap">{payment.reference}</td>
+                  <td className="py-3 px-3 sm:px-4 text-slate-100 font-medium text-xs sm:text-sm whitespace-nowrap">{formatCurrency(payment.amount)}</td>
+                  <td className="py-3 px-3 sm:px-4">
                     {editingPaymentId === payment.id ? (
                       <div className="flex items-center gap-2">
                         <select
@@ -402,7 +402,7 @@ export default function PaymentsTab({
                       </div>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                     {payment.proof_url ? (
                       <div className="flex items-center gap-2">
                         {payment.proof_url.toLowerCase().includes('.pdf') ? (

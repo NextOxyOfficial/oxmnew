@@ -1,6 +1,6 @@
-import type { NextConfig } from "next";
+declare const process: any;
 
-const nextConfig: NextConfig = {
+const nextConfig = {
 	images: {
 		domains: ["localhost", "168.231.119.200", "127.0.0.1", "oxymanager.com"],
 		remotePatterns: [
@@ -42,9 +42,8 @@ const nextConfig: NextConfig = {
 		ignoreBuildErrors: true,
 	},
 	// Add output configuration for better chunk handling
-	output: 'standalone',
 	// Configure webpack for better chunk loading
-	webpack: (config, { isServer }) => {
+	webpack: (config: any, { isServer }: any) => {
 		if (!isServer) {
 			// Add retry logic for chunk loading
 			config.output = {
@@ -55,5 +54,9 @@ const nextConfig: NextConfig = {
 		return config;
 	},
 };
+
+if (process.env.NEXT_OUTPUT === "standalone") {
+	(nextConfig as any).output = "standalone";
+}
 
 export default nextConfig;

@@ -197,7 +197,16 @@ export default function EditOrderPage() {
     setOrderForm((prev) => ({ ...prev, subtotal, discount_amount: discountAmount, vat_amount: vatAmount, total, net_profit: netProfit, total_buy_price: totalBuyPrice, total_sell_price: totalSellPrice, gross_profit: grossProfit, total_payment_received: totalPaymentReceived, remaining_balance: remainingBalance }));
   }, [orderForm.items, orderForm.discount_type, orderForm.discount_percentage, orderForm.discount_flat_amount, orderForm.vat_percentage, orderForm.previous_due, orderForm.apply_previous_due_to_total, orderForm.incentive_amount, orderForm.payments]);
 
-  const handleSubmit = async (status: "pending" | "processing" | "shipped" | "delivered" | "completed" | "cancelled" | "refunded") => {
+  const handleSubmit = async (
+    status:
+      | "draft"
+      | "pending"
+      | "confirmed"
+      | "processing"
+      | "completed"
+      | "cancelled"
+      | "refunded"
+  ) => {
     if (orderForm.items.length === 0) { setError("Please add at least one item to the order"); return; }
     if (!orderForm.customer.name) { setError("Please enter customer name"); return; }
     try {
@@ -493,29 +502,32 @@ export default function EditOrderPage() {
         setError("Product not found. Please try searching again.");
         return;
       }
+
+      const selectedProduct = productToAdd;
       
       // If product was found in search results but not in main products array,
       // add it to the main products array for future reference
       if (!productFromMain && productFromSearch) {
-        setProducts(prev => [...prev, productFromSearch]);
+        const productToStore = productFromSearch;
+        setProducts((prev) => [...prev, productToStore]);
       }
 
       // Check stock availability - skip for products that don't require stock tracking
       let availableStock = 0;
       const requestedQuantity = 1; // Default quantity when clicking on product
 
-      if (productToAdd.has_variants) {
+      if (selectedProduct.has_variants) {
         // For products with variants, we'll use the first available variant
-        const firstVariant = productToAdd.variants?.[0];
+        const firstVariant = selectedProduct.variants?.[0];
         if (firstVariant) {
           availableStock = firstVariant.stock || 0;
         }
       } else {
-        availableStock = productToAdd.stock || 0;
+        availableStock = selectedProduct.stock || 0;
       }
 
       // Only check stock if the product requires stock tracking
-      const requiresStockTracking = !productToAdd.no_stock_required;
+      const requiresStockTracking = !selectedProduct.no_stock_required;
       if (requiresStockTracking && availableStock <= 0) {
         setError("Product is out of stock");
         setProductSearch("");
@@ -526,7 +538,7 @@ export default function EditOrderPage() {
       // Check if the same product already exists in the order
       const existingItemIndex = orderForm.items.findIndex(
         (item) => item.product === parseInt(productId) && 
-        (!productToAdd.has_variants || item.variant === productToAdd.variants?.[0]?.id)
+        (!selectedProduct.has_variants || item.variant === selectedProduct.variants?.[0]?.id)
       );
 
       if (existingItemIndex >= 0) {
@@ -558,26 +570,26 @@ export default function EditOrderPage() {
         let selectedVariant = null;
         let variantDetails = "";
 
-        if (productToAdd.has_variants && productToAdd.variants?.[0]) {
-          selectedVariant = productToAdd.variants[0];
+        if (selectedProduct.has_variants && selectedProduct.variants?.[0]) {
+          selectedVariant = selectedProduct.variants[0];
           unitPrice = selectedVariant.sell_price || 0;
           buyPrice = selectedVariant.buy_price || 0;
           variantDetails = `${selectedVariant.color || ""} - ${selectedVariant.size || ""}${selectedVariant.custom_variant ? ` - ${selectedVariant.custom_variant}` : ""}`.trim();
         } else {
-          unitPrice = productToAdd.sell_price || 0;
-          buyPrice = productToAdd.buy_price || 0;
+          unitPrice = selectedProduct.sell_price || 0;
+          buyPrice = selectedProduct.buy_price || 0;
         }
 
   // Add to local state using temporary ID
   const newOrderItem: OrderItemT = {
           id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // More unique temporary ID
-          product: productToAdd.id,
+          product: selectedProduct.id,
           variant: selectedVariant?.id,
           quantity: requestedQuantity,
           unit_price: unitPrice,
           buy_price: buyPrice,
           total: requestedQuantity * unitPrice,
-          product_name: productToAdd.name,
+          product_name: selectedProduct.name,
           variant_details: variantDetails,
         };
 
@@ -1019,10 +1031,26 @@ export default function EditOrderPage() {
               <PaymentsSection orderForm={orderForm} setOrderForm={setOrderForm} formatCurrency={formatCurrency} />
               <SalesIncentive orderForm={orderForm} setOrderForm={setOrderForm} employees={employees} isEmployeeDropdownOpen={isEmployeeDropdownOpen} setIsEmployeeDropdownOpen={setIsEmployeeDropdownOpen} employeeSearch={employeeSearch} setEmployeeSearch={setEmployeeSearch} formatCurrency={formatCurrency} isOpen={isSalesIncentiveOpen} setIsOpen={setIsSalesIncentiveOpen} />
               <div className="flex gap-3">
-                <button onClick={() => handleSubmit(orderForm.status === 'draft' ? 'completed' : 'pending')} disabled={isSubmitting} className={`flex-1 px-6 py-3 text-white text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-all duration-200 shadow-lg ${orderForm.status === 'draft' ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500' : 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 focus:ring-cyan-500'}`}>
+                <button
+                  onClick={() =>
+                    handleSubmit(
+                      (orderForm.status === "draft"
+                        ? "completed"
+                        : (orderForm.status as any))
+                    )
+                  }
+                  disabled={isSubmitting}
+                  className={`flex-1 px-6 py-3 text-white text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-all duration-200 shadow-lg ${orderForm.status === 'draft' ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500' : 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 focus:ring-cyan-500'}`}
+                >
                   {isSubmitting ? (orderForm.status === 'draft' ? "Completing..." : "Updating...") : (orderForm.status === 'draft' ? "Complete Order" : "Update Order")}
                 </button>
-                <button onClick={handleCancel} className="flex-1 px-6 py-3 bg-slate-600 text-slate-100 text-sm font-medium rounded-lg hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 transition-all duration-200">Cancel</button>
+                <button
+                  onClick={() => handleSubmit("draft")}
+                  disabled={isSubmitting}
+                  className="flex-1 px-6 py-3 bg-slate-600 text-slate-100 text-sm font-medium rounded-lg hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 transition-all duration-200"
+                >
+                  Save as Draft
+                </button>
               </div>
             </div>
           </div>

@@ -143,7 +143,9 @@ interface Order {
   customer_name?: string;
   order_number: string;
   status:
+    | "draft"
     | "pending"
+    | "confirmed"
     | "processing"
     | "shipped"
     | "delivered"
@@ -2369,6 +2371,28 @@ export class ApiService {
 
   static async verifyPayment(orderId: string) {
     return this.get(`/verify-payment/?sp_order_id=${orderId}`);
+  }
+
+  static async getPaymentHistory(params?: {
+    payment_type?: "subscription" | "sms_package" | "unknown";
+    is_successful?: boolean;
+    is_applied?: boolean;
+    ordering?: string;
+    page?: number;
+    page_size?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.payment_type) queryParams.append("payment_type", params.payment_type);
+    if (typeof params?.is_successful === "boolean")
+      queryParams.append("is_successful", String(params.is_successful));
+    if (typeof params?.is_applied === "boolean")
+      queryParams.append("is_applied", String(params.is_applied));
+    if (params?.ordering) queryParams.append("ordering", params.ordering);
+    if (params?.page) queryParams.append("page", String(params.page));
+    if (params?.page_size) queryParams.append("page_size", String(params.page_size));
+
+    const qs = queryParams.toString();
+    return this.get(`/payment-history/${qs ? `?${qs}` : ""}`);
   }
 
   // API Key management methods

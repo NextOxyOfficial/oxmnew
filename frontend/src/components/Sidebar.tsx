@@ -4,7 +4,6 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
-import { ApiService } from "@/lib/api";
 import {
   Activity,
   Command,
@@ -55,7 +54,7 @@ export default function Sidebar({
   networkStatus = 78,
   smsCredits: initialSmsCredits = 1250
 }: SidebarProps) {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, profile } = useAuth();
   const { subscriptionStatus, isPro, isLoading: subscriptionLoading } = useSubscription();
   const [smsCredits, setSmsCredits] = useState<number | null>(null);
 
@@ -64,16 +63,12 @@ export default function Sidebar({
       setSmsCredits(null);
       return;
     }
-    async function fetchSmsCredits() {
-      try {
-        const data = await ApiService.get("/get-my-sms-credits/");
-        setSmsCredits(typeof data.credits === "number" ? data.credits : 0);
-      } catch {
-        setSmsCredits(0);
-      }
+    if (profile && typeof profile.sms_credits === "number") {
+      setSmsCredits(profile.sms_credits);
+    } else {
+      setSmsCredits(0);
     }
-    fetchSmsCredits();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, profile]);
 
   // Component for dynamic subscription badge
   const SubscriptionBadge = () => {
@@ -109,16 +104,18 @@ export default function Sidebar({
       <div
         className={`${
           isOpen ? "block" : "hidden"
-        } fixed inset-0 z-50 lg:hidden mt-16`}
+        } fixed inset-0 z-50 lg:hidden transition-opacity duration-300`}
       >
         <div
-          className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm mt-16"
+          className="fixed inset-0 bg-black/20 transition-opacity duration-300"
           onClick={onClose}
         ></div>
-        <div className="fixed top-16 bottom-0 left-0 flex w-64 flex-col transform transition-transform duration-300 ease-out">
-          <div className="bg-slate-900 border border-slate-700/30 rounded-lg m-4 h-full flex flex-col overflow-hidden">
+        <div className={`fixed top-16 bottom-0 left-0 flex w-72 max-w-[85vw] flex-col transition-transform duration-300 ease-out ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}>
+          <div className="bg-slate-900 border border-slate-700/30 rounded-none h-full flex flex-col overflow-hidden">
             <div className="p-3 flex-1 flex flex-col overflow-y-auto">
-              <div className="flex items-center justify-end mb-4">
+              <div className="flex items-center justify-end mb-2">
                 <button
                   onClick={onClose}
                   className="lg:hidden rounded-lg p-2 inline-flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-900/50 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
@@ -136,14 +133,6 @@ export default function Sidebar({
                   <div className="absolute top-2 right-2">
                     <SubscriptionBadge />
                   </div>
-                  
-                  {!isPro && !subscriptionLoading && (
-                    <div className="absolute top-2 left-2">
-                      <Link href="/dashboard/subscriptions" className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
-                        Upgrade
-                      </Link>
-                    </div>
-                  )}
                       <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="rounded-lg bg-emerald-500/20 p-2">
@@ -152,11 +141,18 @@ export default function Sidebar({
                     <div>
                       <div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
                       <div className="flex items-center gap-2">
-                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
+                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : isAuthenticated ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
                         <Link href="/dashboard/subscriptions">
                           <ShoppingCart className="h-4 w-4 text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors" />
                         </Link>
                       </div>
+                      {!isPro && !subscriptionLoading && (
+                        <div className="mt-1">
+                          <Link href="/dashboard/subscriptions" className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                            Upgrade
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -191,7 +187,7 @@ export default function Sidebar({
                     <div>
                       <div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
                       <div className="flex items-center gap-2">
-                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
+                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : isAuthenticated ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
                         <Link href="/dashboard/subscriptions">
                           <ShoppingCart className="h-4 w-4 text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors" />
                         </Link>

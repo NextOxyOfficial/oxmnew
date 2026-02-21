@@ -108,12 +108,33 @@ export default function SuppliersTab({
   return (
     <div className="space-y-6">
       {/* Header with Search and Create Button */}
-      <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-        <h4 className="text-lg font-medium text-slate-100">Suppliers</h4>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-base sm:text-lg font-medium text-slate-100">Suppliers</h4>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-3 sm:px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center gap-2 cursor-pointer whitespace-nowrap"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            <span className="hidden sm:inline">Add Supplier</span>
+            <span className="sm:hidden">Add</span>
+          </button>
+        </div>
         
-        <div className="flex gap-3 items-center">
-          {/* Search Input */}
-          <div className="relative flex-1 sm:w-64">
+        {/* Search Input */}
+        <div className="relative w-full">
             <svg
               className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400"
               fill="none"
@@ -132,7 +153,7 @@ export default function SuppliersTab({
               placeholder="Search suppliers..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-10 pr-10 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
+              className="w-full pl-10 pr-10 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm"
             />
             {searchInput && (
               <button
@@ -156,33 +177,12 @@ export default function SuppliersTab({
               </button>
             )}
           </div>
-
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg flex items-center gap-2 cursor-pointer whitespace-nowrap"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Add Supplier
-          </button>
-        </div>
       </div>
 
       {/* Create Supplier Form Modal */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto scrollbar-hide">
-          <div className="bg-slate-800 border border-slate-700/50 rounded-lg p-6 w-full max-w-md my-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto scrollbar-hide">
+          <div className="bg-slate-800 border border-slate-700/50 rounded-lg p-4 sm:p-6 w-full max-w-md my-auto">
             <div className="flex justify-between items-center mb-4">
               <h4 className="text-lg font-medium text-slate-100">
                 {isEditing ? "Edit Supplier" : "Create New Supplier"}
@@ -318,6 +318,7 @@ export default function SuppliersTab({
       )}
 
       {/* Suppliers Grid */}
+      <div className="mt-4 sm:mt-6">
       {filteredSuppliers.length === 0 ? (
         <div className="text-center py-12">
           <svg
@@ -343,20 +344,20 @@ export default function SuppliersTab({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filteredSuppliers.map((supplier) => (
           <div
             key={supplier.id}
-            className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/50 transition-colors duration-200 relative"
+            className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 sm:p-4 hover:bg-slate-800/50 transition-colors duration-200 relative"
           >
             <div className="space-y-3">
               {/* Header with three-dot menu */}
               <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h5 className="text-slate-100 font-medium text-sm">
+                <div className="flex-1 min-w-0">
+                  <h5 className="text-slate-100 font-medium text-sm truncate">
                     {supplier.name}
                   </h5>
-                  <p className="text-slate-400 text-xs mt-1">
+                  <p className="text-slate-400 text-xs mt-1 line-clamp-2">
                     {supplier.address}
                   </p>
                 </div>
@@ -389,14 +390,14 @@ export default function SuppliersTab({
 
                   {/* Dropdown menu */}
                   {activeDropdown === supplier.id && (
-                    <div className="absolute right-0 top-8 w-48 bg-slate-800 border border-slate-700/50 rounded-lg shadow-lg z-10">
+                    <div className="absolute right-0 top-8 w-44 sm:w-48 bg-slate-800 border border-slate-700/50 rounded-lg shadow-lg z-10">
                       <div className="py-1">
                         <button
                           onClick={() => {
                             onCreatePurchase(supplier);
                             setActiveDropdown(null);
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 flex items-center gap-2 cursor-pointer"
+                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 flex items-center gap-2 cursor-pointer truncate overflow-hidden whitespace-nowrap"
                         >
                           <svg
                             className="w-4 h-4"
@@ -418,7 +419,7 @@ export default function SuppliersTab({
                             onCreatePayment(supplier);
                             setActiveDropdown(null);
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 flex items-center gap-2 cursor-pointer"
+                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 flex items-center gap-2 cursor-pointer truncate overflow-hidden whitespace-nowrap"
                         >
                           <svg
                             className="w-4 h-4"
@@ -441,7 +442,7 @@ export default function SuppliersTab({
                             onEditSupplier(supplier);
                             setActiveDropdown(null);
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 flex items-center gap-2 cursor-pointer"
+                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 flex items-center gap-2 cursor-pointer truncate overflow-hidden whitespace-nowrap"
                         >
                           <svg
                             className="w-4 h-4"
@@ -463,7 +464,7 @@ export default function SuppliersTab({
                             onDeleteSupplier(supplier);
                             setActiveDropdown(null);
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 flex items-center gap-2 cursor-pointer"
+                          className="w-full text-left px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 flex items-center gap-2 cursor-pointer truncate overflow-hidden whitespace-nowrap"
                         >
                           <svg
                             className="w-4 h-4"
@@ -505,16 +506,16 @@ export default function SuppliersTab({
                       d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                     />
                   </svg>
-                  <span className="text-slate-300">{supplier.phone}</span>
+                  <span className="text-slate-300 break-all">{supplier.phone}</span>
                 </div>
 
                 {supplier.email && (
                   <div
                     key={`${supplier.id}-email`}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 min-w-0"
                   >
                     <svg
-                      className="w-3 h-3 text-slate-400"
+                      className="w-3 h-3 text-slate-400 flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -526,17 +527,17 @@ export default function SuppliersTab({
                         d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                       />
                     </svg>
-                    <span className="text-slate-300">{supplier.email}</span>
+                    <span className="text-slate-300 truncate">{supplier.email}</span>
                   </div>
                 )}
 
                 {supplier.website && (
                   <div
                     key={`${supplier.id}-website`}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 min-w-0"
                   >
                     <svg
-                      className="w-3 h-3 text-slate-400"
+                      className="w-3 h-3 text-slate-400 flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -560,7 +561,7 @@ export default function SuppliersTab({
                 )}
               </div>
 
-              <div className="border-t border-slate-700/50 pt-3 grid grid-cols-2 gap-2 text-xs">
+              <div className="border-t border-slate-700/50 pt-3 grid grid-cols-2 gap-3 text-xs">
                 <div key={`${supplier.id}-orders`}>
                   <span className="text-slate-400">Purchase:</span>
                   <p className="text-slate-100 font-medium">
@@ -579,6 +580,7 @@ export default function SuppliersTab({
           ))}
         </div>
       )}
+      </div>
 
       {/* Search Results Count */}
       {searchTerm && filteredSuppliers.length > 0 && (
@@ -589,11 +591,11 @@ export default function SuppliersTab({
 
       {/* Load More Button */}
       {hasNextPage && (
-        <div className="mt-6 flex justify-center">
+        <div className="mt-4 sm:mt-6 flex justify-center">
           <button
             onClick={onLoadMore}
             disabled={isLoadingMore}
-            className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 disabled:from-slate-600 disabled:to-slate-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 disabled:from-slate-600 disabled:to-slate-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isLoadingMore ? (
               <>

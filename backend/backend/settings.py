@@ -24,15 +24,13 @@ SECRET_KEY = config(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config("DEBUG", default=True, cast=bool)
+DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-    "51.222.138.167",
-    "oxymanager.com",
-    "www.oxymanager.com",
-]
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1,oxymanager.com,www.oxymanager.com",
+    cast=lambda v: [s.strip() for s in v.split(",")],
+)
 
 # Application definition
 INSTALLED_APPS = [
@@ -113,6 +111,15 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
+    # Rate limiting to prevent API abuse and high CPU
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "30/minute",
+        "user": "120/minute",
+    },
 }
 
 # Session settings
@@ -161,7 +168,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql_psycopg2",
         "NAME": config("DB_NAME", default="oxm_user"),
         "USER": config("DB_USER", default="postgres"),
-        "PASSWORD": config("DB_PASSWORD", default="pgPass7431"),
+        "PASSWORD": config("DB_PASSWORD", default="change-me-in-env"),
         "HOST": config("DB_HOST", default="localhost"),
         "PORT": config("DB_PORT", default="5432"),
     }
@@ -184,7 +191,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # sms settings
-API_SMS = "SplZ3f60tlt69pkZAEc8WHk3MbHkGeLYtJ1jElCd"
+API_SMS = config("API_SMS", default="")
 
 # Internationalization
 LANGUAGE_CODE = "en-us"
@@ -269,13 +276,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # ShurjoPay Settings
-SP_USERNAME = "lyriczsoft"
-SP_PASSWORD = "lyrikskdzprvz&ud"
-SP_ENDPOINT = "https://engine.shurjopayment.com"
+SP_USERNAME = config("SP_USERNAME", default="")
+SP_PASSWORD = config("SP_PASSWORD", default="")
+SP_ENDPOINT = config("SP_ENDPOINT", default="https://engine.shurjopayment.com")
 # for live
-SP_RETURN = "http://oxymanager.com/dashboard/verify-payment"
-SP_CANCEL = "http://oxymanager.com/dashboard/subscriptions"
-# for development
-# SP_RETURN = "http://localhost:3000/dashboard/verify-payment"
-# SP_CANCEL = "http://localhost:3000/dashboard/subscriptions"
+if DEBUG:
+    SP_RETURN = config("SP_RETURN", default="http://localhost:3000/dashboard/verify-payment")
+    SP_CANCEL = config("SP_CANCEL", default="http://localhost:3000/dashboard/subscriptions")
+else:
+    SP_RETURN = config("SP_RETURN", default="https://oxymanager.com/dashboard/verify-payment")
+    SP_CANCEL = config("SP_CANCEL", default="https://oxymanager.com/dashboard/subscriptions")
 SP_PREFIX = "OXMPAY_"

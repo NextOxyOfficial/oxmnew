@@ -1,6 +1,13 @@
 # subscription/serializers.py
 from rest_framework import serializers
-from .models import SubscriptionPlan, SMSPackage, UserSubscription, UserSMSCredit, SMSSentHistory
+from .models import (
+    PaymentTransaction,
+    SMSPackage,
+    SMSSentHistory,
+    SubscriptionPlan,
+    UserSMSCredit,
+    UserSubscription,
+)
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
     class Meta:
@@ -28,3 +35,21 @@ class SMSSentHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = SMSSentHistory
         fields = '__all__'
+
+
+class PaymentTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentTransaction
+        fields = [
+            "id",
+            "sp_order_id",
+            "customer_order_id",
+            "payment_type",
+            "amount",
+            "currency",
+            "is_successful",
+            "is_applied",
+            "applied_at",
+            "created_at",
+            "updated_at",
+        ]

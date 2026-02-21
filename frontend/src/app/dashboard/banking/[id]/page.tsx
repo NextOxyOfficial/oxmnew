@@ -790,7 +790,7 @@ export default function BankAccountPage() {
           </div>
 
         {/* Account Tabs */}
-        {allAccounts.length > 1 && (
+        {(
           <div className="mb-6">
             <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">

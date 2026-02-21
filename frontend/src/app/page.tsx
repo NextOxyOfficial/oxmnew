@@ -2,278 +2,774 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ApiService } from '@/lib/api';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface ApiStatus {
-  message: string;
-  isConnected: boolean;
-  error?: string;
-}
+import { useRouter } from 'next/navigation';
+import {
+  Package,
+  ShoppingCart,
+  Users,
+  CreditCard,
+  MessageSquare,
+  BarChart3,
+  Shield,
+  Zap,
+  CheckCircle,
+  ArrowRight,
+  Star,
+  TrendingUp,
+  Clock,
+  Globe,
+  Smartphone,
+  Building2,
+  ChevronRight,
+  Play,
+  Menu,
+  X,
+} from 'lucide-react';
 
 export default function Home() {
-  const [apiStatus, setApiStatus] = useState<ApiStatus>({
-    message: 'Checking connection...',
-    isConnected: false,
-  });
+  const { user, isAuthenticated, loading, logout } = useAuth();
+  const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
 
-  const { user, isAuthenticated, loading } = useAuth();
+  const features = [
+    {
+      icon: Package,
+      title: 'Inventory Management',
+      description: 'Track products, variants, stock levels with real-time alerts for low stock items.',
+      color: 'from-blue-500 to-cyan-500',
+    },
+    {
+      icon: ShoppingCart,
+      title: 'Sales & Orders',
+      description: 'Process sales, manage orders, generate invoices with complete transaction history.',
+      color: 'from-emerald-500 to-green-500',
+    },
+    {
+      icon: Users,
+      title: 'Customer Management',
+      description: 'Maintain customer database, track purchase history, manage due payments.',
+      color: 'from-purple-500 to-pink-500',
+    },
+    {
+      icon: CreditCard,
+      title: 'Banking & Finance',
+      description: 'Multi-account banking, transaction tracking, financial reports and analytics.',
+      color: 'from-orange-500 to-amber-500',
+    },
+    {
+      icon: MessageSquare,
+      title: 'SMS Marketing',
+      description: 'Bulk SMS campaigns, automated notifications, customer engagement tools.',
+      color: 'from-rose-500 to-red-500',
+    },
+    {
+      icon: BarChart3,
+      title: 'Reports & Analytics',
+      description: 'Comprehensive dashboards, sales reports, inventory insights, profit analysis.',
+      color: 'from-indigo-500 to-violet-500',
+    },
+  ];
+
+  const stats = [
+    { value: '10,00+', label: 'Active Businesses' },
+    { value: '৳11Cr+', label: 'Transactions Processed' },
+    { value: '99.9%', label: 'Uptime Guarantee' },
+    { value: '24/7', label: 'Customer Support' },
+  ];
+
+  const testimonials = [
+    {
+      name: 'Rahim Uddin',
+      business: 'Fashion House BD',
+      image: '/testimonials/user1.jpg',
+      quote: 'OxyManager transformed how we manage our clothing business. Stock tracking is now effortless!',
+      rating: 5,
+    },
+    {
+      name: 'Fatima Akter',
+      business: 'Grocery Mart',
+      image: '/testimonials/user2.jpg',
+      quote: 'The SMS feature helped us increase repeat customers by 40%. Amazing tool for small businesses.',
+      rating: 5,
+    },
+    {
+      name: 'Kamal Hossain',
+      business: 'Electronics Plus',
+      image: '/testimonials/user3.jpg',
+      quote: 'Finally a business software that understands Bangladeshi businesses. The due book feature is a lifesaver!',
+      rating: 5,
+    },
+  ];
+
+  const pricingPlans = [
+    {
+      name: 'Free',
+      price: '০',
+      period: '/মাস',
+      description: 'ছোট ব্যবসার জন্য পারফেক্ট',
+      features: [
+        'Up to 25 Products',
+        'Basic Inventory Management',
+        'Sales & Order Tracking',
+        'Customer Database',
+        '50 SMS Credits/month',
+        'Email Support',
+      ],
+      cta: 'Start Free',
+      popular: false,
+    },
+    {
+      name: 'Pro',
+      price: '৩৯৯',
+      period: '/মাস',
+      description: 'Growing businesses এর জন্য',
+      features: [
+        'Unlimited Products',
+        'Advanced Inventory',
+        'Multi-user Access',
+        'Banking Integration',
+        '500 SMS Credits/month',
+        'Priority Support',
+        'Custom Reports',
+        'API Access',
+      ],
+      cta: 'Start Pro Trial',
+      popular: true,
+    },
+    {
+      name: 'Enterprise',
+      price: 'Custom',
+      period: '',
+      description: 'Large organizations এর জন্য',
+      features: [
+        'Everything in Pro',
+        'Unlimited Users',
+        'Dedicated Server',
+        'Custom Integrations',
+        'Unlimited SMS',
+        'Dedicated Account Manager',
+        'On-premise Option',
+        'SLA Guarantee',
+      ],
+      cta: 'Contact Sales',
+      popular: false,
+    },
+  ];
 
   useEffect(() => {
-    checkApiConnection();
-  }, []);
-
-  const checkApiConnection = async () => {
-    try {
-      const response = await ApiService.healthCheck();
-      setApiStatus({
-        message: response.message || 'Connected to Django backend',
-        isConnected: true,
-      });
-    } catch (error) {
-      setApiStatus({
-        message: 'Failed to connect to backend',
-        isConnected: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  };
+    const interval = setInterval(() => {
+      setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [testimonials.length]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden">
       {/* Navigation */}
-      <nav className="bg-white dark:bg-gray-800 shadow">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-                OXM Project
-              </h1>
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center">
+                <span className="text-slate-900 font-bold text-lg">O</span>
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+                OxyManager
+              </span>
             </div>
-            <div className="flex items-center space-x-4">
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-8">
+              <a href="#features" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
+                Features
+              </a>
+              <a href="#pricing" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
+                Pricing
+              </a>
+              <a href="#testimonials" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
+                Reviews
+              </a>
+              <a href="#faq" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
+                FAQ
+              </a>
+            </div>
+
+            {/* Auth Buttons */}
+            <div className="hidden md:flex items-center gap-4">
               {loading ? (
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-300 rounded w-20"></div>
-                </div>
+                <div className="animate-pulse h-10 w-24 bg-slate-800 rounded-lg"></div>
               ) : isAuthenticated ? (
                 <>
-                  <span className="text-gray-700 dark:text-gray-300">
-                    Welcome, {user?.first_name || user?.username}!
-                  </span>
                   <Link
                     href="/dashboard"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                    className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/25"
                   >
                     Dashboard
                   </Link>
+                  <button
+                    onClick={() => {
+                      logout();
+                      router.push('/');
+                    }}
+                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold rounded-lg transition-all duration-300"
+                  >
+                    Logout
+                  </button>
                 </>
               ) : (
                 <>
                   <Link
                     href="/auth/login"
-                    className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                    className="text-slate-300 hover:text-white transition-colors text-sm font-medium px-4 py-2"
                   >
                     Sign in
                   </Link>
                   <Link
                     href="/auth/register"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                    className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/25"
                   >
-                    Sign up
+                    Get Started Free
                   </Link>
                 </>
               )}
             </div>
-          </div>
-        </div>
-      </nav>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto py-12 px-4">
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            OXM Project
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300">
-            Full-stack application with Django backend and Next.js frontend
-          </p>
-        </div>
-
-        {/* Authentication Status */}
-        {isAuthenticated && (
-          <div className="mb-8 max-w-md mx-auto">
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                <span className="text-green-800 dark:text-green-200 font-medium">
-                  You are logged in as {user?.username}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* API Connection Status */}
-        <div className="mb-12 max-w-md mx-auto">
-          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
-            <h2 className="text-xl font-semibold mb-4">Backend Connection</h2>
-            <div className="flex items-center gap-3 mb-3">
-              <div 
-                className={`w-3 h-3 rounded-full ${
-                  apiStatus.isConnected ? 'bg-green-500' : 'bg-red-500'
-                }`}
-              />
-              <span className={`font-medium ${
-                apiStatus.isConnected ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {apiStatus.isConnected ? 'Connected' : 'Disconnected'}
-              </span>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              {apiStatus.message}
-            </p>
-            {apiStatus.error && (
-              <p className="text-xs text-red-500 mb-3">
-                Error: {apiStatus.error}
-              </p>
-            )}
+            {/* Mobile Menu Button */}
             <button
-              onClick={checkApiConnection}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-slate-400 hover:text-white"
             >
-              Retry Connection
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
-        {/* Project Info */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
-            <h3 className="text-2xl font-semibold mb-4 text-blue-600">Backend (Django)</h3>
-            <ul className="text-gray-600 dark:text-gray-400 space-y-2 mb-6">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                Django REST Framework
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                PostgreSQL Database (oxmdb_new)
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                Admin Panel
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                CORS Enabled
-              </li>
-            </ul>
-            <div className="space-y-2">
-              <a
-                href="http://localhost:8000/admin/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                🔗 Open Admin Panel →
-              </a>
-              <a
-                href="http://localhost:8000/api/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                🔗 View API →
-              </a>
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-slate-900 border-t border-slate-800">
+            <div className="px-4 py-4 space-y-3">
+              <a href="#features" className="block text-slate-300 hover:text-white py-2">Features</a>
+              <a href="#pricing" className="block text-slate-300 hover:text-white py-2">Pricing</a>
+              <a href="#testimonials" className="block text-slate-300 hover:text-white py-2">Reviews</a>
+              <a href="#faq" className="block text-slate-300 hover:text-white py-2">FAQ</a>
+              <div className="pt-4 border-t border-slate-800 space-y-3">
+                {isAuthenticated ? (
+                  <>
+                    <Link href="/dashboard" className="block w-full text-center px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold rounded-lg">
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        router.push('/');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-center px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold rounded-lg"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/auth/login" className="block w-full text-center text-slate-300 py-2">Sign in</Link>
+                    <Link href="/auth/register" className="block w-full text-center px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold rounded-lg">
+                      Get Started Free
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
+        )}
+      </nav>
 
-          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
-            <h3 className="text-2xl font-semibold mb-4 text-purple-600">Frontend (Next.js)</h3>
-            <ul className="text-gray-600 dark:text-gray-400 space-y-2 mb-6">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                React 18 with TypeScript
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                Tailwind CSS
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                App Router
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                API Integration
-              </li>
-            </ul>
-          </div>
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-cyan-500/5 to-emerald-500/5 rounded-full blur-3xl"></div>
         </div>
 
-        {/* Quick Start Guide */}
-        <div className="p-8 rounded-xl border border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-800">
-          <h3 className="text-2xl font-semibold mb-6 text-center">🚀 Quick Start Guide</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div>
-              <h4 className="text-lg font-semibold mb-3 text-blue-600">1. Backend Setup</h4>
-              <div className="bg-gray-900 text-green-400 p-4 rounded-lg text-sm font-mono overflow-x-auto">
-                <div className="space-y-1">
-                  <div>cd backend</div>
-                  <div>python -m venv venv</div>
-                  <div>venv\\Scripts\\activate</div>
-                  <div>pip install -r requirements.txt</div>
-                  <div>python manage.py migrate</div>
-                  <div>python manage.py createsuperuser</div>
-                  <div>python manage.py runserver</div>
-                </div>
-              </div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-4xl mx-auto">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-full mb-8">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-sm text-slate-300">বাংলাদেশের #1 Business Management Software</span>
             </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-3 text-purple-600">2. Frontend Setup</h4>
-              <div className="bg-gray-900 text-green-400 p-4 rounded-lg text-sm font-mono overflow-x-auto">
-                <div className="space-y-1">
-                  <div>cd frontend</div>
-                  <div>npm install</div>
-                  <div>npm run dev</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-8 p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-            <h4 className="text-lg font-semibold mb-3 text-yellow-800 dark:text-yellow-200">📋 Database Setup Required</h4>
-            <p className="text-yellow-700 dark:text-yellow-300 mb-3">
-              Before running the backend, make sure to:
+
+            {/* Headline */}
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 leading-tight">
+              আপনার ব্যবসা
+              <span className="block bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                সহজে ম্যানেজ করুন
+              </span>
+            </h1>
+
+            {/* Subheadline */}
+            <p className="text-lg sm:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
+              Inventory, Sales, Customers, Banking, SMS - সব এক জায়গায়। 
+              ছোট থেকে বড় সব ব্যবসার জন্য complete business management solution।
             </p>
-            <ul className="text-yellow-700 dark:text-yellow-300 space-y-1 text-sm">
-              <li>• Install PostgreSQL and pgAdmin</li>
-              <li>• Create database: <code className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">oxmdb_new</code></li>
-              <li>• Update <code className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">.env</code> file with your database credentials</li>
-              <li>• Check <code className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">DATABASE_SETUP.md</code> for detailed instructions</li>
-            </ul>
-          </div>
-        </div>
 
-        {/* Service URLs */}
-        <div className="mt-12 text-center">
-          <h3 className="text-xl font-semibold mb-4">🌐 Service URLs</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="font-medium text-blue-800 dark:text-blue-200">Frontend</div>
-              <div className="text-sm text-blue-600 dark:text-blue-300">http://localhost:3000</div>
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+              <Link
+                href="/auth/register"
+                className="group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-bold rounded-xl transition-all duration-300 shadow-2xl shadow-cyan-500/25 hover:shadow-cyan-500/40 flex items-center justify-center gap-2"
+              >
+                ফ্রি শুরু করুন
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <button className="group w-full sm:w-auto px-8 py-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2">
+                <Play className="w-5 h-5" />
+                Watch Demo
+              </button>
             </div>
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <div className="font-medium text-green-800 dark:text-green-200">Backend API</div>
-              <div className="text-sm text-green-600 dark:text-green-300">http://localhost:8000/api</div>
+
+            {/* Trust Badges */}
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
+                <span>No credit card required</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
+                <span>14-day free trial</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
+                <span>Cancel anytime</span>
+              </div>
             </div>
-            <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <div className="font-medium text-purple-800 dark:text-purple-200">Admin Panel</div>
-              <div className="text-sm text-purple-600 dark:text-purple-300">http://localhost:8000/admin</div>
+
+            {/* Contact Info */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-400">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <a href="tel:+8801234567890" className="hover:text-white transition-colors">+880 1234-567890</a>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <a href="mailto:support@oxymanager.com" className="hover:text-white transition-colors">support@oxymanager.com</a>
+              </div>
+            </div>
+          </div>
+
+          {/* Dashboard Preview */}
+          <div className="mt-16 relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent z-10 pointer-events-none"></div>
+            <div className="relative rounded-2xl overflow-hidden border border-slate-800 shadow-2xl shadow-cyan-500/10">
+              <div className="bg-slate-900 px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <div className="flex-1 text-center text-xs text-slate-500">oxymanager.com/dashboard</div>
+              </div>
+              <div className="bg-gradient-to-br from-slate-900 to-slate-800 aspect-video flex items-center justify-center">
+                <div className="text-center p-8">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center">
+                    <BarChart3 className="w-10 h-10 text-slate-900" />
+                  </div>
+                  <p className="text-slate-400">Interactive Dashboard Preview</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </main>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16 border-y border-slate-800/50 bg-slate-900/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="text-center">
+                <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent mb-2">
+                  {stat.value}
+                </div>
+                <div className="text-slate-400 text-sm">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 lg:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
+              Everything you need to
+              <span className="block bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+                run your business
+              </span>
+            </h2>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+              Powerful features designed specifically for Bangladeshi businesses. 
+              Simple to use, yet powerful enough for any scale.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, index) => (
+              <div
+                key={index}
+                className="group p-6 bg-slate-900/50 border border-slate-800 rounded-2xl hover:border-slate-700 transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                  <feature.icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-white">{feature.title}</h3>
+                <p className="text-slate-400 leading-relaxed">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Additional Features Grid */}
+          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { icon: Shield, label: 'Bank-grade Security' },
+              { icon: Globe, label: 'Access Anywhere' },
+              { icon: Smartphone, label: 'Mobile Friendly' },
+              { icon: Clock, label: 'Real-time Sync' },
+            ].map((item, index) => (
+              <div key={index} className="flex items-center gap-3 p-4 bg-slate-900/30 rounded-xl border border-slate-800/50">
+                <item.icon className="w-5 h-5 text-cyan-400" />
+                <span className="text-sm text-slate-300">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20 lg:py-32 bg-slate-900/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              শুরু করুন মাত্র <span className="text-cyan-400">৩ ধাপে</span>
+            </h2>
+            <p className="text-slate-400 text-lg">Simple setup, powerful results</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                step: '01',
+                title: 'Sign Up Free',
+                description: 'Create your account in 30 seconds. No credit card needed.',
+                icon: Users,
+              },
+              {
+                step: '02',
+                title: 'Add Your Products',
+                description: 'Import or manually add your inventory. Set prices and stock levels.',
+                icon: Package,
+              },
+              {
+                step: '03',
+                title: 'Start Selling',
+                description: 'Process sales, track customers, and grow your business.',
+                icon: TrendingUp,
+              },
+            ].map((item, index) => (
+              <div key={index} className="relative">
+                {index < 2 && (
+                  <div className="hidden md:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-cyan-500/50 to-transparent -translate-x-1/2"></div>
+                )}
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 mb-6">
+                    <item.icon className="w-10 h-10 text-cyan-400" />
+                  </div>
+                  <div className="text-cyan-400 font-mono text-sm mb-2">{item.step}</div>
+                  <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
+                  <p className="text-slate-400">{item.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section id="testimonials" className="py-20 lg:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Trusted by <span className="text-emerald-400">10,000+</span> businesses
+            </h2>
+            <p className="text-slate-400 text-lg">See what our customers have to say</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((testimonial, index) => (
+              <div
+                key={index}
+                className={`p-6 rounded-2xl border transition-all duration-500 ${
+                  index === activeTestimonial
+                    ? 'bg-gradient-to-br from-cyan-500/10 to-emerald-500/10 border-cyan-500/30 scale-105'
+                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <p className="text-slate-300 mb-6 leading-relaxed">&ldquo;{testimonial.quote}&rdquo;</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-900 font-bold">
+                    {testimonial.name.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-white">{testimonial.name}</div>
+                    <div className="text-sm text-slate-400">{testimonial.business}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Testimonial Dots */}
+          <div className="flex justify-center gap-2 mt-8">
+            {testimonials.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveTestimonial(index)}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  index === activeTestimonial ? 'bg-cyan-400 w-6' : 'bg-slate-600'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 lg:py-32 bg-slate-900/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Simple, transparent <span className="text-cyan-400">pricing</span>
+            </h2>
+            <p className="text-slate-400 text-lg">Start free, upgrade when you need</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {pricingPlans.map((plan, index) => (
+              <div
+                key={index}
+                className={`relative p-6 rounded-2xl border transition-all duration-300 ${
+                  plan.popular
+                    ? 'bg-gradient-to-br from-cyan-500/10 to-emerald-500/10 border-cyan-500/50 scale-105 shadow-2xl shadow-cyan-500/20'
+                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 text-xs font-bold rounded-full">
+                    Most Popular
+                  </div>
+                )}
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                    <span className="text-slate-400">{plan.period}</span>
+                  </div>
+                  <p className="text-sm text-slate-400 mt-2">{plan.description}</p>
+                </div>
+                <ul className="space-y-3 mb-6">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href={plan.name === 'Enterprise' ? '#contact' : '/auth/register'}
+                  className={`block w-full py-3 rounded-xl font-semibold text-center transition-all ${
+                    plan.popular
+                      ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 hover:from-cyan-400 hover:to-emerald-400'
+                      : 'bg-slate-800 text-white hover:bg-slate-700'
+                  }`}
+                >
+                  {plan.cta}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className="py-20 lg:py-32">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Frequently Asked <span className="text-cyan-400">Questions</span>
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              {
+                q: 'OxyManager কি ফ্রি?',
+                a: 'হ্যাঁ! আমাদের Free plan দিয়ে শুরু করতে পারবেন। ১০০টি প্রোডাক্ট পর্যন্ত ম্যানেজ করতে পারবেন বিনামূল্যে।',
+              },
+              {
+                q: 'আমার ডাটা কি সুরক্ষিত?',
+                a: 'অবশ্যই! আমরা bank-grade encryption ব্যবহার করি এবং আপনার ডাটা নিয়মিত backup নেওয়া হয়।',
+              },
+              {
+                q: 'মোবাইল থেকে ব্যবহার করা যাবে?',
+                a: 'হ্যাঁ, OxyManager সম্পূর্ণ mobile responsive। যেকোনো device থেকে access করতে পারবেন।',
+              },
+              {
+                q: 'SMS credit কিভাবে কিনবো?',
+                a: 'Dashboard থেকে Subscriptions এ গিয়ে SMS packages দেখতে পাবেন। bKash/Nagad/Card দিয়ে কিনতে পারবেন।',
+              },
+              {
+                q: 'Support কিভাবে পাবো?',
+                a: 'Free users email support পাবেন। Pro users priority support এবং live chat access পাবেন।',
+              },
+            ].map((faq, index) => (
+              <details
+                key={index}
+                className="group p-4 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-slate-700 transition-all"
+              >
+                <summary className="flex items-center justify-between cursor-pointer list-none">
+                  <span className="font-medium text-white">{faq.q}</span>
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-open:rotate-90 transition-transform" />
+                </summary>
+                <p className="mt-4 text-slate-400 leading-relaxed">{faq.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 lg:py-32">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/30">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Ready to grow your business?
+            </h2>
+            <p className="text-slate-400 text-lg mb-8 max-w-xl mx-auto">
+              Join 10,000+ businesses already using OxyManager. Start your free trial today.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/auth/register"
+                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-bold rounded-xl transition-all duration-300 shadow-2xl shadow-cyan-500/25"
+              >
+                Start Free Trial
+              </Link>
+              <Link
+                href="#contact"
+                className="w-full sm:w-auto px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all border border-slate-700"
+              >
+                Contact Sales
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center">
+                  <span className="text-slate-900 font-bold text-sm">O</span>
+                </div>
+                <span className="text-lg font-bold">OxyManager</span>
+              </div>
+              <p className="text-slate-400 text-sm mb-4">
+                Complete business management solution for Bangladeshi businesses.
+              </p>
+              <div className="space-y-2 text-sm text-slate-400">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  <a href="tel:+8801234567890" className="hover:text-white transition-colors">+880 1234-567890</a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <a href="mailto:support@oxymanager.com" className="hover:text-white transition-colors">support@oxymanager.com</a>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Updates</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Company</h4>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors">Terms & Conditions</Link></li>
+                <li><a href="mailto:support@oxymanager.com" className="hover:text-white transition-colors">Contact Support</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-slate-400 text-sm">
+              <p>&copy; {new Date().getFullYear()} OxyManager. All rights reserved.</p>
+              <div className="flex items-center gap-4">
+                <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+                <span className="hidden sm:inline">•</span>
+                <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <a href="#" className="text-slate-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+              </a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+              </a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

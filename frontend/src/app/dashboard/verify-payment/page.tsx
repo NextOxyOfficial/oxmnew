@@ -3,15 +3,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiService } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-
-interface PaymentData {
-  accountName?: string;
-  initialBalance?: number;
-  planId?: number;
-  packageId?: number;
-  subscriptionId?: number;
-}
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface VerificationResult {
   success: boolean;
@@ -23,29 +15,20 @@ interface VerificationResult {
 export default function VerifyPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<VerificationResult | null>(null);
 
-  const verifyPayment = useCallback(async () => {
+  const verifiedOrderIdRef = useRef<string | null>(null);
+
+  const verifyPayment = useCallback(async (spOrderId: string) => {
     try {
-      const orderId = searchParams.get("order_id");
-
-      if (!orderId) {
-        setResult({
-          success: false,
-          message: "No order ID found in URL parameters.",
-        });
-        setLoading(false);
-        return;
-      }
-
-      console.log("Verifying payment for order:", orderId);
-      console.log("Order ID type:", typeof orderId);
-      console.log("Order ID length:", orderId?.length);
+      console.log("Verifying payment for order:", spOrderId);
+      console.log("Order ID type:", typeof spOrderId);
+      console.log("Order ID length:", spOrderId?.length);
 
       // Verify payment with the backend
-      const verifyResponse = await ApiService.verifyPayment(orderId);
+      const verifyResponse = await ApiService.verifyPayment(spOrderId);
       console.log("Payment verification response:", verifyResponse);
 
       // Check for successful payment using the same logic as banking page
@@ -68,8 +51,8 @@ export default function VerifyPaymentPage() {
       console.log("Payment verification successful!");
 
       // Use the customer_order_id from the response if available, otherwise use the URL order_id
-      const actualOrderId = verifyResponse.customer_order_id || orderId;
-      console.log("Original order ID from URL:", orderId);
+      const actualOrderId = verifyResponse.customer_order_id || spOrderId;
+      console.log("Original order ID from URL:", spOrderId);
       console.log(
         "Customer order ID from response:",
         verifyResponse.customer_order_id
@@ -78,36 +61,22 @@ export default function VerifyPaymentPage() {
 
       // Determine payment type based on order ID prefix
       console.log("Determining payment type for order ID:", actualOrderId);
-      let paymentType = "";
+      const paymentType =
+        verifyResponse.payment_type ||
+        (actualOrderId.startsWith("SUB-")
+          ? "subscription"
+          : actualOrderId.startsWith("SMS-")
+          ? "sms_package"
+          : actualOrderId.startsWith("BANK-")
+          ? "banking_plan"
+          : "unknown");
+
+      const applied = verifyResponse.applied === true;
+
       let activationResult = null;
 
-      if (actualOrderId.startsWith("SUB-")) {
-        console.log("Detected subscription payment");
-        paymentType = "subscription";
-        // Handle subscription activation
-        const pendingSubscription = localStorage.getItem("pendingSubscription");
-        if (pendingSubscription) {
-          const subData = JSON.parse(pendingSubscription);
-          activationResult = await ApiService.upgradeSubscription(
-            subData.subscriptionId
-          );
-          localStorage.removeItem("pendingSubscription");
-        }
-      } else if (actualOrderId.startsWith("SMS-")) {
-        console.log("Detected SMS package payment");
-        paymentType = "sms_package";
-        // Handle SMS package activation
-        const pendingSmsPackage = localStorage.getItem("pendingSmsPackage");
-        if (pendingSmsPackage) {
-          const smsData = JSON.parse(pendingSmsPackage);
-          activationResult = await ApiService.purchaseSmsPackage(
-            smsData.packageId
-          );
-          localStorage.removeItem("pendingSmsPackage");
-        }
-      } else if (actualOrderId.startsWith("BANK-")) {
+      if (actualOrderId.startsWith("BANK-")) {
         console.log("Detected banking plan payment");
-        paymentType = "banking_plan";
         console.log(
           "Processing banking plan payment for order:",
           actualOrderId
@@ -237,43 +206,68 @@ export default function VerifyPaymentPage() {
           }
         }
       } else {
-        console.log("Unknown payment type for order ID:", actualOrderId);
-        console.log(
-          "Order ID does not match any known prefixes (SUB-, SMS-, BANK-)"
-        );
-        paymentType = "unknown";
+        console.log("Non-banking payment type:", paymentType);
       }
 
       // Set final result
       console.log("Setting final result. activationResult:", activationResult);
       console.log("Payment type:", paymentType);
 
-      if (activationResult && activationResult.success) {
-        console.log("Case 1: Activation successful");
+      if (paymentType === "banking_plan") {
+        if (activationResult && activationResult.success) {
+          console.log("Banking activation successful");
+          setResult({
+            success: true,
+            message: "Payment verified successfully! Your banking plan has been activated.",
+            orderId: actualOrderId,
+            paymentType,
+          });
+        } else if (activationResult && !activationResult.success) {
+          console.log("Banking activation failed");
+          setResult({
+            success: false,
+            message:
+              activationResult.message ||
+              "Payment verified but banking plan activation failed.",
+            orderId: actualOrderId,
+            paymentType,
+          });
+        } else {
+          setResult({
+            success: true,
+            message: "Payment verified successfully!",
+            orderId: actualOrderId,
+            paymentType,
+          });
+        }
+      } else if (paymentType === "subscription") {
+        await refreshProfile();
         setResult({
           success: true,
-          message: `Payment verified successfully! Your ${paymentType.replace(
-            "_",
-            " "
-          )} has been activated.`,
+          message: applied
+            ? "Payment verified successfully! Your subscription is now active."
+            : "Payment verified successfully. Subscription activation is pending.",
           orderId: actualOrderId,
           paymentType,
         });
-      } else if (activationResult && !activationResult.success) {
-        console.log("Case 2: Activation failed");
+      } else if (paymentType === "sms_package") {
+        await refreshProfile();
+        const creditsAdded =
+          typeof verifyResponse.credits_added === "number"
+            ? verifyResponse.credits_added
+            : typeof verifyResponse.credits_added === "string"
+            ? Number.parseInt(verifyResponse.credits_added, 10) || 0
+            : 0;
         setResult({
-          success: false,
-          message:
-            activationResult.message ||
-            `Payment verified but ${paymentType.replace(
-              "_",
-              " "
-            )} activation failed.`,
+          success: true,
+          message: applied
+            ? `Payment verified successfully! ${creditsAdded.toLocaleString()} SMS credits have been added to your account.`
+            : "Payment verified successfully. SMS credits will be added shortly.",
           orderId: actualOrderId,
           paymentType,
         });
       } else {
-        console.log("Case 3: No activation result, showing general success");
+        await refreshProfile();
         setResult({
           success: true,
           message: "Payment verified successfully!",
@@ -291,19 +285,38 @@ export default function VerifyPaymentPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchParams]);
+  }, [refreshProfile]);
 
   useEffect(() => {
-    if (user) {
-      verifyPayment();
-    } else {
+    const spOrderId = searchParams.get("order_id");
+
+    if (!user) {
       setResult({
         success: false,
         message: "Please log in to verify your payment.",
       });
       setLoading(false);
+      return;
     }
-  }, [user, verifyPayment]);
+
+    if (!spOrderId) {
+      if (!result) {
+        setResult({
+          success: false,
+          message: "No order ID found in URL parameters.",
+        });
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (verifiedOrderIdRef.current === spOrderId) {
+      return;
+    }
+
+    verifiedOrderIdRef.current = spOrderId;
+    verifyPayment(spOrderId);
+  }, [result, searchParams, user, verifyPayment]);
 
   const handleReturnToDashboard = () => {
     // Check if it's a banking payment based on the order ID or result
@@ -318,7 +331,18 @@ export default function VerifyPaymentPage() {
   const handleRetry = () => {
     setLoading(true);
     setResult(null);
-    verifyPayment();
+    const spOrderId = searchParams.get("order_id");
+    if (!spOrderId) {
+      setResult({
+        success: false,
+        message: "No order ID found in URL parameters.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    verifiedOrderIdRef.current = null;
+    verifyPayment(spOrderId);
   };
 
   return (

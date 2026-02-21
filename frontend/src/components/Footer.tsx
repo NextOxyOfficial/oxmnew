@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 
 export default function Footer() {
   return (
@@ -11,9 +12,9 @@ export default function Footer() {
             © 2025 OXM Project. All rights reserved.
           </div>
           <div className="flex space-x-6 text-sm text-slate-400">
-            <a href="#" className="hover:text-slate-300 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-300 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-slate-300 transition-colors">Support</a>
+            <Link href="/privacy" className="hover:text-slate-300 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-slate-300 transition-colors">Terms & Conditions</Link>
+            <a href="mailto:support@oxymanager.com" className="hover:text-slate-300 transition-colors">Support</a>
           </div>
         </div>
       </div>

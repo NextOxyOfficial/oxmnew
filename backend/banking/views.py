@@ -72,7 +72,12 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         """Ensure user has a Main account"""
         if not BankAccount.objects.filter(owner=user, name="Main").exists():
             BankAccount.objects.create(
-                name="Main", owner=user, balance=0.00, is_active=True
+                name="Main",
+                owner=user,
+                balance=0.00,
+                is_active=True,
+                activation_fee=0.00,
+                is_activated=True,
             )
 
     def perform_create(self, serializer):

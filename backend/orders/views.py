@@ -2,6 +2,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from .models import Order
@@ -30,10 +31,17 @@ from django.db.models import (
 from django.db.models.functions import Coalesce, Cast
 
 
+class OrdersPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 2000
+
+
 class OrderViewSet(viewsets.ModelViewSet):
     """ViewSet for Order model with backward compatibility for ProductSale API"""
 
     serializer_class = OrderSerializer
+    pagination_class = OrdersPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = [
         "id",
@@ -566,6 +574,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         order = self.get_object()
 
+        # Prevent adding items to completed or cancelled orders
+        if order.status in ["completed", "cancelled"]:
+            return Response(
+                {"error": f"Cannot add items to {order.status} orders"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Create the item data with the order reference
         item_data = request.data.copy()
         item_data["order"] = order.id
@@ -641,6 +656,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         Remove an item from an existing order.
         """
         order = self.get_object()
+
+        # Prevent removing items from completed or cancelled orders
+        if order.status in ["completed", "cancelled"]:
+            return Response(
+                {"error": f"Cannot remove items from {order.status} orders"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             item = order.items.get(id=item_id)

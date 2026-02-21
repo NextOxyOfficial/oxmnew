@@ -172,11 +172,11 @@ const OrdersList: React.FC<OrdersListProps> = ({
   return (
     <>
       {/* Mobile Card Layout */}
-      <div className="block lg:hidden space-y-4 p-2 sm:p-4">
+      <div className="block lg:hidden space-y-4 p-1 sm:p-4">
         {orders.map((order) => (
           <div
             key={order.id}
-            className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/70 transition-all duration-200 cursor-pointer"
+            className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/70 transition-all duration-200 cursor-pointer overflow-hidden"
             onClick={() => onOrderClick(order)}
           >
             <div className="flex justify-between items-start mb-3">
@@ -191,7 +191,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
                   {formatDate(order.sale_date)}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="text-right flex-shrink-0">
                 <p className={`text-lg font-bold ${(order.net_profit || 0) >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
                   {formatCurrency(order.net_profit || 0)}
                 </p>
@@ -206,12 +206,12 @@ const OrdersList: React.FC<OrdersListProps> = ({
                   <div>
                     <button
                       onClick={(e) => onCustomerClick(order, e)}
-                      className="text-sm text-slate-100 hover:text-cyan-400 transition-colors cursor-pointer text-left"
+                      className="text-sm text-slate-100 hover:text-cyan-400 transition-colors cursor-pointer text-left break-words"
                     >
                       {order.customer_name}
                     </button>
                     {order.customer_phone && (
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-400 break-all">
                         {order.customer_phone}
                       </p>
                     )}
@@ -222,7 +222,7 @@ const OrdersList: React.FC<OrdersListProps> = ({
               </div>
               <div>
                 <p className="text-xs text-slate-400">Buy & Total Price</p>
-                <p className="text-sm font-medium text-slate-100">
+                <p className="text-sm font-medium text-slate-100 break-words leading-tight">
                   {formatCurrency(order.total_buy_price || 0)} →{" "}
                   {formatCurrency(order.total_amount || 0)}
                 </p>
@@ -233,14 +233,14 @@ const OrdersList: React.FC<OrdersListProps> = ({
             {order.notes && (
               <div className="mt-3 pt-3 border-t border-slate-700/50">
                 <p className="text-xs text-slate-400">Notes</p>
-                <p className="text-sm text-slate-300">{order.notes}</p>
+                <p className="text-sm text-slate-300 break-words">{order.notes}</p>
               </div>
             )}
 
             {/* Invoice line with print and edit icons */}
-            <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
+            <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center gap-3">
               <div
-                className="flex items-center gap-2 cursor-pointer hover:text-cyan-400 transition-colors"
+                className="flex items-center gap-2 cursor-pointer hover:text-cyan-400 transition-colors min-w-0 flex-1"
                 onClick={(e) => handleViewInvoice(order, e)}
                 title="View Invoice"
               >
@@ -257,14 +257,14 @@ const OrdersList: React.FC<OrdersListProps> = ({
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-slate-400">Invoice</p>
-                  <p className="text-sm text-slate-300">
+                  <p className="text-sm text-slate-300 break-all">
                     #{highlightOrderNumber(order.order_number || order.id)}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   className="p-2 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
                   onClick={(e) => handlePrintInvoice(order, e)}
