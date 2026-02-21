@@ -92,7 +92,7 @@ class NotebookTag(models.Model):
     """
     Model for predefined tags that can be used across notebooks
     """
-    name = models.CharField(max_length=50, unique=True, help_text="Tag name")
+    name = models.CharField(max_length=50, help_text="Tag name")
     color = models.CharField(
         max_length=7, 
         default="#3B82F6", 
@@ -115,6 +115,7 @@ class NotebookTag(models.Model):
     class Meta:
         ordering = ['-usage_count', 'name']
         verbose_name = "Notebook Tag"
+        unique_together = [('created_by', 'name')]
         verbose_name_plural = "Notebook Tags"
     
     def __str__(self):

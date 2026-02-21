@@ -5,7 +5,7 @@ from django.dispatch import receiver
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="categories")
@@ -15,6 +15,7 @@ class Category(models.Model):
     class Meta:
         verbose_name_plural = "Categories"
         ordering = ["name"]
+        unique_together = [('user', 'name')]
 
     def __str__(self):
         return self.name
