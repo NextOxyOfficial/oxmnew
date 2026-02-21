@@ -175,10 +175,11 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
         }
 
     def validate_employee_id(self, value):
-        """Ensure employee_id is unique"""
+        """Ensure employee_id is unique within the current user's employees"""
         instance = getattr(self, "instance", None)
+        user = self.context["request"].user
         if (
-            Employee.objects.filter(employee_id=value)
+            Employee.objects.filter(employee_id=value, user=user)
             .exclude(pk=instance.pk if instance else None)
             .exists()
         ):
@@ -186,10 +187,11 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_email(self, value):
-        """Ensure email is unique"""
+        """Ensure email is unique within the current user's employees"""
         instance = getattr(self, "instance", None)
+        user = self.context["request"].user
         if (
-            Employee.objects.filter(email=value)
+            Employee.objects.filter(email=value, user=user)
             .exclude(pk=instance.pk if instance else None)
             .exists()
         ):

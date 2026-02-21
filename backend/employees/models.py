@@ -16,9 +16,9 @@ class Employee(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="employees")
 
     # Basic Information
-    employee_id = models.CharField(max_length=20, unique=True)
+    employee_id = models.CharField(max_length=20)
     name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
+    email = models.EmailField()
     phone = models.CharField(max_length=20)
     address = models.TextField(blank=True, null=True)
     photo = models.ImageField(
@@ -44,6 +44,10 @@ class Employee(models.Model):
 
     class Meta:
         ordering = ['name']
+        unique_together = [
+            ('user', 'employee_id'),
+            ('user', 'email'),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.employee_id})"
