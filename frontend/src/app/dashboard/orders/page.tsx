@@ -82,7 +82,7 @@ export default function OrdersPage() {
   const [isSearchingProducts, setIsSearchingProducts] = useState(false);
   
   // Product date filtering state
-  const [productDateFilter, setProductDateFilter] = useState("last_30_days");
+  const [productDateFilter, setProductDateFilter] = useState("all_time");
   const [productStartDate, setProductStartDate] = useState("");
   const [productEndDate, setProductEndDate] = useState("");
   
@@ -489,12 +489,8 @@ export default function OrdersPage() {
   // Fetch product sales summary (server-side pagination)
   const fetchProductSales = useCallback(async () => {
     try {
-      if (activeTab !== "products") return;
-
       setIsSearchingProducts(true);
-      if (productCurrentPage === 1 && productSales.length === 0) {
-        setIsLoadingProducts(true);
-      }
+      setIsLoadingProducts(true);
 
       const params: any = {
         page: productCurrentPage,
@@ -506,7 +502,9 @@ export default function OrdersPage() {
       }
 
       // Add date filtering based on selected filter
-      if (productDateFilter === "today") {
+      if (productDateFilter === "all_time") {
+        // No date filter — include all orders
+      } else if (productDateFilter === "today") {
         const today = new Date().toISOString().split('T')[0];
         params.start_date = today;
         params.end_date = today;
@@ -576,7 +574,7 @@ export default function OrdersPage() {
       setIsLoadingProducts(false);
       setIsSearchingProducts(false);
     }
-  }, [activeTab, productCurrentPage, productPageSize, productSearchTerm, productSortBy, productDateFilter, productStartDate, productEndDate, productSales.length]);
+  }, [productCurrentPage, productPageSize, productSearchTerm, productSortBy, productDateFilter, productStartDate, productEndDate]);
 
   // Fetch orders when dependencies change
   useEffect(() => {
@@ -1488,6 +1486,16 @@ export default function OrdersPage() {
                     </div>
                     
                     <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleProductDateFilterChange("all_time")}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          productDateFilter === "all_time"
+                            ? "bg-cyan-500 text-white"
+                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                        }`}
+                      >
+                        All Time
+                      </button>
                       <button
                         onClick={() => handleProductDateFilterChange("today")}
                         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${

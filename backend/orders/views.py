@@ -232,7 +232,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         # Base queryset of OrderItems for current user
         from .models import OrderItem
 
-        items_qs = OrderItem.objects.filter(order__user=request.user)
+        items_qs = OrderItem.objects.filter(
+            order__user=request.user
+        ).exclude(order__status__in=["cancelled", "refunded"])
 
         # Date filtering (reuse logic similar to orders list)
         date_filter = request.query_params.get("date_filter")
@@ -564,13 +566,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         order = self.get_object()
 
-        # Prevent adding items to completed or cancelled orders
-        if order.status in ["completed", "cancelled"]:
-            return Response(
-                {"error": f"Cannot add items to {order.status} orders"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         # Create the item data with the order reference
         item_data = request.data.copy()
         item_data["order"] = order.id
@@ -646,13 +641,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         Remove an item from an existing order.
         """
         order = self.get_object()
-
-        # Prevent removing items from completed or cancelled orders
-        if order.status in ["completed", "cancelled"]:
-            return Response(
-                {"error": f"Cannot remove items from {order.status} orders"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         try:
             item = order.items.get(id=item_id)
