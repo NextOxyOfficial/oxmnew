@@ -215,6 +215,12 @@ export default function EditOrderPage() {
       const round = (v: number | null | undefined) => Math.round((typeof v === 'number' ? v : 0) * 100) / 100;
       const currentOrder = await ApiService.getOrder(parseInt(orderId));
       const existingItems = currentOrder.items || [];
+
+      // Update status first so item add/remove isn't blocked by the old status
+      if (currentOrder.status !== status) {
+        await ApiService.updateOrder(parseInt(orderId), { status } as any);
+      }
+
       for (const existingItem of existingItems) { try { await ApiService.removeOrderItem(parseInt(orderId), existingItem.id); } catch {} }
       for (const item of orderForm.items) { const itemData: any = { product: item.product, quantity: item.quantity, unit_price: item.unit_price, buy_price: item.buy_price, variant: item.variant ?? null }; await ApiService.addOrderItem(parseInt(orderId), itemData); }
       const orderUpdateData = { 
