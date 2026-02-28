@@ -216,9 +216,10 @@ export default function EditOrderPage() {
       const currentOrder = await ApiService.getOrder(parseInt(orderId));
       const existingItems = currentOrder.items || [];
 
-      // Update status first so item add/remove isn't blocked by the old status
-      if (currentOrder.status !== status) {
-        await ApiService.updateOrder(parseInt(orderId), { status } as any);
+      // Completed orders are locked for add/remove item APIs.
+      // Temporarily switch them to draft first, then apply final status at the end.
+      if (currentOrder.status === "completed") {
+        await ApiService.updateOrder(parseInt(orderId), { status: "draft" } as any);
       }
 
       for (const existingItem of existingItems) { try { await ApiService.removeOrderItem(parseInt(orderId), existingItem.id); } catch {} }
