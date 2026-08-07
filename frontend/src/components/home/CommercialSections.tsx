@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Reveal from "@/components/home/Reveal";
 import {
   ArrowRight,
   Bike,
@@ -152,17 +153,22 @@ function SectionHead({
 
 export function IndustriesSection() {
   return (
-    <section id="industries" className="py-16 lg:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHead
+    <section id="industries" className="relative overflow-hidden py-16 lg:py-24">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_50%,transparent_100%)]"
+        />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Reveal><SectionHead
           eyebrow="কাদের জন্য"
           title="আপনার দোকানটাও"
           accent="এই তালিকায় আছে"
           sub="একই হিসাব সব ব্যবসায় খাটে না। তাই প্রতিটা ধরনের জন্য আলাদা করে ভাবা হয়েছে।"
-        />
+        /></Reveal>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {INDUSTRIES.map((row) => (
+          {INDUSTRIES.map((row, i) => (
+            <Reveal key={row.name} delay={i * 60}>
             <div
               key={row.name}
               className="rounded-xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-sm"
@@ -175,6 +181,7 @@ export function IndustriesSection() {
               </h3>
               <p className="mt-1.5 text-sm text-slate-600">{row.detail}</p>
             </div>
+            </Reveal>
           ))}
         </div>
 
@@ -196,12 +203,12 @@ export function ComparisonSection() {
   return (
     <section className="border-y border-slate-200 bg-white py-16 lg:py-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <SectionHead
+        <Reveal><SectionHead
           eyebrow="কেন বদলাবেন"
           title="খাতা-কলম আর"
           accent="OxyManager — পার্থক্যটা এখানে"
           sub="সফটওয়্যার মানেই ভালো নয়। আসল কথা হলো কোন কাজটা কত সহজ হয়।"
-        />
+        /></Reveal>
 
         <div className="overflow-hidden rounded-xl border border-slate-200">
           <table className="w-full text-sm">
@@ -254,17 +261,22 @@ export function ComparisonSection() {
 
 export function AdvancedSection() {
   return (
-    <section id="advanced" className="py-16 lg:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHead
+    <section id="advanced" className="relative overflow-hidden py-16 lg:py-24">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_50%,transparent_100%)]"
+        />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Reveal><SectionHead
           eyebrow="যা আর কোথাও পাবেন না"
           title="শুধু হিসাব রাখা নয় —"
           accent="ব্যবসাটা বুঝেও নেয়"
           sub="সংখ্যা তো সব সফটওয়্যারই দেখায়। এটা বলে দেয় সংখ্যাগুলো দিয়ে কী করতে হবে।"
-        />
+        /></Reveal>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {ADVANCED.map((row) => (
+          {ADVANCED.map((row, i) => (
+            <Reveal key={row.title} delay={i * 70}>
             <div
               key={row.title}
               className="flex gap-4 rounded-xl border border-slate-200 bg-white p-5"
@@ -281,6 +293,7 @@ export function AdvancedSection() {
                 </p>
               </div>
             </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -292,15 +305,16 @@ export function SafetySection() {
   return (
     <section className="border-y border-slate-200 bg-slate-50 py-16 lg:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHead
+        <Reveal><SectionHead
           eyebrow="নিরাপত্তা"
           title="আপনার হিসাব"
           accent="আপনার কাছেই থাকে"
           sub="ব্যবসার হিসাব সবচেয়ে গোপন জিনিস। সেটা কোথায় থাকে আর কে দেখতে পায়, সেটা লুকিয়ে রাখার কিছু নেই।"
-        />
+        /></Reveal>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {SAFETY.map((row) => (
+          {SAFETY.map((row, i) => (
+            <Reveal key={row.title} delay={i * 80}>
             <div
               key={row.title}
               className="rounded-xl border border-slate-200 bg-white p-5"
@@ -313,6 +327,7 @@ export function SafetySection() {
               </h3>
               <p className="mt-1.5 text-sm text-slate-600">{row.detail}</p>
             </div>
+            </Reveal>
           ))}
         </div>
 

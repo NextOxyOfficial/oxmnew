@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Hero from '@/components/home/Hero';
+import Reveal from '@/components/home/Reveal';
+import TestimonialSlider from '@/components/home/TestimonialSlider';
 import {
   AdvancedSection,
   ComparisonSection,
@@ -400,59 +402,30 @@ export default function Home() {
 
       <SafetySection />
 
-      <section id="testimonials" className="py-16 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              <span className="text-emerald-700">১০,০০০+</span> ব্যবসায়ীর ভরসা
-            </h2>
-            <p className="mt-3 text-slate-600">কাস্টমাররা কী বলছেন দেখুন</p>
-          </div>
-
-          <div className="plane">
-            <div className="grid grid-cols-1 gap-px bg-slate-200 md:grid-cols-3">
-              {testimonials.map((testimonial, index) => (
-                <div
-                  key={index}
-                  className={`p-6 transition-colors ${index === activeTestimonial ? 'bg-slate-50' : 'bg-white'}`}
-                >
-                  <div className="mb-3 flex items-center gap-0.5">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-500" />
-                    ))}
-                  </div>
-                  <p className="text-sm leading-relaxed text-slate-600">&ldquo;{testimonial.quote}&rdquo;</p>
-                  <div className="mt-5 flex items-center gap-3">
-                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-sm font-semibold text-cyan-700">
-                      {testimonial.name.charAt(0)}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-slate-900">{testimonial.name}</div>
-                      <div className="truncate text-xs text-slate-500">{testimonial.business}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+      {/* ── what people say ─────────────────────────────────────── */}
+      <section id="testimonials" className="relative overflow-hidden py-16 lg:py-24">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_50%,transparent_100%)]"
+        />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Reveal>
+            <div className="mb-10 text-center">
+              <span className="mb-3 inline-block rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+                রিভিউ
+              </span>
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                ১০,০০০+ ব্যবসায়ীর
+                <span className="block text-cyan-600">ভরসা</span>
+              </h2>
             </div>
-          </div>
-
-          {/* Testimonial Dots */}
-          <div className="mt-6 flex justify-center gap-2">
-            {testimonials.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setActiveTestimonial(index)}
-                aria-label={`রিভিউ ${index + 1} দেখুন`}
-                className={`h-2 rounded-full transition-all ${
-                  index === activeTestimonial ? 'w-6 bg-cyan-600' : 'w-2 bg-slate-300'
-                }`}
-              />
-            ))}
-          </div>
+          </Reveal>
+          <Reveal delay={80}>
+            <TestimonialSlider />
+          </Reveal>
         </div>
       </section>
 
-      {/* Pricing Section */}
       <section id="pricing" className="border-y border-slate-200 bg-white py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
