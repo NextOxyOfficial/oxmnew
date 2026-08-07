@@ -124,17 +124,17 @@ export default function Header({
               href="/dashboard"
               className="flex items-center gap-2 min-w-0 lg:hidden"
             >
+              {/* The full lockup, same as the desktop rail and the public
+                  site. It already carries the wordmark and tagline, so no
+                  separate text sits beside it. */}
               <Image
-                src="/logo-mark.png"
-                alt="OxyManager"
-                width={28}
-                height={28}
-                className="h-7 w-7 shrink-0 rounded-lg"
+                src="/logo.png"
+                alt="OxyManager — Your Smart Assistant"
+                width={378}
+                height={96}
+                className="h-8 w-auto shrink-0"
                 priority
               />
-              <span className="text-[15px] font-semibold text-slate-900 truncate">
-                OxyManager
-              </span>
             </Link>
 
             {/* Breadcrumbs */}

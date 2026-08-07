@@ -16,6 +16,8 @@ from banking.models import Loan, RecurringCost, Transaction
 from orders.models import Order, OrderItem
 from products.models import Product
 
+from core import business_days
+
 from . import periods, services
 
 ZERO = Decimal("0")
@@ -301,10 +303,14 @@ def unclassified(user, begin, finish):
 
 def targets(user, begin, finish):
     """Day-by-day sales against the break-even line."""
-    day_count = (finish.date() - begin.date()).days + 1
+    closed = business_days.closed_weekdays(user)
+    day_count = business_days.open_days_between(begin.date(), finish.date(), closed)
     sales = services.sales_for(user, begin, finish)
     cost = services.costs_for(user, begin, finish)
-    plan = services.build_targets(sales, cost, day_count)
+    plan = services.build_targets(
+        sales, cost, day_count,
+        open_month_days=business_days.open_days_in_month(finish.date(), closed),
+    )
 
     orders = (
         Order.objects.filter(user=user, created_at__range=(begin, finish))
@@ -322,21 +328,29 @@ def targets(user, begin, finish):
     rows = []
     for day in sorted(per_day, reverse=True):
         got = services._money(per_day[day]["revenue"])
+        shut = day.weekday() in closed
         rows.append(
             {
                 "date_text": day.strftime("%d-%m-%Y"),
                 "orders": per_day[day]["orders"],
                 "revenue": got,
-                "need": need,
-                "gap": got - need,
-                "status_text": "টার্গেট হয়েছে" if got >= need else "কম হয়েছে",
+                # A closed day carries no target, so it can neither be met nor
+                # missed — showing it in red would be blaming the shop for a
+                # holiday it set itself.
+                "need": ZERO if shut else need,
+                "gap": got if shut else got - need,
+                "status_text": (
+                    "বন্ধের দিন" if shut
+                    else "টার্গেট হয়েছে" if got >= need
+                    else "কম হয়েছে"
+                ),
             }
         )
 
     return _envelope(
         "দিনে দিনে টার্গেট",
-        "খরচ উঠতে প্রতিদিন %s টাকা বিক্রি দরকার। যেদিন কম হয়েছে সেদিন লাল।"
-        % f"{need:,.0f}",
+        "খরচ উঠতে খোলার দিনে %s টাকা বিক্রি দরকার। যেদিন কম হয়েছে সেদিন লাল।%s"
+        % (f"{need:,.0f}", f" ({business_days.describe(closed)})" if closed else ""),
         [
             {"key": "date_text", "label": "তারিখ"},
             {"key": "orders", "label": "অর্ডার", "type": "number"},

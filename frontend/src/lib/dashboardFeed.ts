@@ -81,6 +81,11 @@ export interface UpcomingCost {
   amount: number;
   due_date: string;
   days_left: number;
+  /**
+   * Trading days left before it falls due. A bill due in 3 days with only 1
+   * selling day before it is far more urgent than `days_left` suggests.
+   */
+  open_days_left: number;
   paid_this_month: boolean;
   href: string;
 }

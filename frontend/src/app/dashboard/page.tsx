@@ -23,6 +23,7 @@ import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { AnalyticsOverview } from "@/lib/analytics";
 import ReportCard, { ReportRow } from "@/components/dashboard/ReportCard";
 import CoachStrip from "@/components/dashboard/CoachStrip";
+import MonthlyExpenseButton from "@/components/dashboard/MonthlyExpenseButton";
 import {
   DashboardFeed,
   SMS_STATUS,
@@ -184,6 +185,13 @@ export default function DashboardPage() {
             </span>
           </div>
 
+          {/* The itemised version of the same money — who got paid what, and
+              when — for handing to an accountant or checking against a bank
+              statement. */}
+          <div className="mt-1">
+            <MonthlyExpenseButton />
+          </div>
+
           <div className="mt-2 grid gap-2 grid-cols-2 lg:auto-cols-fr lg:grid-flow-col">
             {(
               [
@@ -223,7 +231,10 @@ export default function DashboardPage() {
               <div className="stat-value num text-cyan-800">
                 {money(commitment.total)}
               </div>
-              <div className="stat-meta">দিনে {money(commitment.daily)}</div>
+              <div className="stat-meta">
+                {month.period?.closed_label ? "খোলার দিনে " : "দিনে "}
+                {money(commitment.daily)}
+              </div>
             </div>
           </div>
         </div>

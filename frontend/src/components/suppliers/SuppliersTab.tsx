@@ -114,28 +114,47 @@ export default function SuppliersTab({
     <>
       {/* Search + add supplier */}
       <div className="plane-section">
-        <div className="flex flex-wrap items-center gap-2">
+        {/* One row at every width. The search box flexes (`flex-1 min-w-0`)
+            instead of holding a fixed 320px, which is what pushed the add
+            button onto its own line on a phone. */}
+        <div className="flex items-center gap-2">
           <input
             type="text"
             placeholder="নাম, ফোন, ইমেইল বা ঠিকানা দিয়ে খুঁজুন"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="input max-w-xs"
+            className="input min-w-0 flex-1 sm:max-w-xs"
           />
           {searchInput && (
             <button
               type="button"
               onClick={() => setSearchInput("")}
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost btn-sm shrink-0"
               title="খোঁজা বাদ দিন"
+              aria-label="খোঁজা বাদ দিন"
             >
-              সাফ করুন
+              {/* Room is tight on a phone once three controls share the row,
+                  so the label collapses to its icon there. */}
+              <svg
+                className="h-4 w-4 sm:hidden"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+              <span className="hidden sm:inline">সাফ করুন</span>
             </button>
           )}
           <button
             type="button"
             onClick={() => setShowCreateForm(true)}
-            className="btn btn-primary ml-auto"
+            className="btn btn-primary shrink-0 sm:ml-auto"
           >
             <svg
               className="h-4 w-4"
@@ -150,7 +169,8 @@ export default function SuppliersTab({
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            নতুন সাপ্লায়ার
+            <span className="hidden sm:inline">নতুন সাপ্লায়ার</span>
+            <span className="sm:hidden">নতুন</span>
           </button>
         </div>
       </div>

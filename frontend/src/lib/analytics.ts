@@ -31,7 +31,23 @@ export interface DetailPayload {
 }
 
 export interface AnalyticsOverview {
-  period: { preset: string; label: string; start: string; end: string; days: number };
+  period: {
+    preset: string;
+    label: string;
+    start: string;
+    end: string;
+    /** Length of the window. */
+    days: number;
+    /**
+     * Trading days in the window — what every per-day figure is divided by.
+     * A shop closed on Fridays still owes a full month's rent, so those costs
+     * are recovered across the days it is actually open.
+     */
+    open_days: number;
+    closed_days: number[];
+    /** "শুক্রবার বন্ধ", or empty when the shop never closes. */
+    closed_label: string;
+  };
   compare_with: { label: string; start: string; end: string };
   sales: {
     revenue: number;
@@ -72,6 +88,8 @@ export interface AnalyticsOverview {
     on_track: boolean;
     has_margin: boolean;
     has_costs: boolean;
+    /** Trading days the window's costs were spread across. */
+    open_days: number;
   };
   receivables: {
     total: number;
@@ -98,7 +116,9 @@ export interface AnalyticsOverview {
     loan: number;
     fixed: number;
     total: number;
+    /** Per trading day, not per calendar day — see period.open_days. */
     daily: number;
+    open_month_days: number;
   };
   fixed_costs: {
     count: number;

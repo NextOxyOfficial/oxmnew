@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate
 from django.db.models import Q
 from django.utils import timezone
+from core import business_days
 from core.scoping import owner_for, owner_only, require_permission
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
@@ -934,6 +935,17 @@ def user_settings(request):
                         "currency_symbol": settings.currency_symbol,
                         "email_notifications": settings.email_notifications,
                         "marketing_notifications": settings.marketing_notifications,
+                        # The shop's weekly holidays. Every per-day target in
+                        # the app divides by the open days these leave behind —
+                        # see core.business_days.
+                        "closed_days": business_days.clean(settings.closed_days),
+                        "closed_days_label": business_days.describe(
+                            settings.closed_days
+                        ),
+                        "weekday_options": [
+                            {"value": number, "label": bangla, "short": short}
+                            for number, bangla, short in business_days.WEEKDAYS
+                        ],
                     }
                 },
                 status=status.HTTP_200_OK,
@@ -978,6 +990,17 @@ def user_settings(request):
                     request.data["marketing_notifications"]
                 )
 
+            if "closed_days" in request.data:
+                sent = request.data["closed_days"]
+                if not isinstance(sent, (list, tuple)):
+                    return Response(
+                        {"error": "closed_days must be a list of weekday numbers"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                # clean() also refuses "closed all seven days", which would make
+                # every per-day figure divide by zero.
+                settings.closed_days = business_days.clean(sent)
+
             settings.save()
 
             return Response(
@@ -989,6 +1012,17 @@ def user_settings(request):
                         "currency_symbol": settings.currency_symbol,
                         "email_notifications": settings.email_notifications,
                         "marketing_notifications": settings.marketing_notifications,
+                        # The shop's weekly holidays. Every per-day target in
+                        # the app divides by the open days these leave behind —
+                        # see core.business_days.
+                        "closed_days": business_days.clean(settings.closed_days),
+                        "closed_days_label": business_days.describe(
+                            settings.closed_days
+                        ),
+                        "weekday_options": [
+                            {"value": number, "label": bangla, "short": short}
+                            for number, bangla, short in business_days.WEEKDAYS
+                        ],
                     },
                 },
                 status=status.HTTP_200_OK,

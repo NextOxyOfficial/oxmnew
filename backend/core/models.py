@@ -92,6 +92,15 @@ class UserSettings(models.Model):
     )
     email_notifications = models.BooleanField(default=True)
     marketing_notifications = models.BooleanField(default=False)
+    #: Weekdays the shop is shut, as Python weekday() numbers (Mon 0 … Sun 6).
+    #: Empty means open every day. Read through core.business_days, which is
+    #: also where the "costs accrue daily, revenue only on open days" rule that
+    #: every target depends on is written down.
+    closed_days = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Weekdays the shop is closed: 0=Mon … 6=Sun",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -99,6 +108,11 @@ class UserSettings(models.Model):
         # Automatically set currency symbol based on currency code
         if self.currency in self.CURRENCY_SYMBOLS:
             self.currency_symbol = self.CURRENCY_SYMBOLS[self.currency]
+        # Normalised on the way in, so no reader has to defend against a stray
+        # string or a shop that marked all seven days closed.
+        from core.business_days import clean
+
+        self.closed_days = clean(self.closed_days)
         super().save(*args, **kwargs)
 
     def __str__(self):

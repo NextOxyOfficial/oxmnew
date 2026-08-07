@@ -71,7 +71,24 @@ interface GeneralSettings {
   language: string;
   email_notifications: boolean;
   marketing_notifications: boolean;
+  /**
+   * Weekdays the shop stays shut, as Python weekday numbers (Mon 0 … Sun 6).
+   * Every per-day target in the app divides by the open days these leave
+   * behind, so this is not cosmetic.
+   */
+  closed_days: number[];
 }
+
+/** Saturday first — where a Bangladeshi week starts. */
+const WEEKDAYS: { value: number; label: string }[] = [
+  { value: 5, label: "শনিবার" },
+  { value: 6, label: "রবিবার" },
+  { value: 0, label: "সোমবার" },
+  { value: 1, label: "মঙ্গলবার" },
+  { value: 2, label: "বুধবার" },
+  { value: 3, label: "বৃহস্পতিবার" },
+  { value: 4, label: "শুক্রবার" },
+];
 
 // Store profile shape used by the store sections (moved here from the profile page)
 interface StoreProfileData {
@@ -227,6 +244,7 @@ export default function SettingsPage() {
     language: "en",
     email_notifications: true,
     marketing_notifications: false,
+    closed_days: [],
   });
 
   // Store profile state (moved here from the profile page)
@@ -328,6 +346,9 @@ export default function SettingsPage() {
             response.settings.marketing_notifications !== undefined
               ? response.settings.marketing_notifications
               : false,
+          closed_days: Array.isArray(response.settings.closed_days)
+            ? response.settings.closed_days
+            : [],
         });
       }
     } catch (error) {
@@ -811,6 +832,7 @@ export default function SettingsPage() {
         currency: currency,
         email_notifications: generalSettings.email_notifications,
         marketing_notifications: generalSettings.marketing_notifications,
+        closed_days: generalSettings.closed_days,
       });
 
       console.log("General settings saved:", response);
@@ -1204,6 +1226,87 @@ export default function SettingsPage() {
                 <button
                   onClick={handleGeneralSettingsSave}
                   disabled={loading}
+                  className="btn btn-primary"
+                >
+                  {loading ? "সেভ হচ্ছে…" : "সেভ করুন"}
+                </button>
+              </div>
+            </div>
+
+            {/* Weekly holidays. This is not a display preference: every
+                per-day target, the restock rate and the খরচ report divide by
+                the open days these leave behind. */}
+            <div className="plane-section">
+              <div className="section-title">দোকান বন্ধের দিন</div>
+              <p className="mb-3 text-xs text-slate-500">
+                সপ্তাহে যেদিন দোকান বন্ধ থাকে সেগুলো বেছে দিন। বন্ধের দিনে বিক্রি হয় না,
+                কিন্তু ভাড়া-বেতন ঠিকই চলে — তাই খোলার দিনগুলোর টার্গেট সেই অনুযায়ী হিসাব
+                হবে।
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {WEEKDAYS.map((day) => {
+                  const off = generalSettings.closed_days.includes(day.value);
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      aria-pressed={off}
+                      onClick={() =>
+                        setGeneralSettings((prev) => ({
+                          ...prev,
+                          closed_days: off
+                            ? prev.closed_days.filter((d) => d !== day.value)
+                            : [...prev.closed_days, day.value],
+                        }))
+                      }
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        off
+                          ? "border-rose-300 bg-rose-50 text-rose-700"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-4 w-4 items-center justify-center rounded border ${
+                          off
+                            ? "border-rose-500 bg-rose-500 text-white"
+                            : "border-slate-300 bg-white"
+                        }`}
+                      >
+                        {off && (
+                          <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none">
+                            <path
+                              d="M2.5 6.2l2.3 2.3 4.7-5"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </span>
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                {generalSettings.closed_days.length === 0
+                  ? "এখন সপ্তাহের 7 দিনই খোলা ধরা হচ্ছে।"
+                  : `সপ্তাহে ${
+                      7 - generalSettings.closed_days.length
+                    } দিন খোলা — বাকি ${
+                      generalSettings.closed_days.length
+                    } দিন বন্ধ।`}
+              </p>
+              {generalSettings.closed_days.length >= 7 && (
+                <p className="mt-1 text-xs text-rose-600">
+                  সাত দিনই বন্ধ রাখা যাবে না — অন্তত একটা দিন খোলা রাখুন।
+                </p>
+              )}
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={handleGeneralSettingsSave}
+                  disabled={loading || generalSettings.closed_days.length >= 7}
                   className="btn btn-primary"
                 >
                   {loading ? "সেভ হচ্ছে…" : "সেভ করুন"}

@@ -851,8 +851,20 @@ export class ApiService {
     currency?: string;
     email_notifications?: boolean;
     marketing_notifications?: boolean;
+    /** Weekdays the shop is shut, as Python weekday numbers (Mon 0 … Sun 6). */
+    closed_days?: number[];
   }) {
     return this.put("/auth/settings/", settingsData);
+  }
+
+  /**
+   * Everything one month cost, itemised — the source for the downloadable
+   * খরচের রিপোর্ট. Sections come back pre-titled with their own columns, so a
+   * new cost type on the server needs no change here.
+   */
+  static async getMonthlyExpenses(month?: string) {
+    const query = month ? `?month=${encodeURIComponent(month)}` : "";
+    return this.get(`/analytics/monthly-expenses/${query}`);
   }
 
   static async changePassword(passwordData: {

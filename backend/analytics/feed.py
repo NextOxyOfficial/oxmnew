@@ -15,6 +15,8 @@ from datetime import date
 from banking.models import Loan, RecurringCost, Transaction
 from customers.models import Customer, SMSLog
 from django.utils import timezone
+
+from core import business_days
 from notebook.models import NotebookSection
 from orders.models import Order
 from products.models import Product
@@ -241,6 +243,7 @@ def upcoming_costs(user, today=None):
     care whether the money is owed to a landlord or a bank — only when it leaves.
     """
     today = today or timezone.localdate()
+    closed = business_days.closed_weekdays(user)
     rows = []
 
     for cost in RecurringCost.objects.filter(user=user, is_active=True).select_related(
@@ -261,6 +264,7 @@ def upcoming_costs(user, today=None):
                 "amount": _money(cost.amount),
                 "due_date": due,
                 "days_left": (due - today).days,
+                "open_days_left": business_days.open_days_left(due, closed, today),
                 "paid_this_month": cost.paid_this_month,
                 "href": "/dashboard/employees/office-rent",
             }
@@ -279,6 +283,7 @@ def upcoming_costs(user, today=None):
                 "amount": _money(loan.installment_amount),
                 "due_date": due,
                 "days_left": (due - today).days,
+                "open_days_left": business_days.open_days_left(due, closed, today),
                 "paid_this_month": False,
                 "href": "/dashboard/banking/loans",
             }

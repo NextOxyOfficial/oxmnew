@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from . import details, feed, periods, services
+from . import details, expense_report, feed, periods, services
 
 
 @api_view(["GET"])
@@ -17,7 +17,7 @@ def overview(request):
     other while the user watches them load.
     """
     data = services.build_overview(
-        request.user,
+        owner_for(request),
         preset=request.query_params.get("period", "this_month"),
         start=request.query_params.get("start"),
         end=request.query_params.get("end"),
@@ -45,7 +45,7 @@ def detail(request):
     """
     topic = request.query_params.get("topic", "")
     data = details.build(
-        request.user,
+        owner_for(request),
         topic,
         preset=request.query_params.get("period", "this_month"),
         start=request.query_params.get("start"),
@@ -67,4 +67,23 @@ def dashboard_feed(request):
     One request instead of ten: each list is only five rows, so the round trips
     would have cost more than the queries.
     """
-    return Response(feed.build_feed(request.user))
+    return Response(feed.build_feed(owner_for(request)))
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@require_permission("analytics.view", "employees.salary")
+def monthly_expenses(request):
+    """Everything one month cost, itemised, for the downloadable report.
+
+    Gated on payroll as well as analytics: the rows name each employee and what
+    they were paid, which is not something an ordinary "can see reports" login
+    should be handed.
+    """
+    owner = owner_for(request)
+    return Response(
+        {
+            **expense_report.build(owner, month=request.query_params.get("month")),
+            "months": expense_report.months_available(owner),
+        }
+    )

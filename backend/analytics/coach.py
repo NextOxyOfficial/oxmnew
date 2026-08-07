@@ -7,7 +7,10 @@ Every line is derived from a real number and names it, so nothing here is
 motivational filler the reader can't check.
 """
 
+from django.utils import timezone
+
 from analytics import periods, services
+from core import business_days
 
 
 # Figures stay in Latin digits. The app's Bangla face renders ১ as a smudge,
@@ -77,6 +80,12 @@ def build_messages(user, today=None):
     targets = today["targets"]
     commitment = today["monthly_commitment"]
 
+    # On a day the shop is shut there is no target to miss, and telling the
+    # owner to sell more would be nonsense — so the day's nudges are replaced
+    # by the one thing that is still true: the bills kept running.
+    closed = business_days.closed_weekdays(user)
+    is_closed_today = (timezone.localdate().weekday() in closed)
+
     # The shop has to clear its share of rent and payroll before a day counts
     # as profitable, so the target is the break-even revenue, not just costs.
     daily_need = max(
@@ -103,7 +112,15 @@ def build_messages(user, today=None):
         )
 
     # 2. Where today stands against the day's break-even.
-    if shortfall > 0:
+    if is_closed_today:
+        add(
+            "info",
+            "🛍️",
+            "আজ দোকান বন্ধ",
+            f"বন্ধের দিনেও দিনে {_money(commitment['daily'])} খরচ চলতে থাকে — "
+            "খোলার দিনগুলোর টার্গেটে সেটা ধরাই আছে।",
+        )
+    elif shortfall > 0:
         add(
             "warn",
             "🎯",

@@ -144,19 +144,22 @@ export default function Sidebar({ isOpen, onClose, navigation }: SidebarProps) {
           }`}
         >
           <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-3">
-            <span className="flex items-center gap-2">
+            <Link
+              href="/dashboard"
+              onClick={onClose}
+              className="flex min-w-0 items-center"
+            >
+              {/* Same lockup as the desktop rail — the drawer used to show a
+                  different mark, so the app looked like two products. */}
               <Image
-                src="/logo-mark.png"
-                alt="OxyManager"
-                width={28}
-                height={28}
-                className="h-7 w-7 shrink-0 rounded-lg"
+                src="/logo.png"
+                alt="OxyManager — Your Smart Assistant"
+                width={378}
+                height={96}
+                className="h-8 w-auto shrink-0"
                 priority
               />
-              <span className="text-[15px] font-semibold text-slate-900">
-                OxyManager
-              </span>
-            </span>
+            </Link>
             <button
               onClick={onClose}
               aria-label="মেনু বন্ধ করুন"

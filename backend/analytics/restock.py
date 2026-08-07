@@ -16,6 +16,8 @@ from django.db.models import F, Sum
 from orders.models import Order, OrderItem
 from products.models import Product
 
+from core import business_days
+
 #: Days of stock to hold. Two weeks is short enough that money isn't parked on
 #: a shelf, long enough to survive a slow resupply.
 COVER_DAYS = 14
@@ -31,13 +33,39 @@ def _bn(value):
     return str(value)
 
 
+def _calendar_days_for(open_days, closed):
+    """How many days on the wall calendar contain `open_days` trading days.
+
+    The stock rate is measured per trading day, but "আর 5 দিনেই শেষ" is read
+    against a calendar. For a Friday-closed shop, 5 trading days is a week.
+    """
+    if open_days <= 0 or not closed:
+        return open_days
+    from datetime import timedelta
+    from django.utils import timezone
+
+    day = timezone.localdate()
+    counted = 0
+    walked = 0
+    while counted < open_days and walked < 400:
+        day += timedelta(days=1)
+        walked += 1
+        if day.weekday() not in closed:
+            counted += 1
+    return walked
+
+
 def restock_suggestions(user, begin, finish, limit=6):
     """Fast movers whose shelf will not last the cover window.
 
     Returns rows carrying both the evidence (what sold, how fast) and the
     recommendation (how many to bring in), so the advice can be checked.
     """
-    days = max(1, (finish.date() - begin.date()).days + 1)
+    # Trading days, not calendar days: stock only moves when the door is open,
+    # so a Friday-closed shop that sold 40 pieces sold them in 26 days, not 30.
+    # Dividing by 30 would understate the rate and under-order every week.
+    closed = business_days.closed_weekdays(user)
+    days = business_days.open_days_between(begin.date(), finish.date(), closed)
 
     sold = (
         OrderItem.objects.filter(
@@ -78,7 +106,8 @@ def restock_suggestions(user, begin, finish, limit=6):
 
         # Round up to a whole piece — half a bike helps nobody.
         suggest = int(shortfall) + (1 if shortfall % 1 else 0)
-        days_left = int(on_hand / per_day) if per_day else 0
+        open_left = int(on_hand / per_day) if per_day else 0
+        days_left = _calendar_days_for(open_left, closed)
 
         rows.append(
             {

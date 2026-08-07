@@ -23,6 +23,8 @@ from orders.models import Order
 from products.models import Product
 from vehicles.models import Vehicle
 
+from core import business_days
+
 from . import periods
 
 ZERO = Decimal("0")
@@ -316,12 +318,17 @@ def dead_stock_for(user, begin, finish, limit=6):
 # ── the brain ───────────────────────────────────────────────────────────
 
 
-def build_targets(sales, costs, day_count, loan_monthly=ZERO):
-    """What the shop must sell per day just to stop losing money.
+def build_targets(sales, costs, day_count, loan_monthly=ZERO, open_month_days=30):
+    """What the shop must sell per open day just to stop losing money.
 
     Break-even is driven by gross margin, not by revenue: selling more at a thin
     margin can raise turnover and still lose money, which is exactly the trap
     this is meant to expose.
+
+    `day_count` is the number of *trading* days in the window, never its length
+    — see core.business_days. A shop closed on Fridays still owes a full
+    month's rent, so those costs have to be recovered across the days it is
+    actually open, or the target is one it can never hit.
     """
     revenue = sales["revenue"]
     margin_ratio = (sales["gross_profit"] / revenue) if revenue else ZERO
@@ -330,7 +337,8 @@ def build_targets(sales, costs, day_count, loan_monthly=ZERO):
     # added as a daily share — otherwise the target looks reachable right up
     # until the payment date.
     daily_cost = costs["total"] / day_count if day_count else ZERO
-    daily_cost += (loan_monthly / Decimal("30")) if loan_monthly else ZERO
+    month_days = Decimal(open_month_days or 30)
+    daily_cost += (loan_monthly / month_days) if loan_monthly else ZERO
 
     if margin_ratio > 0:
         breakeven_daily = daily_cost / margin_ratio
@@ -358,8 +366,9 @@ def build_targets(sales, costs, day_count, loan_monthly=ZERO):
         "has_margin": margin_ratio > 0,
         "has_costs": costs["total"] > 0 or loan_monthly > 0,
         "loan_share_daily": _money(
-            (loan_monthly / Decimal("30")) if loan_monthly else ZERO
+            (loan_monthly / Decimal(open_month_days or 30)) if loan_monthly else ZERO
         ),
+        "open_days": day_count,
     }
 
 
@@ -596,11 +605,14 @@ def fixed_costs_for(user):
     }
 
 
-def monthly_commitment_for(user, loans, fixed):
+def monthly_commitment_for(user, loans, fixed, open_month_days=30):
     """What it costs to keep the shop open for a month, before buying stock.
 
     Payroll is read from the employee records rather than from salaries already
     paid: the question is what will be owed, not what has gone out so far.
+
+    The daily share is spread over trading days: a closed Friday earns nothing
+    but still costs its share of the rent.
     """
     payroll = (
         Employee.objects.filter(user=user, status="active").aggregate(
@@ -615,7 +627,8 @@ def monthly_commitment_for(user, loans, fixed):
         "loan": _money(loans["monthly_due"]),
         "fixed": _money(fixed["monthly_total"]),
         "total": _money(total),
-        "daily": _money(total / Decimal("30")),
+        "daily": _money(total / Decimal(open_month_days or 30)),
+        "open_month_days": open_month_days,
     }
 
 
@@ -634,11 +647,21 @@ def build_overview(user, preset="this_month", start=None, end=None):
     net_profit = sales["gross_profit"] - costs["total"]
     prev_net = prev_sales["gross_profit"] - prev_costs["total"]
 
-    day_count = periods.days_in(first, last)
+    # The shop's own calendar, resolved once and threaded through everything
+    # that divides by a day count.
+    closed = business_days.closed_weekdays(user)
+    calendar_days = periods.days_in(first, last)
+    day_count = business_days.open_days_between(first, last, closed)
+    open_month_days = business_days.open_days_in_month(last, closed)
+
     loans = loans_for(user)
     fixed = fixed_costs_for(user)
     targets = build_targets(
-        sales, costs, day_count, loans["monthly_due"] + fixed["monthly_total"]
+        sales,
+        costs,
+        day_count,
+        loans["monthly_due"] + fixed["monthly_total"],
+        open_month_days,
     )
 
     comparison = {
@@ -662,7 +685,12 @@ def build_overview(user, preset="this_month", start=None, end=None):
             "label": label,
             "start": first.isoformat(),
             "end": last.isoformat(),
-            "days": day_count,
+            # `days` stays the window's length — it is what the heading says.
+            # `open_days` is what every per-day figure is actually divided by.
+            "days": calendar_days,
+            "open_days": day_count,
+            "closed_days": sorted(closed),
+            "closed_label": business_days.describe(closed),
         },
         "compare_with": {
             "label": periods.COMPARE_LABELS.get(preset, "আগের সমান সময়"),
@@ -712,7 +740,9 @@ def build_overview(user, preset="this_month", start=None, end=None):
             "overdue_count": loans["overdue_count"],
             "next": loans["next"],
         },
-        "monthly_commitment": monthly_commitment_for(user, loans, fixed),
+        "monthly_commitment": monthly_commitment_for(
+            user, loans, fixed, open_month_days
+        ),
         "fixed_costs": {
             "count": fixed["count"],
             "monthly_total": _money(fixed["monthly_total"]),

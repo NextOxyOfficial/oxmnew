@@ -372,6 +372,13 @@ export default function AnalyticsPage() {
             <div className="plane-section lg:grid lg:grid-cols-[1fr_1.6fr] lg:gap-6">
             <div className="mt-6 border-t border-slate-200 pt-4 lg:mt-0 lg:border-r lg:border-t-0 lg:pr-6 lg:pt-0">
               <div className="section-title">দিনের টার্গেট</div>
+              {data.period.closed_label && (
+                <p className="-mt-1 mb-2 text-xs text-slate-500">
+                  {data.period.closed_label} — এই {data.period.days} দিনের মধ্যে{" "}
+                  <span className="num">{data.period.open_days}</span> দিন খোলা ছিল,
+                  খরচ সেই দিনগুলোর উপরেই ভাগ করা হয়েছে।
+                </p>
+              )}
               {data.targets.has_costs && data.targets.has_margin ? (
                 <>
                   {/* A checklist, not three loose numbers: each line says what
@@ -379,13 +386,17 @@ export default function AnalyticsPage() {
                   <ol className="divide-y divide-slate-200">
                     {[
                       {
-                        title: "খরচ উঠতে দিনে বিক্রি",
+                        title: data.period.closed_label
+                          ? "খরচ উঠতে খোলার দিনে বিক্রি"
+                          : "খরচ উঠতে দিনে বিক্রি",
                         value: data.targets.breakeven_daily_revenue,
                         note: "এর নিচে নামলেই লোকসান",
                         done: data.targets.on_track,
                       },
                       {
-                        title: "লাভসহ দিনের টার্গেট",
+                        title: data.period.closed_label
+                          ? "লাভসহ খোলার দিনের টার্গেট"
+                          : "লাভসহ দিনের টার্গেট",
                         value: data.targets.target_daily_revenue,
                         note: "খরচের 20% লাভ ধরে",
                         done:
