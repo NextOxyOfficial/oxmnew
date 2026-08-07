@@ -1,6 +1,11 @@
 declare const process: any;
 
 const nextConfig = {
+	// A verification build must not overwrite the running dev server's `.next`:
+	// `next build` writes production artifacts there, and the dev server then
+	// fails with "Cannot find module './xxxx.js'" until it is restarted. Set
+	// NEXT_DIST_DIR=.next-verify to build into a throwaway folder instead.
+	distDir: process.env.NEXT_DIST_DIR || ".next",
 	images: {
 		domains: ["localhost", "168.231.119.200", "127.0.0.1", "oxymanager.com"],
 		remotePatterns: [
@@ -34,12 +39,24 @@ const nextConfig = {
 	serverExternalPackages: [],
 	reactStrictMode: true,
 	eslint: {
-		// Temporarily ignore ESLint errors during build
+		// Still skipped: the remaining findings are style-level (unused vars,
+		// `any`), not correctness. Turn this on once they are cleaned up.
 		ignoreDuringBuilds: true,
 	},
 	typescript: {
-		// Temporarily ignore TypeScript errors during build
-		ignoreBuildErrors: true,
+		// Type errors now FAIL the build again. This was `true`, which let a
+		// broken file ship silently — a page with a syntax/type error only
+		// showed up as a blank screen at runtime.
+		ignoreBuildErrors: false,
+	},
+	compiler: {
+		// Strip debug logging from production bundles (the app carries ~340
+		// console.log calls). `error` and `warn` are kept so real problems are
+		// still reported; in dev everything logs as before.
+		removeConsole:
+			process.env.NODE_ENV === "production"
+				? { exclude: ["error", "warn"] }
+				: false,
 	},
 	// Add output configuration for better chunk handling
 	// Configure webpack for better chunk loading
@@ -53,10 +70,7 @@ const nextConfig = {
 		}
 		return config;
 	},
+	output: "standalone",
 };
-
-if (process.env.NEXT_OUTPUT === "standalone") {
-	(nextConfig as any).output = "standalone";
-}
 
 export default nextConfig;

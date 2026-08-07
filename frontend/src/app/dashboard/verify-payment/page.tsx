@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiService } from "@/lib/api";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -42,7 +43,7 @@ export default function VerifyPaymentPage() {
         console.log("Payment verification failed:", verifyResponse);
         setResult({
           success: false,
-          message: verifyResponse.message || "Payment verification failed.",
+          message: verifyResponse.message || "পেমেন্ট যাচাই করা যায়নি।",
         });
         setLoading(false);
         return;
@@ -125,7 +126,7 @@ export default function VerifyPaymentPage() {
             console.error("Error activating banking plan:", error);
             activationResult = {
               success: false,
-              message: "Failed to activate banking plan",
+              message: "ব্যাংকিং প্ল্যান চালু করা যায়নি",
             };
           }
 
@@ -190,7 +191,7 @@ export default function VerifyPaymentPage() {
               );
               activationResult = {
                 success: false,
-                message: "Invalid account ID in order",
+                message: "অর্ডারে অ্যাকাউন্ট আইডি ঠিক নেই",
               };
             }
             console.log(
@@ -201,7 +202,7 @@ export default function VerifyPaymentPage() {
             console.error("Error in fallback banking plan activation:", error);
             activationResult = {
               success: false,
-              message: "Failed to activate banking plan (no pending data)",
+              message: "ব্যাংকিং প্ল্যান চালু করা যায়নি (দরকারি তথ্য পাওয়া যায়নি)",
             };
           }
         }
@@ -218,7 +219,7 @@ export default function VerifyPaymentPage() {
           console.log("Banking activation successful");
           setResult({
             success: true,
-            message: "Payment verified successfully! Your banking plan has been activated.",
+            message: "পেমেন্ট যাচাই হয়ে গেছে! আপনার ব্যাংকিং প্ল্যান চালু হয়েছে।",
             orderId: actualOrderId,
             paymentType,
           });
@@ -228,14 +229,14 @@ export default function VerifyPaymentPage() {
             success: false,
             message:
               activationResult.message ||
-              "Payment verified but banking plan activation failed.",
+              "পেমেন্ট হয়েছে, কিন্তু ব্যাংকিং প্ল্যান চালু করা যায়নি।",
             orderId: actualOrderId,
             paymentType,
           });
         } else {
           setResult({
             success: true,
-            message: "Payment verified successfully!",
+            message: "পেমেন্ট যাচাই হয়ে গেছে!",
             orderId: actualOrderId,
             paymentType,
           });
@@ -245,8 +246,8 @@ export default function VerifyPaymentPage() {
         setResult({
           success: true,
           message: applied
-            ? "Payment verified successfully! Your subscription is now active."
-            : "Payment verified successfully. Subscription activation is pending.",
+            ? "পেমেন্ট যাচাই হয়ে গেছে! আপনার সাবস্ক্রিপশন এখন চালু।"
+            : "পেমেন্ট যাচাই হয়ে গেছে। সাবস্ক্রিপশন চালু হতে একটু সময় লাগবে।",
           orderId: actualOrderId,
           paymentType,
         });
@@ -261,8 +262,8 @@ export default function VerifyPaymentPage() {
         setResult({
           success: true,
           message: applied
-            ? `Payment verified successfully! ${creditsAdded.toLocaleString()} SMS credits have been added to your account.`
-            : "Payment verified successfully. SMS credits will be added shortly.",
+            ? `পেমেন্ট যাচাই হয়ে গেছে! আপনার অ্যাকাউন্টে ${creditsAdded.toLocaleString()} এসএমএস ক্রেডিট যোগ হয়েছে।`
+            : "পেমেন্ট যাচাই হয়ে গেছে। এসএমএস ক্রেডিট একটু পরেই যোগ হবে।",
           orderId: actualOrderId,
           paymentType,
         });
@@ -270,7 +271,7 @@ export default function VerifyPaymentPage() {
         await refreshProfile();
         setResult({
           success: true,
-          message: "Payment verified successfully!",
+          message: "পেমেন্ট যাচাই হয়ে গেছে!",
           orderId: actualOrderId,
           paymentType,
         });
@@ -280,7 +281,7 @@ export default function VerifyPaymentPage() {
       setResult({
         success: false,
         message:
-          "An error occurred during payment verification. Please contact support.",
+          "পেমেন্ট যাচাইয়ের সময় একটা সমস্যা হয়েছে। সাপোর্টে যোগাযোগ করুন।",
       });
     } finally {
       setLoading(false);
@@ -293,7 +294,7 @@ export default function VerifyPaymentPage() {
     if (!user) {
       setResult({
         success: false,
-        message: "Please log in to verify your payment.",
+        message: "পেমেন্ট যাচাই করতে আগে লগইন করুন।",
       });
       setLoading(false);
       return;
@@ -303,7 +304,7 @@ export default function VerifyPaymentPage() {
       if (!result) {
         setResult({
           success: false,
-          message: "No order ID found in URL parameters.",
+          message: "লিংকে কোনো অর্ডার আইডি পাওয়া যায়নি।",
         });
         setLoading(false);
       }
@@ -335,7 +336,7 @@ export default function VerifyPaymentPage() {
     if (!spOrderId) {
       setResult({
         success: false,
-        message: "No order ID found in URL parameters.",
+        message: "লিংকে কোনো অর্ডার আইডি পাওয়া যায়নি।",
       });
       setLoading(false);
       return;
@@ -345,109 +346,77 @@ export default function VerifyPaymentPage() {
     verifyPayment(spOrderId);
   };
 
-  return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-2xl font-bold text-center mb-8">
-          Payment Verification
-        </h1>
+  const returnLabel = searchParams.get("order_id")?.startsWith("BANK-")
+    ? "ব্যাংকিং-এ ফিরে যান"
+    : "ড্যাশবোর্ডে ফিরে যান";
 
+  return (
+    <div className="page">
+      <header className="page-head">
+        <div>
+          <h1 className="page-title">পেমেন্ট যাচাই</h1>
+          <p className="page-sub">আপনার পেমেন্ট ঠিকমতো হয়েছে কি না দেখুন</p>
+        </div>
+      </header>
+
+      <div className="plane">
         {loading ? (
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Verifying your payment...</p>
+          <div className="empty">
+            <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-cyan-600" />
+            <p>আপনার পেমেন্ট যাচাই করা হচ্ছে…</p>
           </div>
         ) : result ? (
-          <div className="text-center">
-            {result.success ? (
-              <div className="mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 13l4 4L19 7"
-                    ></path>
-                  </svg>
-                </div>
-                <h2 className="text-xl font-semibold text-green-600 mb-2">
-                  Payment Successful!
-                </h2>
-                <p className="text-gray-700 mb-4">{result.message}</p>
-                {result.orderId && (
-                  <p className="text-sm text-gray-500 mb-4">
-                    Order ID: {result.orderId}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-red-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    ></path>
-                  </svg>
-                </div>
-                <h2 className="text-xl font-semibold text-red-600 mb-2">
-                  Payment Failed
-                </h2>
-                <p className="text-gray-700 mb-4">{result.message}</p>
-                {result.orderId && (
-                  <p className="text-sm text-gray-500 mb-4">
-                    Order ID: {result.orderId}
-                  </p>
-                )}
-              </div>
-            )}
+          <>
+            <div className="plane-section text-center">
+              {result.success ? (
+                <>
+                  <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-600" />
+                  <h2 className="text-base font-semibold text-slate-900">
+                    পেমেন্ট হয়ে গেছে!
+                  </h2>
+                </>
+              ) : (
+                <>
+                  <XCircle className="mx-auto mb-3 h-10 w-10 text-rose-600" />
+                  <h2 className="text-base font-semibold text-slate-900">
+                    পেমেন্ট হয়নি
+                  </h2>
+                </>
+              )}
+              <p className="mt-2 text-sm text-slate-600">{result.message}</p>
+              {result.orderId && (
+                <p className="mt-2 text-xs text-slate-500">
+                  অর্ডার আইডি: <span className="num">{result.orderId}</span>
+                </p>
+              )}
+            </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="plane-section flex flex-wrap justify-center gap-2">
               <button
                 onClick={handleReturnToDashboard}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="btn btn-primary"
               >
-                {searchParams.get("order_id")?.startsWith("BANK-") 
-                  ? "Return to Banking" 
-                  : "Return to Dashboard"}
+                {returnLabel}
               </button>
               {!result.success && (
-                <button
-                  onClick={handleRetry}
-                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-                >
-                  Try Again
+                <button onClick={handleRetry} className="btn btn-ghost">
+                  আবার চেষ্টা করুন
                 </button>
               )}
             </div>
-          </div>
+          </>
         ) : (
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">
-              No payment verification data found.
-            </p>
-            <button
-              onClick={handleReturnToDashboard}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              {searchParams.get("order_id")?.startsWith("BANK-") 
-                ? "Return to Banking" 
-                : "Return to Dashboard"}
-            </button>
-          </div>
+          <>
+            <div className="empty">পেমেন্ট যাচাইয়ের কোনো তথ্য পাওয়া যায়নি।</div>
+            <div className="plane-section flex justify-center">
+              <button
+                onClick={handleReturnToDashboard}
+                className="btn btn-primary"
+              >
+                {returnLabel}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

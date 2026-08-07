@@ -1,21 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Phone, 
-  Mail, 
-  MessageCircle, 
-  Clock, 
-  MapPin, 
-  HelpCircle, 
-  ChevronDown, 
+import {
+  Phone,
+  Mail,
+  MessageCircle,
+  Clock,
+  MapPin,
+  HelpCircle,
+  ChevronDown,
   ChevronUp,
   Users,
   Settings,
   CreditCard,
   Package,
-  AlertCircle,
-  ExternalLink
+  AlertCircle
 } from 'lucide-react';
 
 interface FAQ {
@@ -28,68 +27,68 @@ interface FAQ {
 const faqData: FAQ[] = [
   {
     id: 1,
-    question: "How do I reset my password?",
-    answer: "Go to your profile settings and click on 'Change Password'. You'll need to enter your current password and then your new password twice to confirm.",
+    question: "পাসওয়ার্ড ভুলে গেলে কী করব?",
+    answer: "প্রোফাইল সেটিংসে গিয়ে 'পাসওয়ার্ড বদলান' এ ক্লিক করুন। আগের পাসওয়ার্ড দিয়ে নতুন পাসওয়ার্ডটা দুইবার লিখলেই হয়ে যাবে।",
     category: 'general'
   },
   {
     id: 2,
-    question: "How can I track my orders?",
-    answer: "You can track all your orders from the Orders page in your dashboard. Each order shows its current status and estimated delivery date.",
+    question: "অর্ডার কোথায় আছে দেখব কীভাবে?",
+    answer: "ড্যাশবোর্ডের অর্ডার পেজ থেকে সব অর্ডার দেখতে পারবেন। প্রতিটা অর্ডারের এখনকার অবস্থা আর কবে পৌঁছাবে সেটা ওখানেই লেখা থাকে।",
     category: 'orders'
   },
   {
     id: 3,
-    question: "What payment methods do you accept?",
-    answer: "We accept all major credit cards (Visa, MasterCard, American Express), PayPal, and bank transfers. All payments are processed securely.",
+    question: "কোন কোন উপায়ে টাকা দেওয়া যায়?",
+    answer: "সব বড় কার্ড (Visa, MasterCard, American Express), PayPal আর ব্যাংক ট্রান্সফার নেওয়া হয়। সব পেমেন্ট নিরাপদভাবেই হয়।",
     category: 'billing'
   },
   {
     id: 4,
-    question: "How do I update my billing information?",
-    answer: "Navigate to Settings > Billing to update your payment methods, billing address, and view your payment history.",
+    question: "বিলিংয়ের তথ্য কীভাবে বদলাব?",
+    answer: "সেটিংস > বিলিং এ গিয়ে পেমেন্ট মাধ্যম, বিলিং ঠিকানা বদলাতে পারবেন আর আগের পেমেন্টের হিস্ট্রিও দেখতে পারবেন।",
     category: 'billing'
   },
   {
     id: 5,
-    question: "I'm having trouble accessing my account",
-    answer: "If you're having login issues, try clearing your browser cache and cookies. If the problem persists, contact our support team.",
+    question: "অ্যাকাউন্টে ঢুকতে পারছি না",
+    answer: "লগইনে সমস্যা হলে ব্রাউজারের ক্যাশ আর কুকি মুছে আবার চেষ্টা করুন। তাতেও না হলে আমাদের সাপোর্ট টিমে যোগাযোগ করুন।",
     category: 'technical'
   },
   {
     id: 6,
-    question: "How do I cancel an order?",
-    answer: "Orders can be cancelled within 24 hours of placement. Go to your Orders page, find the order, and click 'Cancel Order' if the option is available.",
+    question: "অর্ডার বাতিল করব কীভাবে?",
+    answer: "অর্ডার দেওয়ার ২৪ ঘণ্টার ভেতরে বাতিল করা যায়। অর্ডার পেজে গিয়ে অর্ডারটা খুঁজে বের করে 'অর্ডার বাতিল' বাটনে ক্লিক করুন, অপশনটা থাকলে কাজ হবে।",
     category: 'orders'
   },
   {
     id: 7,
-    question: "Can I change my email address?",
-    answer: "Yes, you can update your email address in your profile settings. You'll need to verify the new email address before the change takes effect.",
+    question: "ইমেইল ঠিকানা বদলাতে পারব?",
+    answer: "হ্যাঁ, প্রোফাইল সেটিংস থেকে ইমেইল বদলাতে পারবেন। নতুন ইমেইলটা ভেরিফাই করার পরেই পরিবর্তনটা কাজ করবে।",
     category: 'general'
   },
   {
     id: 8,
-    question: "How do I export my data?",
-    answer: "You can export your order history, customer data, and other information from the Settings > Data Export section.",
+    question: "আমার ডেটা ডাউনলোড করব কীভাবে?",
+    answer: "সেটিংস > ডেটা এক্সপোর্ট থেকে অর্ডারের হিসাব, কাস্টমারের তথ্য আর বাকি সব ডেটা নামিয়ে নিতে পারবেন।",
     category: 'technical'
   }
 ];
 
 const categories = [
-  { id: 'all', name: 'All Topics', icon: HelpCircle },
-  { id: 'general', name: 'General', icon: Users },
-  { id: 'orders', name: 'Orders', icon: Package },
-  { id: 'billing', name: 'Billing', icon: CreditCard },
-  { id: 'technical', name: 'Technical', icon: Settings }
+  { id: 'all', name: 'সব বিষয়', icon: HelpCircle },
+  { id: 'general', name: 'সাধারণ', icon: Users },
+  { id: 'orders', name: 'অর্ডার', icon: Package },
+  { id: 'billing', name: 'বিলিং', icon: CreditCard },
+  { id: 'technical', name: 'টেকনিক্যাল', icon: Settings }
 ];
 
 export default function HelpPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
-  const filteredFaqs = selectedCategory === 'all' 
-    ? faqData 
+  const filteredFaqs = selectedCategory === 'all'
+    ? faqData
     : faqData.filter(faq => faq.category === selectedCategory);
 
   const toggleFaq = (id: number) => {
@@ -97,164 +96,149 @@ export default function HelpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      {/* Header Section */}
-      <div className="bg-slate-800/50 border-b border-slate-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-slate-100 mb-4">
-              Help & Support Center
-            </h1>
-            <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-              Find answers to common questions or get in touch with our support team
-            </p>
+    <div className="page">
+      <header className="page-head">
+        <div>
+          <h1 className="page-title">সাহায্য আর সাপোর্ট</h1>
+          <p className="page-sub">সাধারণ প্রশ্নের উত্তর দেখুন, না মিললে আমাদের জানান</p>
+        </div>
+      </header>
+
+      <div className="plane">
+        {/* Contact channels */}
+        <div className="plane-section">
+          <div className="section-title">যোগাযোগ</div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex items-start gap-3">
+              <Phone className="mt-0.5 h-4 w-4 flex-shrink-0 text-cyan-600" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-900">ফোনে কথা বলুন</p>
+                <p className="text-sm text-slate-600 num">+1 (555) 123-4567</p>
+                <p className="text-xs text-slate-500">শনি–বৃহস্পতি, সকাল ৯টা – সন্ধ্যা ৬টা</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Mail className="mt-0.5 h-4 w-4 flex-shrink-0 text-cyan-600" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-900">ইমেইল করুন</p>
+                <p className="truncate text-sm text-slate-600" title="support@oxm.com">support@oxm.com</p>
+                <p className="text-xs text-slate-500">২৪ ঘণ্টার ভেতরে উত্তর পাবেন</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-cyan-600" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-900">অফিসের ঠিকানা</p>
+                <p className="text-sm text-slate-600">
+                  ১২৩ বিজনেস স্ট্রিট, স্যুট ৪৫৬<br />
+                  নিউ ইয়র্ক, NY 10001
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Contact Information */}
-            <div className="lg:col-span-1">
-              <div className="bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl p-6 mb-6">
-                <h2 className="text-xl font-semibold text-slate-100 mb-6">Contact Us</h2>
-                
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <Phone className="h-5 w-5 text-cyan-400 mt-1" />
-                    <div>
-                      <p className="font-medium text-slate-200">Phone Support</p>
-                      <p className="text-slate-300">+1 (555) 123-4567</p>
-                      <p className="text-sm text-slate-400">Mon-Fri, 9AM-6PM EST</p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-start space-x-3">
-                    <Mail className="h-5 w-5 text-cyan-400 mt-1" />
-                    <div>
-                      <p className="font-medium text-slate-200">Email Support</p>
-                      <p className="text-slate-300">support@oxm.com</p>
-                      <p className="text-sm text-slate-400">Response within 24 hours</p>
-                    </div>
-                  </div>
+        {/* Business hours */}
+        <div className="plane-section">
+          <div className="section-title">
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" /> খোলা থাকার সময়
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-x-8 gap-y-1.5 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex justify-between gap-3">
+              <span className="text-slate-500">শনি – বৃহস্পতি</span>
+              <span className="num text-slate-900">সকাল ৯টা – সন্ধ্যা ৬টা</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-slate-500">শুক্রবার</span>
+              <span className="num text-slate-900">সকাল ১০টা – বিকেল ৪টা</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-slate-500">সরকারি ছুটি</span>
+              <span className="text-slate-900">বন্ধ</span>
+            </div>
+          </div>
+        </div>
 
-                  <div className="flex items-start space-x-3">
-                    <MapPin className="h-5 w-5 text-cyan-400 mt-1" />
-                    <div>
-                      <p className="font-medium text-slate-200">Office Address</p>
-                      <p className="text-slate-300">
-                        123 Business Street<br />
-                        Suite 456<br />
-                        New York, NY 10001
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* FAQ */}
+        <div className="plane-section">
+          <div className="section-title">
+            <span className="inline-flex items-center gap-1.5">
+              <MessageCircle className="h-3.5 w-3.5" /> যেসব প্রশ্ন সবাই করে
+            </span>
+          </div>
 
-              {/* Business Hours */}
-              <div className="bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl p-6">
-                <h3 className="text-lg font-semibold text-slate-100 mb-4 flex items-center">
-                  <Clock className="h-5 w-5 text-cyan-400 mr-2" />
-                  Business Hours
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Monday - Friday</span>
-                    <span className="text-slate-200">9:00 AM - 6:00 PM</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Saturday</span>
-                    <span className="text-slate-200">10:00 AM - 4:00 PM</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Sunday</span>
-                    <span className="text-slate-200">Closed</span>
-                  </div>
-                </div>
-              </div>
-            </div>            {/* FAQ Section */}
-            <div className="lg:col-span-2">
-              <div className="bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl p-6">
-                <h2 className="text-xl font-semibold text-slate-100 mb-6">
-                  Frequently Asked Questions
-                </h2>
+          {/* Category filter */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            {categories.map((category) => {
+              const IconComponent = category.icon;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`btn btn-sm ${selectedCategory === category.id ? 'btn-primary' : 'btn-ghost'}`}
+                >
+                  <IconComponent className="h-3.5 w-3.5" />
+                  <span>{category.name}</span>
+                </button>
+              );
+            })}
+          </div>
 
-                {/* Category Filter */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {categories.map((category) => {
-                    const IconComponent = category.icon;
-                    return (
-                      <button
-                        key={category.id}
-                        onClick={() => setSelectedCategory(category.id)}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
-                          selectedCategory === category.id
-                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                            : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 border border-slate-600/50'
-                        }`}
-                      >
-                        <IconComponent className="h-4 w-4" />
-                        <span>{category.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* FAQ List */}
-                <div className="space-y-4">
-                  {filteredFaqs.map((faq) => (
-                    <div
-                      key={faq.id}
-                      className="border border-slate-700/50 rounded-lg overflow-hidden bg-slate-800/50"
-                    >
-                      <button
-                        onClick={() => toggleFaq(faq.id)}
-                        className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-slate-700/50 transition-colors cursor-pointer"
-                      >
-                        <span className="font-medium text-slate-200 pr-4">
-                          {faq.question}
-                        </span>
-                        {expandedFaq === faq.id ? (
-                          <ChevronUp className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                        )}
-                      </button>
-                      {expandedFaq === faq.id && (
-                        <div className="px-6 pb-4 text-slate-300 border-t border-slate-700/50 pt-4">
-                          {faq.answer}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {filteredFaqs.length === 0 && (
-                  <div className="text-center py-8">
-                    <AlertCircle className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-                    <p className="text-slate-400">No FAQs found for this category.</p>
+          {/* FAQ list */}
+          <div className="divide-y divide-slate-200 border-t border-slate-200">
+            {filteredFaqs.map((faq) => (
+              <div key={faq.id}>
+                <button
+                  onClick={() => toggleFaq(faq.id)}
+                  className="flex w-full items-center justify-between gap-3 py-3 text-left transition-colors hover:text-cyan-600"
+                >
+                  <span className="text-sm font-medium text-slate-900">
+                    {faq.question}
+                  </span>
+                  {expandedFaq === faq.id ? (
+                    <ChevronUp className="h-4 w-4 flex-shrink-0 text-slate-500" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 flex-shrink-0 text-slate-500" />
+                  )}
+                </button>
+                {expandedFaq === faq.id && (
+                  <div className="pb-3 text-sm text-slate-600">
+                    {faq.answer}
                   </div>
                 )}
               </div>
+            ))}
+          </div>
+
+          {filteredFaqs.length === 0 && (
+            <div className="empty">
+              <AlertCircle className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+              এই বিষয়ে এখনো কোনো প্রশ্ন যোগ করা হয়নি।
             </div>
+          )}
         </div>
 
-        {/* Emergency Contact */}
-        <div className="mt-8 bg-red-900/30 border border-red-500/30 p-6 rounded-lg">
-          <div className="flex items-start">
-            <AlertCircle className="h-6 w-6 text-red-400 mt-0.5 mr-3" />
+        {/* Emergency contact */}
+        <div className="plane-section">
+          <div className="section-title">জরুরি সাপোর্ট</div>
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-rose-600" />
             <div>
-              <h3 className="text-lg font-medium text-red-300 mb-2">Emergency Support</h3>
-              <p className="text-red-200 mb-3">
-                For urgent technical issues that affect your business operations, contact our emergency support line.
+              <p className="text-sm text-slate-600">
+                ব্যবসা আটকে যাচ্ছে এমন জরুরি সমস্যা হলে সরাসরি জরুরি লাইনে ফোন করুন।
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:gap-8">
                 <div>
-                  <p className="font-medium text-red-300">Emergency Hotline:</p>
-                  <p className="text-red-200">+1 (555) 999-HELP (4357)</p>
+                  <p className="text-xs font-medium text-slate-500">জরুরি হটলাইন</p>
+                  <p className="num text-sm text-slate-900">+1 (555) 999-HELP (4357)</p>
                 </div>
                 <div>
-                  <p className="font-medium text-red-300">Available:</p>
-                  <p className="text-red-200">24/7 for critical issues</p>
+                  <p className="text-xs font-medium text-slate-500">কখন পাওয়া যাবে</p>
+                  <p className="text-sm text-slate-900">দিনরাত ২৪ ঘণ্টা, জরুরি সমস্যার জন্য</p>
                 </div>
               </div>
             </div>

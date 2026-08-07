@@ -188,37 +188,40 @@ class StoreSettingsView(generics.RetrieveUpdateAPIView):
         return settings
 
 
-@api_view(['GET'])
+# NOTE: terms/ and privacy/ each used to be registered TWICE in urls.py — once
+# for a GET-only view and once for a POST-only view on the identical path.
+# Django resolves the first match, so every POST hit the GET view and came back
+# 405: saving store terms or the privacy policy silently failed. Each resource
+# is now a single view handling both methods.
+
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
-def get_store_terms(request):
-    """Get store terms and conditions."""
-    settings, created = StoreSettings.objects.get_or_create(user=request.user)
+def store_terms(request):
+    """Read or update the store's terms and conditions."""
+    settings, _created = StoreSettings.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        settings.terms_and_conditions = request.data.get('content', '')
+        settings.save()
+        return Response({'success': True, 'message': 'Terms updated successfully'})
     return Response({'content': settings.terms_and_conditions})
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
-def update_store_terms(request):
-    """Update store terms and conditions."""
-    settings, created = StoreSettings.objects.get_or_create(user=request.user)
-    settings.terms_and_conditions = request.data.get('content', '')
-    settings.save()
-    return Response({'success': True, 'message': 'Terms updated successfully'})
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_store_privacy(request):
-    """Get store privacy policy."""
-    settings, created = StoreSettings.objects.get_or_create(user=request.user)
+def store_privacy(request):
+    """Read or update the store's privacy policy."""
+    settings, _created = StoreSettings.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        settings.privacy_policy = request.data.get('content', '')
+        settings.save()
+        return Response(
+            {'success': True, 'message': 'Privacy policy updated successfully'}
+        )
     return Response({'content': settings.privacy_policy})
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def update_store_privacy(request):
-    """Update store privacy policy."""
-    settings, created = StoreSettings.objects.get_or_create(user=request.user)
-    settings.privacy_policy = request.data.get('content', '')
-    settings.save()
-    return Response({'success': True, 'message': 'Privacy policy updated successfully'})
+# Backwards-compatible aliases, in case anything still imports the old names.
+get_store_terms = store_terms
+update_store_terms = store_terms
+get_store_privacy = store_privacy
+update_store_privacy = store_privacy

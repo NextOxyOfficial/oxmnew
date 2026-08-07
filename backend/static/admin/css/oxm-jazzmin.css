@@ -1,0 +1,553 @@
+/* ══════════════════════════════════════════════════════════════
+   OxyManager — Jazzmin / AdminLTE brand layer.
+   Light and neutral: white chrome, slate text, soft hairlines, one
+   restrained indigo accent. No cyan, no heavy shadows, no gradients.
+   Registered via JAZZMIN_SETTINGS["custom_css"].
+   ══════════════════════════════════════════════════════════════ */
+
+/* Inter + Hind Siliguri — the same pairing adsyclub.com uses, so the
+   admin, the app and the public site all read as one brand. Inter has no
+   Bangla glyphs; the browser falls through to Hind Siliguri for those. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap");
+
+:root,
+[data-bs-theme="light"] {
+  /* Accent: a calm indigo that reads as "software", not decoration. */
+  --oxm-font: "Inter", "Hind Siliguri", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --oxm-accent: #4f46e5;
+  --oxm-accent-dark: #4338ca;
+  --oxm-accent-soft: #eef2ff;
+
+  --oxm-ink: #0f172a;
+  --oxm-text: #334155;
+  --oxm-muted: #64748b;
+  --oxm-faint: #94a3b8;
+  --oxm-line: #e5e7eb;
+  --oxm-canvas: #f7f8fa;
+
+  --oxm-success: #047857;
+  --oxm-warn: #b45309;
+  --oxm-danger: #be123c;
+
+  /* Bootstrap overrides so stock components inherit the palette. */
+  --bs-primary: #4f46e5;
+  --bs-primary-rgb: 79, 70, 229;
+  --bs-link-color: #4f46e5;
+  --bs-link-color-rgb: 79, 70, 229;
+  --bs-link-hover-color: #4338ca;
+  --bs-body-font-family: var(--oxm-font);
+  --bs-border-color: #e5e7eb;
+  --bs-body-color: #334155;
+  --bs-body-bg: #f7f8fa;
+  --bs-secondary-bg: #f7f8fa;
+}
+
+body,
+.wrapper,
+.content-wrapper {
+  font-family: var(--oxm-font);
+  font-size: 14px;
+  color: var(--oxm-text);
+}
+.content-wrapper,
+.login-page,
+.register-page { background: var(--oxm-canvas) !important; }
+
+/* Buttons, inputs and selects fall back to the UA font unless named
+   explicitly — without this the admin mixes Inter with Segoe UI. */
+button, input, select, textarea, optgroup,
+.btn, .form-control, .form-select, .select2-container,
+.table, .navbar, .modal, .dropdown-menu, .card, .alert,
+h1, h2, h3, h4, h5, h6 { font-family: var(--oxm-font); }
+
+/* ── Top navbar: white with a single hairline ──────────────── */
+.main-header.navbar,
+.app-header {
+  background: #fff !important;
+  border-bottom: 1px solid var(--oxm-line) !important;
+  box-shadow: none !important;
+}
+.main-header .nav-link,
+.app-header .nav-link { color: var(--oxm-text) !important; font-size: 13.5px; }
+.main-header .nav-link:hover,
+.app-header .nav-link:hover { color: var(--oxm-ink) !important; }
+
+/* ── Sidebar ───────────────────────────────────────────────────
+   Jazzmin 3 ships AdminLTE 4, whose menu markup is `.sidebar-menu`
+   (NOT AdminLTE 3's `.nav-sidebar`) and whose colours come from
+   --lte-sidebar-* custom properties. Those ship tuned for a DARK
+   sidebar (#c2c7d0 text on translucent-white hovers); on our white
+   sidebar that renders as unreadable grey. Re-point the variables
+   rather than fighting individual selectors.
+   The panel also carries Bootstrap's `.shadow` utility, which is why
+   it floated above the content — that is cleared here so the sidebar
+   uses the same hairline language as the cards on the right.
+   ──────────────────────────────────────────────────────────── */
+/* Jazzmin marks the sidebar `data-bs-theme="dark"`, and AdminLTE's
+   `[data-bs-theme="dark"] .app-sidebar` rule outranks a plain
+   `.app-sidebar` one — so the light values must be declared through the
+   SAME selector shape to win the cascade. */
+.app-sidebar,
+.main-sidebar,
+[data-bs-theme="dark"] .app-sidebar,
+[data-bs-theme="dark"].app-sidebar,
+[data-bs-theme="dark"] .main-sidebar,
+[data-bs-theme="dark"].main-sidebar {
+  --lte-sidebar-color: #475569;
+  --lte-sidebar-hover-color: #0f172a;
+  --lte-sidebar-hover-bg: #f1f5f9;
+  --lte-sidebar-active-color: var(--oxm-accent-dark);
+  --lte-sidebar-menu-active-color: var(--oxm-accent-dark);
+  --lte-sidebar-menu-active-bg: var(--oxm-accent-soft);
+  --lte-sidebar-submenu-color: #64748b;
+  --lte-sidebar-submenu-hover-color: #0f172a;
+  --lte-sidebar-submenu-hover-bg: #f1f5f9;
+  --lte-sidebar-submenu-active-color: var(--oxm-accent-dark);
+  --lte-sidebar-submenu-active-bg: var(--oxm-accent-soft);
+  --lte-sidebar-header-color: #94a3b8;
+
+  /* Wider than AdminLTE's 250px so labels like "Authentication and
+     Authorization" fit without forcing a horizontal scrollbar. */
+  --lte-sidebar-width: 274px;
+
+  background: #fff !important;              /* beats .bg-body-secondary */
+  border-right: 1px solid var(--oxm-line) !important;
+  box-shadow: none !important;              /* beats the .shadow utility */
+  overflow-x: hidden !important;            /* kill the sideways scrollbar */
+}
+
+/* Long labels ellipsis instead of widening the rail. */
+.app-sidebar .sidebar-wrapper,
+.app-sidebar nav { overflow-x: hidden !important; }
+.sidebar-menu .nav-link > p,
+.nav-sidebar .nav-link > p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.sidebar-menu .nav-link,
+.nav-sidebar .nav-link { min-width: 0; }
+
+/* The brand logo ships with Bootstrap's .shadow utility too. */
+.app-sidebar .brand-image,
+.app-sidebar .brand-image-xs,
+.app-sidebar img.shadow { box-shadow: none !important; }
+
+.brand-link,
+.sidebar-brand {
+  background: #fff !important;
+  border-bottom: 1px solid var(--oxm-line) !important;
+  padding: 14px 16px;
+}
+.brand-link .brand-text,
+.sidebar-brand .brand-text,
+.brand-link {
+  color: var(--oxm-ink) !important;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+/* Menu rows — same rhythm as the content lists. */
+.sidebar-menu .nav-link,
+.nav-sidebar .nav-link {
+  color: var(--lte-sidebar-color) !important;
+  border-radius: 8px;
+  font-size: 13px;
+  padding: 7px 10px;
+  margin: 1px 8px;
+}
+.sidebar-menu .nav-link:hover,
+.nav-sidebar .nav-link:hover {
+  background: var(--lte-sidebar-hover-bg) !important;
+  color: var(--lte-sidebar-hover-color) !important;
+}
+.sidebar-menu .nav-link.active,
+.sidebar-menu .nav-treeview .nav-link.active,
+.nav-sidebar .nav-link.active {
+  background: var(--oxm-accent-soft) !important;
+  color: var(--oxm-accent-dark) !important;
+  font-weight: 600;
+}
+.sidebar-menu .nav-link.active .nav-icon,
+.nav-sidebar .nav-link.active .nav-icon { color: var(--oxm-accent) !important; }
+.sidebar-menu .nav-icon,
+.nav-sidebar .nav-icon { color: var(--oxm-faint); opacity: 1; }
+
+/* An expanded group is a quiet container, not a filled block. */
+.sidebar-menu .nav-item.menu-open > .nav-link,
+.nav-sidebar .nav-item.menu-open > .nav-link {
+  background: transparent !important;
+  color: var(--oxm-ink) !important;
+  font-weight: 600;
+}
+.sidebar-menu .nav-treeview,
+.nav-sidebar .nav-treeview { background: transparent !important; }
+.sidebar-menu .nav-treeview .nav-link,
+.nav-sidebar .nav-treeview .nav-link {
+  color: var(--lte-sidebar-submenu-color) !important;
+  font-size: 12.5px;
+}
+.sidebar-menu .nav-treeview .nav-link:hover,
+.nav-sidebar .nav-treeview .nav-link:hover {
+  background: var(--lte-sidebar-submenu-hover-bg) !important;
+  color: var(--lte-sidebar-submenu-hover-color) !important;
+}
+
+.sidebar-menu .nav-header,
+.nav-sidebar .nav-header {
+  color: var(--oxm-faint) !important;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 14px 18px 4px;
+}
+
+.form-control-sidebar {
+  background: #f7f8fa;
+  border: 1px solid var(--oxm-line);
+  color: var(--oxm-text);
+  border-radius: 8px;
+}
+.form-control-sidebar::placeholder { color: var(--oxm-faint); }
+
+/* ── Buttons ───────────────────────────────────────────────── */
+.btn { border-radius: 8px; font-weight: 600; font-size: 13px; }
+.btn-sm { font-size: 12px; }
+.btn-primary,
+.submit-row input[type="submit"],
+input[type="submit"].default,
+.object-tools a.addlink {
+  background-color: var(--oxm-accent) !important;
+  border-color: var(--oxm-accent) !important;
+  color: #fff !important;
+}
+.btn-primary:hover,
+.submit-row input[type="submit"]:hover,
+.object-tools a.addlink:hover {
+  background-color: var(--oxm-accent-dark) !important;
+  border-color: var(--oxm-accent-dark) !important;
+}
+.btn-outline-primary { color: var(--oxm-accent); border-color: var(--oxm-accent); }
+.btn-outline-primary:hover { background: var(--oxm-accent); border-color: var(--oxm-accent); }
+
+a, a:link { color: var(--oxm-accent); }
+a:hover { color: var(--oxm-accent-dark); }
+.text-primary { color: var(--oxm-accent) !important; }
+.bg-primary, .badge.bg-primary { background-color: var(--oxm-accent) !important; }
+
+/* ── Cards / panels ────────────────────────────────────────── */
+.card {
+  border: 1px solid var(--oxm-line);
+  border-radius: 10px;
+  box-shadow: none;
+}
+.card-header {
+  background: #fff;
+  border-bottom: 1px solid var(--oxm-line);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--oxm-ink);
+  padding: 12px 16px;
+}
+.card-primary.card-outline { border-top: 2px solid var(--oxm-accent); }
+
+/* ── Tables ────────────────────────────────────────────────── */
+.table thead th,
+#result_list thead th {
+  background: #f7f8fa;
+  border-bottom: 1px solid var(--oxm-line) !important;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--oxm-muted);
+  white-space: nowrap;
+}
+.table td, .table th,
+#result_list td, #result_list th {
+  border-color: var(--oxm-line) !important;
+  vertical-align: middle;
+  font-size: 13px;
+}
+.table-hover tbody tr:hover,
+#result_list tbody tr:hover td { background: #f7f8fa; }
+
+/* ── Forms ─────────────────────────────────────────────────── */
+.form-control, .form-select, textarea, select,
+input[type="text"], input[type="password"], input[type="email"],
+input[type="number"], input[type="url"], input[type="date"] {
+  border: 1px solid var(--oxm-line);
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--oxm-ink);
+}
+.form-control:focus, .form-select:focus,
+input:focus, textarea:focus, select:focus {
+  border-color: var(--oxm-accent);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+label, .form-label { font-size: 13px; font-weight: 500; color: var(--oxm-text); }
+.help, .helptext, .form-text { font-size: 12px; color: var(--oxm-faint); }
+
+/* Tabbed change form */
+.nav-tabs { border-bottom: 1px solid var(--oxm-line); }
+.nav-tabs .nav-link { color: var(--oxm-muted); font-size: 13px; font-weight: 500; border: 0; }
+.nav-tabs .nav-link:hover { color: var(--oxm-ink); }
+.nav-tabs .nav-link.active {
+  color: var(--oxm-accent);
+  border-bottom: 2px solid var(--oxm-accent);
+  background: transparent;
+}
+
+/* ── Login ─────────────────────────────────────────────────── */
+.login-box .card, .login-card-body {
+  border: 1px solid var(--oxm-line);
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.06);
+}
+.login-logo a, .login-box .login-logo { color: var(--oxm-ink); font-weight: 600; }
+
+/* ══════════════════════════════════════════════════════════
+   Dashboard (templates/admin/index.html)
+   Layout: full-width KPI strip, then a wide sections grid with a
+   fixed rail beside it. Heights stay balanced instead of one
+   column running twice as long as the other.
+   ══════════════════════════════════════════════════════════ */
+.oxm-dash-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--oxm-muted);
+  margin: 0 0 10px;
+}
+
+/* Shared surface for every dashboard panel. */
+.oxm-panel {
+  background: #fff;
+  border: 1px solid var(--oxm-line);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+              0 8px 24px -12px rgba(15, 23, 42, 0.10);
+  overflow: hidden;
+}
+
+/* ── KPI strip ─────────────────────────────────────────── */
+.oxm-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+@media (min-width: 576px) { .oxm-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Caps at 4 across on purpose: with 8 KPIs that reads as two tidy rows,
+   which stays legible on wide screens instead of one thin 8-up strip. */
+@media (min-width: 992px) { .oxm-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.oxm-kpi {
+  background: #fff;
+  border: 1px solid var(--oxm-line);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+              0 8px 24px -12px rgba(15, 23, 42, 0.10);
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.oxm-kpi:hover {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05),
+              0 14px 30px -14px rgba(15, 23, 42, 0.16);
+  transform: translateY(-1px);
+}
+.oxm-kpi__icon {
+  width: 34px; height: 34px;
+  flex: 0 0 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: var(--oxm-muted);
+  font-size: 14px;
+}
+.oxm-kpi--accent  .oxm-kpi__icon { background: var(--oxm-accent-soft); color: var(--oxm-accent); }
+.oxm-kpi--success .oxm-kpi__icon { background: #ecfdf5; color: var(--oxm-success); }
+.oxm-kpi--warn    .oxm-kpi__icon { background: #fffbeb; color: var(--oxm-warn); }
+.oxm-kpi--danger  .oxm-kpi__icon { background: #fff1f2; color: var(--oxm-danger); }
+.oxm-kpi__body { min-width: 0; }
+.oxm-kpi__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--oxm-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.oxm-kpi__value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--oxm-ink);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.oxm-kpi__meta {
+  font-size: 11.5px;
+  color: var(--oxm-faint);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Insight row: attention + activity, side by side ───── */
+.oxm-insights {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 22px;
+  align-items: start;
+}
+@media (min-width: 992px) {
+  .oxm-insights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Sections grid — fills the wide column with real columns. */
+.oxm-apps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.oxm-app {
+  background: #fff;
+  border: 1px solid var(--oxm-line);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+              0 8px 24px -12px rgba(15, 23, 42, 0.10);
+  overflow: hidden;
+}
+.oxm-app__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fbfcfd;
+  border-bottom: 1px solid var(--oxm-line);
+}
+.oxm-app__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--oxm-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oxm-model {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--oxm-line);
+  font-size: 13px;
+}
+.oxm-model:last-child { border-bottom: 0; }
+.oxm-model:hover { background: #f7f8fa; }
+.oxm-model__name {
+  color: var(--oxm-text) !important;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oxm-model__name:hover { color: var(--oxm-accent) !important; }
+.oxm-model__add {
+  font-size: 11.5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--oxm-line);
+  color: var(--oxm-muted) !important;
+  flex: 0 0 auto;
+}
+.oxm-model__add:hover { border-color: var(--oxm-accent); color: var(--oxm-accent) !important; }
+
+/* ── Rail: attention + activity ────────────────────────── */
+
+.oxm-alert-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--oxm-line);
+  font-size: 13px;
+}
+.oxm-alert-row:last-child { border-bottom: 0; }
+.oxm-alert-row:hover { background: #f7f8fa; }
+.oxm-alert-row__label { color: var(--oxm-text); display: flex; align-items: center; gap: 9px; }
+.oxm-alert-row__label i { width: 16px; text-align: center; color: var(--oxm-faint); flex: 0 0 16px; }
+
+.oxm-activity { list-style: none; margin: 0; padding: 0; }
+.oxm-activity li {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--oxm-line);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.oxm-activity li:last-child { border-bottom: 0; }
+.oxm-activity__meta { color: var(--oxm-faint); font-size: 11.5px; margin-top: 1px; }
+.oxm-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-right: 6px;
+}
+.oxm-tag--add { background: #ecfdf5; color: var(--oxm-success); }
+.oxm-tag--change { background: var(--oxm-accent-soft); color: var(--oxm-accent-dark); }
+.oxm-tag--delete { background: #fff1f2; color: var(--oxm-danger); }
+
+/* ── Badges used by admin.py display helpers ───────────────── */
+.oxm-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.oxm-badge--success { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.oxm-badge--warn    { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.oxm-badge--danger  { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.oxm-badge--muted   { background: #f1f5f9; color: #64748b; border-color: #e5e7eb; }
+.oxm-badge--info    { background: var(--oxm-accent-soft); color: var(--oxm-accent-dark); border-color: #c7d2fe; }
+.oxm-thumb {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--oxm-line);
+  background: #f1f5f9;
+}
+.oxm-num { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 767px) {
+  .oxm-kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .oxm-apps { grid-template-columns: 1fr; }
+}

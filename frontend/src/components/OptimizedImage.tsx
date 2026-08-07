@@ -17,7 +17,7 @@ export default function OptimizedImage({
   src,
   alt,
   className = "",
-  fallbackText = "Image failed to load",
+  fallbackText = "ছবিটা লোড হয়নি",
   showFallback = true,
   onError,
   onLoad,
@@ -50,12 +50,12 @@ export default function OptimizedImage({
 
   if (imageError && showFallback) {
     return (
-      <div className={`flex items-center justify-center bg-slate-800/50 ${className}`}>
+      <div className={`flex items-center justify-center bg-slate-50 ${className}`}>
         <div className="text-center">
-          <svg 
-            className="mx-auto h-12 w-12 text-slate-400 mb-2" 
-            fill="none" 
-            stroke="currentColor" 
+          <svg
+            className="mx-auto h-10 w-10 text-slate-400 mb-2"
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path 
@@ -65,8 +65,8 @@ export default function OptimizedImage({
               d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <p className="text-red-400 text-sm">{fallbackText}</p>
-          <p className="text-slate-500 text-xs mt-1">Please try re-uploading</p>
+          <p className="text-[13px] text-rose-600">{fallbackText}</p>
+          <p className="mt-1 text-xs text-slate-500">আবার আপলোড করে দেখুন</p>
         </div>
       </div>
     );
@@ -75,8 +75,12 @@ export default function OptimizedImage({
   return (
     <div className="relative w-full h-full">
       {imageLoading && (
-        <div className={`absolute inset-0 flex items-center justify-center bg-slate-800/50 ${className}`}>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+        <div className={`absolute inset-0 flex items-center justify-center bg-slate-50 ${className}`}>
+          <div
+            className="animate-spin rounded-full h-7 w-7 border-2 border-slate-200 border-t-cyan-600"
+            role="status"
+            aria-label="লোড হচ্ছে"
+          ></div>
         </div>
       )}
       <img

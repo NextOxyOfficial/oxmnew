@@ -4,6 +4,9 @@ import os
 import requests
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.db.models import Q
+from django.utils import timezone
+from core.scoping import owner_for
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -12,7 +15,9 @@ from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.response import Response
 
 from .models import (
@@ -60,6 +65,18 @@ def build_absolute_url(request, relative_url):
     return f"{base_url}{relative_url}"
 
 
+class LoginThrottle(AnonRateThrottle):
+    """Password guessing budget, per IP.
+
+    The global anon limit of 30/min allowed ~1800 guesses an hour against a
+    single account, which is plenty for a script and far more than any human
+    needs. Ten a minute leaves room for a fat-fingered login and little else.
+    """
+
+    scope = "login"
+    rate = "10/min"
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def api_root(request):
@@ -96,6 +113,7 @@ def health_check(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([LoginThrottle])
 def register(request):
     """
     User registration endpoint
@@ -225,8 +243,35 @@ def register(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
+def _staff_login(identifier, password):
+    """Authenticate an employee by the phone or email on their record."""
+    from employees.models import EmployeeAccess
+
+    identifier = (identifier or "").strip()
+    if not identifier:
+        return None
+
+    digits = "".join(ch for ch in identifier if ch.isdigit())
+    query = Q(employee__email__iexact=identifier)
+    if len(digits) >= 6:
+        # Match on the last nine digits so +8801957045438, 01957045438 and
+        # 1957045438 all reach the same person.
+        query |= Q(employee__phone__endswith=digits[-9:])
+
+    matches = list(
+        EmployeeAccess.objects.filter(query).select_related("account", "employee")[:2]
+    )
+    if len(matches) != 1:
+        return None
+
+    access = matches[0]
+    return authenticate(username=access.account.username, password=password)
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([LoginThrottle])
 def login(request):
     """
     User login endpoint
@@ -241,7 +286,27 @@ def login(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Normalize username: strip surrounding whitespace (common copy/paste issue)
+        username = username.strip()
+
         user = authenticate(username=username, password=password)
+
+        # Fallback: if exact-username auth fails, retry with a case-insensitive
+        # match, but ONLY when it resolves to exactly one user. This avoids any
+        # ambiguity where usernames differ only by case (e.g. "Asad" vs "asad").
+        if user is None:
+            matches = User.objects.filter(username__iexact=username)
+            if matches.count() == 1:
+                user = authenticate(
+                    username=matches.first().username, password=password
+                )
+
+        # Staff sign in with the phone or email their employer already had on
+        # file — nobody hands a shop assistant a generated username. Resolved
+        # only when it points at exactly one login, so an owner and an employee
+        # sharing a phone number can never authenticate each other.
+        if user is None:
+            user = _staff_login(username, password)
 
         if user is None:
             return Response(
@@ -251,15 +316,31 @@ def login(request):
         # Get or create token
         token, created = Token.objects.get_or_create(user=user)
 
-        # Get user profile and settings
-        profile, profile_created = UserProfile.objects.get_or_create(user=user)
-        settings, settings_created = UserSettings.objects.get_or_create(user=user)
+        # A staff login reads the *shop's* branding and settings, not its own —
+        # the assistant works inside their employer's store, so the logo, the
+        # currency and the SMS balance all come from the owner.
+        from core.scoping import staff_access
+
+        access = staff_access(user)
+        if access is not None and not access.is_enabled:
+            return Response(
+                {"error": "আপনার লগইন বন্ধ করে দেওয়া হয়েছে। মালিককে বলুন।"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        data_owner = access.owner if access else user
+
+        profile, profile_created = UserProfile.objects.get_or_create(user=data_owner)
+        settings, settings_created = UserSettings.objects.get_or_create(user=data_owner)
+
+        if access is not None:
+            access.last_login_at = timezone.now()
+            access.save(update_fields=["last_login_at"])
 
         # Get SMS credits
         from subscription.models import UserSMSCredit
 
         try:
-            sms_credit = UserSMSCredit.objects.get(user=user)
+            sms_credit = UserSMSCredit.objects.get(user=data_owner)
             sms_credits = sms_credit.credits
         except UserSMSCredit.DoesNotExist:
             sms_credits = 0
@@ -278,6 +359,12 @@ def login(request):
                     "is_active": user.is_active,
                     "is_staff": user.is_staff,
                     "is_superuser": user.is_superuser,
+                    # Everything the frontend needs to draw the right menu.
+                    "is_employee": access is not None,
+                    "employee_name": access.employee.name if access else None,
+                    "employee_id": access.employee_id if access else None,
+                    "store_owner": data_owner.username,
+                    "permissions": list(access.permissions or []) if access else None,
                 },
                 "profile": {
                     "company": profile.company or "",
@@ -336,7 +423,9 @@ def profile(request):
     """
     Get or update user profile
     """
-    user = request.user
+    # The shop's own record, not the assistant's: a staff login has no store
+    # name, logo or currency of its own.
+    user = owner_for(request)
 
     if request.method == "GET":
         # Get profile data
@@ -828,7 +917,9 @@ def user_settings(request):
     """
     Get or update user settings
     """
-    user = request.user
+    # The shop's own record, not the assistant's: a staff login has no store
+    # name, logo or currency of its own.
+    user = owner_for(request)
 
     if request.method == "GET":
         try:
@@ -1723,6 +1814,13 @@ def smsSend(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    # Stamp the shop's name on before anything measures or charges for the
+    # message, so the credit count matches what is actually sent.
+    from core.scoping import owner_for
+    from core.sms_identity import with_store_signature
+
+    message = with_store_signature(message, owner_for(request))
+
     # Calculate SMS count properly for Unicode/Bengali text
     length = len(message)
     
@@ -1748,12 +1846,17 @@ def smsSend(request):
     
     # Check if user has sufficient SMS credits
     try:
-        user_sms_credit = UserSMSCredit.objects.get(user=request.user)
+        user_sms_credit = UserSMSCredit.objects.get(user=owner_for(request))
         if user_sms_credit.credits < sms_count:
             return Response(
                 {
                     "success": False,
-                    "error": f"Insufficient SMS credits. You need {sms_count} credit{'s' if sms_count > 1 else ''} but only have {user_sms_credit.credits}.",
+                    "error": (
+                        f"এসএমএস ক্রেডিট কম পড়েছে। এই মেসেজটার জন্য {sms_count} টা "
+                        f"ক্রেডিট লাগবে, আছে {user_sms_credit.credits} টা। "
+                        "সাবস্ক্রিপশন পেজ থেকে ক্রেডিট কিনে নিন।"
+                    ),
+                    "code": "insufficient_credits",
                     "required_credits": sms_count,
                     "available_credits": user_sms_credit.credits,
                 },
@@ -1763,7 +1866,11 @@ def smsSend(request):
         return Response(
             {
                 "success": False,
-                "error": f"No SMS credits available. You need {sms_count} credit{'s' if sms_count > 1 else ''} to send this message.",
+                "error": (
+                    f"আপনার কোনো এসএমএস ক্রেডিট নেই। এই মেসেজটার জন্য {sms_count} টা "
+                    "ক্রেডিট লাগবে। সাবস্ক্রিপশন পেজ থেকে কিনে নিন।"
+                ),
+                "code": "insufficient_credits",
                 "required_credits": sms_count,
                 "available_credits": 0,
             },
@@ -1790,7 +1897,7 @@ def smsSend(request):
 
             # Log the SMS transaction
             SMSSentHistory.objects.create(
-                user=request.user,
+                user=owner_for(request),
                 recipient=phone,
                 message=message,
                 status="sent",

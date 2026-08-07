@@ -15,20 +15,6 @@ const isProduction = () => {
   
   const result = nodeEnvProduction || notLocalhost;
   
-  // Always log production detection for debugging
-  if (typeof window !== 'undefined') {
-    console.log('🔍 Production detection:', {
-      nodeEnvProduction,
-      notLocalhost,
-      hostname: window.location.hostname,
-      href: window.location.href,
-      env: process.env.NODE_ENV,
-      result,
-      envApiUrl: process.env.NEXT_PUBLIC_API_URL,
-      envBackendUrl: process.env.NEXT_PUBLIC_BACKEND_URL
-    });
-  }
-  
   return result;
 };
 
@@ -37,35 +23,30 @@ const getProductionBackendUrl = () => {
   if (typeof window !== 'undefined') {
     // If we have environment variable, use it in production
     if (process.env.NEXT_PUBLIC_BACKEND_URL && process.env.NEXT_PUBLIC_BACKEND_URL !== "http://localhost:8000") {
-      console.log('🌐 Using environment backend URL:', process.env.NEXT_PUBLIC_BACKEND_URL);
       return process.env.NEXT_PUBLIC_BACKEND_URL;
     }
     
     // Fallback to current domain
     const url = `${window.location.protocol}//${window.location.hostname}${window.location.port && window.location.port !== '80' && window.location.port !== '443' ? ':' + window.location.port : ''}`;
     
-    console.log('🌐 Using dynamic backend URL:', url);
     return url;
   }
   return BACKEND_BASE_URL;
 };
 
 // Get the API URL for requests
-const getApiUrl = () => {
+export const getApiUrl = () => {
   if (isProduction()) {
     // In production, prefer environment variable, fallback to dynamic
     if (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL !== "http://localhost:8000/api") {
-      console.log('🚀 Using environment API URL:', process.env.NEXT_PUBLIC_API_URL);
       return process.env.NEXT_PUBLIC_API_URL;
     }
     
     const backendUrl = getProductionBackendUrl();
     const apiUrl = `${backendUrl}/api`;
-    console.log('🚀 Using dynamic API URL:', apiUrl);
     return apiUrl;
   }
   
-  console.log('💻 Using development API URL:', API_BASE_URL);
   return API_BASE_URL;
 };
 
@@ -256,25 +237,6 @@ export class ApiService {
     const token = AuthToken.get();
 
     // Always log API requests for debugging upload issues
-    console.log('📡 API Request:', {
-      endpoint,
-      apiUrl,
-      url,
-      isProduction: isProduction(),
-      method: options.method || 'GET',
-      hasToken: !!token,
-      isFormData: options.body instanceof FormData
-    });
-
-    // Special logging for sales endpoint
-    if (endpoint.includes('/sales/')) {
-      console.log('🔍 SALES API CALL:', {
-        fullUrl: url,
-        endpoint: endpoint,
-        queryParams: endpoint.includes('?') ? endpoint.split('?')[1] : 'none'
-      });
-    }
-
     const headers: HeadersInit = {};
 
     // Only set Content-Type for non-FormData requests
@@ -310,8 +272,11 @@ export class ApiService {
 
         // Get response text first to check if it's HTML or JSON
   const responseText = await response.text();
-  // Use warn to avoid noisy dev overlay while we may recover via fallbacks
-  console.warn(`API Error Response (${response.status}):`, responseText);
+  // 402 is a business condition, not a fault — the caller shows the user how
+  // to fix it, so logging it only adds noise to the console.
+  if (response.status !== 402) {
+    console.warn(`API Error Response (${response.status}):`, responseText);
+  }
 
         try {
           const errorData = JSON.parse(responseText);
@@ -506,14 +471,6 @@ export class ApiService {
   }
 
   static async uploadStoreLogo(file: File) {
-    console.log('🖼️ Starting store logo upload:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      apiUrl: getApiUrl(),
-      isProduction: isProduction()
-    });
-    
     const formData = new FormData();
     formData.append("store_logo", file);
 
@@ -523,23 +480,14 @@ export class ApiService {
         body: formData,
       });
       
-      console.log('✅ Store logo upload successful:', response);
       return response;
     } catch (error) {
-      console.error('❌ Store logo upload failed:', error);
+      console.error('Store logo upload failed:', error);
       throw error;
     }
   }
 
   static async uploadBannerImage(file: File) {
-    console.log('🖼️ Starting banner image upload:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      apiUrl: getApiUrl(),
-      isProduction: isProduction()
-    });
-    
     const formData = new FormData();
     formData.append("banner_image", file);
 
@@ -549,10 +497,9 @@ export class ApiService {
         body: formData,
       });
       
-      console.log('✅ Banner image upload successful:', response);
       return response;
     } catch (error) {
-      console.error('❌ Banner image upload failed:', error);
+      console.error('Banner image upload failed:', error);
       throw error;
     }
   }
@@ -717,9 +664,6 @@ export class ApiService {
     try {
       return this.get("/banking/accounts/my_accounts/");
     } catch (error) {
-      console.log(
-        "my_accounts endpoint failed, trying regular accounts endpoint"
-      );
       return this.get("/banking/accounts/");
     }
   }
@@ -730,19 +674,15 @@ export class ApiService {
     balance?: number;
     is_active?: boolean;
   }) {
-    console.log("🏦 Creating bank account with data:", accountData);
     try {
       const response = await this.post("/banking/accounts/", {
         ...accountData,
         balance: accountData.balance || 0,
         is_active: accountData.is_active !== undefined ? accountData.is_active : true,
       });
-      console.log("🏦 Bank account created successfully:", response);
       return response;
     } catch (error: any) {
-      console.error("🏦 Failed to create bank account:", error);
-      console.error("🏦 Error response:", error?.response?.data);
-      console.error("🏦 Error status:", error?.response?.status);
+      console.error("Failed to create bank account:", error);
       throw error;
     }
   }
@@ -782,8 +722,6 @@ export class ApiService {
     const queryParams = buildParams(filters);
     const queryString = queryParams.toString();
     endpoint = `${endpoint}${queryString ? `?${queryString}` : ""}`;
-    
-    console.log("🌐 API endpoint:", endpoint);
     
     const response = await this.get(endpoint);
     if (response && typeof response === 'object' && 'results' in response) {
@@ -853,7 +791,6 @@ export class ApiService {
   static async getCategories() {
     try {
       const result = await this.get("/categories/");
-      console.log("Categories result:", result);
 
       // Handle the specific backend response format: {"categories": [...]}
       if (result && result.categories && Array.isArray(result.categories)) {
@@ -1193,15 +1130,11 @@ export class ApiService {
   }
 
   // Suppliers methods
-  static async getSuppliers(page?: number) {
+  /** `pageSize` matters for dropdowns — without it only the first page (10) arrives. */
+  static async getSuppliers(page?: number, pageSize?: number) {
     try {
-      const url = page ? `/suppliers/?page=${page}` : "/suppliers/";
-      console.log('API: Making suppliers request to:', url);
-      console.log('API: Auth token:', AuthToken.get() ? 'Present' : 'Missing');
-      
+      const url = `/suppliers/${this.buildQuery({ page, page_size: pageSize })}`;
       const result = await this.get(url);
-      
-      console.log('API: Suppliers response received:', result);
 
       // Handle paginated response
       if (result && result.results && Array.isArray(result.results)) {
@@ -1282,10 +1215,7 @@ export class ApiService {
       endpoint += `?${searchParams.toString()}`;
     }
 
-    console.log('API: Making products request to:', endpoint);
     const result = await this.get(endpoint);
-    console.log('API: Products response received:', result);
-    
     return result;
   }
 
@@ -1295,81 +1225,24 @@ export class ApiService {
     }
     
     try {
-      // For search, we want to get all matching results in one request
-      // Use a very large page_size to avoid pagination issues
-      const response = await this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=50000`, signal);
+      const response = await this.get(
+        `/products/fast-search/?q=${encodeURIComponent(query.trim())}&limit=20`,
+        signal
+      );
       
-      // Check if request was aborted
       if (signal?.aborted) {
-        throw new Error('Request aborted');
+        throw new Error('AbortError');
       }
       
-      // Handle paginated response
       if (response && response.results && Array.isArray(response.results)) {
-        console.log(`API: Search returned ${response.results.length} products out of ${response.count} total`);
-        console.log(`API: Response pagination info:`, { 
-          count: response.count, 
-          next: response.next, 
-          previous: response.previous 
-        });
-        
-        // With page_size=50000, we should get all results in one page for most searches
-        // Only paginate if absolutely necessary (more than 50000 matching results)
-        if (!response.next || response.results.length >= (response.count || 0)) {
-          console.log(`API: All search results fetched in single request: ${response.results.length}`);
-          return response.results;
-        }
-        
-        // If there are still more pages (very rare case), fetch them
-        console.log(`API: Warning - Search has more than 50000 results, using pagination`);
-        const allResults = [...response.results];
-        let nextPage = 2;
-        
-        while (allResults.length < (response.count || 0) && nextPage <= 10) { // Limit to 10 pages max for safety
-          // Check if request was aborted before each pagination request
-          if (signal?.aborted) {
-            throw new Error('Request aborted');
-          }
-          
-          try {
-            const nextResponse = await this.get(`/products/?search=${encodeURIComponent(query.trim())}&page_size=50000&page=${nextPage}`, signal);
-            console.log(`API: Page ${nextPage} response:`, { 
-              resultsLength: nextResponse?.results?.length, 
-              hasNext: !!nextResponse?.next 
-            });
-            
-            if (nextResponse && nextResponse.results && Array.isArray(nextResponse.results) && nextResponse.results.length > 0) {
-              allResults.push(...nextResponse.results);
-              nextPage++;
-              
-              // Stop if no more pages
-              if (!nextResponse.next) break;
-            } else {
-              console.log(`API: No more results on page ${nextPage}, stopping`);
-              break;
-            }
-          } catch (error) {
-            if (error instanceof Error && error.message === 'Request aborted') {
-              throw error; // Re-throw abort errors
-            }
-            console.warn(`Failed to fetch page ${nextPage}:`, error);
-            break;
-          }
-        }
-        
-        console.log(`API: Total search results fetched: ${allResults.length}`);
-        return allResults;
+        return response.results;
       } else if (Array.isArray(response)) {
-        console.log(`API: Search returned ${response.length} products (direct array)`);
         return response;
-      } else {
-        console.log('API: Unexpected search response format:', response);
-        return [];
       }
+      return [];
     } catch (error) {
-      if (error instanceof Error && error.message === 'Request aborted') {
-        console.log('🚫 Search request was aborted');
-        throw new Error('AbortError'); // Standardize abort error name
+      if (error instanceof Error && (error.message === 'Request aborted' || error.name === 'AbortError' || error.message === 'AbortError')) {
+        throw new Error('AbortError');
       }
       console.error('API: Error in searchProducts:', error);
       return [];
@@ -1380,24 +1253,48 @@ export class ApiService {
     return this.get(`/products/${id}/`);
   }
 
+  /**
+   * Creates a product, then uploads its photos.
+   *
+   * Photos cannot ride along with the create call: `post()` JSON-encodes its
+   * body, and a File serialises to `{}` — so photos passed here used to be
+   * dropped silently. They go up separately through the multipart add_photos
+   * endpoint once the product has an id.
+   */
   static async createProduct(productData: {
     name: string;
     category?: number;
     supplier?: number;
+    product_code?: string;
     location?: string;
     details?: string;
     has_variants: boolean;
+    no_stock_required?: boolean;
     buy_price: number;
     sell_price: number;
     stock: number;
     variants?: ProductVariant[];
     is_active?: boolean;
+    photos?: File[];
   }) {
-    return this.post("/products/", productData);
+    const { photos, ...rest } = productData;
+    const product = await this.post("/products/", rest);
+
+    if (photos?.length && product?.id) {
+      try {
+        await this.addProductPhotos(product.id, photos);
+      } catch (error) {
+        // The product itself exists; surface the photo failure without
+        // pretending the whole create failed.
+        console.error("Product created but photos failed to upload:", error);
+        return { ...product, photo_upload_failed: true };
+      }
+    }
+    return product;
   }
 
   static async updateProduct(id: number, productData: Partial<Product>) {
-    return this.put(`/products/${id}/`, productData);
+    return this.patch(`/products/${id}/`, productData);
   }
 
   static async deleteProduct(id: number) {
@@ -1406,6 +1303,48 @@ export class ApiService {
 
   static async toggleProduct(id: number) {
     return this.put(`/products/${id}/toggle/`, {});
+  }
+
+  // ── Variants & photos of an existing product ──────────────────────────
+  // These back the edit screen, which needs the same capabilities the add
+  // screen has. The endpoints are the @action routes on ProductViewSet.
+
+  static async addProductVariant(
+    productId: number,
+    variant: {
+      color?: string;
+      size?: string;
+      weight?: number | null;
+      weight_unit?: string | null;
+      custom_variant?: string | null;
+      buy_price: number;
+      sell_price: number;
+      stock: number;
+    }
+  ) {
+    return this.post(`/products/${productId}/add_variant/`, variant);
+  }
+
+  static async updateProductVariant(
+    productId: number,
+    variantId: number,
+    variant: Record<string, unknown>
+  ) {
+    return this.patch(`/products/${productId}/variants/${variantId}/`, variant);
+  }
+
+  static async deleteProductVariant(productId: number, variantId: number) {
+    return this.delete(`/products/${productId}/variants/${variantId}/`);
+  }
+
+  static async addProductPhotos(productId: number, photos: File[]) {
+    const formData = new FormData();
+    photos.forEach((photo) => formData.append("photos", photo));
+    return this.postFormData(`/products/${productId}/add_photos/`, formData);
+  }
+
+  static async deleteProductPhoto(productId: number, photoId: number) {
+    return this.delete(`/products/${productId}/photos/${photoId}/`);
   }
 
   // Stock management methods
@@ -1543,9 +1482,16 @@ export class ApiService {
   }
 
   // Customer methods
-  static async getCustomers() {
+  /**
+   * Always returns a plain array.
+   *
+   * Note the caller-supplied `page_size`: the list endpoint paginates at 10, so
+   * a picker that needs every customer (e.g. choosing a buyer) must ask for a
+   * bigger page or it silently offers only the first ten.
+   */
+  static async getCustomers(params?: { page?: number; page_size?: number; search?: string }) {
     try {
-      const result = await this.get("/customers/");
+      const result = await this.get(`/customers/${this.buildQuery(params)}`);
 
       // Ensure we return an array
       if (Array.isArray(result)) {
@@ -1859,13 +1805,8 @@ export class ApiService {
       price: number;
     }>;
   }) {
-    console.log('createPurchase called with:', purchaseData);
-    console.log('proof_document type:', typeof purchaseData.proof_document);
-    console.log('proof_document instanceof File:', purchaseData.proof_document instanceof File);
-    
     // If we have a file, use FormData for file upload
     if (purchaseData.proof_document instanceof File) {
-      console.log('Using FormData for file upload');
       const formData = new FormData();
       formData.append('supplier', purchaseData.supplier.toString());
       if (purchaseData.date) formData.append('date', purchaseData.date);
@@ -1876,15 +1817,8 @@ export class ApiService {
       formData.append('proof_document', purchaseData.proof_document);
       if (purchaseData.items) formData.append('items', JSON.stringify(purchaseData.items));
 
-      console.log('FormData entries:');
-      for (let [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
-
       return this.postFormData("/purchases/", formData);
     } else {
-      console.log('Using regular JSON request');
-      // Regular JSON request without file
       return this.post("/purchases/", purchaseData);
     }
   }
@@ -1906,16 +1840,11 @@ export class ApiService {
       }>;
     }>
   ) {
-    console.log("API updatePurchase called with:", { id, purchaseData });
-    console.log("Making PATCH request to:", `/purchases/${id}/`);
-    
     try {
-      // Use PATCH instead of PUT for partial updates
       const result = await this.patch(`/purchases/${id}/`, purchaseData);
-      console.log("API updatePurchase response:", result);
       return result;
     } catch (error) {
-      console.error("API updatePurchase error:", error);
+      console.error("Error updating purchase:", error);
       throw error;
     }
   }
@@ -1960,13 +1889,8 @@ export class ApiService {
     notes?: string;
     proof_document?: File | string;
   }) {
-    console.log('createPayment called with:', paymentData);
-    console.log('proof_document type:', typeof paymentData.proof_document);
-    console.log('proof_document instanceof File:', paymentData.proof_document instanceof File);
-    
     // If we have a file, use FormData for file upload
     if (paymentData.proof_document instanceof File) {
-      console.log('Using FormData for file upload');
       const formData = new FormData();
       if (paymentData.supplier) formData.append('supplier', paymentData.supplier.toString());
       if (paymentData.type) formData.append('type', paymentData.type);
@@ -1979,15 +1903,8 @@ export class ApiService {
       if (paymentData.notes) formData.append('notes', paymentData.notes);
       formData.append('proof_document', paymentData.proof_document);
 
-      console.log('FormData entries:');
-      for (let [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
-
       return this.postFormData("/payments/", formData);
     } else {
-      console.log('Using regular JSON request');
-      // Regular JSON request without file
       return this.post("/payments/", paymentData);
     }
   }
@@ -2007,16 +1924,11 @@ export class ApiService {
       proof_document?: string;
     }>
   ) {
-    console.log("API updatePayment called with:", { id, paymentData });
-    console.log("Making PATCH request to:", `/payments/${id}/`);
-    
     try {
-      // Use PATCH instead of PUT for partial updates
       const result = await this.patch(`/payments/${id}/`, paymentData);
-      console.log("API updatePayment response:", result);
       return result;
     } catch (error) {
-      console.error("API updatePayment error:", error);
+      console.error("Error updating payment:", error);
       throw error;
     }
   }
@@ -2048,19 +1960,6 @@ export class ApiService {
     const timestamp = Date.now();
     const urlWithCacheBust = `${fullUrl}?t=${timestamp}`;
 
-    // Debug logging for development
-    if (process.env.NODE_ENV === "development") {
-      console.log("Image URL constructed:", {
-        relativePath,
-        cleanPath,
-        BACKEND_BASE_URL,
-        backendUrl,
-        fullUrl,
-        urlWithCacheBust,
-        isProduction: isProduction(),
-      });
-    }
-
     return urlWithCacheBust;
   }
 
@@ -2072,9 +1971,7 @@ export class ApiService {
   // Subscription API methods
   static async getSubscriptionPlans() {
     try {
-      console.log("Fetching subscription plans...");
       const result = await this.get("/plans/");
-      console.log("Subscription plans result:", result);
 
       // Handle paginated response
       if (result && result.results && Array.isArray(result.results)) {
@@ -2097,9 +1994,7 @@ export class ApiService {
 
   static async getSmsPackages() {
     try {
-      console.log("Fetching SMS packages...");
       const result = await this.get("/sms-packages/");
-      console.log("SMS packages result:", result);
 
       // Handle paginated response
       if (result && result.results && Array.isArray(result.results)) {
@@ -2122,9 +2017,7 @@ export class ApiService {
 
   static async getMySubscription() {
     try {
-      console.log("Fetching user subscription...");
       const result = await this.get("/get-my-subscription/");
-      console.log("User subscription result:", result);
       return result;
     } catch (error) {
       console.error("Error fetching user subscription:", error);
@@ -2145,16 +2038,10 @@ export class ApiService {
   }
 
   static async upgradeSubscription(planId: string) {
-    console.log(`=== UPGRADING SUBSCRIPTION ===`);
-    console.log(`Plan ID: ${planId}`);
-    console.log(`API endpoint: /subscription/upgrade/`);
-    console.log(`Request data:`, { plan_id: planId });
-
     try {
       const response = await this.post("/subscription/upgrade/", {
         plan_id: planId,
       });
-      console.log(`Upgrade response:`, response);
       return response;
     } catch (error) {
       console.error(`Upgrade subscription error:`, error);
@@ -2175,98 +2062,6 @@ export class ApiService {
   static async getTransactionDashboardStats(accountId?: string) {
     const queryParams = accountId ? `?account_id=${accountId}` : "";
     return this.get(`/banking/transactions/dashboard_stats/${queryParams}`);
-  }
-
-  // Debug and testing methods
-  static async testEndpoint(endpoint: string) {
-    const fullUrl = `${API_BASE_URL}${endpoint}`;
-    console.log(`Testing endpoint: ${fullUrl}`);
-
-    try {
-      const response = await fetch(fullUrl, {
-        method: "GET",
-        headers: {
-          Authorization: `Token ${AuthToken.get()}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      console.log(`Endpoint ${endpoint} response status:`, response.status);
-      console.log(
-        `Endpoint ${endpoint} response headers:`,
-        Object.fromEntries(response.headers.entries())
-      );
-
-      const responseText = await response.text();
-      console.log(`Endpoint ${endpoint} response body:`, responseText);
-
-      return {
-        status: response.status,
-        ok: response.ok,
-        body: responseText,
-      };
-    } catch (error) {
-      console.error(`Error testing endpoint ${endpoint}:`, error);
-      throw error;
-    }
-  }
-
-  // Test customers endpoint specifically
-  static async testCustomersEndpoint() {
-    console.log("=== DEBUG: Testing Customers Endpoint ===");
-    console.log("API Base URL:", API_BASE_URL);
-    console.log("Backend Base URL:", BACKEND_BASE_URL);
-    const token = AuthToken.get();
-    console.log(
-      "Auth Token:",
-      token ? `Present (${token.substring(0, 10)}...)` : "Missing"
-    );
-
-    try {
-      console.log("\n--- Testing /customers/ endpoint ---");
-      const result = await this.testEndpoint("/customers/");
-      console.log("Customers endpoint test result:", result);
-      return result;
-    } catch (error) {
-      console.error("Failed to test customers endpoint:", error);
-      throw error;
-    }
-  }
-
-  static async debugSubscriptionEndpoints() {
-    console.log("=== DEBUG: Testing Subscription Endpoints ===");
-    console.log("API Base URL:", API_BASE_URL);
-    console.log("Backend Base URL:", BACKEND_BASE_URL);
-    const token = AuthToken.get();
-    console.log(
-      "Auth Token:",
-      token ? `Present (${token.substring(0, 10)}...)` : "Missing"
-    );
-
-    const endpoints = [
-      { path: "/plans/", requiresAuth: false },
-      { path: "/sms-packages/", requiresAuth: false },
-      { path: "/my-subscription/", requiresAuth: true },
-    ];
-
-    for (const endpoint of endpoints) {
-      try {
-        console.log(
-          `\n--- Testing ${endpoint.path} (Auth required: ${endpoint.requiresAuth}) ---`
-        );
-        await this.testEndpoint(endpoint.path);
-      } catch (error) {
-        console.error(`Failed to test ${endpoint.path}:`, error);
-      }
-    }
-
-    // Also test if the base API is working
-    try {
-      console.log("\n--- Testing base API health ---");
-      await this.testEndpoint("/health/");
-    } catch (error) {
-      console.error("Failed to test health endpoint:", error);
-    }
   }
 
   // Inventory statistics methods
@@ -2348,20 +2143,15 @@ export class ApiService {
     customer_city: string;
     customer_post_code: string;
   }) {
-    console.log("=== MAKE PAYMENT API CALL ===");
-    console.log("Params:", params);
-
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       queryParams.append(key, value.toString());
     });
 
     const endpoint = `/pay/?${queryParams.toString()}`;
-    console.log("Payment endpoint:", endpoint);
 
     try {
       const result = await this.get(endpoint);
-      console.log("Payment API result:", result);
       return result;
     } catch (error) {
       console.error("Payment API error:", error);
@@ -2398,16 +2188,12 @@ export class ApiService {
   // API Key management methods
   static async getAPIKeys(): Promise<APIKey[]> {
     const response = await this.get("/public/manage/api-keys/");
-    console.log("Raw API Keys response:", response);
 
     // Handle both paginated and non-paginated responses
     if (response.results) {
-      console.log("Found paginated results:", response.results);
       return response.results;
     }
-    // If it's not paginated, it should be an array
     const result = Array.isArray(response) ? response : [];
-    console.log("Processed API Keys result:", result);
     return result;
   }
 
@@ -2460,28 +2246,22 @@ export class ApiService {
 
   // Banking Plan methods
   static async getBankingPlans() {
-    console.log("🚀 ApiService.getBankingPlans called");
-    console.log("🌐 Making request to:", "/banking/plans/");
     try {
       const result = await this.get("/banking/plans/");
-      console.log("📦 Raw API response:", result);
 
       // Handle paginated response - extract results array
       if (result && typeof result === "object" && "results" in result) {
-        console.log("📋 Extracted plans from results:", result.results);
         return result.results;
       }
 
       // If it's already an array, return as is
       if (Array.isArray(result)) {
-        console.log("📋 Plans already in array format:", result);
         return result;
       }
 
-      console.warn("⚠️ Unexpected response format, returning empty array");
       return [];
     } catch (error) {
-      console.error("💥 getBankingPlans API error:", error);
+      console.error("getBankingPlans API error:", error);
       throw error;
     }
   }
@@ -2497,5 +2277,375 @@ export class ApiService {
     payment_amount: number;
   }) {
     return this.post("/banking/activate-plan/", data);
+  }
+
+  // ---------------------------------------------------------------------
+  // Vehicles — serial-tracked units (bikes, CNGs, cars). Unlike products,
+  // each row is ONE physical unit with its own engine/chassis number.
+  // ---------------------------------------------------------------------
+
+  private static buildQuery(params?: Record<string, unknown>) {
+    if (!params) return "";
+    const search = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        search.append(key, String(value));
+      }
+    });
+    const qs = search.toString();
+    return qs ? `?${qs}` : "";
+  }
+
+  static async getVehicles(params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    status?: string;
+    vehicle_type?: string;
+    condition?: string;
+    product?: number | string;
+    supplier?: number | string;
+    customer?: number | string;
+    ordering?: string;
+  }) {
+    return this.get(`/vehicles/${this.buildQuery(params)}`);
+  }
+
+  static async getVehicle(id: number | string) {
+    return this.get(`/vehicles/${id}/`);
+  }
+
+  static async getVehicleStats() {
+    return this.get("/vehicles/stats/");
+  }
+
+  static async createVehicle(data: Record<string, unknown>) {
+    return this.post("/vehicles/", data);
+  }
+
+  static async updateVehicle(id: number | string, data: Record<string, unknown>) {
+    return this.patch(`/vehicles/${id}/`, data);
+  }
+
+  static async deleteVehicle(id: number | string) {
+    return this.delete(`/vehicles/${id}/`);
+  }
+
+  /** Sells a unit. The backend creates a normal Order, so the sale shows up in
+   *  the regular sales list and its payments live on that order. */
+  static async sellVehicle(
+    id: number | string,
+    data: {
+      customer: number;
+      sell_price: number;
+      paid_amount?: number;
+      payment_method?: string;
+      payment_reference?: string;
+      notes?: string;
+    }
+  ) {
+    return this.post(`/vehicles/${id}/sell/`, data);
+  }
+
+  /** Undo an installment entered by mistake; the bank transaction goes too. */
+  static async removeLoanInstallment(
+    loanId: number | string,
+    paymentId: number | string
+  ) {
+    return this.delete(`/banking/loans/${loanId}/payments/${paymentId}/`);
+  }
+
+  static async deleteLoanInstallmentReceipt(
+    loanId: number | string,
+    paymentId: number | string
+  ) {
+    return this.delete(
+      `/banking/loans/${loanId}/payments/${paymentId}/receipt/`
+    );
+  }
+
+  static async deleteRecurringCostReceipt(
+    costId: number | string,
+    paymentId: number | string
+  ) {
+    return this.delete(
+      `/banking/recurring-costs/${costId}/payments/${paymentId}/receipt/`
+    );
+  }
+
+  static async uploadLoanInstallmentReceipt(
+    loanId: number | string,
+    paymentId: number | string,
+    receipt: File
+  ) {
+    const formData = new FormData();
+    formData.append("receipt", receipt);
+    return this.postFormData(
+      `/banking/loans/${loanId}/payments/${paymentId}/receipt/`,
+      formData
+    );
+  }
+
+  static async cancelVehicleSale(id: number | string) {
+    return this.post(`/vehicles/${id}/cancel_sale/`, {});
+  }
+
+  static async getVehicleDocuments(id: number | string) {
+    return this.get(`/vehicles/${id}/documents/`);
+  }
+
+  static async uploadVehicleDocument(
+    id: number | string,
+    data: { file: File; doc_type: string; title?: string; received_date?: string; notes?: string }
+  ) {
+    const formData = new FormData();
+    formData.append("file", data.file);
+    formData.append("doc_type", data.doc_type);
+    if (data.title) formData.append("title", data.title);
+    if (data.received_date) formData.append("received_date", data.received_date);
+    if (data.notes) formData.append("notes", data.notes);
+    return this.postFormData(`/vehicles/${id}/documents/`, formData);
+  }
+
+  static async deleteVehicleDocument(
+    vehicleId: number | string,
+    documentId: number | string
+  ) {
+    return this.delete(`/vehicles/${vehicleId}/documents/${documentId}/`);
+  }
+
+  /** Units bought by one customer — powers the vehicle tab on their profile. */
+  static async getCustomerVehicles(customerId: number | string) {
+    return this.get(`/vehicles/by-customer/${customerId}/`);
+  }
+
+  // ---------------------------------------------------------------------
+  // Analytics — one request returns the whole report so every figure on the
+  // screen is computed against the same period.
+  // ---------------------------------------------------------------------
+
+  static async getAnalyticsOverview(params?: {
+    period?: string;
+    start?: string;
+    end?: string;
+  }) {
+    return this.get(`/analytics/overview/${this.buildQuery(params)}`);
+  }
+
+  // ── Payroll: advances, balances and bulk payment ──────────────────
+  static async getPayroll() {
+    return this.get("/payroll/");
+  }
+
+  static async getEmployeePayroll(employeeId: number) {
+    return this.get(`/payroll/${employeeId}/`);
+  }
+
+  static async paySalaries(data: {
+    account?: number | null;
+    method?: string;
+    note?: string | null;
+    payments: { employee: number; amount: number; kind: string }[];
+  }) {
+    return this.post("/payroll/pay/", data);
+  }
+
+  static async removeSalaryPayment(paymentId: number) {
+    return this.delete(`/payroll/payments/${paymentId}/`);
+  }
+
+  // ── Role settings: staff logins and what they may do ──────────────
+  static async getPermissionCatalogue() {
+    return this.get("/roles/permissions/");
+  }
+
+  static async getEmployeeAccess() {
+    return this.get("/roles/access/");
+  }
+
+  static async createEmployeeAccess(
+    employeeId: number,
+    data: { password: string; permissions: string[] }
+  ) {
+    return this.post(`/roles/access/${employeeId}/`, data);
+  }
+
+  static async updateEmployeeAccess(
+    employeeId: number,
+    data: { permissions?: string[]; is_enabled?: boolean; password?: string }
+  ) {
+    return this.patch(`/roles/access/${employeeId}/`, data);
+  }
+
+  static async deleteEmployeeAccess(employeeId: number) {
+    return this.delete(`/roles/access/${employeeId}/`);
+  }
+
+  /** Recent activity across every module — the dashboard's short reports. */
+  static async getDashboardFeed() {
+    return this.get("/analytics/feed/");
+  }
+
+  /** Rows behind one analytics signal — idle products, overdue customers, … */
+  static async getAnalyticsDetail(params: {
+    topic: string;
+    period?: string;
+    start?: string;
+    end?: string;
+  }) {
+    return this.get(`/analytics/detail/${this.buildQuery(params)}`);
+  }
+
+  // ---------------------------------------------------------------------
+  // Loans — money the shop is repaying. Installments are a fixed monthly
+  // cost, so analytics reads them when working out the daily target.
+  // ---------------------------------------------------------------------
+
+  static async getLoans(params?: {
+    status?: string;
+    account?: number | string;
+    search?: string;
+    page?: number;
+    page_size?: number;
+  }) {
+    return this.get(`/banking/loans/${this.buildQuery(params)}`);
+  }
+
+  /** Preset expense buckets plus the ones this shop has typed before. */
+  /** Uploads an employee's profile photo (multipart — a File cannot ride in JSON). */
+  static async uploadEmployeePhoto(id: number | string, photo: File) {
+    const formData = new FormData();
+    formData.append("photo", photo);
+    return this.request(`/employees/${id}/`, {
+      method: "PATCH",
+      body: formData,
+    });
+  }
+
+  /** Recent money movement across every account — used by the dashboard. */
+  static async getTransactions(params?: {
+    page?: number;
+    page_size?: number;
+    ordering?: string;
+    type?: string;
+    nature?: string;
+  }) {
+    return this.get(`/banking/transactions/${this.buildQuery(params)}`);
+  }
+
+  // ── Forgotten password: request a code, verify it, set the password ──
+
+  static async requestPasswordReset(data: {
+    identifier: string;
+    channel: "email" | "sms";
+  }) {
+    return this.post("/auth/password-reset/request/", data);
+  }
+
+  static async verifyPasswordResetCode(data: {
+    identifier: string;
+    code: string;
+  }) {
+    return this.post("/auth/password-reset/verify/", data);
+  }
+
+  static async confirmPasswordReset(data: {
+    identifier: string;
+    code: string;
+    password: string;
+  }) {
+    return this.post("/auth/password-reset/confirm/", data);
+  }
+
+  /** Orders honouring the list filters — used by the sales report. */
+  static async getOrdersList(params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    customer?: string;
+    ordering?: string;
+    start_date?: string;
+    end_date?: string;
+  }) {
+    return this.get(`/orders/${this.buildQuery(params)}`);
+  }
+
+  static async getExpenseCategories() {
+    return this.get("/banking/expense-categories/");
+  }
+
+  // ── Recurring fixed costs (office rent and the like) ─────────────────
+
+  static async getRecurringCosts(params?: { is_active?: boolean; search?: string }) {
+    return this.get(`/banking/recurring-costs/${this.buildQuery(params)}`);
+  }
+
+  static async getRecurringCostSummary() {
+    return this.get("/banking/recurring-costs/summary/");
+  }
+
+  static async createRecurringCost(data: Record<string, unknown>) {
+    return this.post("/banking/recurring-costs/", data);
+  }
+
+  static async updateRecurringCost(id: number | string, data: Record<string, unknown>) {
+    return this.patch(`/banking/recurring-costs/${id}/`, data);
+  }
+
+  static async deleteRecurringCost(id: number | string) {
+    return this.delete(`/banking/recurring-costs/${id}/`);
+  }
+
+  /** Settles one month; writes the matching bank expense too. */
+  static async payRecurringCost(
+    id: number | string,
+    data?: { period?: string; amount?: number }
+  ) {
+    return this.post(`/banking/recurring-costs/${id}/pay/`, data ?? {});
+  }
+
+  /** Attaches the money receipt to a month already settled. */
+  static async uploadRecurringCostReceipt(
+    costId: number | string,
+    paymentId: number | string,
+    receipt: File
+  ) {
+    const formData = new FormData();
+    formData.append("receipt", receipt);
+    return this.postFormData(
+      `/banking/recurring-costs/${costId}/payments/${paymentId}/receipt/`,
+      formData
+    );
+  }
+
+  static async removeRecurringCostPayment(
+    costId: number | string,
+    paymentId: number | string
+  ) {
+    return this.delete(`/banking/recurring-costs/${costId}/payments/${paymentId}/`);
+  }
+
+  static async getLoanSummary() {
+    return this.get("/banking/loans/summary/");
+  }
+
+  static async createLoan(data: Record<string, unknown>) {
+    return this.post("/banking/loans/", data);
+  }
+
+  static async updateLoan(id: number | string, data: Record<string, unknown>) {
+    return this.patch(`/banking/loans/${id}/`, data);
+  }
+
+  static async deleteLoan(id: number | string) {
+    return this.delete(`/banking/loans/${id}/`);
+  }
+
+  /** Records an installment and writes the matching bank transaction. */
+  static async payLoanInstallment(
+    id: number | string,
+    data?: { amount?: number; paid_on?: string; reference?: string }
+  ) {
+    return this.post(`/banking/loans/${id}/pay/`, data ?? {});
   }
 }

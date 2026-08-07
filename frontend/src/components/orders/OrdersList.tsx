@@ -3,7 +3,6 @@
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { Order } from "@/types/order";
 import React from "react";
-import { useRouter } from "next/navigation";
 
 interface OrdersListProps {
   orders: Order[];
@@ -29,33 +28,41 @@ const OrdersList: React.FC<OrdersListProps> = ({
   isSendingSms,
   onOrderClick,
   onCustomerClick,
-  onViewInvoice,
-  onPrintInvoice,
   onEditInvoice,
   onDeleteOrder,
   onSendSms,
   onAddOrder,
 }) => {
   const formatCurrency = useCurrencyFormatter();
-  const router = useRouter();
 
   // Check if search is for order number
-  const isOrderNumberSearch = searchInput?.trim().startsWith('#');
-  const searchOrderNumber = isOrderNumberSearch ? searchInput?.substring(1).trim() : '';
+  const isOrderNumberSearch = searchInput?.trim().startsWith("#");
+  const searchOrderNumber = isOrderNumberSearch
+    ? searchInput?.substring(1).trim()
+    : "";
 
   // Function to highlight order number if it matches search
   const highlightOrderNumber = (orderNumber: string | number) => {
     const orderNumStr = orderNumber.toString();
-    if (isOrderNumberSearch && searchOrderNumber && orderNumStr.includes(searchOrderNumber)) {
+    if (
+      isOrderNumberSearch &&
+      searchOrderNumber &&
+      orderNumStr.includes(searchOrderNumber)
+    ) {
       const index = orderNumStr.indexOf(searchOrderNumber);
       const before = orderNumStr.substring(0, index);
-      const match = orderNumStr.substring(index, index + searchOrderNumber.length);
+      const match = orderNumStr.substring(
+        index,
+        index + searchOrderNumber.length
+      );
       const after = orderNumStr.substring(index + searchOrderNumber.length);
-      
+
       return (
         <>
           {before}
-          <span className="bg-cyan-400/20 text-cyan-300 font-semibold">{match}</span>
+          <span className="bg-cyan-100 text-cyan-700 font-semibold">
+            {match}
+          </span>
           {after}
         </>
       );
@@ -68,14 +75,14 @@ const OrdersList: React.FC<OrdersListProps> = ({
     e.stopPropagation();
     // Open invoice in new tab
     const invoiceUrl = `/invoice/${order.id}`;
-    window.open(invoiceUrl, '_blank');
+    window.open(invoiceUrl, "_blank");
   };
 
   // Print invoice by navigating to invoice page
   const handlePrintInvoice = (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
     // Open invoice page in new tab for printing
-    window.open(`/invoice/${order.id}`, '_blank');
+    window.open(`/invoice/${order.id}`, "_blank");
   };
 
   // Format date
@@ -92,26 +99,17 @@ const OrdersList: React.FC<OrdersListProps> = ({
   // Render status label
   const renderStatusLabel = (status?: string) => {
     if (status === "draft") {
-      return (
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100/10 text-yellow-400 border border-yellow-400/20 ml-1">
-          Draft
-        </span>
-      );
-    } else {
-      return (
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100/10 text-green-400 border border-green-400/20 ml-1">
-          Completed
-        </span>
-      );
+      return <span className="badge badge-warn ml-1.5">ড্রাফট</span>;
     }
+    return <span className="badge badge-success ml-1.5">কমপ্লিট</span>;
   };
 
   if (isSearching) {
     return (
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-10 flex items-center justify-center">
-        <div className="bg-slate-800/90 rounded-lg p-4 border border-slate-700/50 flex items-center gap-3">
+      <div className="empty">
+        <span className="inline-flex items-center gap-2">
           <svg
-            className="w-5 h-5 text-cyan-400 animate-spin"
+            className="w-4 h-4 text-cyan-600 animate-spin"
             fill="none"
             viewBox="0 0 24 24"
           >
@@ -129,207 +127,123 @@ const OrdersList: React.FC<OrdersListProps> = ({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          <span className="text-slate-200 text-sm">Searching orders...</span>
-        </div>
+          অর্ডার খোঁজা হচ্ছে…
+        </span>
       </div>
     );
   }
 
   if (orders.length === 0) {
     return (
-      <div className="text-center py-12">
-        <svg
-          className="w-16 h-16 text-slate-600 mx-auto mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1}
-            d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-          />
-        </svg>
-        <h3 className="text-xl font-medium text-slate-300 mb-2">
-          No orders found
-        </h3>
-        <p className="text-slate-400 mb-6">
+      <div className="empty">
+        <p className="text-slate-900 font-medium mb-1">কোনো অর্ডার পাওয়া যায়নি</p>
+        <p className="mb-4">
           {totalItems === 0
-            ? "Get started by creating your first order."
-            : "Try adjusting your search or filter criteria."}
+            ? "প্রথম অর্ডারটা বানিয়ে শুরু করুন।"
+            : "খোঁজা বা ফিল্টার একটু বদলে দেখুন।"}
         </p>
-        <button
-          onClick={onAddOrder}
-          className="px-6 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-        >
-          Create First Order
+        <button onClick={onAddOrder} className="btn btn-primary">
+          প্রথম অর্ডার বানান
         </button>
       </div>
     );
   }
 
   return (
-    <>
-      {/* Mobile Card Layout */}
-      <div className="block lg:hidden space-y-4 p-1 sm:p-4">
-        {orders.map((order) => (
-          <div
-            key={order.id}
-            className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/70 transition-all duration-200 cursor-pointer overflow-hidden"
-            onClick={() => onOrderClick(order)}
-          >
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex-1 min-w-0 pr-2">
+    <div className="tbl-wrap">
+      <table className="tbl">
+        <thead>
+          <tr>
+            <th>অর্ডার</th>
+            <th>কাস্টমার</th>
+            <th className="cell-num">কেনা দাম</th>
+            <th className="cell-num">মোট দাম</th>
+            <th className="cell-num">নিট লাভ</th>
+            <th>ইনভয়েস</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((order) => (
+            <tr
+              key={order.id}
+              className="cursor-pointer"
+              onClick={() => onOrderClick(order)}
+            >
+              <td>
                 <div className="flex items-center">
-                  <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 transition-colors">
-                    Order #{order.id}
-                  </h4>
+                  <span className="cell-strong">#{order.id}</span>
                   {renderStatusLabel(order.status)}
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
+                <div className="text-xs text-slate-500 mt-0.5">
                   {formatDate(order.sale_date)}
-                </p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className={`text-lg font-bold ${(order.net_profit || 0) >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
-                  {formatCurrency(order.net_profit || 0)}
-                </p>
-                <p className="text-xs text-slate-400">Net Profit</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-slate-400">Customer</p>
+                </div>
+              </td>
+              <td>
                 {order.customer_name ? (
-                  <div>
+                  <div className="min-w-0">
                     <button
                       onClick={(e) => onCustomerClick(order, e)}
-                      className="text-sm text-slate-100 hover:text-cyan-400 transition-colors cursor-pointer text-left break-words"
+                      className="text-slate-900 hover:text-cyan-600 transition-colors text-left truncate max-w-[12rem]"
+                      title={order.customer_name}
                     >
                       {order.customer_name}
                     </button>
                     {order.customer_phone && (
-                      <p className="text-xs text-slate-400 break-all">
+                      <div className="text-xs text-slate-500">
                         {order.customer_phone}
-                      </p>
+                      </div>
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-500">No customer info</p>
+                  <span className="text-slate-500">কাস্টমারের তথ্য নেই</span>
                 )}
-              </div>
-              <div>
-                <p className="text-xs text-slate-400">Buy & Total Price</p>
-                <p className="text-sm font-medium text-slate-100 break-words leading-tight">
-                  {formatCurrency(order.total_buy_price || 0)} →{" "}
-                  {formatCurrency(order.total_amount || 0)}
-                </p>
-              </div>
-            </div>
-
-            {/* Notes */}
-            {order.notes && (
-              <div className="mt-3 pt-3 border-t border-slate-700/50">
-                <p className="text-xs text-slate-400">Notes</p>
-                <p className="text-sm text-slate-300 break-words">{order.notes}</p>
-              </div>
-            )}
-
-            {/* Invoice line with print and edit icons */}
-            <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center gap-3">
-              <div
-                className="flex items-center gap-2 cursor-pointer hover:text-cyan-400 transition-colors min-w-0 flex-1"
-                onClick={(e) => handleViewInvoice(order, e)}
-                title="View Invoice"
+              </td>
+              <td className="cell-num">
+                {formatCurrency(order.total_buy_price || 0)}
+              </td>
+              <td className="cell-num cell-strong">
+                {formatCurrency(order.total_amount || 0)}
+              </td>
+              <td
+                className={`cell-num ${
+                  (order.net_profit || 0) >= 0 ? "money-pos" : "money-neg"
+                }`}
               >
-                <svg
-                  className="w-4 h-4 text-slate-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                {formatCurrency(order.net_profit || 0)}
+              </td>
+              <td>
+                <button
+                  className="inline-flex items-center gap-1.5 text-cyan-600 hover:text-cyan-700 transition-colors"
+                  onClick={(e) => handleViewInvoice(order, e)}
+                  title="ইনভয়েস দেখুন"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <div className="min-w-0">
-                  <p className="text-xs text-slate-400">Invoice</p>
-                  <p className="text-sm text-slate-300 break-all">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <span className="num">
                     #{highlightOrderNumber(order.order_number || order.id)}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  className="p-2 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
-                  onClick={(e) => handlePrintInvoice(order, e)}
-                  title="Print Invoice"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                    />
-                  </svg>
+                  </span>
                 </button>
-                <button
-                  className="p-2 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
-                  onClick={(e) => onEditInvoice(order, e)}
-                  title="Edit Invoice"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              </td>
+              <td className="text-right">
+                <div className="row-actions">
+                  <button
+                    className="p-1.5 text-slate-500 hover:text-cyan-600 transition-colors"
+                    onClick={(e) => handlePrintInvoice(order, e)}
+                    title="ইনভয়েস প্রিন্ট করুন"
+                    aria-label="ইনভয়েস প্রিন্ট করুন"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  className="p-2 text-slate-400 hover:text-cyan-400 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                  onClick={(e) => onSendSms(order, e)}
-                  disabled={isSendingSms === order.id}
-                  title="Send SMS"
-                >
-                  {isSendingSms === order.id ? (
-                    <svg
-                      className="w-4 h-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  ) : (
                     <svg
                       className="w-4 h-4"
                       fill="none"
@@ -340,207 +254,100 @@ const OrdersList: React.FC<OrdersListProps> = ({
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
                       />
                     </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop Table Layout */}
-      <div className="hidden lg:block">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-700/50">
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                  Order ID
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                  Customer
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                  Buy Price
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                  Total Price
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                  Net Profit
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                  Invoice
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr
-                  key={order.id}
-                  className="border-b border-slate-700/30 hover:bg-slate-800/30 transition-colors cursor-pointer"
-                  onClick={() => onOrderClick(order)}
-                >
-                  <td className="py-4 px-4">
-                    <div>
-                      <div className="flex items-center">
-                        <p className="text-sm font-medium text-slate-100">
-                          #{order.id}
-                        </p>
-                        {renderStatusLabel(order.status)}
-                      </div>
-                      <p className="text-xs text-slate-400 mt-1">
-                        {formatDate(order.sale_date)}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div>
-                      {order.customer_name ? (
-                        <div>
-                          <button
-                            onClick={(e) => onCustomerClick(order, e)}
-                            className="text-sm text-slate-100 hover:text-cyan-400 transition-colors cursor-pointer text-left"
-                          >
-                            {order.customer_name}
-                          </button>
-                          {order.customer_phone && (
-                            <p className="text-xs text-slate-400">
-                              {order.customer_phone}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-500">
-                          No customer info
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-sm text-slate-100">
-                    {formatCurrency(order.total_buy_price || 0)}
-                  </td>
-                  <td className="py-4 px-4 text-sm font-bold text-cyan-400">
-                    {formatCurrency(order.total_amount || 0)}
-                  </td>
-                  <td className="py-4 px-4 text-sm font-medium">
-                    <span className={((order.net_profit || 0)) >= 0 ? 'text-green-400' : 'text-red-400'}>
-                      {formatCurrency(order.net_profit || 0)}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
-                        onClick={(e) => handleViewInvoice(order, e)}
-                        title="View Invoice"
+                  </button>
+                  <button
+                    className="p-1.5 text-slate-500 hover:text-cyan-600 transition-colors"
+                    onClick={(e) => onEditInvoice(order, e)}
+                    title="অর্ডার এডিট করুন"
+                    aria-label="অর্ডার এডিট করুন"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    className="p-1.5 text-slate-500 hover:text-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={(e) => onSendSms(order, e)}
+                    disabled={isSendingSms === order.id}
+                    title="এসএমএস পাঠান"
+                    aria-label="এসএমএস পাঠান"
+                  >
+                    {isSendingSms === order.id ? (
+                      <svg
+                        className="w-4 h-4 animate-spin"
+                        fill="none"
+                        viewBox="0 0 24 24"
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
                           stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
-                        onClick={(e) => onEditInvoice(order, e)}
-                        title="Edit Invoice"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer disabled:opacity-50"
-                        onClick={(e) => onSendSms(order, e)}
-                        disabled={isSendingSms === order.id}
-                        title="Send SMS"
-                      >
-                        {isSendingSms === order.id ? (
-                          <svg
-                            className="w-4 h-4 animate-spin"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            />
-                          </svg>
-                        ) : (
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                      <button
-                        className="p-1 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
-                        onClick={(e) => onDeleteOrder(order, e)}
-                        title="Delete Order"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    className="p-1.5 text-slate-500 hover:text-rose-600 transition-colors"
+                    onClick={(e) => onDeleteOrder(order, e)}
+                    title="অর্ডার ডিলিট করুন"
+                    aria-label="অর্ডার ডিলিট করুন"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 

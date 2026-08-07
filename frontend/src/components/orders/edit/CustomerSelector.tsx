@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { CustomerInfo, OrderForm } from "../types";
+import { OrderForm } from "../types";
 
 interface Customer {
   id: number;
@@ -76,16 +76,14 @@ export default function CustomerSelector({
   };
 
   return (
-    <div className="mb-6">
-      <label className="block text-sm font-medium text-slate-300 mb-2">
-        Customer Selection
-      </label>
-      <div className="flex gap-4 items-center">
+    <div>
+      <label className="label">কাস্টমার সিলেক্ট করুন</label>
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
         <div className="flex-1 relative">
           <div className="relative">
             <input
               type="text"
-              placeholder="Search and select customer (minimum 2 characters)..."
+              placeholder="কাস্টমার খুঁজে সিলেক্ট করুন (অন্তত ২ অক্ষর লিখুন)…"
               value={customerSearch}
               onChange={(e) => {
                 setCustomerSearch(e.target.value);
@@ -97,9 +95,7 @@ export default function CustomerSelector({
                 }
               }}
               disabled={customerType === "guest"}
-              className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 pr-20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 ${
-                customerType === "guest" ? "opacity-50 cursor-not-allowed" : "cursor-text"
-              }`}
+              className="input pr-20"
             />
             {customerSearch && (
               <button
@@ -115,19 +111,19 @@ export default function CustomerSelector({
                     apply_previous_due_to_total: true,
                   }));
                 }}
-                className="absolute right-12 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50"
-                title="Clear search"
+                className="absolute right-9 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-900 transition-colors px-1.5 py-1 rounded hover:bg-slate-100"
+                title="খোঁজা মুছে দিন"
               >
-                Clear
+                মুছুন
               </button>
             )}
-            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
 
           {isCustomerDropdownOpen && customerSearch.trim().length >= 2 && (
-            <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg">
+            <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
               {filteredCustomers.length > 0 ? (
                 filteredCustomers.slice(0, 10).map((customer) => (
                   <div
@@ -137,34 +133,34 @@ export default function CustomerSelector({
                       setCustomerSearch(`${customer.name}${customer.email ? ` (${customer.email})` : ""}${customer.phone ? ` - ${customer.phone}` : ""}`);
                       setIsCustomerDropdownOpen(false);
                     }}
-                    className="p-3 hover:bg-slate-700 cursor-pointer transition-colors border-b border-slate-700/50 last:border-b-0"
+                    className="p-3 hover:bg-slate-100 cursor-pointer transition-colors border-b border-slate-200 last:border-b-0"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="text-white font-medium">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-slate-900 font-medium truncate">
                           {highlightText(customer.name, customerSearch.trim())}
                         </div>
-                        <div className="text-slate-400 text-sm">
-                          {highlightText(customer.email || "No email", customerSearch.trim())} • {highlightText(customer.phone || "No phone", customerSearch.trim())}
+                        <div className="text-slate-500 text-xs truncate">
+                          {highlightText(customer.email || "ইমেইল নেই", customerSearch.trim())} • {highlightText(customer.phone || "ফোন নেই", customerSearch.trim())}
                         </div>
                       </div>
-                      <div className="ml-3 text-right">
-                        <div className={`text-xs font-medium ${customer.previous_due && customer.previous_due > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                          Due: {formatCurrency(customer.previous_due || 0)}
+                      <div className="text-right shrink-0">
+                        <div className={`text-xs font-medium ${customer.previous_due && customer.previous_due > 0 ? "money-neg" : "money-pos"}`}>
+                          বাকি: {formatCurrency(customer.previous_due || 0)}
                         </div>
                         {customer.total_orders && (
-                          <div className="text-xs text-slate-500">{customer.total_orders} orders</div>
+                          <div className="text-xs text-slate-500">{customer.total_orders}টি অর্ডার</div>
                         )}
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="p-3 text-slate-400">No customers found</div>
+                <div className="p-3 text-sm text-slate-500">কোনো কাস্টমার পাওয়া যায়নি</div>
               )}
               {filteredCustomers.length > 10 && (
-                <div className="p-2 text-xs text-slate-500 bg-slate-700/30 border-t border-slate-600/50 text-center">
-                  Showing 10 of {filteredCustomers.length} results. Type more to refine search.
+                <div className="p-2 text-xs text-slate-500 bg-slate-100 border-t border-slate-200 text-center">
+                  {filteredCustomers.length}টির মধ্যে ১০টি দেখাচ্ছে। আরও লিখে খোঁজ ছোট করুন।
                 </div>
               )}
             </div>
@@ -175,39 +171,37 @@ export default function CustomerSelector({
           )}
         </div>
 
-        <div className="flex items-center">
-          <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
-            <input
-              type="checkbox"
-              checked={customerType === "guest"}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setCustomerType("guest");
-                  setSelectedCustomerId(null);
-                  setIsCustomerDropdownOpen(false);
-                  setCustomerSearch("");
-                  setOrderForm((prev) => ({
-                    ...prev,
-                    customer: { name: "", email: "", phone: "", address: "", company: "" },
-                    previous_due: 0,
-                    apply_previous_due_to_total: true,
-                  }));
-                } else {
-                  setCustomerType("existing");
-                  setSelectedCustomerId(null);
-                  setOrderForm((prev) => ({
-                    ...prev,
-                    customer: { name: "", email: "", phone: "", address: "", company: "" },
-                    previous_due: 0,
-                    apply_previous_due_to_total: true,
-                  }));
-                }
-              }}
-              className="w-4 h-4 text-cyan-500 bg-slate-800 border-slate-600 focus:ring-cyan-500 focus:ring-2 rounded cursor-pointer"
-            />
-            <span className="text-sm text-slate-300">New Customer</span>
-          </label>
-        </div>
+        <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+          <input
+            type="checkbox"
+            checked={customerType === "guest"}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setCustomerType("guest");
+                setSelectedCustomerId(null);
+                setIsCustomerDropdownOpen(false);
+                setCustomerSearch("");
+                setOrderForm((prev) => ({
+                  ...prev,
+                  customer: { name: "", email: "", phone: "", address: "", company: "" },
+                  previous_due: 0,
+                  apply_previous_due_to_total: true,
+                }));
+              } else {
+                setCustomerType("existing");
+                setSelectedCustomerId(null);
+                setOrderForm((prev) => ({
+                  ...prev,
+                  customer: { name: "", email: "", phone: "", address: "", company: "" },
+                  previous_due: 0,
+                  apply_previous_due_to_total: true,
+                }));
+              }
+            }}
+            className="w-4 h-4 rounded border-slate-200 text-cyan-600 focus:ring-cyan-500"
+          />
+          <span className="text-sm text-slate-600">নতুন কাস্টমার</span>
+        </label>
       </div>
     </div>
   );

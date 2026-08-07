@@ -1,9 +1,12 @@
 "use client";
 
+import { num } from "@/lib/money";
+
 import React, { useState, useEffect } from "react";
 import { Trash2, X, RefreshCw, TrendingDown } from "lucide-react";
 import { Incentive, CreateIncentiveData, IncentiveWithdrawal } from "@/types/employee";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { useToast } from "@/components/ui/Feedback";
 import employeeAPI from "@/lib/employeeAPI";
 import { ApiService } from "@/lib/api";
 
@@ -16,6 +19,7 @@ interface IncentivesTabProps {
 
 export default function IncentivesTab({ incentives, employeeId, onIncentivesUpdate, onRefresh }: IncentivesTabProps) {
   const formatCurrencyWithSymbol = useCurrencyFormatter();
+  const toast = useToast();
   const [mounted, setMounted] = useState(false);
   const [showIncentiveModal, setShowIncentiveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -95,10 +99,10 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
         amount: "",
         type: "bonus",
       });
-      alert("Incentive added successfully!");
+      toast.success("ইনসেনটিভ যোগ হয়ে গেছে!");
     } catch (error) {
       console.error("Error adding incentive:", error);
-      alert("Failed to add incentive. Please try again.");
+      toast.error("ইনসেনটিভ যোগ করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setIsAddingIncentive(false);
     }
@@ -113,10 +117,10 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
       onIncentivesUpdate(incentives.filter(inc => inc.id !== incentiveToDelete));
       setShowDeleteModal(false);
       setIncentiveToDelete(null);
-      alert("Incentive deleted successfully!");
+      toast.success("ইনসেনটিভ ডিলিট হয়ে গেছে!");
     } catch (error) {
       console.error("Error deleting incentive:", error);
-      alert("Failed to delete incentive. Please try again.");
+      toast.error("ইনসেনটিভ ডিলিট করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setIsDeletingIncentive(false);
     }
@@ -169,7 +173,7 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
   // Calculate total available for withdrawal (only paid incentives)
   const totalAvailableForWithdrawal = incentives
     .filter(inc => inc.status === 'paid' && inc.amount > 0)
-    .reduce((sum, inc) => sum + inc.amount, 0);
+    .reduce((sum, inc) => sum + num(inc.amount), 0);
 
   const handleOpenWithdrawModal = () => {
     setWithdrawalAmount('');
@@ -179,12 +183,12 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
   const processWithdrawal = async () => {
     const amount = parseFloat(withdrawalAmount);
     if (isNaN(amount) || amount <= 0) {
-      alert("Please enter a valid withdrawal amount greater than 0");
+      toast.error("০ এর বেশি একটা ঠিকঠাক টাকার পরিমাণ দিন");
       return;
     }
 
     if (amount > totalAvailableForWithdrawal) {
-      alert(`Withdrawal amount cannot exceed the total available incentives (${formatCurrencyWithSymbol(totalAvailableForWithdrawal)})`);
+      toast.error(`যত টাকা জমা আছে (${formatCurrencyWithSymbol(totalAvailableForWithdrawal)}) তার বেশি তোলা যাবে না`);
       return;
     }
 
@@ -200,7 +204,7 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
       setShowWithdrawModal(false);
       setWithdrawalAmount('');
 
-      alert(`Successfully withdrew ${formatCurrencyWithSymbol(amount)}. Remaining: ${formatCurrencyWithSymbol(response.remaining_total)}`);
+      toast.success(`${formatCurrencyWithSymbol(amount)} তোলা হয়েছে। বাকি আছে: ${formatCurrencyWithSymbol(response.remaining_total)}`);
       
       // Refresh the data to get the updated values from server
       if (onRefresh) {
@@ -211,7 +215,7 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
       await fetchWithdrawalHistory(1, false);
     } catch (error) {
       console.error("Error processing withdrawal:", error);
-      alert("Failed to process withdrawal. Please try again.");
+      toast.error("টাকা তোলা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setIsWithdrawing(false);
     }
@@ -222,330 +226,285 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
     setWithdrawalAmount('');
   };
 
+  const statusLabel = (status: Incentive["status"]) => {
+    if (status === "paid") return "পরিশোধ";
+    if (status === "approved") return "অনুমোদিত";
+    return "বাকি আছে";
+  };
+
+  const statusBadge = (status: Incentive["status"]) => {
+    if (status === "paid") return "badge badge-success";
+    if (status === "approved") return "badge badge-info";
+    return "badge badge-warn";
+  };
+
   return (
     <>
-      <div className="space-y-6">
-        {/* Total Available and Withdraw Section */}
-        <div className="bg-gradient-to-br from-purple-500/15 to-purple-600/8 border border-purple-500/25 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-purple-300 font-medium mb-1">Total Available for Withdrawal</p>
-              <p className="text-2xl font-bold text-purple-400">{formatCurrencyWithSymbol(totalAvailableForWithdrawal)}</p>
-              <p className="text-xs text-purple-500 opacity-80 mt-1">From paid incentives only</p>
-            </div>
+      <div className="stat-strip">
+        <div className="stat">
+          <div className="stat-label">এখন তোলা যাবে</div>
+          <div className="stat-value num">{formatCurrencyWithSymbol(totalAvailableForWithdrawal)}</div>
+          <div className="stat-meta">শুধু পরিশোধ হওয়া ইনসেনটিভ থেকে</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">মোট ইনসেনটিভ</div>
+          <div className="stat-value num">{incentives.length}</div>
+          <div className="stat-meta">সব মিলিয়ে</div>
+        </div>
+      </div>
+
+      <div className="plane-section">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="section-title mb-0">ইনসেনটিভ আর বোনাস</div>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleOpenWithdrawModal}
               disabled={totalAvailableForWithdrawal <= 0}
-              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="btn btn-ghost btn-sm"
             >
-              <TrendingDown className="w-4 h-4" />
-              Withdraw
+              <TrendingDown className="h-4 w-4" />
+              টাকা তুলুন
             </button>
-          </div>
-        </div>
-
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-lg font-medium text-slate-100">
-              Incentives & Bonuses
-            </h4>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 cursor-pointer disabled:opacity-50 flex items-center gap-2"
-                title="Refresh incentives from recent orders"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Refreshing...' : 'Refresh'}
-              </button>
-              <button
-                onClick={() => setShowIncentiveModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
-              >
-                Add Incentive
-              </button>
-            </div>
-          </div>
-
-          <div className="max-w-6xl">
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
-              {incentives.length > 0 ? (
-                <>
-                  {/* Table Header */}
-                  <div className="px-6 py-3 bg-white/5 border-b border-white/10">
-                    <div className="grid grid-cols-10 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
-                      <div className="col-span-3">Date</div>
-                      <div className="col-span-2">Status</div>
-                      <div className="col-span-2">Amount</div>
-                      <div className="col-span-3">Actions</div>
-                    </div>
-                  </div>
-
-                  {/* Table Body */}
-                  <div className="divide-y divide-white/5">
-                    {incentives.map((incentive) => (
-                      <div
-                        key={incentive.id}
-                        className="px-6 py-4 hover:bg-white/5 transition-colors"
-                      >
-                        <div className="grid grid-cols-10 gap-4 items-center">
-                          <div className="col-span-3">
-                            <p className="text-sm font-medium text-slate-100">
-                              {formatDate(incentive.date_awarded)}
-                            </p>
-                          </div>
-                          <div className="col-span-2">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                incentive.status === "paid"
-                                  ? "bg-green-500/20 text-green-300 border border-green-400/30"
-                                  : incentive.status === "approved"
-                                  ? "bg-blue-500/20 text-blue-300 border border-blue-400/30"
-                                  : "bg-yellow-500/20 text-yellow-300 border border-yellow-400/30"
-                              }`}
-                            >
-                              {incentive.status}
-                            </span>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-sm font-semibold text-green-300">
-                              {formatCurrencyWithSymbol(incentive.amount)}
-                            </p>
-                          </div>
-                          <div className="col-span-3">
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => {
-                                  setIncentiveToDelete(incentive.id);
-                                  setShowDeleteModal(true);
-                                }}
-                                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-                                title="Delete incentive"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="p-8 text-center">
-                  <p className="text-slate-400 mb-2">No incentives recorded yet.</p>
-                  <p className="text-slate-500 text-sm mb-4">
-                    Incentives from sales orders will appear here automatically, or you can add them manually.
-                  </p>
-                  <div className="flex justify-center gap-2">
-                    <button
-                      onClick={handleRefresh}
-                      disabled={isRefreshing}
-                      className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 transition-all duration-200 cursor-pointer disabled:opacity-50 flex items-center gap-2"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                      {isRefreshing ? 'Checking...' : 'Check for Orders'}
-                    </button>
-                    <button
-                      onClick={() => setShowIncentiveModal(true)}
-                      className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 cursor-pointer"
-                    >
-                      Add Manual Incentive
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Withdrawal History */}
-        <div>
-          <h4 className="text-lg font-medium text-slate-100 mb-4">
-            Withdrawal History
-          </h4>
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
-            {isLoadingHistory ? (
-              <div className="p-8 text-center">
-                <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-slate-400 text-sm">Loading withdrawal history...</p>
-              </div>
-            ) : withdrawalHistory.length > 0 ? (
-              <>
-                {/* Table Header */}
-                <div className="bg-white/5 border-b border-white/10">
-                  <div className="px-6 py-3">
-                    <div className="grid grid-cols-10 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
-                      <div className="col-span-3">Date</div>
-                      <div className="col-span-2">Amount</div>
-                      <div className="col-span-5">Reason</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Table Body */}
-                <div className="divide-y divide-white/5">
-                  {withdrawalHistory.map((withdrawal) => (
-                    <div
-                      key={withdrawal.id}
-                      className="px-6 py-4 hover:bg-white/5 transition-colors"
-                    >
-                      <div className="grid grid-cols-10 gap-4 items-center">
-                        <div className="col-span-3">
-                          <p className="text-sm font-medium text-slate-100">
-                            {formatDate(withdrawal.withdrawal_date)}
-                          </p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-sm font-semibold text-purple-300">
-                            {formatCurrencyWithSymbol(withdrawal.amount)}
-                          </p>
-                        </div>
-                        <div className="col-span-5">
-                          <p className="text-sm text-slate-400">
-                            {withdrawal.reason || 'Incentive withdrawal'}
-                          </p>
-                          {withdrawal.notes && (
-                            <p className="text-xs text-slate-500 mt-1">
-                              {withdrawal.notes}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Load More Button */}
-                {historyPagination.hasNext && (
-                  <div className="p-4 bg-white/5 border-t border-white/10">
-                    <button
-                      onClick={loadMoreHistory}
-                      disabled={historyPagination.isLoadingMore}
-                      className="w-full px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {historyPagination.isLoadingMore ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-purple-300 border-t-transparent rounded-full animate-spin"></div>
-                          <span>Loading More...</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                          </svg>
-                          <span>Load More History</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="p-8 text-center">
-                <p className="text-slate-400 mb-2">No withdrawal history yet.</p>
-                <p className="text-slate-500 text-sm">
-                  Withdrawals will appear here once you make them.
-                </p>
-              </div>
-            )}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="btn btn-ghost btn-sm"
+              title="নতুন অর্ডার থেকে ইনসেনটিভ এসেছে কিনা দেখুন"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'রিফ্রেশ হচ্ছে…' : 'রিফ্রেশ'}
+            </button>
+            <button
+              onClick={() => setShowIncentiveModal(true)}
+              className="btn btn-primary btn-sm"
+            >
+              ইনসেনটিভ যোগ করুন
+            </button>
           </div>
         </div>
       </div>
 
+      <div className="tbl-wrap">
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>তারিখ</th>
+              <th>কারণ / বিবরণ</th>
+              <th>অবস্থা</th>
+              <th className="cell-num">টাকার পরিমাণ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {incentives.length > 0 ? (
+              incentives.map((incentive) => (
+                <tr key={incentive.id}>
+                  <td className="whitespace-nowrap">{formatDate(incentive.date_awarded)}</td>
+                  <td>
+                    <div className="cell-strong">{incentive.title}</div>
+                    {incentive.description && (
+                      <div className="text-slate-500">{incentive.description}</div>
+                    )}
+                  </td>
+                  <td>
+                    <span className={statusBadge(incentive.status)}>
+                      {statusLabel(incentive.status)}
+                    </span>
+                  </td>
+                  <td className="cell-num money-pos">
+                    {formatCurrencyWithSymbol(incentive.amount)}
+                  </td>
+                  <td className="text-right">
+                    <button
+                      onClick={() => {
+                        setIncentiveToDelete(incentive.id);
+                        setShowDeleteModal(true);
+                      }}
+                      className="text-slate-500 hover:text-cyan-600"
+                      title="ইনসেনটিভ ডিলিট করুন"
+                      aria-label="ইনসেনটিভ ডিলিট করুন"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5}>
+                  <div className="empty">
+                    <p>এখনো কোনো ইনসেনটিভ নেই।</p>
+                    <p className="mt-1">
+                      বিক্রির অর্ডার থেকে ইনসেনটিভ নিজে নিজেই এখানে চলে আসবে, চাইলে হাতেও যোগ করতে পারেন।
+                    </p>
+                    <div className="mt-4 flex flex-wrap justify-center gap-2">
+                      <button
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        className="btn btn-ghost btn-sm"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        {isRefreshing ? 'দেখা হচ্ছে…' : 'অর্ডার দেখে নিন'}
+                      </button>
+                      <button
+                        onClick={() => setShowIncentiveModal(true)}
+                        className="btn btn-primary btn-sm"
+                      >
+                        হাতে ইনসেনটিভ যোগ করুন
+                      </button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Withdrawal History */}
+      <div className="plane-section border-t border-slate-200">
+        <div className="section-title mb-0">টাকা তোলার হিস্ট্রি</div>
+      </div>
+
+      {isLoadingHistory ? (
+        <div className="empty">টাকা তোলার হিস্ট্রি লোড হচ্ছে…</div>
+      ) : (
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>তারিখ</th>
+                <th className="cell-num">টাকার পরিমাণ</th>
+                <th>কারণ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {withdrawalHistory.length > 0 ? (
+                withdrawalHistory.map((withdrawal) => (
+                  <tr key={withdrawal.id}>
+                    <td className="whitespace-nowrap">{formatDate(withdrawal.withdrawal_date)}</td>
+                    <td className="cell-num money-neg">
+                      {formatCurrencyWithSymbol(withdrawal.amount)}
+                    </td>
+                    <td>
+                      <div>{withdrawal.reason || 'ইনসেনটিভ থেকে তোলা'}</div>
+                      {withdrawal.notes && (
+                        <div className="text-slate-500">{withdrawal.notes}</div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={3}>
+                    <div className="empty">
+                      <p>এখনো কোনো টাকা তোলা হয়নি।</p>
+                      <p className="mt-1">টাকা তুললে এখানে দেখতে পাবেন।</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Load More Button */}
+      {!isLoadingHistory && withdrawalHistory.length > 0 && historyPagination.hasNext && (
+        <div className="plane-section border-t border-slate-200">
+          <button
+            onClick={loadMoreHistory}
+            disabled={historyPagination.isLoadingMore}
+            className="btn btn-ghost btn-sm w-full"
+          >
+            {historyPagination.isLoadingMore ? 'আরও আসছে…' : 'আরও দেখুন'}
+          </button>
+        </div>
+      )}
+
       {/* Add Incentive Modal */}
       {showIncentiveModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-          <div className="min-h-full flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                <h2 className="text-xl font-semibold text-slate-100">
-                  Add Manual Incentive
-                </h2>
-                <button
-                  onClick={() => setShowIncentiveModal(false)}
-                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-head">
+              <h2 className="modal-title">হাতে ইনসেনটিভ যোগ করুন</h2>
+              <button
+                type="button"
+                onClick={() => setShowIncentiveModal(false)}
+                aria-label="বন্ধ করুন"
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-              {/* Modal Body */}
-              <div className="p-6 space-y-4">
-                {/* Incentive Title */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={newIncentive.title}
-                    onChange={(e) =>
-                      setNewIncentive({ ...newIncentive, title: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                    placeholder="Enter incentive title"
-                    maxLength={200}
-                  />
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={newIncentive.description}
-                    onChange={(e) =>
-                      setNewIncentive({ ...newIncentive, description: e.target.value })
-                    }
-                    rows={3}
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
-                    placeholder="Optional description"
-                  />
-                </div>
-
-                {/* Amount */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Amount *
-                  </label>
-                  <input
-                    type="number"
-                    value={newIncentive.amount}
-                    onChange={(e) =>
-                      setNewIncentive({ ...newIncentive, amount: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                    placeholder="Enter amount"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
-                <button
-                  onClick={() => setShowIncentiveModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddIncentive}
-                  disabled={
-                    isAddingIncentive ||
-                    !newIncentive.title ||
-                    !newIncentive.amount
+            <div className="modal-body space-y-4">
+              {/* Incentive Title */}
+              <div>
+                <label className="label">কারণ / নাম *</label>
+                <input
+                  type="text"
+                  value={newIncentive.title}
+                  onChange={(e) =>
+                    setNewIncentive({ ...newIncentive, title: e.target.value })
                   }
-                  className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                >
-                  {isAddingIncentive ? "Adding..." : "Add Incentive"}
-                </button>
+                  className="input"
+                  placeholder="কীসের ইনসেনটিভ লিখুন"
+                  maxLength={200}
+                />
               </div>
+
+              {/* Description */}
+              <div>
+                <label className="label">বিবরণ</label>
+                <textarea
+                  value={newIncentive.description}
+                  onChange={(e) =>
+                    setNewIncentive({ ...newIncentive, description: e.target.value })
+                  }
+                  rows={3}
+                  className="textarea resize-none"
+                  placeholder="চাইলে বিস্তারিত লিখতে পারেন"
+                />
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="label">টাকার পরিমাণ *</label>
+                <input
+                  type="number"
+                  value={newIncentive.amount}
+                  onChange={(e) =>
+                    setNewIncentive({ ...newIncentive, amount: e.target.value })
+                  }
+                  className="input"
+                  placeholder="কত টাকা লিখুন"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+
+            <div className="modal-foot">
+              <button
+                type="button"
+                onClick={() => setShowIncentiveModal(false)}
+                className="btn btn-ghost"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={handleAddIncentive}
+                disabled={
+                  isAddingIncentive ||
+                  !newIncentive.title ||
+                  !newIncentive.amount
+                }
+                className="btn btn-primary"
+              >
+                {isAddingIncentive ? "যোগ হচ্ছে…" : "ইনসেনটিভ যোগ করুন"}
+              </button>
             </div>
           </div>
         </div>
@@ -553,45 +512,42 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
 
       {/* Delete Incentive Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-          <div className="min-h-full flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                <h2 className="text-xl font-semibold text-slate-100">
-                  Delete Incentive
-                </h2>
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-head">
+              <h2 className="modal-title">ইনসেনটিভ ডিলিট করবেন?</h2>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                aria-label="বন্ধ করুন"
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-              {/* Modal Body */}
-              <div className="p-6">
-                <p className="text-slate-300">
-                  Are you sure you want to delete this incentive? This action cannot be undone.
-                </p>
-              </div>
+            <div className="modal-body">
+              <p className="text-sm text-slate-600">
+                এই ইনসেনটিভটা ডিলিট করে দেবেন? এটা আর ফেরানো যাবে না।
+              </p>
+            </div>
 
-              {/* Modal Footer */}
-              <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteIncentive}
-                  disabled={isDeletingIncentive}
-                  className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                >
-                  {isDeletingIncentive ? "Deleting..." : "Delete"}
-                </button>
-              </div>
+            <div className="modal-foot">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="btn btn-ghost"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteIncentive}
+                disabled={isDeletingIncentive}
+                className="btn btn-danger"
+              >
+                {isDeletingIncentive ? "ডিলিট হচ্ছে…" : "ডিলিট করুন"}
+              </button>
             </div>
           </div>
         </div>
@@ -599,75 +555,72 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
 
       {/* Withdrawal Modal */}
       {showWithdrawModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-          <div className="min-h-full flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                <h3 className="text-lg font-semibold text-slate-100">
-                  Withdraw Incentive
-                </h3>
-                <button
-                  onClick={cancelWithdrawal}
-                  className="text-slate-400 hover:text-slate-200 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-head">
+              <h3 className="modal-title">ইনসেনটিভ থেকে টাকা তুলুন</h3>
+              <button
+                type="button"
+                onClick={cancelWithdrawal}
+                aria-label="বন্ধ করুন"
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-              {/* Modal Body */}
-              <div className="p-6 space-y-4">
-                <div>
-                  <p className="text-slate-400 text-sm mb-4">
-                    Withdraw from your total available incentive balance
-                  </p>
-                  
-                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 text-sm">Total Available:</span>
-                      <span className="text-purple-400 font-semibold">{formatCurrencyWithSymbol(totalAvailableForWithdrawal)}</span>
-                    </div>
-                  </div>
-                </div>
+            <div className="modal-body space-y-4">
+              <div>
+                <p className="text-sm text-slate-600">
+                  জমা থাকা ইনসেনটিভ থেকে টাকা তুলতে পারবেন
+                </p>
 
-                <div>
-                  <label htmlFor="withdrawalAmount" className="block text-sm font-medium text-slate-300 mb-2">
-                    Withdrawal Amount
-                  </label>
-                  <input
-                    type="number"
-                    id="withdrawalAmount"
-                    value={withdrawalAmount}
-                    onChange={(e) => setWithdrawalAmount(e.target.value)}
-                    placeholder="Enter amount to withdraw"
-                    min="0"
-                    max={totalAvailableForWithdrawal}
-                    step="0.01"
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 text-slate-100 placeholder-slate-400"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Maximum: {formatCurrencyWithSymbol(totalAvailableForWithdrawal)}
-                  </p>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="text-sm text-slate-600">এখন তোলা যাবে</span>
+                  <span className="num font-semibold text-slate-900">
+                    {formatCurrencyWithSymbol(totalAvailableForWithdrawal)}
+                  </span>
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="flex space-x-3 p-6 border-t border-slate-700/50">
-                <button
-                  onClick={cancelWithdrawal}
-                  disabled={isWithdrawing}
-                  className="flex-1 px-4 py-2 bg-slate-800/50 border border-slate-700/50 text-slate-300 rounded-lg hover:bg-slate-700/50 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={processWithdrawal}
-                  disabled={isWithdrawing || !withdrawalAmount || parseFloat(withdrawalAmount) <= 0}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 transition-all duration-200 shadow-lg"
-                >
-                  {isWithdrawing ? "Processing..." : "Withdraw"}
-                </button>
+              <div>
+                <label htmlFor="withdrawalAmount" className="label">
+                  কত টাকা তুলবেন
+                </label>
+                <input
+                  type="number"
+                  id="withdrawalAmount"
+                  value={withdrawalAmount}
+                  onChange={(e) => setWithdrawalAmount(e.target.value)}
+                  placeholder="টাকার পরিমাণ লিখুন"
+                  min="0"
+                  max={totalAvailableForWithdrawal}
+                  step="0.01"
+                  className="input"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  সর্বোচ্চ: {formatCurrencyWithSymbol(totalAvailableForWithdrawal)}
+                </p>
               </div>
+            </div>
+
+            <div className="modal-foot">
+              <button
+                type="button"
+                onClick={cancelWithdrawal}
+                disabled={isWithdrawing}
+                className="btn btn-ghost"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={processWithdrawal}
+                disabled={isWithdrawing || !withdrawalAmount || parseFloat(withdrawalAmount) <= 0}
+                className="btn btn-primary"
+              >
+                {isWithdrawing ? "হচ্ছে…" : "টাকা তুলুন"}
+              </button>
             </div>
           </div>
         </div>

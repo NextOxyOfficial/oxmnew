@@ -14,17 +14,24 @@ import os
 from pathlib import Path
 
 from decouple import config
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config(
-    "SECRET_KEY", default="django-insecure-change-me-in-production-12345678901234567890"
-)
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# The real key lives in .env. The throwaway default exists only so a fresh
+# checkout can run locally — in production a missing .env must stop the boot,
+# not silently fall back to a key that is published in this file. Session
+# cookies and password-reset tokens are signed with it.
+SECRET_KEY = config("SECRET_KEY", default="" if not DEBUG else "django-insecure-local-only")
+if not SECRET_KEY:
+    raise ImproperlyConfigured(
+        "SECRET_KEY is not set. Add it to backend/.env before starting the server."
+    )
 
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
@@ -34,6 +41,8 @@ ALLOWED_HOSTS = config(
 
 # Application definition
 INSTALLED_APPS = [
+    # Jazzmin must precede django.contrib.admin so its templates win.
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -55,6 +64,8 @@ INSTALLED_APPS = [
     "online_store",  # Added online store app
     "public_api",  # Public API app for external access
     "notebook",  # Added notebook app for note management
+    "vehicles",  # Serial-tracked vehicle units (bikes, CNGs, cars)
+    "analytics",  # Cross-app business reporting
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -70,6 +81,13 @@ CORS_ALLOWED_ORIGINS = [
     "http://www.oxymanager.com",
     "https://www.oxymanager.com",
 ]
+
+# Any localhost port is allowed in DEBUG so a second dev server (e.g. one
+# started for testing) can reach the API. Production still uses the explicit
+# CORS_ALLOWED_ORIGINS list above.
+CORS_ALLOWED_ORIGIN_REGEXES = (
+    [r"^http://(localhost|127\.0\.0\.1):\d+$"] if DEBUG else []
+)
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
@@ -109,7 +127,7 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardPagination",
     "PAGE_SIZE": 10,
     # Rate limiting to prevent API abuse and high CPU
     "DEFAULT_THROTTLE_CLASSES": [
@@ -119,6 +137,9 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "30/minute",
         "user": "120/minute",
+        # Password reset sends real SMS, so it gets its own tighter budget.
+        "password_reset": "6/hour",
+        "login": "10/min",
     },
 }
 
@@ -147,7 +168,9 @@ ROOT_URLCONF = "backend.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        # Project-level templates — holds the branded admin shell
+        # (templates/admin/base_site.html).
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -155,6 +178,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                # KPI/alert data for the admin dashboard (no-ops elsewhere).
+                "core.admin_dashboard.dashboard_context",
             ],
         },
     },
@@ -195,9 +220,173 @@ API_SMS = config("API_SMS", default="")
 
 # Internationalization
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+# The shop runs on Bangladesh time. On UTC, anything entered between midnight
+# and 6am local fell on the previous day, so "আজ" showed yesterday's figures and
+# an expense added at 4am never appeared in this month's report.
+# USE_TZ stays on: timestamps are still stored as UTC, only interpretation moves.
+TIME_ZONE = "Asia/Dhaka"
 USE_I18N = True
 USE_TZ = True
+
+# ══════════════════════════════════════════════════════════════
+# Jazzmin — admin UI. Menu labels are colloquial Bangla to match
+# the app; model/app names themselves stay as Django knows them.
+# ══════════════════════════════════════════════════════════════
+JAZZMIN_SETTINGS = {
+    "site_title": "OxyManager",
+    "site_header": "OxyManager",
+    "site_brand": "OxyManager",
+    "site_logo": None,
+    "login_logo": None,
+    "site_icon": None,
+    "welcome_sign": "OxyManager অ্যাডমিনে স্বাগতম",
+    "copyright": "OxyManager",
+    # Global search box at the top of the sidebar.
+    "search_model": ["auth.User", "products.Product", "customers.Customer"],
+    "user_avatar": None,
+
+    # ── Top menu ──
+    "topmenu_links": [
+        {"name": "ড্যাশবোর্ড", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "সাইট দেখুন", "url": "/", "new_window": True},
+        {"model": "auth.User"},
+        {"app": "products"},
+        {"app": "orders"},
+    ],
+    # ── User menu (top right) ──
+    "usermenu_links": [
+        {"name": "আমার প্রোফাইল", "url": "admin:auth_user_changelist"},
+        {"model": "auth.user"},
+    ],
+
+    # ── Sidebar ──
+    "show_sidebar": True,
+    "navigation_expanded": False,
+    "hide_apps": [],
+    "hide_models": [],
+    "order_with_respect_to": [
+        "auth",
+        "products",
+        "orders",
+        "customers",
+        "suppliers",
+        "banking",
+        "employees",
+        "subscription",
+        "online_store",
+        "public_api",
+        "notebook",
+        "core",
+    ],
+    # Human labels for the app groups in the sidebar.
+    "custom_links": {},
+    "icons": {
+        # auth
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "authtoken.tokenproxy": "fas fa-key",
+        # products
+        "products": "fas fa-boxes",
+        "products.Product": "fas fa-box",
+        "products.ProductVariant": "fas fa-layer-group",
+        "products.ProductPhoto": "fas fa-image",
+        "products.ProductStockMovement": "fas fa-exchange-alt",
+        "products.Category": "fas fa-tags",
+        "products.Brand": "fas fa-copyright",
+        # orders
+        "orders": "fas fa-shopping-cart",
+        "orders.Order": "fas fa-receipt",
+        "orders.OrderStockMovement": "fas fa-dolly",
+        # customers
+        "customers": "fas fa-user-friends",
+        "customers.Customer": "fas fa-user-tie",
+        "customers.DuePayment": "fas fa-hand-holding-usd",
+        "customers.CustomerLevel": "fas fa-medal",
+        "customers.CustomerGift": "fas fa-gift",
+        "customers.CustomerAchievement": "fas fa-trophy",
+        "customers.SMSLog": "fas fa-sms",
+        # suppliers
+        "suppliers": "fas fa-truck",
+        "suppliers.Supplier": "fas fa-truck-loading",
+        "suppliers.Purchase": "fas fa-file-invoice",
+        "suppliers.Payment": "fas fa-money-check-alt",
+        # banking
+        "banking": "fas fa-university",
+        "banking.BankAccount": "fas fa-piggy-bank",
+        "banking.Transaction": "fas fa-exchange-alt",
+        "banking.BankingPlan": "fas fa-clipboard-list",
+        # employees
+        "employees": "fas fa-id-badge",
+        "employees.Employee": "fas fa-user-tie",
+        "employees.SalaryRecord": "fas fa-money-bill-wave",
+        "employees.Task": "fas fa-tasks",
+        "employees.Incentive": "fas fa-award",
+        "employees.IncentiveWithdrawal": "fas fa-hand-holding-usd",
+        "employees.Document": "fas fa-file-alt",
+        "employees.PaymentInformation": "fas fa-credit-card",
+        # others
+        "subscription": "fas fa-gem",
+        "online_store": "fas fa-store",
+        "online_store.OnlineProduct": "fas fa-box-open",
+        "online_store.OnlineOrder": "fas fa-cart-arrow-down",
+        "online_store.StoreSettings": "fas fa-cog",
+        "public_api": "fas fa-plug",
+        "public_api.PublicAPIKey": "fas fa-key",
+        "public_api.APIKeyUsageLog": "fas fa-history",
+        "notebook": "fas fa-book",
+        "core": "fas fa-sliders-h",
+        "core.CustomDomain": "fas fa-globe",
+        "core.DNSRecord": "fas fa-network-wired",
+    },
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+
+    # ── Change form: tabbed layout is what makes this feel like an app ──
+    "related_modal_active": True,
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": {
+        "auth.user": "collapsible",
+        "auth.group": "vertical_tabs",
+    },
+    "show_ui_builder": False,
+    # Brand tuning on top of Jazzmin's Bootstrap defaults (cyan + slate).
+    "custom_css": "admin/css/oxm-jazzmin.css",
+}
+
+# Light chrome, Jazzmin's stock accents (no custom brand colour).
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": True,
+    "body_small_text": True,
+    "brand_small_text": False,
+    "brand_colour": "navbar-white",
+    "accent": "accent-primary",
+    "navbar": "navbar-white navbar-light",
+    "no_navbar_border": True,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-light-primary",
+    "sidebar_nav_small_text": True,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": True,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-outline-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+    "actions_sticky_top": True,
+}
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "/static/"

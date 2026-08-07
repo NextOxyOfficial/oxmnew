@@ -1,0 +1,95 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% comment %}
+  OxyManager dashboard. Keeps Django's app/model data (so permissions and
+  registrations drive it) but presents a KPI strip plus grouped app panels
+  instead of the default plain table.
+{% endcomment %}
+
+{% block coltype %}colMS{% endblock %}
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+  {% if oxm_kpis %}
+    <div class="oxm-kpis">
+      {% for kpi in oxm_kpis %}
+        <div class="oxm-kpi">
+          <div class="oxm-kpi__label">{{ kpi.label }}</div>
+          <div class="oxm-kpi__value">{{ kpi.value }}</div>
+          {% if kpi.meta %}<div class="oxm-kpi__meta">{{ kpi.meta }}</div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if app_list %}
+    <div class="oxm-apps">
+      {% for app in app_list %}
+        <div class="module oxm-app">
+          <div class="oxm-app__head">
+            <span class="oxm-app__title">{{ app.name }}</span>
+            <span class="oxm-app__count">{{ app.models|length }}</span>
+          </div>
+
+          {% for model in app.models %}
+            <div class="oxm-model">
+              {% if model.admin_url %}
+                <a href="{{ model.admin_url }}" class="oxm-model__name">{{ model.name }}</a>
+              {% else %}
+                <span class="oxm-model__name">{{ model.name }}</span>
+              {% endif %}
+
+              <span class="oxm-model__actions">
+                {% if model.add_url %}
+                  <a href="{{ model.add_url }}" class="oxm-model__action">নতুন</a>
+                {% endif %}
+                {% if model.admin_url %}
+                  <a href="{{ model.admin_url }}" class="oxm-model__action">তালিকা</a>
+                {% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>{% translate "You don't have permission to view or edit anything." %}</p>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div id="content-related">
+  <div class="module" id="recent-actions-module">
+    <h2>সাম্প্রতিক কাজ</h2>
+    {% load log %}
+    {% get_admin_log 10 as admin_log for_user user %}
+    {% if not admin_log %}
+      <ul class="actionlist"><li style="padding:12px 16px;color:#94a3b8;">এখনো কিছু করা হয়নি</li></ul>
+    {% else %}
+      <ul class="actionlist">
+        {% for entry in admin_log %}
+          <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+            {% if entry.is_deletion or not entry.get_admin_url %}
+              {{ entry.object_repr }}
+            {% else %}
+              <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+            {% endif %}
+            <br>
+            {% if entry.content_type %}
+              <span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>
+            {% else %}
+              <span class="mini quiet">{% translate "Unknown content" %}</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

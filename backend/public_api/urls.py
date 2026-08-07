@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import orders, views
 
 app_name = "public_api"
 
@@ -13,6 +13,12 @@ urlpatterns = [
         "products/<int:id>/",
         views.PublicProductDetailView.as_view(),
         name="public-product-detail",
+    ),
+    path("orders/", orders.PublicOrderCreateView.as_view(), name="public-order-create"),
+    path(
+        "orders/<str:order_number>/",
+        orders.PublicOrderDetailView.as_view(),
+        name="public-order-detail",
     ),
     # Management endpoints for authenticated users
     path(

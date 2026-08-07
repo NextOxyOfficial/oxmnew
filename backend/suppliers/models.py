@@ -1,3 +1,5 @@
+from core.uploads import validate_document
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import EmailValidator, URLValidator
@@ -51,7 +53,7 @@ class Purchase(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     products = models.TextField(help_text="Products purchased (comma-separated)")
     notes = models.TextField(blank=True, null=True)
-    proof_document = models.FileField(upload_to='purchase_proofs/', blank=True, null=True)
+    proof_document = models.FileField(upload_to='purchase_proofs/', blank=True, null=True, validators=[validate_document])
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -85,7 +87,7 @@ class Payment(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     reference = models.CharField(max_length=100, blank=True, null=True, help_text="Payment reference/transaction number")
     notes = models.TextField(blank=True, null=True)
-    proof_document = models.FileField(upload_to='payment_proofs/', blank=True, null=True)
+    proof_document = models.FileField(upload_to='payment_proofs/', blank=True, null=True, validators=[validate_document])
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

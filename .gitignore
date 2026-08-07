@@ -173,3 +173,6 @@ dev.sqlite3
 development.db
 test.sqlite3
 local.db
+
+# Claude Code local settings
+.claude/

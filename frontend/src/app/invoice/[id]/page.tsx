@@ -1,12 +1,83 @@
 "use client";
 
-import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import { useCurrency, useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
-import { Order, OrderItem } from "@/types/order";
+import { Order } from "@/types/order";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Printer, Download, ArrowLeft, FileText, CheckCircle, Clock } from "lucide-react";
+import { Printer, Download, ArrowLeft } from "lucide-react";
 import "./print-styles.css";
+
+/**
+ * Bangla words for 0–99. Every larger number is composed from this table
+ * using the South-Asian scale (হাজার / লক্ষ / কোটি), which is why only two
+ * digits need spelling out.
+ */
+const BANGLA_UNITS = [
+  "শূন্য", "এক", "দুই", "তিন", "চার", "পাঁচ", "ছয়", "সাত", "আট", "নয়",
+  "দশ", "এগারো", "বারো", "তেরো", "চৌদ্দ", "পনেরো", "ষোলো", "সতেরো", "আঠারো", "উনিশ",
+  "বিশ", "একুশ", "বাইশ", "তেইশ", "চব্বিশ", "পঁচিশ", "ছাব্বিশ", "সাতাশ", "আটাশ", "ঊনত্রিশ",
+  "ত্রিশ", "একত্রিশ", "বত্রিশ", "তেত্রিশ", "চৌত্রিশ", "পঁয়ত্রিশ", "ছত্রিশ", "সাঁইত্রিশ", "আটত্রিশ", "ঊনচল্লিশ",
+  "চল্লিশ", "একচল্লিশ", "বিয়াল্লিশ", "তেতাল্লিশ", "চুয়াল্লিশ", "পঁয়তাল্লিশ", "ছেচল্লিশ", "সাতচল্লিশ", "আটচল্লিশ", "ঊনপঞ্চাশ",
+  "পঞ্চাশ", "একান্ন", "বায়ান্ন", "তিপ্পান্ন", "চুয়ান্ন", "পঞ্চান্ন", "ছাপ্পান্ন", "সাতান্ন", "আটান্ন", "ঊনষাট",
+  "ষাট", "একষট্টি", "বাষট্টি", "তেষট্টি", "চৌষট্টি", "পঁয়ষট্টি", "ছেষট্টি", "সাতষট্টি", "আটষট্টি", "ঊনসত্তর",
+  "সত্তর", "একাত্তর", "বাহাত্তর", "তিয়াত্তর", "চুয়াত্তর", "পঁচাত্তর", "ছিয়াত্তর", "সাতাত্তর", "আটাত্তর", "ঊনআশি",
+  "আশি", "একাশি", "বিরাশি", "তিরাশি", "চুরাশি", "পঁচাশি", "ছিয়াশি", "সাতাশি", "আটাশি", "ঊননব্বই",
+  "নব্বই", "একানব্বই", "বিরানব্বই", "তিরানব্বই", "চুরানব্বই", "পঁচানব্বই", "ছিয়ানব্বই", "সাতানব্বই", "আটানব্বই", "নিরানব্বই",
+];
+
+/** Spells a non-negative integer in Bangla, e.g. 1250 -> "এক হাজার দুইশত পঞ্চাশ". */
+function integerToBanglaWords(value: number): string {
+  if (value === 0) return BANGLA_UNITS[0];
+
+  const parts: string[] = [];
+  let rest = value;
+
+  // Crore recurses, so amounts beyond 99,99,99,999 still read correctly.
+  const crore = Math.floor(rest / 10000000);
+  if (crore > 0) {
+    parts.push(`${integerToBanglaWords(crore)} কোটি`);
+    rest %= 10000000;
+  }
+  // After the crore split every remaining group is below 100.
+  const lakh = Math.floor(rest / 100000);
+  if (lakh > 0) {
+    parts.push(`${BANGLA_UNITS[lakh]} লক্ষ`);
+    rest %= 100000;
+  }
+  const thousand = Math.floor(rest / 1000);
+  if (thousand > 0) {
+    parts.push(`${BANGLA_UNITS[thousand]} হাজার`);
+    rest %= 1000;
+  }
+  const hundred = Math.floor(rest / 100);
+  if (hundred > 0) {
+    parts.push(`${BANGLA_UNITS[hundred]}শত`);
+    rest %= 100;
+  }
+  if (rest > 0) parts.push(BANGLA_UNITS[rest]);
+
+  return parts.join(" ");
+}
+
+/**
+ * Amount-in-words line for the printed sheet. Returns "" when the value
+ * cannot be spelled safely (negative, non-finite, or past the point where
+ * float arithmetic on paisa stops being exact) so the invoice prints
+ * nothing rather than something wrong.
+ */
+function amountToBanglaWords(amount: number): string {
+  if (!Number.isFinite(amount) || amount < 0 || amount > 1e12) return "";
+
+  const asPaisa = Math.round(amount * 100);
+  const taka = Math.floor(asPaisa / 100);
+  const paisa = asPaisa % 100;
+
+  const takaWords = `${integerToBanglaWords(taka)} টাকা`;
+  return paisa > 0
+    ? `${takaWords} ${integerToBanglaWords(paisa)} পয়সা মাত্র`
+    : `${takaWords} মাত্র`;
+}
 
 interface InvoiceData {
   order: Order;
@@ -27,6 +98,8 @@ export default function InvoicePage() {
   const params = useParams();
   const router = useRouter();
   const formatCurrency = useCurrencyFormatter();
+  // Only used to decide whether the টাকা/পয়সা words line applies.
+  const { currency } = useCurrency();
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +112,7 @@ export default function InvoicePage() {
         // Use the correct getOrder method for orders endpoint
         const orderData = await ApiService.getOrder(parseInt(orderId));
         console.log("Raw order data from API:", orderData); // Debug log
-        
+
         // Load company data from localStorage (or use defaults)
         // Get company data from user profile first, with fallback to localStorage
         let companyData = {
@@ -56,11 +129,11 @@ export default function InvoicePage() {
         try {
           const profileData = await ApiService.getProfile();
           console.log("Full profile data received:", JSON.stringify(profileData, null, 2)); // Debug log
-          
+
           userProfile = {
             store_logo: profileData.profile?.store_logo || ""
           };
-          
+
           // Update company data from backend profile if available
           if (profileData.profile) {
             const profile = profileData.profile;
@@ -72,16 +145,16 @@ export default function InvoicePage() {
               first_name: profile.first_name,
               last_name: profile.last_name
             }); // Debug log
-            
+
             // Try multiple possible company name fields
-            const possibleName = profileData.profile.company || 
-                                profile.store_name || 
+            const possibleName = profileData.profile.company ||
+                                profile.store_name ||
                                 profile.business_name ||
-                                profile.name || 
+                                profile.name ||
                                 (profile.first_name && profile.last_name ? `${profile.first_name} ${profile.last_name}` : null) ||
                                 profile.first_name ||
                                 companyData.name;
-            
+
             companyData = {
               name: possibleName,
               address: profile.company_address || profile.business_address || profile.address || companyData.address,
@@ -90,7 +163,7 @@ export default function InvoicePage() {
               email: profile.company_email || profile.business_email || profile.email || companyData.email,
               website: profile.company_website || profile.business_website || profile.website || companyData.website
             };
-            
+
             console.log("Final company data:", companyData); // Debug log
           }
         } catch (error) {
@@ -103,7 +176,7 @@ export default function InvoicePage() {
           if (savedSettings) {
             const parsedSettings = JSON.parse(savedSettings);
             // Only use localStorage for missing fields
-            companyData = { 
+            companyData = {
               name: companyData.name === "Your Company Name" ? parsedSettings.name || companyData.name : companyData.name,
               address: companyData.address === "123 Business Street" ? parsedSettings.address || companyData.address : companyData.address,
               city: companyData.city === "City, State 12345" ? parsedSettings.city || companyData.city : companyData.city,
@@ -123,7 +196,7 @@ export default function InvoicePage() {
         });
       } catch (error) {
         console.error("Error fetching invoice data:", error);
-        setError("Failed to load invoice data");
+        setError("ইনভয়েসের তথ্য আনা গেল না");
       } finally {
         setIsLoading(false);
       }
@@ -143,18 +216,23 @@ export default function InvoicePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-500"></div>
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-cyan-600 border-t-transparent"></div>
+          <p className="text-sm text-slate-500">লোড হচ্ছে…</p>
+        </div>
       </div>
     );
   }
 
   if (error || !invoiceData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-500 mb-4">Error</h1>
-          <p className="text-gray-600">{error || "Invoice not found"}</p>
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="plane w-full max-w-md">
+          <div className="plane-section text-center">
+            <h1 className="page-title">কিছু একটা সমস্যা হয়েছে</h1>
+            <p className="page-sub">{error || "ইনভয়েসটি পাওয়া যায়নি"}</p>
+          </div>
         </div>
       </div>
     );
@@ -166,13 +244,13 @@ export default function InvoicePage() {
   const calculateSubtotal = () => {
     console.log("Order object:", order);
     console.log("Order fields:", Object.keys(order));
-    
+
     // First try: Use subtotal from order (this is calculated by backend)
     if (order.subtotal && order.subtotal > 0) {
       console.log("Using order.subtotal:", order.subtotal);
       return Number(order.subtotal);
     }
-    
+
     // Second try: Multi-item order with items array
     if (order.items && order.items.length > 0) {
       console.log("Multi-item order detected, items:", order.items);
@@ -184,20 +262,20 @@ export default function InvoicePage() {
       console.log("Calculated subtotal from items:", calculatedSubtotal);
       return calculatedSubtotal;
     }
-    
+
     // Third try: Use total_amount directly
     if (order.total_amount && Number(order.total_amount) > 0) {
       console.log("Using order.total_amount:", order.total_amount);
       return Number(order.total_amount);
     }
-    
+
     // Fourth try: Calculate from single order fields (legacy support)
     if (order.quantity && order.unit_price) {
       const calculated = Number(order.quantity) * Number(order.unit_price);
       console.log("Calculated from order quantity/unit_price:", calculated);
       return calculated;
     }
-    
+
     // Log all available fields for debugging
     console.log("No subtotal found, order fields:", {
       subtotal: order.subtotal,
@@ -212,7 +290,7 @@ export default function InvoicePage() {
   };
 
   const subtotal = calculateSubtotal();
-  
+
   // Calculate discount amount dynamically
   let discountAmount = 0;
   if (order.discount_amount && Number(order.discount_amount) > 0) {
@@ -228,19 +306,19 @@ export default function InvoicePage() {
       calculated_discount: discountAmount
     });
   }
-  
+
   const vatRate = Number(order.vat_percentage) || 0;
   const vatAmount = Number(order.vat_amount) || (subtotal * (vatRate / 100));
-  
+
   // For the total, try multiple sources in order of preference
   let total = Number(order.total_amount) || 0;
   if (total === 0 && subtotal > 0) {
     // Calculate total if not available from backend
     total = subtotal + vatAmount - discountAmount;
   }
-  
+
   const paidAmount = Number(order.paid_amount) || 0;
-  
+
   // Due amount calculation - this should be dynamic
   // Due amount from backend takes priority, otherwise calculate as total - paid
   let dueAmount = 0;
@@ -265,239 +343,216 @@ export default function InvoicePage() {
     orderDiscountAmount: order.discount_amount
   });
 
+  // ── Presentation-only derivations (no arithmetic on the figures above) ──
+  const isPaid = dueAmount <= 0;
+  const statusLabel = isPaid ? "পরিশোধ" : "বাকি";
+  const statusToneClass = isPaid ? "badge-success" : "badge-danger";
+
+  const invoiceDate = new Date(order.sale_date || new Date()).toLocaleDateString(
+    "en-US",
+    { day: "2-digit", month: "short", year: "numeric" }
+  );
+
+  // The words line names টাকা/পয়সা, so it is only correct for BDT. For any
+  // other configured currency it is skipped rather than mislabelled.
+  const amountInWords = currency === "BDT" ? amountToBanglaWords(total) : "";
+
   return (
     <>
-      {/* Action Bar - Screen Only */}
-      <div className="print:hidden bg-slate-900 border-b border-slate-800 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      {/* Action Bar — screen only; hidden by .invoice-actions in print-styles.css */}
+      <div className="invoice-actions sticky top-0 z-10 border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
             <button
               onClick={() => router.back()}
-              className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-all"
+              aria-label="ফিরে যান"
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
-            <div>
-              <h1 className="text-lg font-semibold text-white">Invoice #{order.id}</h1>
-              <p className="text-xs text-slate-500">
-                {new Date(order.sale_date || new Date()).toLocaleDateString('en-US', { 
-                  weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
-                })}
-              </p>
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-semibold text-slate-900">ইনভয়েস #{order.id}</h1>
+              <p className="num text-xs text-slate-500">{invoiceDate}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-              dueAmount > 0 
-                ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400' 
-                : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
-            }`}>
-              {dueAmount > 0 ? <Clock className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
-              {dueAmount > 0 ? 'Pending' : 'Paid'}
-            </div>
-            <button
-              onClick={handleDownloadPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg transition-all text-sm"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Download</span>
+            <span className={`badge ${statusToneClass}`}>{statusLabel}</span>
+            <button onClick={handleDownloadPDF} className="btn btn-ghost">
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">ডাউনলোড</span>
             </button>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold rounded-lg transition-all text-sm"
-            >
-              <Printer className="w-4 h-4" />
-              <span className="hidden sm:inline">Print</span>
+            <button onClick={handlePrint} className="btn btn-primary">
+              <Printer className="h-4 w-4" />
+              <span className="hidden sm:inline">প্রিন্ট</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Invoice Content */}
-      <div className="invoice-content bg-white print:shadow-none print:max-w-none print:mx-0 max-w-4xl mx-auto my-6 print:my-0 shadow-xl rounded-lg print:rounded-none overflow-hidden">
-        {/* Invoice Header with Logo */}
-        <div className="px-8 py-2 print:px-3 print:py-1 border-b-2 border-cyan-500 print:border-gray-400">
-          <div className="flex justify-between items-center">
-            {/* Company Logo */}
-            <div className="flex items-center gap-2">
-              {userProfile?.store_logo ? (
-                <div className="w-20 h-12 print:w-16 print:h-10 flex items-center justify-center">
-                  <img src={userProfile.store_logo} alt="Logo" className="max-w-full max-h-full object-contain" />
-                </div>
-              ) : (
-                <div className="w-16 h-16 print:w-12 print:h-12 bg-cyan-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xl print:text-lg">OX</span>
-                </div>
+      {/* Invoice Content — one printable plane */}
+      <div className="invoice-sheet plane mx-auto my-6 max-w-4xl">
+        {/* Invoice Header: identity on the left, invoice meta on the right */}
+        <div className="plane-section flex flex-wrap items-start justify-between gap-3">
+          {userProfile?.store_logo ? (
+            <img src={userProfile.store_logo} alt={company.name} className="h-12 max-w-[10rem] object-contain" />
+          ) : (
+            <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-cyan-600 text-base font-bold text-white">
+              OX
+            </span>
+          )}
+
+          <div className="text-right">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">ইনভয়েস</div>
+            <div className="num text-lg font-semibold text-slate-900">
+              {order.order_number || `#${order.id}`}
+            </div>
+            {order.order_number && (
+              <div className="num text-xs text-slate-500">অর্ডার #{order.id}</div>
+            )}
+            <div className="num mt-0.5 text-xs text-slate-500">তারিখ: {invoiceDate}</div>
+            <div className="mt-1.5">
+              <span className={`invoice-status badge ${statusToneClass}`}>{statusLabel}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Billing Info — store contact and customer contact, side by side */}
+        <div className="invoice-parties plane-section grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div>
+            <div className="section-title">স্টোর</div>
+            <div className="space-y-0.5 text-sm text-slate-600">
+              <p className="font-medium text-slate-900">{company.name}</p>
+              {company.address && <p>{company.address}</p>}
+              {company.city && <p>{company.city}</p>}
+              {company.phone && <p className="num">ফোন: {company.phone}</p>}
+              {company.email && <p className="break-words">ইমেইল: {company.email}</p>}
+              {company.website && <p className="break-words">{company.website}</p>}
+            </div>
+          </div>
+          <div>
+            <div className="section-title">কাস্টমার</div>
+            <div className="space-y-0.5 text-sm text-slate-600">
+              <p className="font-medium text-slate-900">{order.customer_name || "অতিথি কাস্টমার"}</p>
+              {order.customer_company && <p>{order.customer_company}</p>}
+              {order.customer_address && order.customer_address !== "A Dummy Street Area, Location," && (
+                <p>{order.customer_address}</p>
               )}
-            </div>
-
-            {/* Invoice Number */}
-            <div className="text-right">
-              <p className="text-lg print:text-base font-bold text-gray-800">
-                INVOICE <span className="text-cyan-600 print:text-gray-800">#{order.id}</span>
-              </p>
+              {order.customer_phone && <p className="num">ফোন: {order.customer_phone}</p>}
+              {order.customer_email && <p className="break-words">ইমেইল: {order.customer_email}</p>}
             </div>
           </div>
         </div>
 
-        {/* Billing Info */}
-        <div className="px-8 py-3 print:px-3 print:py-2 bg-gray-50 print:bg-white border-b border-gray-200">
-          <div className="grid grid-cols-2 gap-6 print:gap-4">
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">From</p>
-              <div className="text-sm print:text-xs text-gray-700 space-y-0.5">
-                <p className="font-semibold text-gray-900">{company.name}</p>
-                <p>{company.address}</p>
-                <p>{company.city}</p>
-                <p className="text-cyan-600 print:text-gray-800">{company.phone}, {company.email}</p>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Bill To</p>
-              <div className="text-sm print:text-xs text-gray-700 space-y-0.5">
-                <p className="font-semibold text-gray-900">{order.customer_name || "Guest Customer"}</p>
-                {order.customer_address && order.customer_address !== "A Dummy Street Area, Location," && (
-                  <p>{order.customer_address}</p>
-                )}
-                {order.customer_phone && <p>{order.customer_phone}</p>}
-                {order.customer_email && <p>{order.customer_email}</p>}
-              </div>
-            </div>
-          </div>
-        </div>
-          {/* Invoice Table - Compact for A5 */}
-          <div className="px-6 print:px-3 py-2">
-            <div>
-              {/* Table Header */}
-              <div className="bg-slate-700 print:bg-gray-200 text-white print:text-gray-700">
-                <div className="grid grid-cols-12 gap-0 text-xs font-medium">
-                  <div className="col-span-1 py-2 text-center">
-                    No.
-                  </div>
-                  <div className="col-span-6 px-1.5 py-1.5">
-                    Item Description
-                  </div>
-                  <div className="col-span-1 py-1.5 text-center">
-                    Qty
-                  </div>
-                  <div className="col-span-2 px-1.5 py-1.5 text-center">
-                    Price
-                  </div>
-                  <div className="col-span-2 px-1.5 py-1.5 text-right">
-                    Total
-                  </div>
-                </div>
-              </div>
-
-              {/* Table Rows */}
+        {/* Invoice Table */}
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th className="w-12">ক্রম</th>
+                <th>প্রোডাক্টের বিবরণ</th>
+                <th className="cell-num">পরিমাণ</th>
+                <th className="cell-num">দাম</th>
+                <th className="cell-num">মোট</th>
+              </tr>
+            </thead>
+            <tbody>
               {order.items && order.items.length > 0 ? (
                 order.items.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="grid grid-cols-12 gap-0 border-l border-r border-b border-gray-300 print:border-gray-300"
-                  >
-                    <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-gray-600 border-r border-gray-300 print:border-gray-300 flex items-center justify-center">
-                      {index + 1}
-                    </div>
-                    <div className="col-span-6 px-1.5 py-1.5 text-sm text-gray-600 print:text-gray-600 border-r border-gray-300 print:border-gray-300">
-                      <div className="font-medium break-words">{item.product_name}</div>
+                  <tr key={item.id}>
+                    <td className="cell-num">{index + 1}</td>
+                    <td>
+                      <div className="cell-strong break-words">{item.product_name}</div>
                       {item.variant_details && (
-                        <div className="text-xs text-gray-500 print:text-gray-500 mt-1 break-words">
+                        <div className="mt-0.5 break-words text-xs text-slate-500">
                           {item.variant_details}
                         </div>
                       )}
-                    </div>
-                    <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-gray-600 text-center border-r border-gray-300 print:border-gray-300 flex items-center justify-center break-all">
-                      {item.quantity}
-                    </div>
-                    <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-gray-600 text-center border-r border-gray-300 print:border-gray-300 flex items-center justify-center break-all">
-                      {formatCurrency(item.unit_price)}
-                    </div>
-                    <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-gray-600 text-right flex items-center justify-end break-all">
+                    </td>
+                    <td className="cell-num">{item.quantity}</td>
+                    <td className="cell-num">{formatCurrency(item.unit_price)}</td>
+                    <td className="cell-num">
                       {formatCurrency(item.total_price || (item.quantity * item.unit_price))}
-                    </div>
-                  </div>
+                    </td>
+                  </tr>
                 ))
               ) : (
-                <div className="grid grid-cols-12 gap-0 border-l border-r border-b border-gray-300 print:border-black">
-                  <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-gray-600 border-r border-gray-300 print:border-black flex items-center justify-center">
-                    1
-                  </div>
-                  <div className="col-span-6 px-1.5 py-1.5 text-sm text-gray-600 print:text-black border-r border-gray-300 print:border-black">
-                    <div className="font-medium break-words">{order.product_name || "Product"}</div>
-                  </div>
-                  <div className="col-span-1 py-1.5 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black flex items-center justify-center break-all">
-                    {order.quantity || 1}
-                  </div>
-                  <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-black text-center border-r border-gray-300 print:border-black flex items-center justify-center break-all">
-                    {formatCurrency(order.unit_price || 0)}
-                  </div>
-                  <div className="col-span-2 px-1.5 py-1.5 text-sm text-gray-600 print:text-black text-right flex items-center justify-end break-all">
-                    {formatCurrency(order.total_amount || 0)}
-                  </div>
-                </div>
+                <tr>
+                  <td className="cell-num">1</td>
+                  <td>
+                    <div className="cell-strong break-words">{order.product_name || "প্রোডাক্ট"}</div>
+                  </td>
+                  <td className="cell-num">{order.quantity || 1}</td>
+                  <td className="cell-num">{formatCurrency(order.unit_price || 0)}</td>
+                  <td className="cell-num">{formatCurrency(order.total_amount || 0)}</td>
+                </tr>
               )}
-            </div>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Bottom Section */}
+        <div className="invoice-bottom plane-section flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          {/* Words, notes and the thank-you on the left */}
+          <div className="min-w-0 flex-1 text-sm text-slate-600">
+            {amountInWords && (
+              <div className="invoice-words mb-3">
+                <div className="section-title">কথায়</div>
+                <p className="text-sm font-medium text-slate-900">{amountInWords}</p>
+              </div>
+            )}
+
+            {order.notes && (
+              <div className="mb-3">
+                <div className="section-title">নোট</div>
+                <p className="break-words text-sm">{order.notes}</p>
+              </div>
+            )}
+
+            <p>আমাদের সাথে থাকার জন্য ধন্যবাদ!</p>
           </div>
 
-          {/* Bottom Section */}
-          <div className="px-8 py-2 print:px-2 print:py-1">
-            <div className="flex justify-between">
-              {/* Thank you message on the left */}
-              <div className="w-1/2">
-                <div className="text-sm print:text-xs mt-2 print:mt-0.5 text-gray-600 space-y-1">
-                  <p>
-                    Thank you for choosing our services!
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(order.sale_date || new Date()).toLocaleDateString('en-US', {
-                      day: '2-digit', month: 'short', year: 'numeric'
-                    })}
-                  </p>
-                </div>
-              </div>
-
-              {/* Totals */}
-              <div className="w-1/3">
-                <div className="">
-                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-t border-b border-gray-300 print:border-gray-300">
-                    <span className="text-sm text-gray-600 print:text-gray-600">VAT {vatRate > 0 ? `(${vatRate}%)` : ''}</span>
-                    <span className="text-sm text-gray-600 print:text-gray-600">
-                      {formatCurrency(vatAmount)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-gray-300">
-                    <span className="text-sm text-gray-600 print:text-gray-600">Discount</span>
-                    <span className="text-sm text-gray-600 print:text-gray-600">
-                      -{formatCurrency(discountAmount)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-gray-300">
-                    <span className="text-sm text-gray-600 print:text-gray-600">Due</span>
-                    <span className="text-sm text-gray-600 print:text-gray-600">
-                      {formatCurrency(dueAmount)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between px-1.5 py-1.5 border-l border-r border-b border-gray-300 print:border-gray-300 bg-slate-700 text-white print:bg-gray-200 print:text-gray-700 font-semibold">
-                    <span className="text-sm font-bold">TOTAL</span>
-                    <span className="text-sm font-bold">
-                      {formatCurrency(total)}
-                    </span>
-                  </div>
-                </div>
-              </div>
+          {/* Totals — right-aligned, tabular figures */}
+          <div className="invoice-totals w-full sm:w-64">
+            <div className="invoice-rule flex items-center justify-between border-b border-slate-200 py-1.5 text-sm">
+              <span className="text-slate-500">মোট</span>
+              <span className="num text-slate-900">{formatCurrency(subtotal)}</span>
             </div>
-          </div>
-          {/* Website Credit */}
-          <div className="text-center py-2 print:py-1 border-t border-gray-200 bg-gray-50 print:bg-white">
-            <p className="text-xs text-gray-400">
-              Powered by <span className="font-medium text-cyan-600 print:text-gray-600">OxyManager</span> • oxymanager.com
-            </p>
+            <div className="invoice-rule flex items-center justify-between border-b border-slate-200 py-1.5 text-sm">
+              <span className="text-slate-500">ভ্যাট {vatRate > 0 ? `(${vatRate}%)` : ''}</span>
+              <span className="num text-slate-900">{formatCurrency(vatAmount)}</span>
+            </div>
+            <div className="invoice-rule flex items-center justify-between border-b border-slate-200 py-1.5 text-sm">
+              <span className="text-slate-500">ছাড়</span>
+              <span className="num text-slate-900">-{formatCurrency(discountAmount)}</span>
+            </div>
+            <div className="invoice-rule flex items-center justify-between border-b border-slate-200 py-2.5 text-base font-semibold text-slate-900">
+              <span>সর্বমোট</span>
+              <span className="num">{formatCurrency(total)}</span>
+            </div>
+            <div className="invoice-rule flex items-center justify-between border-b border-slate-200 py-1.5 text-sm">
+              <span className="text-slate-500">পরিশোধ</span>
+              <span className="num text-slate-900">{formatCurrency(paidAmount)}</span>
+            </div>
+            <div className="flex items-center justify-between py-1.5 text-sm">
+              <span className="text-slate-500">বাকি</span>
+              <span className={`num ${dueAmount > 0 ? 'money-neg' : 'text-slate-900'}`}>
+                {formatCurrency(dueAmount)}
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Signature lines — paper only, so there is somewhere to sign */}
+        <div className="invoice-print-only invoice-signatures plane-section">
+          <div className="invoice-sign">স্টোরের স্বাক্ষর</div>
+          <div className="invoice-sign">ক্রেতার স্বাক্ষর</div>
+        </div>
+
+        {/* Website Credit */}
+        <div className="plane-section text-center text-xs text-slate-500">
+          চালাচ্ছে <span className="font-medium text-slate-900">OxyManager</span> • oxymanager.com
+        </div>
+      </div>
     </>
   );
 }

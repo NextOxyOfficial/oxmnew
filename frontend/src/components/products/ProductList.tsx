@@ -2,6 +2,7 @@
 
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { Product, ProductVariant } from "@/types/product";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 
 interface ProductListProps {
   products: Product[];
@@ -85,114 +86,68 @@ export default function ProductList({
     }
   };
 
+  // Stock level badge shared by the mobile list and the desktop table
+  const renderStockBadge = (product: Product) => {
+    const stock = getDisplayStock(product);
+    if (stock === 0) {
+      return <span className="badge badge-danger">স্টক নাই</span>;
+    }
+    if (stock < 5) {
+      return <span className="badge badge-warn">স্টক কম</span>;
+    }
+    return null;
+  };
+
   return (
-    <div className="flex-1 overflow-x-auto relative">
+    <div className="relative">
       {/* Search loading overlay */}
       {isSearching && (
-        <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-10 flex items-center justify-center">
-          <div className="bg-slate-800/90 rounded-lg p-4 border border-slate-700/50 flex items-center gap-3">
-            <svg
-              className="w-5 h-5 text-cyan-400 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            <span className="text-slate-200 text-sm">
-              Searching products...
-            </span>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3">
+            <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+            <span className="text-sm text-slate-600">প্রোডাক্ট খোঁজা হচ্ছে…</span>
           </div>
         </div>
       )}
 
-      {/* Mobile Card Layout */}
-      <div className="block lg:hidden space-y-4 p-1 sm:p-4">
+      {/* Mobile list — hairline-separated rows, no nested cards */}
+      <div className="block divide-y divide-slate-200 lg:hidden">
         {products.map((product) => (
-          <div
-            key={product.id}
-            className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 hover:bg-slate-800/70 transition-all duration-200 cursor-pointer"
-          >
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex-1 min-w-0 pr-2">
+          <div key={product.id} className="px-4 py-4">
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
                 <button
                   onClick={() => onProductClick(product)}
-                  className="text-left w-full group cursor-pointer"
+                  className="group w-full text-left"
                 >
-                  <h4 className="text-slate-100 font-medium line-clamp-2 leading-tight group-hover:text-cyan-400 cursor-pointer transition-colors">
+                  <h4
+                    className="truncate font-medium leading-tight text-slate-900 group-hover:text-cyan-600"
+                    title={product.name}
+                  >
                     {product.name}
                   </h4>
                   {product.product_code && (
-                    <p className="text-cyan-400 text-xs mt-1 font-mono">
+                    <p className="mt-0.5 font-mono text-xs text-cyan-600">
                       {product.product_code}
                     </p>
                   )}
                 </button>
-                <p className="text-slate-400 text-sm mt-1">
+                <p className="mt-0.5 truncate text-xs text-slate-500">
                   {product.category_name}
                 </p>
               </div>
+              {renderStockBadge(product)}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <div>
-                <p className="text-xs text-slate-400">Stock</p>
-                <div className="flex items-center space-x-1">
-                  <p className="text-sm font-medium text-slate-100">
-                    {getDisplayStock(product)} units
-                  </p>
-                  {(() => {
-                    const stock = getDisplayStock(product);
-                    if (stock === 0) {
-                      return (
-                        <div title="Out of Stock">
-                          <svg
-                            className="w-5 h-5 text-red-500"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                      );
-                    } else if (stock < 5) {
-                      return (
-                        <div title="Low Stock Warning">
-                          <svg
-                            className="w-5 h-5 text-yellow-500"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
+                <p className="text-xs text-slate-500">স্টক</p>
+                <p className="num text-sm font-medium text-slate-900">
+                  {getDisplayStock(product)} টি
+                </p>
               </div>
               <div>
-                <p className="text-xs text-slate-400">Profit/Unit</p>
+                <p className="text-xs text-slate-500">প্রতি পিসে লাভ</p>
                 {(() => {
                   const { buyPrice, sellPrice } = getDisplayPrices(product);
                   const profit = sellPrice - buyPrice;
@@ -201,49 +156,39 @@ export default function ProductList({
                   const { totalProfit } = getProductTotals(product);
 
                   return (
-                    <div className="space-y-1">
+                    <div>
                       <p
-                        className={`text-sm font-bold ${
+                        className={`text-sm font-semibold ${
                           profit > 0
-                            ? "text-green-400"
+                            ? "money-pos"
                             : profit < 0
-                            ? "text-red-400"
-                            : "text-yellow-400"
+                            ? "money-neg"
+                            : "num text-slate-600"
                         }`}
                       >
                         {profit > 0 ? "+" : profit < 0 ? "-" : ""}
                         {formatCurrency(Math.abs(profit))}
                       </p>
-                      <p
-                        className={`text-xs ${
-                          profit > 0
-                            ? "text-green-400/70"
-                            : profit < 0
-                            ? "text-red-400/70"
-                            : "text-yellow-400/70"
-                        }`}
-                      >
+                      <p className="num mt-0.5 text-xs text-slate-500">
                         {profit > 0 ? "+" : profit < 0 ? "-" : ""}
-                        {Math.abs(profitMargin).toFixed(1)}% margin
+                        {Math.abs(profitMargin).toFixed(1)}% মার্জিন
                       </p>
-                      <div className="mt-2 pt-1 border-t border-slate-600">
-                        <p className="text-sm font-semibold text-blue-400">
-                          Total: {formatCurrency(totalProfit)}
-                        </p>
-                      </div>
+                      <p className="num mt-1 text-xs text-slate-600">
+                        মোট: {formatCurrency(totalProfit)}
+                      </p>
                     </div>
                   );
                 })()}
               </div>
               <div>
-                <p className="text-xs text-slate-400">Buy Price</p>
-                <p className="text-sm font-medium text-red-400">
+                <p className="text-xs text-slate-500">কেনা দাম</p>
+                <p className="num text-sm font-medium text-slate-900">
                   {formatCurrency(getDisplayPrices(product).buyPrice)}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-slate-400">Sale Price</p>
-                <p className="text-sm font-medium text-green-400">
+                <p className="text-xs text-slate-500">বিক্রির দাম</p>
+                <p className="num text-sm font-medium text-slate-900">
                   {formatCurrency(getDisplayPrices(product).sellPrice)}
                 </p>
               </div>
@@ -251,32 +196,30 @@ export default function ProductList({
 
             {/* Total Values for Variant Products */}
             {product.has_variants && (
-              <div className="mt-3 pt-3 border-t border-slate-700/50">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-slate-400">Total Buy</p>
-                    <p className="text-sm font-medium text-red-400">
-                      {formatCurrency(getProductTotals(product).totalBuyPrice)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400">Total Sale</p>
-                    <p className="text-sm font-medium text-green-400">
-                      {formatCurrency(getProductTotals(product).totalSellPrice)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400">Total Profit</p>
-                    <p className="text-sm font-medium text-purple-400">
-                      {formatCurrency(getProductTotals(product).totalProfit)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400">Total Qty</p>
-                    <p className="text-sm font-medium text-cyan-400">
-                      {getProductTotals(product).totalQuantity} units
-                    </p>
-                  </div>
+              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-slate-200 pt-3">
+                <div>
+                  <p className="text-xs text-slate-500">মোট কেনা</p>
+                  <p className="num text-sm font-medium text-slate-900">
+                    {formatCurrency(getProductTotals(product).totalBuyPrice)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">মোট বিক্রি</p>
+                  <p className="num text-sm font-medium text-slate-900">
+                    {formatCurrency(getProductTotals(product).totalSellPrice)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">মোট লাভ</p>
+                  <p className="money-pos text-sm font-medium">
+                    {formatCurrency(getProductTotals(product).totalProfit)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">মোট পরিমাণ</p>
+                  <p className="num text-sm font-medium text-slate-900">
+                    {getProductTotals(product).totalQuantity} টি
+                  </p>
                 </div>
               </div>
             )}
@@ -285,234 +228,187 @@ export default function ProductList({
             {product.has_variants &&
               product.variants &&
               product.variants.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-slate-700/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-slate-400">
-                      Variants ({product.variants.length})
+                <div className="mt-3 border-t border-slate-200 pt-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-xs text-slate-500">
+                      ভ্যারিয়েন্ট ({product.variants.length})
                     </p>
-                    <div className="text-xs text-slate-500">
+                    <p className="num text-xs text-slate-500">
+                      মোট{" "}
                       {product.variants.reduce(
                         (total, variant) => total + (variant.stock || 0),
                         0
                       )}{" "}
-                      total units
-                    </div>
+                      টি
+                    </p>
                   </div>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                  <div className="max-h-32 divide-y divide-slate-200 overflow-y-auto">
                     {product.variants.slice(0, 3).map((variant, index) => (
                       <div
                         key={variant.id || index}
-                        className="bg-slate-700/30 rounded-lg p-2"
+                        className="flex items-center justify-between gap-2 py-1.5 text-xs"
                       >
-                        <div className="flex justify-between items-center text-xs">
-                          <div className="flex gap-2">
-                            {variant.color && (
-                              <span className="text-blue-400">
-                                {variant.color}
-                              </span>
-                            )}
-                            {variant.size && (
-                              <span className="text-green-400">
-                                {variant.size}
-                              </span>
-                            )}
-                            {variant.weight && (
-                              <span className="text-purple-400">
-                                {variant.weight}
-                                {variant.weight_unit}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-cyan-400">
-                            {variant.stock || 0} units
-                          </div>
+                        <div className="flex min-w-0 flex-wrap gap-2 text-slate-600">
+                          {variant.color && <span>{variant.color}</span>}
+                          {variant.size && <span>{variant.size}</span>}
+                          {variant.weight && (
+                            <span>
+                              {variant.weight}
+                              {variant.weight_unit}
+                            </span>
+                          )}
+                        </div>
+                        <div className="num shrink-0 text-slate-900">
+                          {variant.stock || 0} টি
                         </div>
                       </div>
                     ))}
                     {product.variants.length > 3 && (
-                      <div className="text-center">
+                      <div className="pt-2 text-center">
                         <button
                           onClick={() => onProductClick(product)}
-                          className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                          className="text-xs font-medium text-cyan-600 hover:text-cyan-700"
                         >
-                          View {product.variants.length - 3} more variants
+                          আরও {product.variants.length - 3} টি ভ্যারিয়েন্ট দেখুন
                         </button>
                       </div>
                     )}
                   </div>
                 </div>
               )}
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => onEditProduct(product)}
+                className="btn btn-ghost btn-sm"
+                title="এডিট করুন"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                এডিট করুন
+              </button>
+              <button
+                onClick={() => onDeleteConfirmation(product)}
+                className="btn btn-ghost btn-sm"
+                title="ডিলিট করুন"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+                ডিলিট করুন
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Desktop Table Layout - Simplified */}
+      {/* Desktop table — flush in the plane */}
       <div className="hidden lg:block">
-        <table className="min-w-full">
-          <thead className="bg-slate-900/95 backdrop-blur-sm z-10">
-            <tr className="border-b border-slate-700/50 text-left">
-              <th className="py-3 px-4 text-sm font-medium text-slate-300">
-                Product Name
-              </th>
-              <th className="py-3 px-4 text-sm font-medium text-slate-300">
-                Stock & Status
-              </th>
-              <th className="py-3 px-4 text-sm font-medium text-slate-300">
-                Prices
-              </th>
-              <th className="py-3 px-4 text-sm font-medium text-slate-300">
-                Profit
-              </th>
-              <th className="py-3 px-4 text-sm font-medium text-slate-300">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr
-                key={product.id}
-                className="border-b border-slate-700/30 hover:bg-slate-800/30 transition-colors"
-              >
-                <td className="py-3 px-4 max-w-xs">
-                  <button
-                    onClick={() => onProductClick(product)}
-                    className="text-left group w-full cursor-pointer"
-                  >
-                    <div className="text-sm font-medium text-slate-100 line-clamp-2 leading-tight group-hover:text-cyan-400 cursor-pointer transition-colors">
-                      {product.name}
-                    </div>
-                    {product.product_code && (
-                      <div className="text-xs text-cyan-400 mt-1 font-mono">
-                        {product.product_code}
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>প্রোডাক্টের নাম</th>
+                <th>স্টক ও অবস্থা</th>
+                <th className="cell-num">কেনা দাম</th>
+                <th className="cell-num">বিক্রির দাম</th>
+                <th className="cell-num">লাভ</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id}>
+                  <td className="max-w-xs">
+                    <button
+                      onClick={() => onProductClick(product)}
+                      className="group w-full text-left"
+                    >
+                      <div
+                        className="cell-strong truncate group-hover:text-cyan-600"
+                        title={product.name}
+                      >
+                        {product.name}
                       </div>
-                    )}
-                    <div className="text-xs text-slate-400 mt-1">
-                      {product.category_name}
-                    </div>
-                  </button>
-                </td>
-                <td className="py-3 px-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-slate-100">
-                        {getDisplayStock(product)} units
+                      {product.product_code && (
+                        <div className="mt-0.5 font-mono text-xs text-cyan-600">
+                          {product.product_code}
+                        </div>
+                      )}
+                      <div className="mt-0.5 truncate text-xs text-slate-500">
+                        {product.category_name}
+                      </div>
+                    </button>
+                  </td>
+                  <td>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="num text-slate-900">
+                        {getDisplayStock(product)} টি
                       </span>
-                      {(() => {
-                        const stock = getDisplayStock(product);
-                        if (stock === 0) {
-                          return (
-                            <svg
-                              className="w-4 h-4 text-red-500"
-                              fill="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          );
-                        } else if (stock < 5) {
-                          return (
-                            <svg
-                              className="w-4 h-4 text-yellow-500"
-                              fill="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          );
-                        }
-                        return null;
-                      })()}
+                      {renderStockBadge(product)}
                     </div>
                     {product.has_variants && (
-                      <div className="text-xs text-purple-400">
-                        {product.variants?.length || 0} variants
+                      <div className="mt-1 text-xs text-slate-500">
+                        {product.variants?.length || 0} টি ভ্যারিয়েন্ট
                       </div>
                     )}
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium text-red-400">
-                      Buy: {formatCurrency(getDisplayPrices(product).buyPrice)}
-                    </div>
-                    <div className="text-sm font-medium text-green-400">
-                      Sell:{" "}
-                      {formatCurrency(getDisplayPrices(product).sellPrice)}
-                    </div>
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  {(() => {
-                    const { buyPrice, sellPrice } = getDisplayPrices(product);
-                    const profit = sellPrice - buyPrice;
-                    return (
-                      <div
-                        className={`text-sm font-bold ${
-                          profit > 0
-                            ? "text-green-400"
-                            : profit < 0
-                            ? "text-red-400"
-                            : "text-yellow-400"
-                        }`}
+                  </td>
+                  <td className="cell-num">
+                    {formatCurrency(getDisplayPrices(product).buyPrice)}
+                  </td>
+                  <td className="cell-num">
+                    {formatCurrency(getDisplayPrices(product).sellPrice)}
+                  </td>
+                  <td className="cell-num">
+                    {(() => {
+                      const { buyPrice, sellPrice } = getDisplayPrices(product);
+                      const profit = sellPrice - buyPrice;
+                      return (
+                        <span
+                          className={`font-semibold ${
+                            profit > 0
+                              ? "money-pos"
+                              : profit < 0
+                              ? "money-neg"
+                              : "num text-slate-600"
+                          }`}
+                        >
+                          {profit > 0 ? "+" : ""}
+                          {formatCurrency(profit)}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td>
+                    <div className="row-actions">
+                      <button
+                        onClick={() => onEditProduct(product)}
+                        className="btn btn-ghost btn-sm"
+                        title="এডিট করুন"
                       >
-                        {profit > 0 ? "+" : ""}
-                        {formatCurrency(profit)}
-                      </div>
-                    );
-                  })()}
-                </td>
-                <td className="py-3 px-4">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => onEditProduct(product)}
-                      className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDeleteConfirmation(product)}
-                      className="text-xs px-2 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                        <Pencil className="h-3.5 w-3.5" />
+                        এডিট করুন
+                      </button>
+                      <button
+                        onClick={() => onDeleteConfirmation(product)}
+                        className="btn btn-ghost btn-sm"
+                        title="ডিলিট করুন"
+                        aria-label="ডিলিট করুন"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* No products found */}
       {products.length === 0 && !isSearching && (
-        <div className="h-full flex flex-col items-center justify-center text-center py-12">
-          <svg
-            className="w-12 h-12 text-gray-400 mx-auto mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-            />
-          </svg>
-          <h3 className="text-lg font-semibold text-slate-300 mb-2">
-            No products found
-          </h3>
-          <p className="text-slate-400 mb-4">
-            Try adjusting your search criteria or add a new product.
+        <div className="empty">
+          <p className="font-medium text-slate-600">কিছু পাওয়া যায়নি</p>
+          <p className="mt-1 text-slate-500">
+            খোঁজার শব্দ বদলে দেখুন, বা নতুন প্রোডাক্ট যোগ করুন।
           </p>
         </div>
       )}

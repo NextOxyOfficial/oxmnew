@@ -108,7 +108,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
       }));
     } catch (error) {
       console.error("Error updating item quantity:", error);
-      setError("Failed to update item quantity. Please try again.");
+      setError("পরিমাণ আপডেট করা যায়নি। আবার চেষ্টা করুন।");
     }
   };
 
@@ -136,7 +136,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
       }));
     } catch (error) {
       console.error("Error updating item price:", error);
-      setError("Failed to update item price. Please try again.");
+      setError("দাম আপডেট করা যায়নি। আবার চেষ্টা করুন।");
     }
   };
 
@@ -145,7 +145,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
       (sum, item) => sum + item.total_price,
       0
     );
-    const discountAmount = orderData.discount_type === "percentage" 
+    const discountAmount = orderData.discount_type === "percentage"
       ? (subtotal * orderData.discount_percentage) / 100
       : orderData.discount_flat_amount;
     const afterDiscount = subtotal - discountAmount;
@@ -194,7 +194,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
       onClose();
     } catch (error) {
       console.error("Error updating order:", error);
-      setError("Failed to update order. Please try again.");
+      setError("অর্ডার আপডেট করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setIsLoading(false);
     }
@@ -205,24 +205,28 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto pt-10">
-      <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-xl shadow-2xl max-w-4xl w-full mb-8">
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal max-w-4xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
+        <div className="modal-head">
           <div>
-            <h2 className="text-xl font-semibold text-slate-100">
-              Edit Order #{order.order_number || order.id}
+            <h2 className="modal-title">
+              অর্ডার এডিট — #{order.order_number || order.id}
             </h2>
-            <p className="text-sm text-slate-400 mt-1">
-              Modify order details and customer information
+            <p className="text-xs text-slate-500 mt-0.5">
+              অর্ডারের তথ্য আর কাস্টমারের তথ্য বদলান
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 rounded-lg transition-colors"
+            className="text-slate-400 hover:text-slate-700"
+            aria-label="বন্ধ করুন"
           >
             <svg
-              className="w-5 h-5"
+              className="w-4 h-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -238,126 +242,108 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
+        <div className="modal-body">
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+            <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
               {error}
             </div>
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Customer Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-slate-200 border-b border-slate-700/50 pb-2">
-                Customer Information
-              </h3>
+            <div className="space-y-3">
+              <div className="section-title">কাস্টমারের তথ্য</div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Customer Name
-                </label>
+                <label className="label">কাস্টমারের নাম</label>
                 <input
                   type="text"
                   value={orderData.customer_name}
                   onChange={(e) =>
                     handleInputChange("customer_name", e.target.value)
                   }
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  placeholder="Enter customer name"
+                  className="input"
+                  placeholder="কাস্টমারের নাম লিখুন"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Phone Number
-                </label>
+                <label className="label">ফোন নম্বর</label>
                 <input
                   type="tel"
                   value={orderData.customer_phone}
                   onChange={(e) =>
                     handleInputChange("customer_phone", e.target.value)
                   }
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  placeholder="Enter phone number"
+                  className="input"
+                  placeholder="ফোন নম্বর লিখুন"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Email Address
-                </label>
+                <label className="label">ইমেইল</label>
                 <input
                   type="email"
                   value={orderData.customer_email}
                   onChange={(e) =>
                     handleInputChange("customer_email", e.target.value)
                   }
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  placeholder="Enter email address"
+                  className="input"
+                  placeholder="ইমেইল লিখুন"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Address
-                </label>
+                <label className="label">ঠিকানা</label>
                 <textarea
                   value={orderData.customer_address}
                   onChange={(e) =>
                     handleInputChange("customer_address", e.target.value)
                   }
                   rows={3}
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  placeholder="Enter customer address"
+                  className="textarea"
+                  placeholder="কাস্টমারের ঠিকানা লিখুন"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Company
-                </label>
+                <label className="label">প্রতিষ্ঠান</label>
                 <input
                   type="text"
                   value={orderData.customer_company}
                   onChange={(e) =>
                     handleInputChange("customer_company", e.target.value)
                   }
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  placeholder="Enter company name"
+                  className="input"
+                  placeholder="প্রতিষ্ঠানের নাম লিখুন"
                 />
               </div>
             </div>
 
             {/* Order Details */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-slate-200 border-b border-slate-700/50 pb-2">
-                Order Details
-              </h3>
+            <div className="space-y-3">
+              <div className="section-title">অর্ডারের তথ্য</div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Status
-                </label>
+                <label className="label">অবস্থা</label>
                 <select
                   value={orderData.status}
                   onChange={(e) => handleInputChange("status", e.target.value)}
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+                  className="select"
                 >
-                  <option value="draft">Draft</option>
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="processing">Processing</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                  <option value="refunded">Refunded</option>
+                  <option value="draft">ড্রাফট</option>
+                  <option value="pending">পেন্ডিং</option>
+                  <option value="confirmed">কনফার্ম</option>
+                  <option value="processing">চলছে</option>
+                  <option value="completed">কমপ্লিট</option>
+                  <option value="cancelled">বাতিল</option>
+                  <option value="refunded">টাকা ফেরত</option>
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Discount (%)
-                  </label>
+                  <label className="label">ডিসকাউন্ট (%)</label>
                   <input
                     type="number"
                     min="0"
@@ -370,14 +356,12 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                         parseFloat(e.target.value) || 0
                       )
                     }
-                    className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+                    className="input"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    VAT (%)
-                  </label>
+                  <label className="label">ভ্যাট (%)</label>
                   <input
                     type="number"
                     min="0"
@@ -390,59 +374,55 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                         parseFloat(e.target.value) || 0
                       )
                     }
-                    className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+                    className="input"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Notes
-                </label>
+                <label className="label">নোট</label>
                 <textarea
                   value={orderData.notes}
                   onChange={(e) => handleInputChange("notes", e.target.value)}
                   rows={3}
-                  className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  placeholder="Add order notes..."
+                  className="textarea"
+                  placeholder="অর্ডারের নোট লিখুন…"
                 />
               </div>
 
               {/* Financial Summary */}
-              <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-slate-300 mb-3">
-                  Financial Summary
-                </h4>
+              <div className="rounded-lg border border-slate-200 p-3">
+                <div className="section-title">টাকার হিসাব</div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Subtotal:</span>
-                    <span className="text-slate-200">
+                    <span className="text-slate-500">সাবটোটাল</span>
+                    <span className="num text-slate-900">
                       {formatCurrency(subtotal)}
                     </span>
                   </div>
                   {discountAmount > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-slate-400">
-                        Discount ({orderData.discount_percentage}%):
+                      <span className="text-slate-500">
+                        ডিসকাউন্ট ({orderData.discount_percentage}%)
                       </span>
-                      <span className="text-red-400">
+                      <span className="money-neg">
                         -{formatCurrency(discountAmount)}
                       </span>
                     </div>
                   )}
                   {vatAmount > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-slate-400">
-                        VAT ({orderData.vat_percentage}%):
+                      <span className="text-slate-500">
+                        ভ্যাট ({orderData.vat_percentage}%)
                       </span>
-                      <span className="text-slate-200">
+                      <span className="num text-slate-900">
                         {formatCurrency(vatAmount)}
                       </span>
                     </div>
                   )}
-                  <div className="border-t border-slate-700/50 pt-2 flex justify-between font-medium">
-                    <span className="text-slate-200">Total:</span>
-                    <span className="text-cyan-400">
+                  <div className="border-t border-slate-200 pt-2 flex justify-between font-semibold">
+                    <span className="text-slate-900">মোট</span>
+                    <span className="num text-cyan-600">
                       {formatCurrency(total)}
                     </span>
                   </div>
@@ -453,45 +433,31 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
 
           {/* Order Items */}
           <div className="mt-6">
-            <h3 className="text-lg font-medium text-slate-200 border-b border-slate-700/50 pb-2 mb-4">
-              Order Items
-            </h3>
+            <div className="section-title">অর্ডারের প্রোডাক্ট</div>
 
-            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg overflow-hidden">
-              <table className="w-full">
+            <div className="tbl-wrap">
+              <table className="tbl">
                 <thead>
-                  <tr className="bg-slate-700/50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-100">
-                      Product
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-100">
-                      Quantity
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100">
-                      Unit Price
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100">
-                      Total
-                    </th>
+                  <tr>
+                    <th>প্রোডাক্ট</th>
+                    <th className="cell-num">পরিমাণ</th>
+                    <th className="cell-num">দাম</th>
+                    <th className="cell-num">মোট</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orderData.items.map((item) => (
-                    <tr key={item.id} className="border-t border-slate-700/30">
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="text-sm font-medium text-slate-100">
-                            {item.product_name}
-                          </p>
-                          {item.variant_details && (
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              {item.variant_details}
-                            </p>
-                          )}
-                        </div>
+                    <tr key={item.id}>
+                      <td>
+                        <div className="cell-strong">{item.product_name}</div>
+                        {item.variant_details && (
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            {item.variant_details}
+                          </div>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="cell-num">
+                        <div className="row-actions">
                           <button
                             onClick={() =>
                               handleItemQuantityChange(
@@ -499,11 +465,12 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                                 item.quantity - 1
                               )
                             }
-                            className="w-6 h-6 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-xs"
+                            className="w-8 h-8 rounded border border-slate-200 text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors"
+                            aria-label="পরিমাণ কমান"
                           >
                             −
                           </button>
-                          <span className="w-8 text-center text-slate-100 font-medium text-sm">
+                          <span className="w-8 text-center num text-slate-900 font-medium">
                             {item.quantity}
                           </span>
                           <button
@@ -513,13 +480,14 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                                 item.quantity + 1
                               )
                             }
-                            className="w-6 h-6 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600 flex items-center justify-center transition-colors text-xs"
+                            className="w-8 h-8 rounded border border-slate-200 text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors"
+                            aria-label="পরিমাণ বাড়ান"
                           >
                             +
                           </button>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="cell-num">
                         <input
                           type="number"
                           min="0"
@@ -531,10 +499,11 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                               parseFloat(e.target.value) || 0
                             )
                           }
-                          className="w-20 bg-slate-800/50 border border-slate-700/50 text-white text-sm rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                          className="input w-24 text-right"
+                          aria-label="দাম"
                         />
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400">
+                      <td className="cell-num cell-strong">
                         {formatCurrency(item.total_price)}
                       </td>
                     </tr>
@@ -546,18 +515,18 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-700/50">
+        <div className="modal-foot">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-800/50 rounded-lg transition-colors disabled:opacity-50"
+            className="btn btn-ghost"
           >
-            Cancel
+            বাতিল
           </button>
           <button
             onClick={handleSave}
             disabled={isLoading}
-            className="px-6 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="btn btn-primary"
           >
             {isLoading && (
               <svg
@@ -580,7 +549,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                 />
               </svg>
             )}
-            {isLoading ? "Saving..." : "Save Changes"}
+            {isLoading ? "সেভ হচ্ছে…" : "সেভ করুন"}
           </button>
         </div>
       </div>

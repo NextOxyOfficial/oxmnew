@@ -1,3 +1,4 @@
+from core.ownership import OwnedRelationsMixin
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Notebook, NotebookSection, NotebookTag
@@ -15,7 +16,9 @@ class NotebookTagSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'usage_count', 'created_at', 'created_by']
 
 
-class NotebookSectionSerializer(serializers.ModelSerializer):
+class NotebookSectionSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("notebook",)
+
     """Serializer for NotebookSection model"""
     
     class Meta:

@@ -1,1214 +1,625 @@
 "use client";
 
-import FilterDropdown from "@/components/dashboard/FilterDropdown";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Bike,
+  CalendarClock,
+  CreditCard,
+  MessageSquare,
+  NotebookPen,
+  Package,
+  PackagePlus,
+  RefreshCw,
+  ShoppingCart,
+  Truck,
+  Users,
+} from "lucide-react";
+import { ApiService } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
-import { useBankingOverview } from "@/hooks/useBankingOverview";
-import { useCustomerStats } from "@/hooks/useCustomerStats";
-import { useInventoryStats } from "@/hooks/useInventoryStats";
-import { useLowStock } from "@/hooks/useLowStock";
-import { useRecentActivitiesStats } from "@/hooks/useRecentActivitiesStats";
-import { useRecentSales } from "@/hooks/useRecentSales";
-import { useRecentSms } from "@/hooks/useRecentSms";
-import { useSmsCredits } from "@/hooks/useSmsCredits";
-import { customersAPI } from "@/lib/api/customers";
+import { AnalyticsOverview } from "@/lib/analytics";
+import ReportCard, { ReportRow } from "@/components/dashboard/ReportCard";
+import CoachStrip from "@/components/dashboard/CoachStrip";
 import {
-  formatDateTime,
-  generateOrderId,
-  getOrderStatus,
-} from "@/lib/utils/salesUtils";
-import {
-  formatVariantName,
-  getLowestStockVariant,
-  getStockStatus,
-  getStockStatusColor,
-  getTotalStock,
-} from "@/lib/utils/stockUtils";
-import { X, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Package, Wallet, MessageSquare, Plus, ArrowRight, RefreshCw, Calendar, BarChart3 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+  DashboardFeed,
+  SMS_STATUS,
+  VEHICLE_STATUS,
+  daysAway,
+  shortDate,
+} from "@/lib/dashboardFeed";
+
+/** Windows the short overview offers — the same presets analytics uses. */
+const RANGE_OPTIONS = [
+  { value: "today", label: "আজ" },
+  { value: "this_week", label: "এই সপ্তাহ" },
+  { value: "this_month", label: "এই মাস" },
+  { value: "last_30", label: "গত ৩০ দিন" },
+] as const;
+
+/** How loud each focus signal is, in one word the right column can hold. */
+const SEVERITY_WORD: Record<string, string> = {
+  danger: "জরুরি",
+  warn: "খেয়াল করুন",
+  info: "দেখে নিন",
+  good: "ভালো",
+};
 
 export default function DashboardPage() {
-  const router = useRouter();
+  const { user } = useAuth();
   const formatCurrency = useCurrencyFormatter();
-  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
-  const [showDateRangePicker, setShowDateRangePicker] = useState(false);
-  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
-  const [currentFilter, setCurrentFilter] = useState("today");
-  const [currentFilterLabel, setCurrentFilterLabel] = useState("Today");
 
-  // Use the custom hook for recent sales
-  const {
-    recentSales,
-    isLoadingSales,
-    salesError,
-    refetchSales,
-    fetchSalesWithFilter,
-  } = useRecentSales(5);
+  const [today, setToday] = useState<AnalyticsOverview | null>(null);
+  const [month, setMonth] = useState<AnalyticsOverview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // The short overview reads whichever window the user picks; today and the
+  // month above it stay fixed because they answer different questions.
+  const [range, setRange] = useState("this_month");
+  const [rangeData, setRangeData] = useState<AnalyticsOverview | null>(null);
+  const [feed, setFeed] = useState<DashboardFeed | null>(null);
 
-  // Use the custom hook for low stock alerts
-  const {
-    lowStockProducts,
-    outOfStockProducts,
-    isLoadingStock,
-    stockError,
-    refetchStock,
-  } = useLowStock(10);
-
-  // Use the custom hook for inventory statistics
-  const {
-    stats,
-    isLoading: isLoadingStats,
-    error: statsError,
-    refetch: refetchStats,
-  } = useInventoryStats();
-
-  // Use the custom hook for recent activities statistics
-  const recentActivitiesStats = useRecentActivitiesStats(recentSales);
-
-  // Use the custom hook for customer statistics
-  const {
-    stats: customerStats,
-    isLoading: isLoadingCustomerStats,
-    error: customerStatsError,
-    refetch: refetchCustomerStats,
-  } = useCustomerStats();
-
-  // Use the custom hook for banking overview
-  const {
-    overview: bankingOverview,
-    isLoading: isLoadingBanking,
-    error: bankingError,
-    refetch: refetchBanking,
-  } = useBankingOverview();
-
-  // Use the custom hook for SMS credits
-  const {
-    credits: smsCredits,
-    isLoading: isLoadingSmsCredits,
-    error: smsCreditsError,
-    refetch: refetchSmsCredits,
-  } = useSmsCredits();
-
-  // Use the custom hook for recent SMS
-  const {
-    recentSms,
-    isLoadingRecentSms,
-    recentSmsError,
-    refetchRecentSms,
-  } = useRecentSms();
-
-  const [newCustomer, setNewCustomer] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    status: "active" as const,
-    notes: "",
-  });
-  const [dateRange, setDateRange] = useState({
-    startDate: new Date(),
-    endDate: new Date(),
-  });
-
-  // Apply initial filter on mount
-  useEffect(() => {
-    console.log("Dashboard: Applying initial filter:", currentFilter);
-    fetchSalesWithFilter({ dateFilter: currentFilter });
-  }, []); // Empty dependency array - only run once on mount
-
-  // Filter handling functions
-  const handleFilterChange = (filter: string, label: string) => {
-    console.log("Dashboard: Filter changing to:", filter, label);
-    setCurrentFilter(filter);
-    setCurrentFilterLabel(label);
-
-    // Apply the filter immediately
-    console.log("Calling fetchSalesWithFilter with:", { dateFilter: filter });
-    fetchSalesWithFilter({ dateFilter: filter });
-  };
-
-  const handleCustomDateRange = () => {
-    setShowDateRangePicker(true);
-  };
-
-  const handleCustomDateRangeApply = () => {
-    const startDate = dateRange.startDate.toISOString().split("T")[0];
-    const endDate = dateRange.endDate.toISOString().split("T")[0];
-
-    fetchSalesWithFilter({
-      startDate,
-      endDate,
-    });
-
-    setCurrentFilter("custom");
-    setCurrentFilterLabel(
-      `${dateRange.startDate.toLocaleDateString()} - ${dateRange.endDate.toLocaleDateString()}`
-    );
-    setSortDropdownOpen(false);
-    setShowDateRangePicker(false);
-  };
-
-  // Quick Actions handlers
-  const handleNewOrder = () => {
-    setIsNavigating(true);
-    router.push("/dashboard/orders/add");
-  };
-
-  const handleAddProduct = () => {
-    setIsNavigating(true);
-    router.push("/dashboard/products/add");
-  };
-
-  const handleNewCustomer = () => {
-    setShowNewCustomerModal(true);
-  };
-
-  const handleDueBook = () => {
-    setIsNavigating(true);
-    router.push("/dashboard/duebook");
-  };
-
-  const handleBuySubscription = () => {
-    setIsNavigating(true);
-    router.push("/dashboard/subscriptions");
-  };
-
-  const handleSendSms = () => {
-    setIsNavigating(true);
-    router.push("/dashboard/sms");
-  };
-
-  const handleViewInvoice = (saleId: number) => {
-    // Open invoice in new tab using standalone invoice page (without dashboard layout)
-    const invoiceUrl = `/invoice/${saleId}`;
-    window.open(invoiceUrl, '_blank');
-  };
-
-  const handleCreateMainAccount = async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
     try {
-      // Create main account via API using the banking API
-      const response = await fetch("/api/banking/accounts/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${localStorage.getItem("authToken") || ""}`,
-        },
-        body: JSON.stringify({
-          name: "Main",
-          balance: 0.0,
-        }),
-      });
-
-      if (response.ok) {
-        // Refresh banking data
-        refetchBanking();
-        alert("Main account created successfully!");
-      } else {
-        const errorData = await response.json();
-        console.error("Failed to create account:", errorData);
-        alert("Failed to create account. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error creating main account:", error);
-      alert("Failed to create account. Please try again.");
-    }
-  };
-
-  const handleCreateCustomer = async () => {
-    if (!newCustomer.name || !newCustomer.email || !newCustomer.phone) {
-      alert("Please fill in all required fields (Name, Email, Phone)");
-      return;
-    }
-
-    try {
-      setIsCreatingCustomer(true);
-      await customersAPI.createCustomer({
-        name: newCustomer.name,
-        email: newCustomer.email,
-        phone: newCustomer.phone,
-        address: newCustomer.address,
-        status: newCustomer.status,
-        notes: newCustomer.notes,
-      });
-      alert("Customer created successfully!");
-      setShowNewCustomerModal(false);
-      setNewCustomer({
-        name: "",
-        email: "",
-        phone: "",
-        address: "",
-        status: "active" as const,
-        notes: "",
-      });
+      // Today drives the live figures; the month drives the running-cost view.
+      // Both come from the analytics endpoint rather than a bespoke one, so the
+      // dashboard can never disagree with the analytics screen.
+      const [todayData, monthData] = await Promise.all([
+        ApiService.getAnalyticsOverview({ period: "today" }),
+        ApiService.getAnalyticsOverview({ period: "this_month" }),
+      ]);
+      setToday(todayData);
+      setMonth(monthData);
+      setError(null);
     } catch (err) {
-      console.error("Error creating customer:", err);
-      alert("Failed to create customer. Please try again.");
+      setError(err instanceof Error ? err.message : "তথ্য আনা যায়নি");
     } finally {
-      setIsCreatingCustomer(false);
+      setLoading(false);
     }
-  };
-
-  const handleCloseCustomerModal = () => {
-    setShowNewCustomerModal(false);
-    setNewCustomer({
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      status: "active" as const,
-      notes: "",
-    });
-  };
+    // The activity cards load on their own: a slow join in one of them must not
+    // hold back the figures above, and an outage there is not worth an error
+    // screen — the cards simply stay empty.
+    try {
+      setFeed(await ApiService.getDashboardFeed());
+    } catch {
+      setFeed(null);
+    }
+  }, []);
 
   useEffect(() => {
-    // Add click outside listener to close dropdown and date picker
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Element;
-      if (sortDropdownOpen && !target.closest("[data-dropdown-toggle]")) {
-        setSortDropdownOpen(false);
-      }
-      if (
-        showDateRangePicker &&
-        !target.closest(".calendar-container") &&
-        !target.closest("[data-dropdown-toggle]")
-      ) {
-        setShowDateRangePicker(false);
-      }
-    }
+    load();
+  }, [load]);
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [sortDropdownOpen, showDateRangePicker]);
-
-  // Apply initial filter when component mounts
   useEffect(() => {
-    // Apply the default filter after the hook has initialized
-    const timer = setTimeout(() => {
-      console.log("Dashboard: Applying initial filter:", currentFilter);
-      fetchSalesWithFilter({ dateFilter: currentFilter });
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []); // Empty dependency array to run only on mount
+    let cancelled = false;
+    ApiService.getAnalyticsOverview({ period: range })
+      .then((data) => {
+        if (!cancelled) setRangeData(data);
+      })
+      .catch(() => {
+        if (!cancelled) setRangeData(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
+
+  const money = (value: number) => formatCurrency(value);
+  const dateLine = new Date().toLocaleDateString("bn-BD", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  if (loading || !today || !month) {
+    return (
+      <div className="page space-y-4">
+        <div className="page-head">
+          <div>
+            <h1 className="page-title">
+              স্বাগতম{user?.first_name ? `, ${user.first_name}` : ""}
+            </h1>
+            <p className="page-sub">{dateLine}</p>
+          </div>
+        </div>
+        <div className="plane">
+          <div className="plane-section">
+            <div className="empty">
+              {error ? (
+                <>
+                  <p>{error}</p>
+                  <button onClick={load} className="btn btn-ghost btn-sm mt-2">
+                    আবার চেষ্টা করুন
+                  </button>
+                </>
+              ) : (
+                "আজকের হিসাব আনা হচ্ছে…"
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const commitment = month.monthly_commitment;
+  const target = today.targets;
+  // Break-even needs the running cost covered too, not just what was spent
+  // today — a quiet day still owes its share of rent and payroll.
+  const dailyNeed = Math.max(
+    target.breakeven_daily_revenue,
+    commitment.daily / (target.margin_pct / 100 || 1)
+  );
+  const progress = dailyNeed > 0 ? (today.sales.revenue / dailyNeed) * 100 : 0;
+  const shortfall = Math.max(0, dailyNeed - today.sales.revenue);
 
   return (
-    <div className="py-4 px-1 sm:px-4 lg:px-6 sm:py-6 lg:py-8 space-y-4">
-      {/* Welcome Message */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-lg sm:text-xl font-semibold text-white">Welcome to OxyManager 👋</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Here&apos;s your business overview for today</p>
+    <div className="page space-y-4">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">
+            স্বাগতম{user?.first_name ? `, ${user.first_name}` : ""}
+          </h1>
+          <p className="page-sub">{dateLine}</p>
         </div>
-        <button
-          onClick={handleNewOrder}
-          disabled={isNavigating}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold rounded-lg transition-all text-xs sm:text-sm whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Sale</span>
+        <button onClick={load} className="btn btn-ghost" disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          রিফ্রেশ
         </button>
       </div>
 
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Buy Price Card */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 hover:border-red-500/30 transition-all group">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 rounded-lg bg-red-500/10 group-hover:bg-red-500/20 transition-all">
-              <TrendingDown className="w-4 h-4 text-red-400" />
-            </div>
-            <span className="text-[10px] text-slate-500 font-medium uppercase">Buy Price</span>
-            {isLoadingStats && <div className="animate-spin rounded-full h-3 w-3 border border-red-400/30 border-t-red-400 ml-auto"></div>}
-          </div>
-          <p className="text-base sm:text-lg font-bold text-white truncate">
-            {isLoadingStats ? "---" : statsError ? <span className="text-red-400 text-xs">Error</span> : formatCurrency(stats?.total_buy_value || 0)}
-          </p>
-        </div>
+      {feed?.coach?.length ? <CoachStrip messages={feed.coach} /> : null}
 
-        {/* Sell Price Card */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 hover:border-cyan-500/30 transition-all group">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 rounded-lg bg-cyan-500/10 group-hover:bg-cyan-500/20 transition-all">
-              <TrendingUp className="w-4 h-4 text-cyan-400" />
-            </div>
-            <span className="text-[10px] text-slate-500 font-medium uppercase">Sell Price</span>
-            {isLoadingStats && <div className="animate-spin rounded-full h-3 w-3 border border-cyan-400/30 border-t-cyan-400 ml-auto"></div>}
-          </div>
-          <p className="text-base sm:text-lg font-bold text-white truncate">
-            {isLoadingStats ? "---" : statsError ? <span className="text-red-400 text-xs">Error</span> : formatCurrency(stats?.total_sell_value || 0)}
-          </p>
-        </div>
-
-        {/* Estimated Profit Card */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 hover:border-emerald-500/30 transition-all group">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-all">
-              <DollarSign className="w-4 h-4 text-emerald-400" />
-            </div>
-            <span className="text-[10px] text-slate-500 font-medium uppercase">Profit</span>
-            <span className="text-[10px] text-emerald-400 ml-auto">
-              {isLoadingStats ? "" : statsError ? "" : `${((((stats?.total_sell_value || 0) - (stats?.total_buy_value || 0)) / (stats?.total_sell_value || 1)) * 100).toFixed(0)}%`}
+      {/* ── what the shop costs to run ───────────────────────────── */}
+      <div className="plane">
+        <div className="plane-section">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="section-title mb-0">ব্যবসা চালাতে মাসে কত লাগে</span>
+            <span className="text-xs text-slate-500">
+              স্টক কেনার টাকা এর বাইরে
             </span>
           </div>
-          <p className="text-base sm:text-lg font-bold text-emerald-400 truncate">
-            {isLoadingStats ? "---" : statsError ? <span className="text-red-400 text-xs">Error</span> : formatCurrency((stats?.total_sell_value || 0) - (stats?.total_buy_value || 0))}
-          </p>
+
+          <div className="mt-2 grid gap-2 grid-cols-2 lg:auto-cols-fr lg:grid-flow-col">
+            {(
+              [
+                [
+                  "কর্মচারীর বেতন",
+                  commitment.payroll,
+                  `${commitment.employees} জন`,
+                  "/dashboard/employees",
+                ],
+                [
+                  "অফিস ম্যানেজমেন্ট",
+                  commitment.fixed,
+                  `${month.fixed_costs.count} টা`,
+                  "/dashboard/employees/office-rent",
+                ],
+                [
+                  "লোনের কিস্তি",
+                  commitment.loan,
+                  `${month.loans.active_count} টা লোন`,
+                  "/dashboard/banking/loans",
+                ],
+              ] as [string, number, string, string][]
+            ).map(([label, amount, note, href]) => (
+              <Link
+                key={label}
+                href={href}
+                className="rounded-lg border border-slate-200 px-3 py-2.5 transition-colors hover:bg-slate-50"
+              >
+                <div className="stat-label">{label}</div>
+                <div className="stat-value num">{money(amount)}</div>
+                <div className="stat-meta">{note}</div>
+              </Link>
+            ))}
+
+            <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2.5">
+              <div className="stat-label">সব মিলিয়ে</div>
+              <div className="stat-value num text-cyan-800">
+                {money(commitment.total)}
+              </div>
+              <div className="stat-meta">দিনে {money(commitment.daily)}</div>
+            </div>
+          </div>
         </div>
 
-        {/* Customers Card */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 hover:border-purple-500/30 transition-all group">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-all">
-              <Users className="w-4 h-4 text-purple-400" />
-            </div>
-            <span className="text-[10px] text-slate-500 font-medium uppercase">Customers</span>
-            <span className="text-[10px] text-purple-400 ml-auto">
-              {isLoadingCustomerStats ? "" : customerStatsError ? "" : `${customerStats?.active_customers || 0} active`}
+        {/* ── today against the target ───────────────────────────── */}
+        <div className="plane-section">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="section-title mb-0">আজকের বিক্রি ও টার্গেট</span>
+            <Link
+              href="/dashboard/analytics"
+              className="text-xs font-medium text-cyan-700 hover:underline"
+            >
+              পুরো অ্যানালিটিক্স
+            </Link>
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
+            <span className="num text-2xl font-semibold text-slate-900">
+              {money(today.sales.revenue)}
+            </span>
+            <span className="text-sm text-slate-600">
+              টার্গেট {money(dailyNeed)}
             </span>
           </div>
-          <p className="text-base sm:text-lg font-bold text-white">
-            {isLoadingCustomerStats ? "---" : customerStatsError ? <span className="text-red-400 text-xs">Error</span> : customerStats?.total_customers || 0}
+
+          {/* A bar, not a chart: one number against one line. */}
+          <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
+            <div
+              className={`h-full rounded-full ${
+                progress >= 100 ? "bg-emerald-500" : "bg-amber-500"
+              }`}
+              style={{ width: `${Math.min(100, Math.max(2, progress))}%` }}
+            />
+          </div>
+
+          <p className="mt-1.5 text-xs">
+            {progress >= 100 ? (
+              <span className="money-pos font-medium">
+                টার্গেট পেরিয়ে গেছে — আজ {today.sales.orders_count} টা অর্ডার
+              </span>
+            ) : (
+              <span className="text-slate-600">
+                আরও <span className="money-neg font-medium">{money(shortfall)}</span>{" "}
+                বিক্রি করলে আজকের খরচ উঠে যাবে · এখন পর্যন্ত{" "}
+                {today.sales.orders_count} টা অর্ডার
+              </span>
+            )}
           </p>
+
+          <div className="stat-strip mt-3 rounded-lg border border-slate-200">
+            <div className="stat">
+              <div className="stat-label">আজকের লাভ</div>
+              <div className="stat-value num money-pos">
+                {money(today.sales.gross_profit)}
+              </div>
+              <div className="stat-meta">খরচ বাদ দেওয়ার আগে</div>
+            </div>
+            <div className="stat">
+              <div className="stat-label">আজকের খরচ</div>
+              <div className="stat-value num money-neg">
+                {money(today.costs.total)}
+              </div>
+              <div className="stat-meta">
+                {today.costs.by_category[0]
+                  ? `সবচেয়ে বেশি ${today.costs.by_category[0].label}`
+                  : "কোনো খরচ ওঠেনি"}
+              </div>
+            </div>
+            <div className="stat">
+              <div className="stat-label">আজ থাকল</div>
+              <div
+                className={`stat-value num ${
+                  today.net.is_profit ? "money-pos" : "money-neg"
+                }`}
+              >
+                {money(Math.abs(today.net.profit))}
+              </div>
+              <div className="stat-meta">
+                {today.net.is_profit ? "লাভ" : "ঘাটতি"}
+              </div>
+            </div>
+            <div className="stat">
+              <div className="stat-label">বাকি পাওনা</div>
+              <div className="stat-value num money-neg">
+                {money(today.receivables.total)}
+              </div>
+              <div className="stat-meta">
+                {today.receivables.customers_count} জনের কাছে
+              </div>
+            </div>
+          </div>
         </div>
+
       </div>
 
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
-        {/* Recent Activities */}
-        <div className="xl:col-span-2 bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-800 overflow-hidden">
-          {/* Section Header */}
-          <div className="p-4 sm:p-6 border-b border-slate-800">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-                  <ShoppingCart className="w-5 h-5 text-cyan-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Recent Sales</h3>
-                  <p className="text-xs text-slate-500">Filter: {currentFilterLabel}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <FilterDropdown
-                  currentFilter={currentFilter}
-                  currentFilterLabel={currentFilterLabel}
-                  onFilterChange={handleFilterChange}
-                  onCustomDateRange={handleCustomDateRange}
-                  isMobile={true}
-                />
-                <button
-                  onClick={refetchSales}
-                  disabled={isLoadingSales}
-                  className="p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-slate-400 hover:text-white transition-all"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoadingSales ? "animate-spin" : ""}`} />
-                </button>
-              </div>
+      {/* ── stock on the shelf ─────────────────────────────────────── */}
+      {feed && (
+        <div className="plane">
+          <div className="plane-section">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="section-title mb-0">স্টকে কত টাকা আটকে আছে</span>
+              <Link
+                href="/dashboard/products"
+                className="text-xs font-medium text-cyan-700 hover:underline"
+              >
+                প্রোডাক্ট দেখুন
+              </Link>
             </div>
           </div>
-
-          <div className="p-4 sm:p-6">
-            {/* Period Stats - Mini Cards */}
-            <div className="grid grid-cols-3 gap-3 mb-5">
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 text-center">
-                <p className="text-xs text-slate-500 mb-1">Buy Price</p>
-                <p className="text-sm sm:text-base font-bold text-white">
-                  {isLoadingSales ? "---" : formatCurrency(recentActivitiesStats.totalBuyPrice)}
-                </p>
-                <p className="text-xs text-slate-500">{recentActivitiesStats.salesCount} sales</p>
+          <div className="stat-strip">
+            <div className="stat">
+              <div className="stat-label">কেনা দাম</div>
+              <div className="stat-value num">
+                {money(feed.inventory.buy_value)}
               </div>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 text-center">
-                <p className="text-xs text-slate-500 mb-1">Sell Price</p>
-                <p className="text-sm sm:text-base font-bold text-cyan-400">
-                  {isLoadingSales ? "---" : formatCurrency(recentActivitiesStats.totalSellPrice)}
-                </p>
-                <p className="text-xs text-slate-500">Revenue</p>
-              </div>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 text-center">
-                <p className="text-xs text-slate-500 mb-1">Profit</p>
-                <p className="text-sm sm:text-base font-bold text-emerald-400">
-                  {isLoadingSales ? "---" : formatCurrency(recentActivitiesStats.totalProfit)}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {isLoadingSales ? "---" : `${recentActivitiesStats.profitMargin.toFixed(1)}%`}
-                </p>
+              <div className="stat-meta">
+                {feed.inventory.product_count.toLocaleString("bn-BD")} টা আইটেম
               </div>
             </div>
-
-            {/* Recent Order Activities */}
-            <div>
-              <div className="space-y-2 max-h-80 overflow-y-auto scrollbar-hide">
-                {isLoadingSales ? (
-                  // Loading state
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/30"></div>
-                    <span className="ml-2 text-sm text-gray-400">
-                      Loading recent sales...
-                    </span>
-                  </div>
-                ) : salesError ? (
-                  // Error state
-                  <div className="flex items-center justify-center py-8">
-                    <div className="text-center">
-                      <div className="text-red-400 mb-2">⚠️</div>
-                      <p className="text-sm text-red-400">{salesError}</p>
-                      <button
-                        onClick={refetchSales}
-                        className="mt-2 px-3 py-1 bg-red-500/20 text-red-400 text-xs rounded hover:bg-red-500/30 transition-colors"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  </div>
-                ) : recentSales.length === 0 ? (
-                  // Empty state
-                  <div className="flex items-center justify-center py-8">
-                    <div className="text-center">
-                      <div className="text-gray-400 mb-2">📋</div>
-                      <p className="text-sm text-gray-400">
-                        No recent sales found
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Sales will appear here once you make some
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  recentSales.map((sale) => {
-                    const orderStatus = getOrderStatus(sale);
-                    const { date, time } = formatDateTime(sale.sale_date);
-                    const orderId = generateOrderId(sale.id);
-
-                    return (
-                      <div
-                        key={sale.id}
-                        className="bg-white/5 rounded-lg p-3 hover:bg-white/3 transition-colors"
-                      >
-                        {/* First row - always visible */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div
-                              className={`w-2 h-2 ${
-                                orderStatus === "Completed"
-                                  ? "bg-green-400"
-                                  : "bg-yellow-400"
-                              } rounded-full mr-2`}
-                              title={
-                                orderStatus === "Completed"
-                                  ? "Sale Completed"
-                                  : "Sale Draft"
-                              }
-                            ></div>
-                            <span className="text-sm font-medium text-white mr-2">
-                              Order {orderId}
-                            </span>
-                            <span
-                              className={`mr-2 ${
-                                orderStatus === "Draft"
-                                  ? "text-yellow-200 bg-yellow-400/10"
-                                  : "text-green-200 bg-green-400/10"
-                              } text-xs font-medium px-1.5 py-0.5 rounded`}
-                            >
-                              {orderStatus}
-                            </span>
-                            <span className="hidden sm:inline text-sm text-gray-300">
-                              {sale.customer_name || "Walk-in Customer"}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center">
-                            <span className="hidden sm:inline text-sm font-bold text-white">
-                              {formatCurrency(sale.total_amount)}
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewInvoice(sale.id);
-                              }}
-                              disabled={isNavigating}
-                              className="text-gray-300 hover:text-white p-1 rounded-full hover:bg-white/3 transition-all ml-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                              title="View Invoice"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 w-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Second row - Mobile only for customer name and amount */}
-                        <div className="sm:hidden flex justify-between items-center mt-2 mb-1">
-                          <span className="text-sm text-gray-300">
-                            {sale.customer_name || "Walk-in Customer"}
-                          </span>
-                          <span className="text-sm font-bold text-white">
-                            {formatCurrency(sale.total_amount)}
-                          </span>
-                        </div>
-
-                        <div className="flex flex-wrap items-center justify-between mt-2 bg-black/20 rounded-lg p-1.5">
-                          <div className="flex items-center space-x-3 px-1.5">
-                            {/* Show order items information */}
-                            {sale.items && sale.items.length > 1 ? (
-                              // Multiple items - show items count and total info
-                              <>
-                                <div>
-                                  <span className="text-xs text-gray-400">
-                                    Items
-                                  </span>
-                                  <span className="text-xs font-medium text-purple-400 ml-1.5">
-                                    {sale.items.length} items
-                                  </span>
-                                </div>
-                                <div className="h-3 w-px bg-gray-600"></div>
-                                <div>
-                                  <span className="text-xs text-gray-400">
-                                    Total Qty
-                                  </span>
-                                  <span className="text-xs font-medium text-gray-300 ml-1.5">
-                                    {sale.items?.reduce((total, item) => total + item.quantity, 0) || sale.quantity}
-                                  </span>
-                                </div>
-                                <div className="h-3 w-px bg-gray-600"></div>
-                                <div>
-                                  <span className="text-xs text-gray-400">
-                                    Profit
-                                  </span>
-                                  <span
-                                    className={`text-xs font-medium ml-1.5 ${
-                                      (sale.gross_profit || sale.profit || 0) >=
-                                      0
-                                        ? "text-green-400"
-                                        : "text-red-400"
-                                    }`}
-                                  >
-                                    {formatCurrency(
-                                      sale.gross_profit || sale.profit || 0
-                                    )}
-                                  </span>
-                                </div>
-                              </>
-                            ) : (
-                              // Single item - show unit price, quantity, and profit
-                              <>
-                                <div>
-                                  <span className="text-xs text-gray-400">
-                                    Unit Price
-                                  </span>
-                                  <span className="text-xs font-medium text-blue-400 ml-1.5">
-                                    {formatCurrency(sale.unit_price)}
-                                  </span>
-                                </div>
-                                <div className="h-3 w-px bg-gray-600"></div>
-                                <div>
-                                  <span className="text-xs text-gray-400">
-                                    Qty
-                                  </span>
-                                  <span className="text-xs font-medium text-gray-300 ml-1.5">
-                                    {sale.quantity}
-                                  </span>
-                                </div>
-                                <div className="h-3 w-px bg-gray-600"></div>
-                                <div>
-                                  <span className="text-xs text-gray-400">
-                                    Profit
-                                  </span>
-                                  <span
-                                    className={`text-xs font-medium ml-1.5 ${
-                                      (sale.gross_profit || sale.profit || 0) >=
-                                      0
-                                        ? "text-green-400"
-                                        : "text-red-400"
-                                    }`}
-                                  >
-                                    {formatCurrency(
-                                      sale.gross_profit || sale.profit || 0
-                                    )}
-                                  </span>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-400 px-1.5 mt-1 sm:mt-0">
-                            {date}, {time}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
+            <div className="stat">
+              <div className="stat-label">বেচা দাম</div>
+              <div className="stat-value num">
+                {money(feed.inventory.sell_value)}
+              </div>
+              <div className="stat-meta">
+                {feed.inventory.units.toLocaleString("bn-BD")} পিস স্টকে
+              </div>
+            </div>
+            <div className="stat">
+              <div className="stat-label">সব বিক্রি হলে লাভ</div>
+              <div className="stat-value num money-pos">
+                {money(feed.inventory.potential_profit)}
+              </div>
+              <div className="stat-meta">
+                মার্জিন {feed.inventory.margin_pct.toLocaleString("bn-BD")}%
+              </div>
+            </div>
+            <div className="stat">
+              <div className="stat-label">সামনে যে খরচ আসছে</div>
+              <div className="stat-value num money-neg">
+                {money(
+                  feed.upcoming_costs.reduce((sum, row) => sum + row.amount, 0)
                 )}
               </div>
-              <button
-                className="w-full mt-3 py-2 bg-gradient-to-r from-blue-500/30 to-purple-500/30 hover:from-blue-500/50 hover:to-purple-500/50 text-white rounded-lg transition-all duration-200 text-sm font-medium cursor-pointer"
-                onClick={() => {
-                  setIsNavigating(true);
-                  router.push("/dashboard/sales");
-                }}
-                disabled={isNavigating}
-              >
-                View All Sales
-              </button>
+              <div className="stat-meta">
+                {feed.upcoming_costs[0]
+                  ? `${feed.upcoming_costs[0].title} ${daysAway(
+                      feed.upcoming_costs[0].days_left
+                    )}`
+                  : "কিছু বাকি নেই"}
+              </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Right Sidebar - Quick Actions & SMS */}
-        <div className="space-y-4">
-          {/* SMS Balance Card */}
-          <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-800 overflow-hidden">
-            <div className="p-4 border-b border-slate-800">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                    <MessageSquare className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-white">SMS Credits</h3>
-                    <p className="text-xl font-bold text-blue-400">
-                      {isLoadingSmsCredits ? "---" : smsCreditsError ? "Error" : smsCredits.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleBuySubscription}
-                  disabled={isNavigating}
-                  className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-xs font-medium rounded-lg transition-all"
-                >
-                  Buy More
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-4">
-              {isLoadingRecentSms ? (
-                <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-400/30 border-t-blue-400"></div>
-                </div>
-              ) : recentSms ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-slate-500">Last SMS sent:</p>
-                  <p className="text-sm text-white font-medium truncate">{recentSms.recipient}</p>
-                  <p className="text-xs text-slate-400 line-clamp-2">&ldquo;{recentSms.message.substring(0, 60)}...&rdquo;</p>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className={`text-xs px-2 py-0.5 rounded ${recentSms.status === 'sent' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                      {recentSms.status}
-                    </span>
-                    <span className="text-xs text-slate-500">{recentSms.sms_count} SMS</span>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-slate-500 text-center py-2">No SMS sent yet</p>
-              )}
-              
-              <button 
-                onClick={handleSendSms}
-                disabled={isNavigating}
-                className="w-full mt-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-slate-900 font-semibold rounded-xl transition-all text-sm"
-              >
-                Send SMS
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-800 p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={handleNewOrder}
-                disabled={isNavigating}
-                className="flex flex-col items-center gap-2 p-3 bg-slate-800/50 hover:bg-emerald-500/10 border border-slate-700/50 hover:border-emerald-500/30 rounded-xl transition-all group"
-              >
-                <div className="p-2 rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-all">
-                  <ShoppingCart className="w-5 h-5 text-emerald-400" />
-                </div>
-                <span className="text-xs text-slate-300 font-medium">New Sale</span>
-              </button>
-              <button
-                onClick={handleAddProduct}
-                disabled={isNavigating}
-                className="flex flex-col items-center gap-2 p-3 bg-slate-800/50 hover:bg-blue-500/10 border border-slate-700/50 hover:border-blue-500/30 rounded-xl transition-all group"
-              >
-                <div className="p-2 rounded-lg bg-blue-500/10 group-hover:bg-blue-500/20 transition-all">
-                  <Package className="w-5 h-5 text-blue-400" />
-                </div>
-                <span className="text-xs text-slate-300 font-medium">Add Product</span>
-              </button>
-              <button
-                onClick={handleNewCustomer}
-                className="flex flex-col items-center gap-2 p-3 bg-slate-800/50 hover:bg-purple-500/10 border border-slate-700/50 hover:border-purple-500/30 rounded-xl transition-all group"
-              >
-                <div className="p-2 rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-all">
-                  <Users className="w-5 h-5 text-purple-400" />
-                </div>
-                <span className="text-xs text-slate-300 font-medium">New Customer</span>
-              </button>
-              <button
-                onClick={handleDueBook}
-                disabled={isNavigating}
-                className="flex flex-col items-center gap-2 p-3 bg-slate-800/50 hover:bg-orange-500/10 border border-slate-700/50 hover:border-orange-500/30 rounded-xl transition-all group"
-              >
-                <div className="p-2 rounded-lg bg-orange-500/10 group-hover:bg-orange-500/20 transition-all">
-                  <Wallet className="w-5 h-5 text-orange-400" />
-                </div>
-                <span className="text-xs text-slate-300 font-medium">Due Book</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Section - Banking & Low Stock Alert */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Low Stock Alert */}
-        <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-800 overflow-hidden">
-          <div className="p-4 sm:p-6 border-b border-slate-800">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-orange-500/10 border border-orange-500/20">
-                  <Package className="w-5 h-5 text-orange-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Low Stock Alert</h3>
-                  <p className="text-xs text-slate-500">{outOfStockProducts.length + lowStockProducts.length} items need attention</p>
-                </div>
-              </div>
-              <button
-                onClick={refetchStock}
-                disabled={isLoadingStock}
-                className="p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-slate-400 hover:text-white transition-all"
-              >
-                <RefreshCw className={`w-4 h-4 ${isLoadingStock ? "animate-spin" : ""}`} />
-              </button>
-            </div>
-          </div>
-          
-          <div className="p-4 sm:p-6">
-
-          <div className="space-y-2 overflow-y-auto max-h-80 scrollbar-hide">
-            {isLoadingStock ? (
-              // Loading state
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/30"></div>
-                <span className="ml-2 text-sm text-gray-400">
-                  Loading stock alerts...
-                </span>
-              </div>
-            ) : stockError ? (
-              // Error state
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center">
-                  <div className="text-red-400 mb-2">⚠️</div>
-                  <p className="text-sm text-red-400">{stockError}</p>
-                  <button
-                    onClick={refetchStock}
-                    className="mt-2 px-3 py-1 bg-red-500/20 text-red-400 text-xs rounded hover:bg-red-500/30 transition-colors cursor-pointer"
-                  >
-                    Retry
-                  </button>
-                </div>
-              </div>
-            ) : outOfStockProducts.length === 0 &&
-              lowStockProducts.length === 0 ? (
-              // Empty state
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center">
-                  <div className="text-green-400 mb-2">✅</div>
-                  <p className="text-sm text-green-400">
-                    All products have sufficient stock
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Great job managing your inventory!
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Out of Stock Products */}
-                {outOfStockProducts.map((product) => {
-                  const stockStatus = getStockStatus(product);
-                  const totalStock = getTotalStock(product);
-                  const statusColor = getStockStatusColor(stockStatus);
-                  const lowestVariant = getLowestStockVariant(product);
-
-                  return (
-                    <div
-                      key={`out-${product.id}`}
-                      className="bg-red-500/10 border border-red-400/30 rounded-lg p-3"
-                    >
-                      <div className="flex items-center mb-2">
-                        <div
-                          className={`w-2 h-2 bg-${statusColor}-500 rounded-full mr-2`}
-                        ></div>
-                        <button
-                          className="text-sm font-medium text-white hover:text-blue-300 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setIsNavigating(true);
-                            router.push(
-                              `/dashboard/products?search=${encodeURIComponent(
-                                product.name
-                              )}`
-                            );
-                          }}
-                        >
-                          {product.name}
-                          {lowestVariant &&
-                            ` - ${formatVariantName(lowestVariant)}`}
-                        </button>
-                      </div>
-
-                      <div className="flex flex-wrap items-center mt-2 bg-black/20 rounded-lg p-1.5">
-                        <div className="flex items-center space-x-3 px-1.5">
-                          <div>
-                            <span className="text-xs text-gray-400">
-                              Stock:
-                            </span>
-                            <span
-                              className={`text-xs font-medium text-${statusColor}-400 ml-1`}
-                            >
-                              {totalStock}
-                            </span>
-                          </div>
-                          <div className="h-3 w-px bg-gray-600"></div>
-                          <div>
-                            <span className="text-xs text-gray-400">
-                              Location:
-                            </span>
-                            <span className="text-xs font-medium text-gray-300 ml-1">
-                              {product.location || "N/A"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Low Stock Products */}
-                {lowStockProducts.map((product) => {
-                  const stockStatus = getStockStatus(product);
-                  const totalStock = getTotalStock(product);
-                  const statusColor = getStockStatusColor(stockStatus);
-                  const lowestVariant = getLowestStockVariant(product);
-
-                  return (
-                    <div
-                      key={`low-${product.id}`}
-                      className="bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-3"
-                    >
-                      <div className="flex items-center mb-2">
-                        <div
-                          className={`w-2 h-2 bg-${statusColor}-500 rounded-full mr-2`}
-                        ></div>
-                        <button
-                          className="text-sm font-medium text-white hover:text-blue-300 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setIsNavigating(true);
-                            router.push(
-                              `/dashboard/products?search=${encodeURIComponent(
-                                product.name
-                              )}`
-                            );
-                          }}
-                        >
-                          {product.name}
-                          {lowestVariant &&
-                            ` - ${formatVariantName(lowestVariant)}`}
-                        </button>
-                      </div>
-
-                      <div className="flex flex-wrap items-center mt-2 bg-black/20 rounded-lg p-1.5">
-                        <div className="flex items-center space-x-3 px-1.5">
-                          <div>
-                            <span className="text-xs text-gray-400">
-                              Stock:
-                            </span>
-                            <span
-                              className={`text-xs font-medium text-${statusColor}-400 ml-1`}
-                            >
-                              {totalStock}
-                            </span>
-                          </div>
-                          <div className="h-3 w-px bg-gray-600"></div>
-                          <div>
-                            <span className="text-xs text-gray-400">
-                              Location:
-                            </span>
-                            <span className="text-xs font-medium text-gray-300 ml-1">
-                              {product.location || "N/A"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </>
-            )}
-          </div>
-
-          <button
-            className="w-full mt-4 py-2.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-white rounded-xl transition-all text-sm font-medium"
-            onClick={() => {
-              setIsNavigating(true);
-              router.push("/dashboard/products");
-            }}
-            disabled={isNavigating}
+      {/* ── the short reports ──────────────────────────────────────
+          Three columns on a wide screen, one on a phone. Each card is
+          self-contained, so a module with no data yet simply says so instead
+          of leaving a hole in the grid. */}
+      {feed && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <ReportCard
+            title="সামনে যেসব খরচ আসছে"
+            icon={CalendarClock}
+            href="/dashboard/employees/office-rent"
+            hrefLabel="খরচ"
+            meta="ভাড়া, বিল, কিস্তি — কবে কোনটা"
+            empty="সামনে কোনো নির্দিষ্ট খরচ নেই।"
+            isEmpty={feed.upcoming_costs.length === 0}
           >
-            View Inventory Report
-          </button>
-          </div>
-        </div>
+            {feed.upcoming_costs.map((row) => (
+              <ReportRow
+                key={row.id}
+                href={row.href}
+                title={row.title}
+                note={`${shortDate(row.due_date)}${
+                  row.paid_this_month ? " · এই মাসের দেওয়া হয়েছে" : ""
+                }`}
+                value={money(row.amount)}
+                valueNote={daysAway(row.days_left)}
+                tone={row.days_left < 0 ? "neg" : row.days_left <= 7 ? "warn" : undefined}
+              />
+            ))}
+          </ReportCard>
 
-        {/* Banking Overview */}
-        <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-800 overflow-hidden">
-          <div className="p-4 sm:p-6 border-b border-slate-800">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <Wallet className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Banking Overview</h3>
-                  <p className="text-xs text-slate-500">
-                    {isLoadingBanking ? "Loading..." : bankingError ? "Error" : `${bankingOverview?.total_accounts || 0} accounts`}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-xl font-bold text-emerald-400">
-                    {isLoadingBanking ? "---" : bankingError ? "Error" : formatCurrency(bankingOverview?.total_balance || 0)}
-                  </p>
-                  <p className="text-xs text-emerald-400/70">
-                    {isLoadingBanking ? "---" : bankingError ? "" : `+${bankingOverview?.monthly_change_percentage || 0}% this month`}
-                  </p>
-                </div>
-                <button
-                  onClick={refetchBanking}
-                  disabled={isLoadingBanking}
-                  className="p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-slate-400 hover:text-white transition-all"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoadingBanking ? "animate-spin" : ""}`} />
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-4 sm:p-6">
-
-          <div className="grid grid-cols-2 gap-3">
-            {isLoadingBanking ? (
-              // Loading state
-              [...Array(4)].map((_, index) => (
-                <div
-                  key={index}
-                  className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 animate-pulse"
-                >
-                  <div className="h-4 bg-slate-700 rounded w-20 mb-2"></div>
-                  <div className="h-6 bg-slate-700 rounded w-24 mb-1"></div>
-                  <div className="h-3 bg-slate-700 rounded w-16"></div>
-                </div>
-              ))
-            ) : bankingError ? (
-              // Error state
-              <div className="col-span-2 flex items-center justify-center py-8">
-                <div className="text-center">
-                  <p className="text-sm text-red-400 mb-2">{bankingError}</p>
-                  <button
-                    onClick={refetchBanking}
-                    className="px-3 py-1.5 bg-red-500/20 text-red-400 text-xs rounded-lg hover:bg-red-500/30 transition-colors"
-                  >
-                    Retry
-                  </button>
-                </div>
-              </div>
-            ) : bankingOverview?.accounts.length === 0 ? (
-              // Empty state
-              <div className="col-span-2 flex items-center justify-center py-8">
-                <div className="text-center">
-                  <Wallet className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-                  <p className="text-sm text-slate-400 mb-1">No bank accounts found</p>
-                  <p className="text-xs text-slate-500 mb-4">Create your first account to get started</p>
-                  <button
-                    onClick={handleCreateMainAccount}
-                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-900 text-sm font-semibold rounded-xl transition-all"
-                  >
-                    Create Main Account
-                  </button>
-                </div>
-              </div>
-            ) : (
-              bankingOverview?.accounts.map((account, index) => {
-                const colors = [
-                  { bg: "emerald", text: "emerald" },
-                  { bg: "blue", text: "blue" },
-                  { bg: "purple", text: "purple" },
-                  { bg: "orange", text: "orange" }
-                ];
-                const color = colors[index % colors.length];
-
-                return (
-                  <div
-                    key={account.id}
-                    className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 hover:border-slate-600 transition-all"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-slate-400 text-xs font-medium">{account.name}</p>
-                      <div className={`w-2 h-2 bg-${color.bg}-400 rounded-full`}></div>
-                    </div>
-                    <p className="text-white font-bold text-lg">{formatCurrency(account.balance)}</p>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          <button
-            className="w-full mt-4 py-2.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-white rounded-xl transition-all text-sm font-medium"
-            onClick={() => {
-              setIsNavigating(true);
-              router.push("/dashboard/banking");
-            }}
-            disabled={isNavigating}
+          <ReportCard
+            title="কোন মাল আরও আনতে হবে"
+            icon={PackagePlus}
+            href="/dashboard/products"
+            hrefLabel="প্রোডাক্ট"
+            meta="যেগুলো দ্রুত ফুরিয়ে যাচ্ছে"
+            empty="এখন আলাদা করে কিছু আনার দরকার নেই — যা বিক্রি হচ্ছে তার স্টক যথেষ্ট আছে।"
+            isEmpty={!feed.restock?.length}
           >
-            View Banking Details
-          </button>
-          </div>
+            {(feed.restock ?? []).map((row) => (
+              <ReportRow
+                key={row.id}
+                href={`/dashboard/products/${row.id}`}
+                title={row.name}
+                note={row.note}
+                value={`${row.suggest_qty.toLocaleString("bn-BD")} পিস`}
+                valueNote={`≈ ${money(row.buy_cost)}`}
+                tone={row.days_left <= 7 ? "neg" : "warn"}
+              />
+            ))}
+          </ReportCard>
+
+          <ReportCard
+            title="শেষ ৫টা বিক্রি"
+            icon={ShoppingCart}
+            href="/dashboard/orders"
+            meta="কাকে, কত টাকার"
+            empty="এখনো কোনো বিক্রি হয়নি।"
+            isEmpty={feed.recent_sales.length === 0}
+          >
+            {feed.recent_sales.map((row) => (
+              <ReportRow
+                key={row.id}
+                href={`/dashboard/orders/edit/${row.id}`}
+                title={row.customer}
+                note={`${row.order_number} · ${shortDate(row.at)}`}
+                value={money(row.total)}
+                valueNote={row.due > 0 ? `বাকি ${money(row.due)}` : "পুরো পরিশোধ"}
+                tone={row.due > 0 ? "warn" : "pos"}
+              />
+            ))}
+          </ReportCard>
+
+          <ReportCard
+            title="শেষ ৫টা এসএমএস"
+            icon={MessageSquare}
+            href="/dashboard/sms"
+            hrefLabel="এসএমএস"
+            meta="কাকে পাঠানো হয়েছে"
+            empty="এখনো কোনো এসএমএস যায়নি।"
+            isEmpty={feed.recent_sms.length === 0}
+          >
+            {feed.recent_sms.map((row) => (
+              <ReportRow
+                key={row.id}
+                title={row.customer}
+                note={row.preview || row.phone}
+                value={SMS_STATUS[row.status] ?? row.status}
+                valueNote={shortDate(row.at)}
+                tone={row.status === "failed" ? "neg" : "pos"}
+              />
+            ))}
+          </ReportCard>
+
+          <ReportCard
+            title="মোটর বাইকের শেষ কাজ"
+            icon={Bike}
+            href="/dashboard/vehicles"
+            hrefLabel="বাইক"
+            meta="স্টকে ঢোকা আর বিক্রি"
+            empty="এখনো কোনো বাইক যোগ হয়নি।"
+            isEmpty={feed.recent_vehicles.length === 0}
+          >
+            {feed.recent_vehicles.map((row) => (
+              <ReportRow
+                key={row.id}
+                href={`/dashboard/vehicles/${row.id}`}
+                title={row.name}
+                note={`${row.identifier}${row.customer ? ` · ${row.customer}` : ""}`}
+                value={money(row.amount)}
+                valueNote={VEHICLE_STATUS[row.status] ?? row.status}
+                tone={row.status === "sold" ? "pos" : undefined}
+              />
+            ))}
+          </ReportCard>
+
+          <ReportCard
+            title="নোটবুকের শেষ লেখা"
+            icon={NotebookPen}
+            href="/dashboard/notebook"
+            hrefLabel="নোটবুক"
+            meta="যা মনে রাখতে লিখেছেন"
+            empty="এখনো কোনো নোট লেখা হয়নি।"
+            isEmpty={feed.recent_notes.length === 0}
+          >
+            {feed.recent_notes.map((row) => (
+              <ReportRow
+                key={row.id}
+                href={`/dashboard/notebook/${row.notebook_id}`}
+                title={row.title}
+                note={row.preview || row.notebook}
+                value={shortDate(row.at)}
+              />
+            ))}
+          </ReportCard>
+
+          <ReportCard
+            title="কোথায় নজর দিতে হবে"
+            icon={AlertTriangle}
+            href="/dashboard/analytics"
+            hrefLabel="অ্যানালিটিক্স"
+            meta="আজকের হিসাব থেকে"
+            empty="এখন আলাদা করে দেখার কিছু নেই।"
+            isEmpty={!today.focus?.length}
+          >
+            {(today.focus ?? []).slice(0, 5).map((item, index) => (
+              <ReportRow
+                key={`${item.title}-${index}`}
+                href="/dashboard/analytics"
+                title={item.title}
+                note={item.detail}
+                /* The action sentence is too long for the right column, so the
+                   row carries how urgent it is and the full advice stays on
+                   the analytics page. */
+                value={SEVERITY_WORD[item.severity]}
+                tone={
+                  item.severity === "danger"
+                    ? "neg"
+                    : item.severity === "good"
+                    ? "pos"
+                    : "warn"
+                }
+              />
+            ))}
+          </ReportCard>
+
+          <ReportCard
+            title="শেষ ৫টা ব্যাংক লেনদেন"
+            icon={CreditCard}
+            href="/dashboard/banking"
+            hrefLabel="ব্যাংকিং"
+            meta="জমা আর উত্তোলন"
+            empty="এখনো কোনো লেনদেন হয়নি।"
+            isEmpty={feed.recent_banking.length === 0}
+          >
+            {feed.recent_banking.map((row) => (
+              <ReportRow
+                key={row.id}
+                href="/dashboard/banking"
+                title={row.purpose || row.account}
+                note={`${row.account} · ${shortDate(row.at)}`}
+                value={`${row.type === "credit" ? "+" : "−"}${money(row.amount)}`}
+                tone={row.type === "credit" ? "pos" : "neg"}
+              />
+            ))}
+          </ReportCard>
+
+          <ReportCard
+            title="শেষ ৫ জন কাস্টমার"
+            icon={Users}
+            href="/dashboard/customers"
+            hrefLabel="কাস্টমার"
+            meta="নতুন যারা যুক্ত হয়েছে"
+            empty="এখনো কোনো কাস্টমার যোগ হয়নি।"
+            isEmpty={feed.recent_customers.length === 0}
+          >
+            {feed.recent_customers.map((row) => (
+              <ReportRow
+                key={row.id}
+                href={`/dashboard/customers/${row.id}`}
+                title={row.name}
+                note={row.phone || "ফোন নেই"}
+                value={shortDate(row.at)}
+              />
+            ))}
+          </ReportCard>
+
+          <ReportCard
+            title="সাপ্লায়ারের শেষ কাজ"
+            icon={Truck}
+            href="/dashboard/suppliers"
+            hrefLabel="সাপ্লায়ার"
+            meta="কেনা আর পেমেন্ট"
+            empty="এখনো কোনো কেনাকাটা হয়নি।"
+            isEmpty={feed.recent_suppliers.length === 0}
+          >
+            {feed.recent_suppliers.map((row) => (
+              <ReportRow
+                key={row.id}
+                href={`/dashboard/suppliers/${row.supplier_id}`}
+                title={row.supplier}
+                note={`${row.kind === "purchase" ? "কেনা" : "পেমেন্ট"} · ${
+                  row.note || shortDate(row.at)
+                }`}
+                value={money(row.amount)}
+                valueNote={shortDate(row.at)}
+                tone={row.kind === "purchase" ? "neg" : undefined}
+              />
+            ))}
+          </ReportCard>
         </div>
-      </div>
+      )}
 
-      {/* New Customer Modal */}
-      {showNewCustomerModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-          <div className="min-h-full flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                <h2 className="text-xl font-semibold text-slate-100">
-                  Create New Customer
-                </h2>
-                <button
-                  onClick={handleCloseCustomerModal}
-                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 space-y-4">
-                {/* Customer Name */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Customer Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newCustomer.name}
-                    onChange={(e) =>
-                      setNewCustomer({ ...newCustomer, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                    placeholder="Enter customer name"
-                  />
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={newCustomer.email}
-                    onChange={(e) =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        email: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                    placeholder="Enter email address"
-                  />
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Phone Number *
-                  </label>
-                  <input
-                    type="tel"
-                    value={newCustomer.phone}
-                    onChange={(e) =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        phone: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                    placeholder="Enter phone number"
-                  />
-                </div>
-
-                {/* Address */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Address
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={newCustomer.address}
-                    onChange={(e) =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        address: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
-                    placeholder="Enter customer address (optional)"
-                  />
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
-                <button
-                  onClick={handleCloseCustomerModal}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateCustomer}
-                  disabled={
-                    isCreatingCustomer ||
-                    !newCustomer.name ||
-                    !newCustomer.email ||
-                    !newCustomer.phone
-                  }
-                  className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                >
-                  {isCreatingCustomer ? "Creating..." : "Create Customer"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Stock value is the one figure the shelf cannot show on its own. */}
+      {feed && feed.inventory.units === 0 && (
+        <p className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+          <Package className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          স্টকে কিছু নেই — প্রোডাক্ট যোগ করলে এখানে কেনা-বেচা দাম আর সম্ভাব্য লাভ
+          দেখা যাবে।
+        </p>
       )}
     </div>
   );

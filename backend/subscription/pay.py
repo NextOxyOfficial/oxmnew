@@ -3,6 +3,8 @@ import os
 from decimal import Decimal, InvalidOperation
 
 import requests
+import logging
+
 from django.conf import settings
 from django.db import transaction
 from django.db import IntegrityError
@@ -12,6 +14,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from shurjopay_plugin import *
+
+logger = logging.getLogger(__name__)
 
 from .models import PaymentTransaction, SMSPackage, SubscriptionPlan, UserSMSCredit, UserSubscription
 
@@ -422,10 +426,19 @@ def makePayment(request):
         base_api_url = sp_endpoint if sp_endpoint.endswith("/api") else f"{sp_endpoint}/api"
 
         if payment_details_dict is None:
+            # The raw gateway exception leaks credentials and endpoints to the
+            # browser and means nothing to a shopkeeper. Log it, show a message
+            # they can act on, and name the one case they can actually fix.
+            logger.error("ShurjoPay initiation failed: %s", plugin_error)
+            unauthorised = "unauthorized" in str(plugin_error).lower()
             return Response(
                 {
-                    "error": "Payment initiation failed",
-                    "exception": f"{type(plugin_error).__name__}: {str(plugin_error)}" if plugin_error else "Unknown",
+                    "error": (
+                        "পেমেন্ট গেটওয়ের সেটআপে সমস্যা আছে — সাপোর্টে জানান।"
+                        if unauthorised
+                        else "পেমেন্ট শুরু করা গেল না। একটু পরে আবার চেষ্টা করুন।"
+                    ),
+                    "code": "gateway_unauthorised" if unauthorised else "gateway_error",
                 },
                 status=status.HTTP_502_BAD_GATEWAY,
             )

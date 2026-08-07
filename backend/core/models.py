@@ -1,4 +1,7 @@
+from core.uploads import validate_image
+
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -32,8 +35,10 @@ class UserProfile(models.Model):
     post_code = models.CharField(max_length=20, blank=True, null=True)
     balance = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
     sms_balance = models.IntegerField(default=0)
-    store_logo = models.ImageField(upload_to="store_logos/", blank=True, null=True)
-    banner_image = models.ImageField(upload_to="banner_images/", blank=True, null=True)
+    store_logo = models.ImageField(
+        validators=[validate_image],upload_to="store_logos/", blank=True, null=True)
+    banner_image = models.ImageField(
+        validators=[validate_image],upload_to="banner_images/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -278,3 +283,52 @@ class DNSRecord(models.Model):
     
     def __str__(self):
         return f"{self.custom_domain.full_domain} - {self.record_type} {self.name}"
+
+
+class PasswordResetCode(models.Model):
+    """A short-lived code for resetting a forgotten password.
+
+    A code rather than a link because the shop owner may only have SMS — a
+    six-digit number works on both channels, and the same verification path
+    serves email and phone.
+    """
+
+    CHANNEL_CHOICES = (
+        ("email", "Email"),
+        ("sms", "SMS"),
+    )
+
+    LIFETIME_MINUTES = 10
+    MAX_ATTEMPTS = 5
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="password_reset_codes"
+    )
+    code = models.CharField(max_length=6)
+    channel = models.CharField(max_length=10, choices=CHANNEL_CHOICES)
+    sent_to = models.CharField(
+        max_length=150, help_text="Masked destination, for showing back to the user"
+    )
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "expires_at"])]
+
+    def __str__(self):
+        return f"{self.user.username} — {self.channel}"
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_usable(self):
+        return (
+            self.used_at is None
+            and not self.is_expired
+            and self.attempts < self.MAX_ATTEMPTS
+        )

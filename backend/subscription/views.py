@@ -1,3 +1,4 @@
+from core.scoping import owner_for
 # subscription/views.py
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
@@ -38,7 +39,7 @@ class UserSubscriptionView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         # Get or create user subscription (only one per user)
         user_subscription, created = UserSubscription.objects.get_or_create(
-            user=self.request.user,
+            user=owner_for(self.request),
             defaults={
                 'plan': SubscriptionPlan.objects.get(name='free'),
                 'active': True
@@ -53,7 +54,7 @@ class UserSMSCreditView(generics.RetrieveAPIView):
     def get_object(self):
         # Get or create user SMS credit record
         user_sms_credit, created = UserSMSCredit.objects.get_or_create(
-            user=self.request.user,
+            user=owner_for(self.request),
             defaults={'credits': 0}
         )
         return user_sms_credit
@@ -63,7 +64,7 @@ class SMSSentHistoryListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        return SMSSentHistory.objects.filter(user=self.request.user).order_by('-sent_at')
+        return SMSSentHistory.objects.filter(user=owner_for(self.request)).order_by('-sent_at')
     
     def list(self, request, *args, **kwargs):
         # Get page number from query params, default to 1
@@ -111,7 +112,7 @@ class PaymentTransactionHistoryView(generics.ListAPIView):
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        return PaymentTransaction.objects.filter(user=self.request.user)
+        return PaymentTransaction.objects.filter(user=owner_for(self.request))
 
 # Add credits endpoint for admin use only
 from rest_framework.decorators import api_view, permission_classes
@@ -126,11 +127,11 @@ from django.utils.decorators import method_decorator
 def get_my_sms_credits(request):
     """Get current user's SMS credits count"""
     try:
-        user_sms_credit = UserSMSCredit.objects.get(user=request.user)
+        user_sms_credit = UserSMSCredit.objects.get(user=owner_for(request))
         return Response({'credits': user_sms_credit.credits}, status=status.HTTP_200_OK)
     except UserSMSCredit.DoesNotExist:
         # Create a new record with 0 credits if it doesn't exist
-        user_sms_credit = UserSMSCredit.objects.create(user=request.user, credits=0)
+        user_sms_credit = UserSMSCredit.objects.create(user=owner_for(request), credits=0)
         return Response({'credits': 0}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
@@ -289,7 +290,7 @@ def get_my_subscription(request):
         # Get or create user subscription (only one per user)
         try:
             # First try to get the user's existing subscription
-            user_subscription = UserSubscription.objects.get(user=request.user)
+            user_subscription = UserSubscription.objects.get(user=owner_for(request))
         except UserSubscription.DoesNotExist:
             # If no subscription exists, create one with free plan
             try:
@@ -311,7 +312,7 @@ def get_my_subscription(request):
                 )
             
             user_subscription = UserSubscription.objects.create(
-                user=request.user,
+                user=owner_for(request),
                 plan=free_plan,
                 active=True
             )

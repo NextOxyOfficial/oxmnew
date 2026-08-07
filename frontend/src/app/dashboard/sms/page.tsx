@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import CreditPackages from "@/components/sms/CreditPackages";
 import SmsHistory from "./SmsHistory";
 import { ApiService } from "../../../lib/api";
 import { customersAPI } from "../../../lib/api/customers";
@@ -202,7 +203,7 @@ export default function SmsPage() {
 
 	const handleSend = async () => {
 		if (!message.trim() || contacts.length === 0) {
-			setStatus("Please enter a message and at least one contact.");
+			setStatus("মেসেজ লিখুন আর অন্তত একটা নম্বর দিন।");
 			return;
 		}
 
@@ -215,7 +216,7 @@ export default function SmsPage() {
 		
 		// Check if user has sufficient credits
 		if (smsCredits !== null && smsCredits < totalSmsNeeded) {
-			setStatus(`You need ${totalSmsNeeded} credits but only have ${smsCredits}. Each message requires ${smsPerMessage} credit${smsPerMessage > 1 ? 's' : ''} (${smsInfo.encoding} encoding).`);
+			setStatus(`ক্রেডিট লাগবে ${totalSmsNeeded}টা, কিন্তু আছে মাত্র ${smsCredits}টা। প্রতিটা মেসেজে ${smsPerMessage}টা ক্রেডিট খরচ হয় (${smsInfo.encoding})।`);
 			setShowCreditError(true);
 			return;
 		}
@@ -239,7 +240,7 @@ export default function SmsPage() {
 					failCount++;
 					// Set specific error message from backend
 					if (response.error) {
-						setStatus(`Error: ${response.error}`);
+						setStatus(`সমস্যা: ${response.error}`);
 					}
 				}
 			} catch (e: any) {
@@ -247,14 +248,14 @@ export default function SmsPage() {
 				// Handle insufficient credits error specifically
 				if (e.response?.status === 402) {
 					const errorData = e.response.data;
-					setStatus(errorData.error || 'Insufficient SMS credits. Please purchase more credits.');
+					setStatus(errorData.error || 'এসএমএস ক্রেডিট শেষ। আরও ক্রেডিট কিনে নিন।');
 					setShowCreditError(true);
 					setIsSending(false);
 					return;
 				} else {
 					// Handle other types of errors
-					const errorMessage = e.response?.data?.error || e.response?.data?.message || e.message || 'Unknown error occurred';
-					setStatus(`Error sending SMS: ${errorMessage}`);
+					const errorMessage = e.response?.data?.error || e.response?.data?.message || e.message || 'কিছু একটা সমস্যা হয়েছে';
+					setStatus(`এসএমএস পাঠাতে সমস্যা: ${errorMessage}`);
 					setShowCreditError(false);
 				}
 			}
@@ -283,7 +284,7 @@ export default function SmsPage() {
 		}
 
 		if (successCount > 0) {
-			setStatus(`${successCount} SMS sent successfully to ${successCount} user${successCount > 1 ? 's' : ''}. ${creditsUsed} credits used.`);
+			setStatus(`সফলভাবে ${successCount} জনকে এসএমএস পাঠানো হয়েছে। ${creditsUsed}টা ক্রেডিট খরচ হয়েছে।`);
 			setShowCreditError(false);
 			setTimeout(() => setStatus(null), 5000);
 			
@@ -292,40 +293,89 @@ export default function SmsPage() {
 				fetchSmsHistory(currentPage);
 			}
 		} else if (failCount > 0 && !showCreditError) {
-			setStatus("Failed to send SMS. Please check the error details above.");
+			setStatus("এসএমএস পাঠানো যায়নি। উপরের সমস্যাটা একবার দেখুন।");
 			setShowCreditError(false);
 		}
 		setIsSending(false);
 	};
 
-	return (
-		<div className="w-full max-w-4xl mx-auto sm:p-6 p-2 space-y-8">
-			<div className="text-center mb-4">
-				<h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-					Send SMS
-				</h1>
-				<p className="text-gray-400 text-base mt-2">
-					Send SMS to individuals, all customers, or all employees.
-				</p>
-			</div>
+	const tabs = [
+		{ id: "custom", label: "নিজে লিখে" },
+		{ id: "customers", label: "সব কাস্টমার" },
+		{ id: "employees", label: "সব কর্মচারী" },
+		{ id: "suppliers", label: "সব সাপ্লায়ার" },
+		{ id: "history", label: "পাঠানোর হিস্ট্রি" },
+		{ id: "buy", label: "ক্রেডিট কিনুন" },
+	];
 
-			{/* SMS Credits Display */}
-			<div className="bg-gradient-to-br from-emerald-500/15 to-emerald-600/8 border border-emerald-500/25 rounded-lg p-3 mb-6 backdrop-blur-sm">
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-3">
-						<div className="rounded-md bg-emerald-500/20 p-1.5">
-							<svg className="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-							</svg>
+	const perMessageSegments = calculateSmsSegments(message).segments;
+	const estimatedCost = contacts.length * perMessageSegments;
+	const notEnoughCredits = smsCredits !== null && smsCredits < estimatedCost;
+
+	return (
+		<div className="page">
+			<header className="page-head">
+				<div>
+					<h1 className="page-title">এসএমএস সেন্টার</h1>
+					<p className="page-sub">একজনকে, সব কাস্টমারকে বা সব কর্মচারীকে এসএমএস পাঠান</p>
+				</div>
+				<button
+					type="button"
+					onClick={() => setTab("buy")}
+					className="btn btn-primary"
+				>
+					ক্রেডিট কিনুন
+				</button>
+			</header>
+
+			<div className="plane">
+				{/* Credits & cost at a glance */}
+				<div className="stat-strip">
+					<div className="stat">
+						<div className="stat-label">এসএমএস ক্রেডিট</div>
+						<div className="stat-value num">
+							{isLoading ? "…" : smsCredits === null ? "—" : smsCredits.toLocaleString()}
 						</div>
-						<div>
-							<div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
-							<div className="text-xs text-emerald-400/70">
-								{isLoading ? "Loading..." : smsCredits === null ? "Error loading" : `${smsCredits.toLocaleString()} available`}
-							</div>
+						<div className="stat-meta">
+							{isLoading ? "লোড হচ্ছে…" : smsCredits === null ? "আনতে সমস্যা হয়েছে" : "এখনো বাকি আছে"}
 						</div>
 					</div>
-					<div className="flex items-center gap-2">
+					<div className="stat">
+						<div className="stat-label">নম্বর ধরা হয়েছে</div>
+						<div className="stat-value num">{contacts.length}</div>
+						<div className="stat-meta">যাদের কাছে যাবে</div>
+					</div>
+					<div className="stat">
+						<div className="stat-label">প্রতি মেসেজে</div>
+						<div className="stat-value num">{message ? perMessageSegments : 0}</div>
+						<div className="stat-meta">ক্রেডিট খরচ হবে</div>
+					</div>
+					<div className="stat">
+						<div className="stat-label">মোট খরচ</div>
+						<div className={`stat-value num ${notEnoughCredits ? "money-neg" : ""}`}>
+							{message ? estimatedCost : 0}
+						</div>
+						<div className="stat-meta">
+							{notEnoughCredits ? "ক্রেডিট কম পড়েছে" : "আনুমানিক হিসাব"}
+						</div>
+					</div>
+				</div>
+
+				{/* Tabs live in the same plane */}
+				<div className="plane-section">
+					<div className="flex flex-wrap items-center gap-2">
+						{tabs.map((t) => (
+							<button
+								key={t.id}
+								className={`btn btn-sm ${tab === t.id ? "btn-primary" : "btn-ghost"}`}
+								onClick={() => setTab(t.id)}
+							>
+								{t.label}
+								{t.id === "history" && (
+									<span className="num opacity-75">({historyData?.count || 0})</span>
+								)}
+							</button>
+						))}
 						<button
 							onClick={async () => {
 								setIsLoading(true);
@@ -345,251 +395,129 @@ export default function SmsPage() {
 								}
 							}}
 							disabled={isLoading}
-							className="p-1.5 rounded-md hover:bg-emerald-500/20 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-							title="Refresh SMS credits"
+							className="btn btn-ghost btn-sm ml-auto"
+							aria-label="ক্রেডিট আবার দেখুন"
+							title="ক্রেডিট আবার দেখুন"
 						>
-							<svg className={`h-3.5 w-3.5 text-emerald-400 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<svg className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
-						</button>
-						<a 
-							href="/dashboard/subscriptions" 
-							className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 cursor-pointer"
-						>
-							Buy Credits
-						</a>
-					</div>
-				</div>
-				{contacts.length > 0 && message && (
-					<div className="mt-3 pt-3 border-t border-emerald-500/20">
-						<div className="text-xs text-emerald-400/70">
-							Estimated cost: {contacts.length * calculateSmsSegments(message).segments} credits
-							({contacts.length} contacts × {calculateSmsSegments(message).segments} SMS each)
-						</div>
-					</div>
-				)}
-			</div>
-
-			{/* Tabs */}
-			<div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg mb-6">
-				<div className="border-b border-slate-700/50">
-					<div className="flex flex-wrap">
-						{/* Custom Tab */}
-						<button
-							className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[120px] ${
-								tab === "custom"
-									? "bg-gradient-to-r from-blue-500/20 to-blue-600/10 text-blue-300"
-									: "text-slate-400 hover:text-blue-300 hover:bg-blue-500/10"
-							}`}
-							onClick={() => setTab("custom")}
-						>
-							<div className="text-left">
-								<div className="font-semibold text-sm">Custom</div>
-								<div className={`text-xs ${tab === "custom" ? "text-blue-400" : "text-slate-500"}`}>
-									Manual input
-								</div>
-							</div>
-							{tab === "custom" && (
-								<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
-							)}
-						</button>
-
-						{/* Customers Tab */}
-						<button
-							className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[140px] ${
-								tab === "customers"
-									? "bg-gradient-to-r from-purple-500/20 to-purple-600/10 text-purple-300"
-									: "text-slate-400 hover:text-purple-300 hover:bg-purple-500/10"
-							}`}
-							onClick={() => setTab("customers")}
-						>
-							<div className="text-left">
-								<div className="font-semibold text-sm">All Customers</div>
-								<div className={`text-xs ${tab === "customers" ? "text-purple-400" : "text-slate-500"}`}>
-								</div>
-							</div>
-							{tab === "customers" && (
-								<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-purple-600"></div>
-							)}
-						</button>
-
-						{/* Employees Tab */}
-						<button
-							className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[140px] ${
-								tab === "employees"
-									? "bg-gradient-to-r from-green-500/20 to-green-600/10 text-green-300"
-									: "text-slate-400 hover:text-green-300 hover:bg-green-500/10"
-							}`}
-							onClick={() => setTab("employees")}
-						>
-							<div className="text-left">
-								<div className="font-semibold text-sm">All Employees</div>
-								<div className={`text-xs ${tab === "employees" ? "text-green-400" : "text-slate-500"}`}>
-								</div>
-							</div>
-							{tab === "employees" && (
-								<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
-							)}
-						</button>
-
-						{/* Suppliers Tab */}
-						<button
-							className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[130px] ${
-								tab === "suppliers"
-									? "bg-gradient-to-r from-orange-500/20 to-orange-600/10 text-orange-300"
-									: "text-slate-400 hover:text-orange-300 hover:bg-orange-500/10"
-							}`}
-							onClick={() => setTab("suppliers")}
-						>
-							<div className="text-left">
-								<div className="font-semibold text-sm">All Suppliers</div>
-								<div className={`text-xs ${tab === "suppliers" ? "text-orange-400" : "text-slate-500"}`}>
-								</div>
-							</div>
-							{tab === "suppliers" && (
-								<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-orange-600"></div>
-							)}
-						</button>
-
-						{/* History Tab */}
-						<button
-							className={`px-4 py-3 font-medium transition-all duration-200 relative flex items-center space-x-2.5 cursor-pointer min-w-[100px] border-l border-slate-700/50 ${
-								tab === "history"
-									? "bg-gradient-to-r from-cyan-500/20 to-cyan-600/10 text-cyan-300"
-									: "text-slate-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-							}`}
-							onClick={() => setTab("history")}
-						>
-							<div className="text-left">
-								<div className="font-semibold text-sm">History</div>
-								<div className={`text-xs ${tab === "history" ? "text-cyan-400" : "text-slate-500"}`}>
-									{isLoading ? "Loading..." : `${historyData?.count || 0} total`}
-								</div>
-							</div>
-							{tab === "history" && (
-								<div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-cyan-600"></div>
-							)}
+							ক্রেডিট রিফ্রেশ
 						</button>
 					</div>
 				</div>
-				
-				{/* Info Message for filtered contacts */}
+
+				{/* Note about contacts without phone numbers */}
 				{tab !== "history" && tab !== "custom" && (
-					<div className="px-4 py-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-						<p className="text-xs text-blue-300">
-							<span className="font-semibold">ℹ️ Note:</span> Only contacts with valid phone numbers are shown. 
-							{tab === "customers" && customers.length > customers.filter(c => c.phone && c.phone.trim() !== "").length && 
-								` ${customers.length - customers.filter(c => c.phone && c.phone.trim() !== "").length} customer(s) excluded due to missing phone numbers.`}
-							{tab === "employees" && employees.length > employees.filter(e => e.phone && e.phone.trim() !== "").length && 
-								` ${employees.length - employees.filter(e => e.phone && e.phone.trim() !== "").length} employee(s) excluded due to missing phone numbers.`}
-							{tab === "suppliers" && suppliers.length > suppliers.filter(s => s.phone && s.phone.trim() !== "").length && 
-								` ${suppliers.length - suppliers.filter(s => s.phone && s.phone.trim() !== "").length} supplier(s) excluded due to missing phone numbers.`}
+					<div className="plane-section">
+						<p className="text-xs text-slate-500">
+							যাদের ফোন নম্বর দেওয়া আছে শুধু তাদেরই দেখানো হচ্ছে।
+							{tab === "customers" && customers.length > customers.filter(c => c.phone && c.phone.trim() !== "").length &&
+								` নম্বর না থাকায় ${customers.length - customers.filter(c => c.phone && c.phone.trim() !== "").length} জন কাস্টমার বাদ পড়েছে।`}
+							{tab === "employees" && employees.length > employees.filter(e => e.phone && e.phone.trim() !== "").length &&
+								` নম্বর না থাকায় ${employees.length - employees.filter(e => e.phone && e.phone.trim() !== "").length} জন কর্মচারী বাদ পড়েছে।`}
+							{tab === "suppliers" && suppliers.length > suppliers.filter(s => s.phone && s.phone.trim() !== "").length &&
+								` নম্বর না থাকায় ${suppliers.length - suppliers.filter(s => s.phone && s.phone.trim() !== "").length} জন সাপ্লায়ার বাদ পড়েছে।`}
 						</p>
 					</div>
 				)}
-			</div>
 
-			{/* Main Form */}
-			<div className="bg-white/3 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-4 space-y-6">
-				{tab !== "history" && (
-					<>
-						<label className="block text-slate-300 mb-2 font-medium">
-							Contacts (Number, Name per line)
-						</label>
-						<textarea
-							className="w-full p-2 rounded bg-slate-800 text-slate-200 border border-slate-700 mb-4"
-							rows={4}
-							placeholder="017xxxxxxxx, John\n018xxxxxxxx, Jane"
-							value={contactsText}
-							onChange={(e) => setContactsText(e.target.value)}
-						/>
-					</>
-				)}
-				{tab === "history" && (
-					<SmsHistory 
-						historyData={historyData} 
+				{tab === "buy" ? (
+					<CreditPackages credits={smsCredits} />
+				) : tab === "history" ? (
+					<SmsHistory
+						historyData={historyData}
 						currentPage={currentPage}
 						onPageChange={handlePageChange}
 						isLoading={isHistoryLoading}
 					/>
-				)}
-				{tab !== "history" && (
+				) : (
 					<>
-						<label className="block text-slate-300 mb-2 font-medium">
-							Message
-						</label>
-						<p className="text-xs text-slate-400 mb-2">
-							You can use{" "}
-							<span className="font-mono bg-slate-800 px-1 rounded">
-								{"{name}"}
-							</span>{" "}
-							in your message. It will be replaced with each contact's name.
-						</p>
-						<p className="text-xs text-slate-500 mb-2">
-							Example: "Hi {"{name}"}, your order is ready for pickup!"
-						</p>
-						<div className="relative mb-4">
+						{/* Contacts */}
+						<div className="plane-section">
+							<div className="section-title">যাদের পাঠাবেন</div>
+							<label className="label" htmlFor="sms-contacts">
+								প্রতি লাইনে একজন — নম্বর, নাম
+							</label>
 							<textarea
-								className="w-full p-3 rounded bg-slate-800 text-slate-200 border border-slate-700 pr-32"
+								id="sms-contacts"
+								className="textarea"
 								rows={4}
-								placeholder="Type your SMS message here..."
+								placeholder={"017xxxxxxxx, করিম\n018xxxxxxxx, রহিমা"}
+								value={contactsText}
+								onChange={(e) => setContactsText(e.target.value)}
+							/>
+						</div>
+
+						{/* Message */}
+						<div className="plane-section">
+							<div className="section-title">মেসেজ</div>
+							<label className="label" htmlFor="sms-message">
+								যা লিখবেন সেটাই সবার কাছে যাবে
+							</label>
+							<p className="mb-2 text-xs text-slate-500">
+								মেসেজে{" "}
+								<span className="rounded bg-slate-100 px-1 font-mono">{"{name}"}</span>{" "}
+								লিখলে সেখানে প্রত্যেকের নাম বসে যাবে। যেমন: &ldquo;{"{name}"} ভাই, আপনার অর্ডার রেডি!&rdquo;
+							</p>
+							<textarea
+								id="sms-message"
+								className="textarea"
+								rows={4}
+								placeholder="এখানে এসএমএসটা লিখুন…"
 								value={message}
 								onChange={(e) => setMessage(e.target.value)}
 							/>
-							<span className="absolute bottom-2 right-4 text-xs text-slate-400 select-none">
-								{message.length} chars /{" "}
-								{calculateSmsSegments(message).segments} SMS
-							</span>
-						</div>
-						{status && (
-							<div className="w-full flex justify-end mb-2">
-								{showCreditError ? (
-									<div className="bg-red-500/90 text-white text-xs font-semibold rounded-lg px-4 py-2 shadow flex items-center gap-3">
-										<span>{status}</span>
-										<a 
-											href="/dashboard/subscriptions" 
-											className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs font-medium transition-all duration-200 cursor-pointer"
-										>
-											Buy Credits
-										</a>
-									</div>
-								) : (
-									<span className={`text-white text-xs font-semibold rounded-lg px-4 py-2 shadow animate-fade-in-out ${
-										status.includes('successfully') ? 'bg-green-500/90' : 'bg-red-500/90'
-									}`}>
-										{status}
-									</span>
-								)}
+							<div className="mt-1 flex justify-end">
+								<span className="num select-none text-xs text-slate-500">
+									{message.length} অক্ষর / {perMessageSegments} এসএমএস
+								</span>
 							</div>
-						)}
-						<button
-							className={`px-6 py-2 rounded-lg font-medium focus:outline-none focus:ring-2 transition-all duration-200 text-sm mt-2 self-end flex items-center justify-center gap-2 ${
-								contacts.length === 0 || isSending || 
-								(smsCredits !== null && smsCredits < (contacts.length * calculateSmsSegments(message).segments))
-									? "bg-gray-600 text-gray-400 cursor-not-allowed"
-									: "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:ring-cyan-500 cursor-pointer"
-							}`}
-							onClick={handleSend}
-							disabled={
-								contacts.length === 0 || 
-								isSending || 
-								(smsCredits !== null && smsCredits < (contacts.length * calculateSmsSegments(message).segments))
-							}
-							style={{ minWidth: 120 }}
-						>
-							{isSending && (
-								<svg className="animate-spin h-4 w-4 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-									<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-									<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-								</svg>
+
+							{status && (
+								<div className="mt-3">
+									{showCreditError ? (
+										<div className="flex flex-wrap items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+											<span className="text-xs font-medium text-rose-700">{status}</span>
+											<a href="/dashboard/subscriptions" className="btn btn-danger btn-sm">
+												ক্রেডিট কিনুন
+											</a>
+										</div>
+									) : (
+										<div
+											className={`rounded-lg border px-3 py-2 text-xs font-medium ${
+												status.includes('সফলভাবে')
+													? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+													: 'border-rose-200 bg-rose-50 text-rose-700'
+											}`}
+										>
+											{status}
+										</div>
+									)}
+								</div>
 							)}
-							{isSending 
-								? "Sending..." 
-								: (smsCredits !== null && smsCredits < (contacts.length * calculateSmsSegments(message).segments))
-									? "Insufficient Credits"
-									: "Send SMS"
-							}
-						</button>
+						</div>
+
+						<div className="plane-section flex justify-end">
+							<button
+								className="btn btn-primary"
+								onClick={handleSend}
+								disabled={contacts.length === 0 || isSending || notEnoughCredits}
+							>
+								{isSending && (
+									<svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+										<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+										<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+									</svg>
+								)}
+								{isSending
+									? "পাঠানো হচ্ছে…"
+									: notEnoughCredits
+										? "ক্রেডিট কম পড়েছে"
+										: "এসএমএস পাঠান"
+								}
+							</button>
+						</div>
 					</>
 				)}
 			</div>

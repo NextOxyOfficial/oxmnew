@@ -1,3 +1,4 @@
+import { num } from "@/lib/money";
 import {
   CreateEmployeeData,
   CreateIncentiveData,
@@ -347,7 +348,7 @@ class EmployeeAPI {
       (e: Employee) => e.status === "active"
     ).length;
     const averageSalary =
-      employees.reduce((sum: number, emp: Employee) => sum + emp.salary, 0) /
+      employees.reduce((sum: number, emp: Employee) => sum + num(emp.salary), 0) /
         employees.length || 0;
     const departments = Array.from(
       new Set(employees.map((emp: Employee) => emp.department))

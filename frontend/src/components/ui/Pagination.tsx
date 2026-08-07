@@ -16,7 +16,6 @@ const Pagination: React.FC<PaginationProps> = ({
   totalItems,
   itemsPerPage,
   onPageChange,
-  onPageSizeChange,
   className = '',
 }) => {
   // Calculate start and end item numbers for display
@@ -84,8 +83,8 @@ const Pagination: React.FC<PaginationProps> = ({
   if (totalPages <= 1) {
     return (
       <div className={`flex items-center justify-center ${className}`}>
-        <div className="text-sm text-slate-400">
-          Showing {totalItems} item{totalItems === 1 ? "" : "s"}
+        <div className="text-[13px] text-slate-500">
+          মোট {totalItems} টি দেখাচ্ছে
         </div>
       </div>
     );
@@ -93,22 +92,25 @@ const Pagination: React.FC<PaginationProps> = ({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 ${className}`}
+      className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${className}`}
     >
       {/* Items info */}
-      <div className="text-sm text-slate-400">
-        Showing {startItem}-{endItem} of {totalItems} items
+      <div className="text-[13px] text-slate-500 num">
+        {totalItems} এর মধ্যে {startItem}-{endItem} দেখাচ্ছে
       </div>
 
       {/* Pagination controls */}
-      <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto max-w-full">
+      <nav
+        aria-label="পেজ নেভিগেশন"
+        className="flex flex-wrap items-center justify-center gap-1.5 w-full sm:w-auto max-w-full"
+      >
         {/* Previous button */}
         <button
           onClick={() => handlePageClick(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="px-3 py-2 text-sm border border-slate-700 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="btn btn-ghost btn-sm"
         >
-          Previous
+          আগের
         </button>
 
         {/* Page numbers */}
@@ -118,13 +120,14 @@ const Pagination: React.FC<PaginationProps> = ({
               key={index}
               onClick={() => handlePageClick(page)}
               disabled={page === "..."}
-              className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+              aria-current={page === currentPage ? "page" : undefined}
+              className={
                 page === currentPage
-                  ? "bg-cyan-600 text-white"
+                  ? "btn btn-primary btn-sm num min-w-8"
                   : page === "..."
-                  ? "cursor-default text-slate-500"
-                  : "border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
-              }`}
+                  ? "inline-flex h-8 min-w-8 items-center justify-center text-xs text-slate-400"
+                  : "btn btn-ghost btn-sm num min-w-8"
+              }
             >
               {page}
             </button>
@@ -135,11 +138,11 @@ const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => handlePageClick(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="px-3 py-2 text-sm border border-slate-700 text-slate-400 rounded-lg hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="btn btn-ghost btn-sm"
         >
-          Next
+          পরের
         </button>
-      </div>
+      </nav>
     </div>
   );
 };

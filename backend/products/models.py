@@ -1,3 +1,5 @@
+from core.uploads import validate_image
+
 import os
 import uuid
 
@@ -162,6 +164,24 @@ class Product(models.Model):
         photo = self.photos.first()
         return photo.image.url if photo else None
 
+    @property
+    def vehicle_stock(self):
+        """How many serial-tracked units of this model are still unsold.
+
+        Vehicles carry their own per-unit rows (engine/chassis numbers), so for a
+        vehicle model this — not `stock` — is the real shelf count.
+        """
+        return self.vehicles.filter(status="in_stock").count()
+
+    @property
+    def vehicle_sold(self):
+        return self.vehicles.filter(status="sold").count()
+
+    @property
+    def is_vehicle(self):
+        """True once any unit has been registered against this product."""
+        return self.vehicles.exists()
+
 
 class ProductVariant(models.Model):
     """Product variants for color, size, and other attributes"""
@@ -235,7 +255,7 @@ class ProductPhoto(models.Model):
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="photos"
     )
-    image = models.ImageField(upload_to=product_photo_upload_path)
+    image = models.ImageField(upload_to=product_photo_upload_path, validators=[validate_image])
     alt_text = models.CharField(max_length=200, blank=True, null=True)
     order = models.PositiveIntegerField(default=0, help_text="Display order")
     created_at = models.DateTimeField(auto_now_add=True)

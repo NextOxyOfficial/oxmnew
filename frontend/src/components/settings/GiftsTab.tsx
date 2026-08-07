@@ -22,34 +22,34 @@ export default function GiftsTab({ gifts, setGifts, showNotification, loading, o
 
   const handleAddGift = async () => {
     if (!newGift.trim()) return;
-    
+
     try {
       const response = await ApiService.createGift({
         name: newGift.trim(),
         is_active: true
       });
-      
+
       const newGiftItem = response.gift;
       setGifts([...gifts, newGiftItem]);
       setNewGift('');
-      showNotification('success', 'Gift added successfully!');
+      showNotification('success', 'গিফট যোগ হয়ে গেছে!');
     } catch (error) {
       console.error('Error adding gift:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Failed to add gift');
+      showNotification('error', error instanceof Error ? error.message : 'গিফট যোগ করা গেল না');
     }
   };
 
   const toggleGift = async (id: number) => {
     try {
       await ApiService.toggleGift(id);
-      setGifts(gifts.map(gift => 
+      setGifts(gifts.map(gift =>
         gift.id === id ? { ...gift, is_active: !gift.is_active } : gift
       ));
       const updatedGift = gifts.find(g => g.id === id);
-      showNotification('success', `Gift ${!updatedGift?.is_active ? 'activated' : 'deactivated'} successfully!`);
+      showNotification('success', `গিফট ${!updatedGift?.is_active ? 'Active' : 'Inactive'} করা হয়েছে!`);
     } catch (error) {
       console.error('Error updating gift:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Error updating gift. Please try again.');
+      showNotification('error', error instanceof Error ? error.message : 'গিফট বদলানো গেল না। আরেকবার চেষ্টা করুন।');
     }
   };
 
@@ -59,73 +59,61 @@ export default function GiftsTab({ gifts, setGifts, showNotification, loading, o
 
   return (
     <>
-      <div className="space-y-6">
-        <div>
-          {/* Add Gift */}
-          <div className="mb-8">
-            <h4 className="text-lg font-medium text-white mb-4">Add New Gift</h4>
-            <div className="flex gap-3 max-w-md">
-              <input
-                type="text"
-                value={newGift}
-                onChange={(e) => setNewGift(e.target.value)}
-                className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                placeholder="Gift name"
-                onKeyPress={(e) => e.key === 'Enter' && handleAddGift()}
-              />
-              <button
-                onClick={handleAddGift}
-                disabled={loading || !newGift.trim()}
-                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-
-          {/* Gifts List */}
-          <div className="mb-8">
-            <h4 className="text-lg font-medium text-white mb-4">Gifts</h4>
-            <div className="max-w-2xl">
-              {gifts.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <p>No gifts found. Add your first gift above.</p>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-3">
-                  {gifts.map((gift) => (
-                    <div
-                      key={gift.id}
-                      className="flex items-center gap-2 p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200"
-                    >
-                      <span 
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 ${
-                          gift.is_active
-                            ? 'bg-green-500/20 text-green-300 border border-green-400/30 hover:bg-green-500/30'
-                            : 'bg-gray-500/20 text-gray-300 border border-gray-400/30 hover:bg-gray-500/30'
-                        }`}
-                        onClick={() => toggleGift(gift.id)}
-                        title="Click to toggle active/inactive status"
-                      >
-                        {gift.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                      <span className="text-sm font-medium text-white whitespace-nowrap">{gift.name}</span>
-                      <button
-                        onClick={() => handleDeleteClick(gift)}
-                        className="p-1.5 bg-red-500/20 text-red-300 rounded-md hover:bg-red-500/30 border border-red-400/30 transition-all duration-200 cursor-pointer"
-                        title="Delete gift"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+      <div className="plane-section">
+        <div className="section-title">নতুন গিফট</div>
+        <div className="flex max-w-md flex-col gap-2 sm:flex-row">
+          <input
+            type="text"
+            value={newGift}
+            onChange={(e) => setNewGift(e.target.value)}
+            className="input"
+            placeholder="গিফটের নাম"
+            aria-label="গিফটের নাম"
+            onKeyPress={(e) => e.key === 'Enter' && handleAddGift()}
+          />
+          <button
+            onClick={handleAddGift}
+            disabled={loading || !newGift.trim()}
+            className="btn btn-primary sm:w-auto"
+          >
+            যোগ করুন
+          </button>
         </div>
+      </div>
+
+      <div className="plane-section">
+        <div className="section-title">গিফটের তালিকা</div>
+        {gifts.length === 0 ? (
+          <div className="empty">এখনো কোনো গিফট নেই। উপরে থেকে প্রথমটা যোগ করুন।</div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {gifts.map((gift) => (
+              <div
+                key={gift.id}
+                className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5"
+              >
+                <button
+                  className={`badge ${gift.is_active ? 'badge-success' : 'badge-muted'}`}
+                  onClick={() => toggleGift(gift.id)}
+                  title="Active/Inactive করতে চাপ দিন"
+                >
+                  {gift.is_active ? 'Active' : 'Inactive'}
+                </button>
+                <span className="whitespace-nowrap text-sm font-medium text-slate-900">{gift.name}</span>
+                <button
+                  onClick={() => handleDeleteClick(gift)}
+                  className="text-slate-400 transition-colors hover:text-rose-600"
+                  title="গিফট ডিলিট করুন"
+                  aria-label="গিফট ডিলিট করুন"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

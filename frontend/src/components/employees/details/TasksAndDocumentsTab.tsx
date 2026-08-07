@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Trash2, X, Upload, Download, Clock, CheckCircle2, ClipboardList, FileText } from "lucide-react";
-import { Task, Document, CreateTaskData } from "@/types/employee";
+import { Trash2, X, Upload, Download, CheckCircle2, ClipboardList, FileText } from "lucide-react";
+import { Task, Document } from "@/types/employee";
+import employeeAPI from "@/lib/employeeAPI";
 
 interface TasksAndDocumentsTabProps {
   tasks: Task[];
@@ -26,6 +27,10 @@ export default function TasksAndDocumentsTab({
   const [isAssigningTask, setIsAssigningTask] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [markingTaskDone, setMarkingTaskDone] = useState<number | null>(null);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(
+    null
+  );
+  const [actionError, setActionError] = useState<string | null>(null);
   
   const [newTask, setNewTask] = useState({
     title: "",
@@ -62,43 +67,98 @@ export default function TasksAndDocumentsTab({
   const getPriorityColor = (priority: Task["priority"]) => {
     switch (priority) {
       case "urgent":
-        return "bg-red-500/20 text-red-300 border-red-400/30";
+        return "badge badge-danger";
       case "high":
-        return "bg-orange-500/20 text-orange-300 border-orange-400/30";
+        return "badge badge-warn";
       case "medium":
-        return "bg-yellow-500/20 text-yellow-300 border-yellow-400/30";
+        return "badge badge-info";
       case "low":
-        return "bg-green-500/20 text-green-300 border-green-400/30";
+        return "badge badge-muted";
       default:
-        return "bg-gray-500/20 text-gray-300 border-gray-400/30";
+        return "badge badge-muted";
+    }
+  };
+
+  const getPriorityLabel = (priority: Task["priority"]) => {
+    switch (priority) {
+      case "urgent":
+        return "জরুরি";
+      case "high":
+        return "বেশি";
+      case "medium":
+        return "মাঝারি";
+      case "low":
+        return "কম";
+      default:
+        return priority;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-green-500/20 text-green-300 border-green-400/30";
+        return "badge badge-success";
       case "in_progress":
-        return "bg-blue-500/20 text-blue-300 border-blue-400/30";
+        return "badge badge-info";
       case "pending":
-        return "bg-yellow-500/20 text-yellow-300 border-yellow-400/30";
+        return "badge badge-warn";
       case "cancelled":
-        return "bg-red-500/20 text-red-300 border-red-400/30";
+        return "badge badge-muted";
+      case "overdue":
+        return "badge badge-danger";
       default:
-        return "bg-gray-500/20 text-gray-300 border-gray-400/30";
+        return "badge badge-muted";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "শেষ";
+      case "in_progress":
+        return "চলছে";
+      case "pending":
+        return "পেন্ডিং";
+      case "cancelled":
+        return "বাতিল করা";
+      case "overdue":
+        return "সময় পার";
+      default:
+        return status;
+    }
+  };
+
+  const getCategoryLabel = (category: Document["category"]) => {
+    switch (category) {
+      case "contract":
+        return "চুক্তিপত্র";
+      case "id_document":
+        return "পরিচয়পত্র";
+      case "certificate":
+        return "সার্টিফিকেট";
+      case "performance":
+        return "পারফরম্যান্স রিভিউ";
+      default:
+        return "অন্যান্য";
     }
   };
 
   const handleAssignTask = async () => {
     if (!newTask.title || !newTask.due_date) return;
-    
+
     setIsAssigningTask(true);
+    setActionError(null);
     try {
-      // API call would go here
-      console.log("Assigning task:", newTask);
-      // const createdTask = await employeeAPI.assignTask(employeeId, newTask);
-      // onTasksUpdate([...tasks, createdTask]);
-      
+      const createdTask = await employeeAPI.createTask(Number(employeeId), {
+        title: newTask.title,
+        description: newTask.description,
+        priority: newTask.priority,
+        due_date: newTask.due_date,
+        assigned_by: newTask.assigned_by,
+        project: newTask.project,
+      });
+      onTasksUpdate([...tasks, createdTask]);
+
       setShowAssignTaskModal(false);
       setNewTask({
         title: "",
@@ -110,6 +170,7 @@ export default function TasksAndDocumentsTab({
       });
     } catch (error) {
       console.error("Error assigning task:", error);
+      setActionError("কাজটা অ্যাসাইন করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setIsAssigningTask(false);
     }
@@ -117,13 +178,15 @@ export default function TasksAndDocumentsTab({
 
   const handleMarkTaskDone = async (taskId: number) => {
     setMarkingTaskDone(taskId);
+    setActionError(null);
     try {
-      // API call would go here
-      console.log("Marking task as done:", taskId);
-      // await employeeAPI.updateTaskStatus(taskId, "completed");
-      // onTasksUpdate(tasks.map(t => t.id === taskId ? {...t, status: "completed"} : t));
+      const updated = await employeeAPI.markTaskCompleted(taskId);
+      onTasksUpdate(
+        tasks.map((t) => (t.id === taskId ? { ...t, ...updated } : t))
+      );
     } catch (error) {
       console.error("Error updating task:", error);
+      setActionError("কাজটা শেষ হিসেবে দেওয়া যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setMarkingTaskDone(null);
     }
@@ -131,14 +194,18 @@ export default function TasksAndDocumentsTab({
 
   const handleFileUpload = async () => {
     if (!newDocument.file || !newDocument.name) return;
-    
+
     setUploadingFile(true);
+    setActionError(null);
     try {
-      // API call would go here
-      console.log("Uploading document:", newDocument);
-      // const uploadedDoc = await employeeAPI.uploadDocument(employeeId, newDocument);
-      // onDocumentsUpdate([...documents, uploadedDoc]);
-      
+      const uploadedDoc = await employeeAPI.uploadDocument(
+        Number(employeeId),
+        newDocument.file,
+        newDocument.name,
+        newDocument.category
+      );
+      onDocumentsUpdate([...documents, uploadedDoc]);
+
       setShowUploadModal(false);
       setNewDocument({
         name: "",
@@ -147,340 +214,359 @@ export default function TasksAndDocumentsTab({
       });
     } catch (error) {
       console.error("Error uploading document:", error);
+      setActionError("কাগজটা আপলোড করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setUploadingFile(false);
     }
   };
 
+  const handleDeleteDocument = async (documentId: number) => {
+    setDeletingDocumentId(documentId);
+    setActionError(null);
+    try {
+      await employeeAPI.deleteDocument(documentId);
+      onDocumentsUpdate(documents.filter((d) => d.id !== documentId));
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      setActionError("কাগজটা ডিলিট করা যায়নি। আবার চেষ্টা করুন।");
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  };
+
   return (
     <>
-      <div className="space-y-6">
-        {/* Sub-tabs for Tasks and Documents */}
-        <div className="flex border-b border-slate-700/50 mb-6">
+      {actionError && (
+        <div
+          className="plane-section flex flex-wrap items-center gap-2"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="badge badge-danger">সমস্যা</span>
+          <p className="text-sm text-slate-600">{actionError}</p>
+        </div>
+      )}
+
+      {/* Sub-tabs for Tasks and Documents */}
+      <div className="plane-section">
+        <div className="flex items-center gap-1 overflow-x-auto">
           <button
             onClick={() => setActiveSubTab("tasks")}
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 flex items-center gap-2 cursor-pointer ${
-              activeSubTab === "tasks"
-                ? "border-cyan-400 text-cyan-400"
-                : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600"
-            }`}
+            className={`btn btn-sm ${activeSubTab === "tasks" ? "btn-primary" : "btn-ghost"}`}
           >
-            <ClipboardList className="w-4 h-4" />
-            Tasks
+            <ClipboardList className="h-4 w-4" />
+            কাজ
           </button>
           <button
             onClick={() => setActiveSubTab("documents")}
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 flex items-center gap-2 cursor-pointer ${
-              activeSubTab === "documents"
-                ? "border-cyan-400 text-cyan-400"
-                : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600"
-            }`}
+            className={`btn btn-sm ${activeSubTab === "documents" ? "btn-primary" : "btn-ghost"}`}
           >
-            <FileText className="w-4 h-4" />
-            Documents
+            <FileText className="h-4 w-4" />
+            কাগজপত্র
           </button>
         </div>
+      </div>
 
-        {/* Tasks Section */}
-        {activeSubTab === "tasks" && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-lg font-medium text-slate-100">
-                Assigned Tasks
-              </h4>
+      {/* Tasks Section */}
+      {activeSubTab === "tasks" && (
+        <>
+          <div className="plane-section">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="section-title mb-0">দেওয়া কাজ</div>
               <button
                 onClick={() => setShowAssignTaskModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
+                className="btn btn-primary btn-sm"
               >
-                Assign New Task
+                নতুন কাজ দিন
               </button>
             </div>
+          </div>
 
-            <div className="max-w-6xl">
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>কাজ</th>
+                  <th>গুরুত্ব</th>
+                  <th>অবস্থা</th>
+                  <th>শেষ তারিখ</th>
+                  <th>কে দিয়েছে</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
                 {tasks.length > 0 ? (
-                  <div className="divide-y divide-white/5">
-                    {tasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="px-6 py-4 hover:bg-white/5 transition-colors"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h5 className="text-sm font-medium text-slate-100">
-                                {task.title}
-                              </h5>
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}
-                              >
-                                {task.priority}
-                              </span>
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(task.status)}`}
-                              >
-                                {task.status}
-                              </span>
-                            </div>
-                            
-                            {task.description && (
-                              <p className="text-sm text-slate-400 mb-2">
-                                {task.description}
-                              </p>
+                  tasks.map((task) => (
+                    <tr key={task.id}>
+                      <td>
+                        <div className="cell-strong">{task.title}</div>
+                        {task.description && (
+                          <div className="text-slate-500">{task.description}</div>
+                        )}
+                        {task.project && (
+                          <div className="text-slate-500">প্রজেক্ট: {task.project}</div>
+                        )}
+                      </td>
+                      <td>
+                        <span className={getPriorityColor(task.priority)}>
+                          {getPriorityLabel(task.priority)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={getStatusColor(task.status)}>
+                          {getStatusLabel(task.status)}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap">{formatDate(task.due_date)}</td>
+                      <td>
+                        <div>{task.assigned_by}</div>
+                        <div className="text-slate-500 whitespace-nowrap">
+                          {formatDate(task.assigned_date)}
+                        </div>
+                      </td>
+                      <td className="text-right">
+                        {task.status !== "completed" && task.status !== "cancelled" && (
+                          <button
+                            onClick={() => handleMarkTaskDone(task.id)}
+                            disabled={markingTaskDone === task.id}
+                            className="text-slate-500 hover:text-cyan-600"
+                            title="কাজটা শেষ হয়েছে বলে দিন"
+                            aria-label="কাজটা শেষ হয়েছে বলে দিন"
+                          >
+                            {markingTaskDone === task.id ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-transparent" />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4" />
                             )}
-                            
-                            <div className="flex items-center gap-4 text-xs text-slate-400">
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                <span>Due: {formatDate(task.due_date)}</span>
-                              </div>
-                              <span>Assigned: {formatDate(task.assigned_date)}</span>
-                              <span>By: {task.assigned_by}</span>
-                              {task.project && <span>Project: {task.project}</span>}
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            {task.status !== "completed" && task.status !== "cancelled" && (
-                              <button
-                                onClick={() => handleMarkTaskDone(task.id)}
-                                disabled={markingTaskDone === task.id}
-                                className="p-2 text-green-400 hover:text-green-300 hover:bg-green-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                                title="Mark as completed"
-                              >
-                                {markingTaskDone === task.id ? (
-                                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-green-400 border-t-transparent" />
-                                ) : (
-                                  <CheckCircle2 className="w-4 h-4" />
-                                )}
-                              </button>
-                            )}
-                          </div>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="empty">
+                        <p>এখনো কোনো কাজ দেওয়া হয়নি।</p>
+                        <div className="mt-4 flex justify-center">
+                          <button
+                            onClick={() => setShowAssignTaskModal(true)}
+                            className="btn btn-primary btn-sm"
+                          >
+                            প্রথম কাজটা দিন
+                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-8 text-center">
-                    <p className="text-slate-400">No tasks assigned yet.</p>
-                    <button
-                      onClick={() => setShowAssignTaskModal(true)}
-                      className="mt-4 px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 cursor-pointer"
-                    >
-                      Assign First Task
-                    </button>
-                  </div>
+                    </td>
+                  </tr>
                 )}
-              </div>
-            </div>
+              </tbody>
+            </table>
           </div>
-        )}
+        </>
+      )}
 
-        {/* Documents Section */}
-        {activeSubTab === "documents" && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-lg font-medium text-slate-100">
-                Employee Documents
-              </h4>
+      {/* Documents Section */}
+      {activeSubTab === "documents" && (
+        <>
+          <div className="plane-section">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="section-title mb-0">কর্মচারীর কাগজপত্র</div>
               <button
                 onClick={() => setShowUploadModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
+                className="btn btn-primary btn-sm"
               >
-                Upload Document
+                <Upload className="h-4 w-4" />
+                কাগজ আপলোড করুন
               </button>
             </div>
+          </div>
 
-            <div className="max-w-6xl">
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>কাগজের নাম</th>
+                  <th>টাইপ</th>
+                  <th className="cell-num">সাইজ</th>
+                  <th>ফরম্যাট</th>
+                  <th>আপলোডের তারিখ</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
                 {documents.length > 0 ? (
-                  <div className="divide-y divide-white/5">
-                    {documents.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="px-6 py-4 hover:bg-white/5 transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-1">
-                              <h5 className="text-sm font-medium text-slate-100">
-                                {doc.name}
-                              </h5>
-                              <span
-                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30"
-                              >
-                                {doc.category}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-4 text-xs text-slate-400">
-                              <span>{formatFileSize(doc.size)}</span>
-                              <span>{doc.file_type.toUpperCase()}</span>
-                              <span>Uploaded: {formatDate(doc.upload_date)}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <a
-                              href={doc.file}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Download document"
-                            >
-                              <Download className="w-4 h-4" />
-                            </a>
-                            <button
-                              className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Delete document"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                  documents.map((doc) => (
+                    <tr key={doc.id}>
+                      <td className="cell-strong">{doc.name}</td>
+                      <td>
+                        <span className="badge badge-info">
+                          {getCategoryLabel(doc.category)}
+                        </span>
+                      </td>
+                      <td className="cell-num whitespace-nowrap">{formatFileSize(doc.size)}</td>
+                      <td>{doc.file_type.toUpperCase()}</td>
+                      <td className="whitespace-nowrap">{formatDate(doc.upload_date)}</td>
+                      <td className="text-right">
+                        <div className="row-actions">
+                          <a
+                            href={doc.file}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-500 hover:text-cyan-600"
+                            title="ডাউনলোড করুন"
+                            aria-label="ডাউনলোড করুন"
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
+                          <button
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            disabled={deletingDocumentId === doc.id}
+                            className="text-slate-500 hover:text-rose-600 disabled:opacity-50"
+                            title="কাগজটা ডিলিট করুন"
+                            aria-label="কাগজটা ডিলিট করুন"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="empty">
+                        <p>এখনো কোনো কাগজপত্র আপলোড করা হয়নি।</p>
+                        <div className="mt-4 flex justify-center">
+                          <button
+                            onClick={() => setShowUploadModal(true)}
+                            className="btn btn-primary btn-sm"
+                          >
+                            <Upload className="h-4 w-4" />
+                            প্রথম কাগজটা আপলোড করুন
+                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-8 text-center">
-                    <p className="text-slate-400">No documents uploaded yet.</p>
-                    <button
-                      onClick={() => setShowUploadModal(true)}
-                      className="mt-4 px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 cursor-pointer"
-                    >
-                      Upload First Document
-                    </button>
-                  </div>
+                    </td>
+                  </tr>
                 )}
-              </div>
-            </div>
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* Assign Task Modal */}
       {showAssignTaskModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-          <div className="min-h-full flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-lg w-full my-8">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                <h2 className="text-xl font-semibold text-slate-100">
-                  Assign New Task
-                </h2>
-                <button
-                  onClick={() => setShowAssignTaskModal(false)}
-                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-head">
+              <h2 className="modal-title">নতুন কাজ দিন</h2>
+              <button
+                type="button"
+                onClick={() => setShowAssignTaskModal(false)}
+                aria-label="বন্ধ করুন"
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="modal-body space-y-4">
+              {/* Task Title */}
+              <div>
+                <label className="label">কাজের নাম *</label>
+                <input
+                  type="text"
+                  value={newTask.title}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, title: e.target.value })
+                  }
+                  className="input"
+                  placeholder="কী কাজ, লিখুন"
+                />
               </div>
 
-              {/* Modal Body */}
-              <div className="p-6 space-y-4">
-                {/* Task Title */}
+              {/* Description */}
+              <div>
+                <label className="label">বিবরণ</label>
+                <textarea
+                  rows={3}
+                  value={newTask.description}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, description: e.target.value })
+                  }
+                  className="textarea resize-none"
+                  placeholder="চাইলে কাজের বিস্তারিত লিখুন"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Priority */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Task Title *
-                  </label>
+                  <label className="label">গুরুত্ব *</label>
+                  <select
+                    value={newTask.priority}
+                    onChange={(e) =>
+                      setNewTask({
+                        ...newTask,
+                        priority: e.target.value as "low" | "medium" | "high" | "urgent",
+                      })
+                    }
+                    className="select"
+                  >
+                    <option value="low">কম</option>
+                    <option value="medium">মাঝারি</option>
+                    <option value="high">বেশি</option>
+                    <option value="urgent">জরুরি</option>
+                  </select>
+                </div>
+
+                {/* Due Date */}
+                <div>
+                  <label className="label">শেষ তারিখ *</label>
                   <input
-                    type="text"
-                    value={newTask.title}
+                    type="date"
+                    value={newTask.due_date}
                     onChange={(e) =>
-                      setNewTask({ ...newTask, title: e.target.value })
+                      setNewTask({ ...newTask, due_date: e.target.value })
                     }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                    placeholder="Enter task title"
-                  />
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={newTask.description}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, description: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
-                    placeholder="Enter task description (optional)"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Priority */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Priority *
-                    </label>
-                    <select
-                      value={newTask.priority}
-                      onChange={(e) =>
-                        setNewTask({
-                          ...newTask,
-                          priority: e.target.value as "low" | "medium" | "high" | "urgent",
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
-                  </div>
-
-                  {/* Due Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Due Date *
-                    </label>
-                    <input
-                      type="date"
-                      value={newTask.due_date}
-                      onChange={(e) =>
-                        setNewTask({ ...newTask, due_date: e.target.value })
-                      }
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                {/* Project */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Project
-                  </label>
-                  <input
-                    type="text"
-                    value={newTask.project}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, project: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                    placeholder="Enter project name (optional)"
+                    className="input"
                   />
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
-                <button
-                  onClick={() => setShowAssignTaskModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAssignTask}
-                  disabled={isAssigningTask || !newTask.title || !newTask.due_date}
-                  className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                >
-                  {isAssigningTask ? "Assigning..." : "Assign Task"}
-                </button>
+              {/* Project */}
+              <div>
+                <label className="label">প্রজেক্ট</label>
+                <input
+                  type="text"
+                  value={newTask.project}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, project: e.target.value })
+                  }
+                  className="input"
+                  placeholder="চাইলে প্রজেক্টের নাম লিখুন"
+                />
               </div>
+            </div>
+
+            <div className="modal-foot">
+              <button
+                type="button"
+                onClick={() => setShowAssignTaskModal(false)}
+                className="btn btn-ghost"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={handleAssignTask}
+                disabled={isAssigningTask || !newTask.title || !newTask.due_date}
+                className="btn btn-primary"
+              >
+                {isAssigningTask ? "দেওয়া হচ্ছে…" : "কাজ দিন"}
+              </button>
             </div>
           </div>
         </div>
@@ -488,101 +574,92 @@ export default function TasksAndDocumentsTab({
 
       {/* Upload Document Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-          <div className="min-h-full flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                <h2 className="text-xl font-semibold text-slate-100">
-                  Upload Document
-                </h2>
-                <button
-                  onClick={() => setShowUploadModal(false)}
-                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-head">
+              <h2 className="modal-title">কাগজ আপলোড করুন</h2>
+              <button
+                type="button"
+                onClick={() => setShowUploadModal(false)}
+                aria-label="বন্ধ করুন"
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="modal-body space-y-4">
+              {/* Document Name */}
+              <div>
+                <label className="label">কাগজের নাম *</label>
+                <input
+                  type="text"
+                  value={newDocument.name}
+                  onChange={(e) =>
+                    setNewDocument({ ...newDocument, name: e.target.value })
+                  }
+                  className="input"
+                  placeholder="কাগজের নাম লিখুন"
+                />
               </div>
 
-              {/* Modal Body */}
-              <div className="p-6 space-y-4">
-                {/* Document Name */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Document Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newDocument.name}
-                    onChange={(e) =>
-                      setNewDocument({ ...newDocument, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                    placeholder="Enter document name"
-                  />
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Category *
-                  </label>
-                  <select
-                    value={newDocument.category}
-                    onChange={(e) =>
-                      setNewDocument({
-                        ...newDocument,
-                        category: e.target.value as Document["category"],
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
-                  >
-                    <option value="contract">Contract</option>
-                    <option value="id_document">ID Document</option>
-                    <option value="certificate">Certificate</option>
-                    <option value="performance">Performance Review</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                {/* File Upload */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Choose File *
-                  </label>
-                  <input
-                    type="file"
-                    onChange={(e) =>
-                      setNewDocument({
-                        ...newDocument,
-                        file: e.target.files?.[0] || null,
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:font-medium file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  />
-                  <p className="text-xs text-slate-400 mt-1">
-                    Accepted formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
-                  </p>
-                </div>
+              {/* Category */}
+              <div>
+                <label className="label">টাইপ *</label>
+                <select
+                  value={newDocument.category}
+                  onChange={(e) =>
+                    setNewDocument({
+                      ...newDocument,
+                      category: e.target.value as Document["category"],
+                    })
+                  }
+                  className="select"
+                >
+                  <option value="contract">চুক্তিপত্র</option>
+                  <option value="id_document">পরিচয়পত্র</option>
+                  <option value="certificate">সার্টিফিকেট</option>
+                  <option value="performance">পারফরম্যান্স রিভিউ</option>
+                  <option value="other">অন্যান্য</option>
+                </select>
               </div>
 
-              {/* Modal Footer */}
-              <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
-                <button
-                  onClick={() => setShowUploadModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleFileUpload}
-                  disabled={uploadingFile || !newDocument.file || !newDocument.name}
-                  className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                >
-                  {uploadingFile ? "Uploading..." : "Upload Document"}
-                </button>
+              {/* File Upload */}
+              <div>
+                <label className="label">ফাইল বেছে নিন *</label>
+                <input
+                  type="file"
+                  onChange={(e) =>
+                    setNewDocument({
+                      ...newDocument,
+                      file: e.target.files?.[0] || null,
+                    })
+                  }
+                  className="input file:mr-3 file:rounded file:border-0 file:px-2 file:py-1 file:text-sm file:font-medium"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  যেসব ফাইল চলবে: PDF, DOC, DOCX, JPG, PNG (সর্বোচ্চ 10MB)
+                </p>
               </div>
+            </div>
+
+            <div className="modal-foot">
+              <button
+                type="button"
+                onClick={() => setShowUploadModal(false)}
+                className="btn btn-ghost"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={handleFileUpload}
+                disabled={uploadingFile || !newDocument.file || !newDocument.name}
+                className="btn btn-primary"
+              >
+                {uploadingFile ? "আপলোড হচ্ছে…" : "আপলোড করুন"}
+              </button>
             </div>
           </div>
         </div>

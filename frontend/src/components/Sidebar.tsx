@@ -1,26 +1,16 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import {
-  Activity,
-  Command,
-  Database,
-  Globe,
-  MessageSquare,
-  Settings,
-  Shield,
-  Terminal,
   type LucideIcon,
   X,
   Crown,
   MessageCircle,
-  ShoppingCart,
-  Package,
-  TrendingUp,
-  BarChart3,
+  Plus,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -45,17 +35,9 @@ interface SidebarProps {
   ordersCount?: number;
 }
 
-export default function Sidebar({ 
-  isOpen, 
-  onClose, 
-  navigation, 
-  systemStatus = 85, 
-  securityLevel = 92, 
-  networkStatus = 78,
-  smsCredits: initialSmsCredits = 1250
-}: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, navigation }: SidebarProps) {
   const { isAuthenticated, loading: authLoading, profile } = useAuth();
-  const { subscriptionStatus, isPro, isLoading: subscriptionLoading } = useSubscription();
+  const { isPro, isLoading: subscriptionLoading } = useSubscription();
   const [smsCredits, setSmsCredits] = useState<number | null>(null);
 
   useEffect(() => {
@@ -70,160 +52,154 @@ export default function Sidebar({
     }
   }, [isAuthenticated, profile]);
 
-  // Component for dynamic subscription badge
-  const SubscriptionBadge = () => {
-    if (subscriptionLoading) {
-      return (
-        <div className="flex items-center gap-1 bg-slate-600/50 text-slate-400 px-2 py-1 rounded-full text-xs font-bold">
-          <Crown className="h-3 w-3" />
-          ...
-        </div>
-      );
-    }
+  // Credit figure shown in the SMS strip: "…" while we do not know it yet.
+  const creditLabel =
+    smsCredits === null
+      ? authLoading || isAuthenticated
+        ? "…"
+        : "লগইন করুন"
+      : smsCredits.toLocaleString();
 
-    if (isPro) {
-      return (
-        <div className="flex items-center gap-1 bg-gradient-to-r from-amber-400 to-orange-500 text-black px-2 py-1 rounded-full text-xs font-bold">
+  const smsPanel = (
+    <div className="px-3 py-3 border-b border-slate-200">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          এসএমএস ব্যালেন্স
+        </span>
+        <span className={`badge ${isPro ? "badge-warn" : "badge-muted"}`}>
           <Crown className="h-3 w-3" />
-          PRO
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex items-center gap-1 bg-slate-600/50 text-slate-400 px-2 py-1 rounded-full text-xs font-bold">
-        <Crown className="h-3 w-3" />
-        FREE
+          {subscriptionLoading ? "…" : isPro ? "প্রো" : "ফ্রি"}
+        </span>
       </div>
-    );
-  };
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2 min-w-0">
+          <MessageCircle className="h-4 w-4 shrink-0 text-slate-400" />
+          <span className="text-[15px] font-semibold text-slate-900 num truncate">
+            {creditLabel}
+          </span>
+        </span>
+        <Link
+          href="/dashboard/subscriptions"
+          onClick={onClose}
+          className="btn btn-ghost btn-sm"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          কিনুন
+        </Link>
+      </div>
+
+      {!isPro && !subscriptionLoading && (
+        <Link
+          href="/dashboard/subscriptions"
+          onClick={onClose}
+          className="mt-2 inline-block text-xs font-medium text-cyan-600 hover:text-cyan-700"
+        >
+          প্রো তে আপগ্রেড করুন
+        </Link>
+      )}
+    </div>
+  );
 
   return (
     <Fragment>
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar — off-canvas drawer */}
       <div
-        className={`${
-          isOpen ? "block" : "hidden"
-        } fixed inset-0 z-50 lg:hidden transition-opacity duration-300`}
+        className={`fixed inset-0 z-50 lg:hidden ${
+          isOpen ? "" : "pointer-events-none"
+        }`}
+        aria-hidden={!isOpen}
       >
         <div
-          className="fixed inset-0 bg-black/20 transition-opacity duration-300"
           onClick={onClose}
+          className={`absolute inset-0 bg-slate-900/30 transition-opacity duration-200 ${
+            isOpen ? "opacity-100" : "opacity-0"
+          }`}
         ></div>
-        <div className={`fixed top-16 bottom-0 left-0 flex w-72 max-w-[85vw] flex-col transition-transform duration-300 ease-out ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}>
-          <div className="bg-slate-900 border border-slate-700/30 rounded-none h-full flex flex-col overflow-hidden">
-            <div className="p-3 flex-1 flex flex-col overflow-y-auto">
-              <div className="flex items-center justify-end mb-2">
-                <button
-                  onClick={onClose}
-                  className="lg:hidden rounded-lg p-2 inline-flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-900/50 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
-                >
-                  <span className="sr-only">Close sidebar</span>
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
 
-              {/* Subscription & SMS Credits Section */}
-              <div className="mb-6">
-                {/* SMS Credits with Subscription Badge */}
-                <div className={`bg-gradient-to-br ${isPro ? 'from-emerald-500/20 to-green-600/10 border-emerald-500/30' : 'from-slate-500/20 to-slate-600/10 border-slate-500/30'} border rounded-xl p-4 relative overflow-hidden`}>
-                  {/* Subscription Badge */}
-                  <div className="absolute top-2 right-2">
-                    <SubscriptionBadge />
-                  </div>
-                      <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-lg bg-emerald-500/20 p-2">
-                      <MessageCircle className="h-5 w-5 text-emerald-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : isAuthenticated ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
-                        <Link href="/dashboard/subscriptions">
-                          <ShoppingCart className="h-4 w-4 text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors" />
-                        </Link>
-                      </div>
-                      {!isPro && !subscriptionLoading && (
-                        <div className="mt-1">
-                          <Link href="/dashboard/subscriptions" className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
-                            Upgrade
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                </div>
-              </div>
-              
-              <nav className="space-y-1 mb-8 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <CategorizedNavigation navigation={navigation} onItemClick={onClose} />
-              </nav>
-            </div>
+        <aside
+          className={`absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white border-r border-slate-200 shadow-xl transition-transform duration-200 ease-out ${
+            isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-3">
+            <span className="flex items-center gap-2">
+              <Image
+                src="/logo-mark.png"
+                alt="OxyManager"
+                width={28}
+                height={28}
+                className="h-7 w-7 shrink-0 rounded-lg"
+                priority
+              />
+              <span className="text-[15px] font-semibold text-slate-900">
+                OxyManager
+              </span>
+            </span>
+            <button
+              onClick={onClose}
+              aria-label="মেনু বন্ধ করুন"
+              className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-        </div>
+
+          {smsPanel}
+
+          <nav className="flex-1 overflow-y-auto px-2 py-3 scrollbar-hide">
+            <CategorizedNavigation navigation={navigation} onItemClick={onClose} />
+          </nav>
+        </aside>
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:top-16 lg:bottom-0 z-40">
-        <div className="bg-slate-900 border border-slate-700/30 rounded-lg my-6 mx-3 h-full flex flex-col overflow-hidden">
-          <div className="p-3 flex-1 flex flex-col overflow-y-auto">
-            {/* Subscription & SMS Credits Section */}
-            <div className="mb-6">
-              {/* SMS Credits with Subscription Badge */}
-              <div className={`bg-gradient-to-br ${isPro ? 'from-emerald-500/20 to-green-600/10 border-emerald-500/30' : 'from-slate-500/20 to-slate-600/10 border-slate-500/30'} border rounded-xl py-5 px-2 relative overflow-hidden`}>
-                {/* Subscription Badge */}
-                <div className="absolute top-2 right-2">
-                  <SubscriptionBadge />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-lg bg-emerald-500/20 p-2">
-                      <MessageCircle className="h-5 w-5 text-emerald-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-emerald-300">SMS Credits</div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs text-emerald-400/70">{smsCredits === null ? (authLoading ? "..." : isAuthenticated ? "..." : "Login to view") : smsCredits.toLocaleString()} available</div>
-                        <Link href="/dashboard/subscriptions">
-                          <ShoppingCart className="h-4 w-4 text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* Full viewport height — the header now sits to the right of this rail,
+          not above it, so the nav starts at the very top of the screen. */}
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 z-50 bg-white border-r border-slate-200">
+        {/* The brand lives here, at the top of the rail. The header used to
+            carry a second copy, which read as two logos on one screen. */}
+        <Link
+          href="/dashboard"
+          className="flex h-16 shrink-0 items-center border-b border-slate-200 px-3"
+        >
+          {/* The full lockup, same as the public site — it already carries the
+              wordmark, so no separate text sits beside it. */}
+          <Image
+            src="/logo.png"
+            alt="OxyManager — Your Smart Assistant"
+            width={378}
+            height={96}
+            className="h-11 w-auto"
+            priority
+          />
+        </Link>
 
-            <nav className="space-y-1 mb-8 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <CategorizedNavigation navigation={navigation} onItemClick={onClose} />
-            </nav>
-          </div>
-        </div>
-      </div>
+        {smsPanel}
+        <nav className="flex-1 overflow-y-auto px-2 py-3 scrollbar-hide">
+          <CategorizedNavigation navigation={navigation} />
+        </nav>
+      </aside>
     </Fragment>
   );
 }
 
 // Component for categorized navigation
-function CategorizedNavigation({ 
-  navigation, 
-  onItemClick 
-}: { 
-  navigation: NavigationItem[]; 
+function CategorizedNavigation({
+  navigation,
+  onItemClick
+}: {
+  navigation: NavigationItem[];
   onItemClick?: () => void;
 }) {
   const categories = {
-    main: { label: "Overview", items: [] as NavigationItem[] },
-    business: { label: "Business Operations", items: [] as NavigationItem[] },
-    finance: { label: "Financial Management", items: [] as NavigationItem[] },
-    hr: { label: "Human Resources", items: [] as NavigationItem[] },
-    communication: { label: "Communication & Sales", items: [] as NavigationItem[] },
-    tools: { label: "Tools & Utilities", items: [] as NavigationItem[] },
-    settings: { label: "Settings", items: [] as NavigationItem[] },
+    main: { label: "এক নজরে", items: [] as NavigationItem[] },
+    business: { label: "ব্যবসা", items: [] as NavigationItem[] },
+    finance: { label: "হিসাব-নিকাশ", items: [] as NavigationItem[] },
+    hr: { label: "কর্মচারী", items: [] as NavigationItem[] },
+    communication: { label: "যোগাযোগ", items: [] as NavigationItem[] },
+    tools: { label: "টুলস", items: [] as NavigationItem[] },
+    settings: { label: "সেটিংস", items: [] as NavigationItem[] },
   };
 
   // Group navigation items by category
@@ -234,13 +210,16 @@ function CategorizedNavigation({
   });
 
   return (
-    <div>
+    <div className="space-y-4">
       {Object.entries(categories).map(([key, category]) => {
         if (category.items.length === 0) return null;
-        
+
         return (
           <div key={key}>
-            <div>
+            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              {category.label}
+            </div>
+            <div className="space-y-0.5">
               {category.items.map((item) => (
                 <NavItem
                   key={item.name}
@@ -261,99 +240,42 @@ function CategorizedNavigation({
 }
 
 // Component for nav items
-function NavItem({ 
-  icon: Icon, 
-  label, 
-  href, 
+function NavItem({
+  icon: Icon,
+  label,
+  href,
   active,
   badge,
-  onClick 
-}: { 
-  icon: LucideIcon; 
-  label: string; 
+  onClick
+}: {
+  icon: LucideIcon;
+  label: string;
   href: string;
   active?: boolean;
   badge?: string;
   onClick?: () => void;
 }) {
-  const getBadgeColors = (badgeType?: string) => {
-    switch (badgeType) {
-      case 'inventory':
-        return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-      case 'sales':
-        return 'bg-green-500/20 text-green-300 border-green-500/30';
-      case 'payments':
-        return 'bg-red-500/20 text-red-300 border-red-500/30';
-      case 'e-commerce':
-        return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-      case 'pro':
-        return 'bg-gradient-to-r from-amber-400 to-orange-500 text-black border-0';
-      default:
-        return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
-    }
-  };
-
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200 group ${
-        active 
-          ? "bg-slate-800/70 text-cyan-400 shadow-sm" 
-          : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/30"
+      aria-current={active ? "page" : undefined}
+      className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg px-3 text-[13px] font-medium transition-colors ${
+        active
+          ? "bg-cyan-50 text-cyan-700"
+          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
       }`}
     >
-      <div className="flex items-center">
-        <Icon className="mr-3 h-4 w-4 flex-shrink-0" />
-        <span className="truncate">{label}</span>
-      </div>
-      
-      {badge && (
-        <span className={`
-          px-2 py-0.5 text-xs font-medium rounded-full border
-          ${getBadgeColors(badge)}
-          ${badge === 'pro' ? 'font-bold' : ''}
-        `}>
-          {badge === 'inventory' && 'INV'}
-          {badge === 'sales' && 'SALE'}
-          {badge === 'payments' && 'PAY'}
-          {badge === 'e-commerce' && 'WEB'}
-          {badge === 'pro' && 'PRO'}
-        </span>
+      <span className="flex min-w-0 items-center gap-2.5">
+        <Icon
+          className={`h-4 w-4 shrink-0 ${active ? "text-cyan-600" : "text-slate-400"}`}
+        />
+        <span className="truncate" title={label}>{label}</span>
+      </span>
+
+      {badge === "pro" && (
+        <span className="badge badge-warn">প্রো</span>
       )}
     </Link>
-  );
-}
-
-// Component for status items
-function StatusItem({ label, value, color }: { label: string; value: number; color: string }) {
-  const getColor = () => {
-    switch (color) {
-      case "cyan":
-        return "from-cyan-400 to-cyan-500"
-      case "green":
-        return "from-green-400 to-green-500"
-      case "blue":
-        return "from-blue-400 to-blue-500"
-      case "purple":
-        return "from-purple-400 to-purple-500"
-      default:
-        return "from-cyan-400 to-cyan-500"
-    }
-  }
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xs text-slate-400 font-medium">{label}</div>
-        <div className="text-xs text-slate-400 font-mono">{value}%</div>
-      </div>
-      <div className="h-2 bg-slate-800/60 rounded-full overflow-hidden">
-        <div 
-          className={`h-full bg-gradient-to-r ${getColor()} rounded-full transition-all duration-500 ease-out`} 
-          style={{ width: `${value}%` }}
-        ></div>
-      </div>
-    </div>
   );
 }

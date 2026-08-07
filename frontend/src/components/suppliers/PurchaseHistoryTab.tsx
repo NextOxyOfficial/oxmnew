@@ -1,6 +1,17 @@
 "use client";
 
+import { sumBy } from "@/lib/money";
+
 import React, { useState, useRef, useEffect } from "react";
+import {
+  ChevronDown,
+  FileSpreadsheet,
+  FileText,
+  ImageIcon,
+  Pencil,
+  Trash2,
+  X,
+} from "lucide-react";
 
 interface Purchase {
   id: number;
@@ -34,6 +45,19 @@ interface PurchaseHistoryTabProps {
   ) => Promise<void>;
   onDeletePurchase?: (purchaseId: number) => Promise<void>;
 }
+
+// Design-system badge + Bangla label for each purchase status.
+const STATUS_BADGE: Record<string, string> = {
+  pending: "badge-warn",
+  completed: "badge-success",
+  cancelled: "badge-muted",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: "বাকি আছে",
+  completed: "শেষ",
+  cancelled: "বাতিল করা",
+};
 
 export default function PurchaseHistoryTab({
   purchases,
@@ -73,6 +97,11 @@ export default function PurchaseHistoryTab({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Unknown statuses fall back to the colour hint the parent supplies.
+  const badgeClassFor = (status: string): string =>
+    STATUS_BADGE[status] ??
+    (getStatusColor(status).includes("red") ? "badge-danger" : "badge-muted");
 
   const handleSupplierSelect = (supplier: string) => {
     setSelectedSupplier(supplier);
@@ -142,7 +171,7 @@ export default function PurchaseHistoryTab({
   const downloadPDF = () => {
     const filteredData = getFilteredPurchases();
     const currentDate = new Date().toLocaleDateString();
-    const totalAmount = filteredData.reduce((sum, p) => sum + p.amount, 0);
+    const totalAmount = sumBy(filteredData, (p) => p.amount);
 
     // Create HTML content for PDF
     const htmlContent = `
@@ -231,205 +260,170 @@ export default function PurchaseHistoryTab({
     }
   };
 
+  const visiblePurchases = getFilteredPurchases();
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <h4 className="text-base sm:text-lg font-medium text-slate-100">
-            Purchase History
-          </h4>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={downloadCSV}
-              className="px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg flex items-center gap-2 cursor-pointer"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <span className="hidden sm:inline">CSV</span>
-            </button>
-            <button
-              onClick={downloadPDF}
-              className="px-3 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-lg hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 shadow-lg flex items-center gap-2 cursor-pointer"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                />
-              </svg>
-              <span className="hidden sm:inline">PDF</span>
-            </button>
+    <>
+      <div className="stat-strip">
+        <div className="stat">
+          <div className="stat-label">মোট কেনাকাটা</div>
+          <div className="stat-value num">{purchases.length}</div>
+          <div className="stat-meta">সব মিলিয়ে</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">দেখাচ্ছে</div>
+          <div className="stat-value num">{visiblePurchases.length}</div>
+          <div className="stat-meta">
+            {purchases.length} টার মধ্যে {visiblePurchases.length} টা
           </div>
         </div>
-        {/* Filter by Supplier */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full min-w-0">
-            <div className="relative w-full sm:w-auto" ref={dropdownRef}>
-              {/* ...existing dropdown code... */}
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full sm:min-w-[200px] px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer flex items-center justify-between"
-              >
-                <span className="truncate">
-                  {selectedSupplier === "all"
-                    ? "All Suppliers"
-                    : selectedSupplier}
-                </span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    isDropdownOpen ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
+        <div className="stat">
+          <div className="stat-label">মোট টাকা</div>
+          <div className="stat-value num">
+            {formatCurrency(
+              sumBy(visiblePurchases, (p) => p.amount)
+            )}
+          </div>
+          <div className="stat-meta">
+            {selectedSupplier === "all" ? "সব সাপ্লায়ার" : selectedSupplier}
+          </div>
+        </div>
+      </div>
 
-              {isDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700/50 rounded-lg shadow-lg z-10 max-h-64 overflow-hidden">
-                  <div className="p-2 border-b border-slate-700/50">
-                    <input
-                      type="text"
-                      placeholder="Search suppliers..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-                      autoFocus
-                    />
-                  </div>
-                  <div className="max-h-48 overflow-y-auto">
+      <div className="plane-section">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-auto" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="btn btn-ghost w-full sm:w-56 justify-between"
+            >
+              <span className="truncate">
+                {selectedSupplier === "all" ? "সব সাপ্লায়ার" : selectedSupplier}
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${
+                  isDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 z-20 max-h-64 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <div className="p-2 border-b border-slate-200">
+                  <input
+                    type="text"
+                    placeholder="সাপ্লায়ার খুঁজুন…"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="input"
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleSupplierSelect("all")}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 truncate ${
+                      selectedSupplier === "all"
+                        ? "text-cyan-600"
+                        : "text-slate-600"
+                    }`}
+                  >
+                    সব সাপ্লায়ার
+                  </button>
+                  {filteredSuppliers.map((supplier) => (
                     <button
-                      onClick={() => handleSupplierSelect("all")}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer ${
-                        selectedSupplier === "all"
-                          ? "bg-slate-700/50 text-cyan-400"
-                          : "text-slate-300"
+                      type="button"
+                      key={supplier}
+                      onClick={() => handleSupplierSelect(supplier)}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 truncate ${
+                        selectedSupplier === supplier
+                          ? "text-cyan-600"
+                          : "text-slate-600"
                       }`}
                     >
-                      All Suppliers
+                      {supplier}
                     </button>
-                    {filteredSuppliers.map((supplier) => (
-                      <button
-                        key={supplier}
-                        onClick={() => handleSupplierSelect(supplier)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer truncate overflow-hidden whitespace-nowrap ${
-                          selectedSupplier === supplier
-                            ? "bg-slate-700/50 text-cyan-400"
-                            : "text-slate-300"
-                        }`}
-                      >
-                        {supplier}
-                      </button>
-                    ))}
-                    {filteredSuppliers.length === 0 && searchTerm && (
-                      <div className="px-3 py-2 text-sm text-slate-400">
-                        No suppliers found
-                      </div>
-                    )}
-                  </div>
+                  ))}
+                  {filteredSuppliers.length === 0 && searchTerm && (
+                    <div className="px-3 py-2 text-sm text-slate-500">
+                      কিছু পাওয়া যায়নি
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {selectedSupplier !== "all" && (
-              <button
-                onClick={() => setSelectedSupplier("all")}
-                className="self-start sm:self-auto px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
-              >
-                Clear Filter
-              </button>
+              </div>
             )}
           </div>
 
-          {/* Results Summary */}
-          <div className="text-sm text-slate-400">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-              <span>
-                Showing {getFilteredPurchases().length} of {purchases.length}{" "}
-                purchases
-              </span>
-              {selectedSupplier !== "all" && (
-                <span className="text-cyan-400">
-                  Total:{" "}
-                  {formatCurrency(
-                    getFilteredPurchases().reduce((sum, p) => sum + p.amount, 0)
-                  )}
-                </span>
-              )}
-            </div>
+          {selectedSupplier !== "all" && (
+            <button
+              type="button"
+              onClick={() => setSelectedSupplier("all")}
+              className="btn btn-ghost btn-sm"
+            >
+              ফিল্টার মুছে দিন
+            </button>
+          )}
+
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <button
+              type="button"
+              onClick={downloadCSV}
+              className="btn btn-ghost btn-sm"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              CSV নামান
+            </button>
+            <button
+              type="button"
+              onClick={downloadPDF}
+              className="btn btn-ghost btn-sm"
+            >
+              <FileText className="h-4 w-4" />
+              PDF নামান
+            </button>
           </div>
         </div>
+      </div>
 
-        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg overflow-x-auto max-w-full">
-          <table className="w-full min-w-[800px]">
-            <thead className="bg-slate-800/50">
+      {visiblePurchases.length === 0 ? (
+        <div className="empty">
+          {purchases.length === 0
+            ? "এখনো কোনো কেনাকাটা যোগ করা হয়নি"
+            : "কিছু পাওয়া যায়নি"}
+        </div>
+      ) : (
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead>
               <tr>
-                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Date
-                </th>
-                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Supplier
-                </th>
-                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Products
-                </th>
-                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Amount
-                </th>
-                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Status
-                </th>
-                <th className="text-left text-slate-300 font-medium py-3 px-3 sm:px-4 text-xs sm:text-sm whitespace-nowrap">
-                  Proof
-                </th>
+                <th>তারিখ</th>
+                <th>সাপ্লায়ার</th>
+                <th>প্রোডাক্ট</th>
+                <th className="cell-num">টাকার পরিমাণ</th>
+                <th>অবস্থা</th>
+                <th>প্রমাণ</th>
               </tr>
             </thead>
             <tbody>
-              {getFilteredPurchases().map((purchase) => (
-                <tr
-                  key={purchase.id}
-                  className="border-t border-slate-700/30 hover:bg-slate-800/30 transition-colors group"
-                >
-                  <td className="py-3 px-3 sm:px-4 text-slate-100 text-xs sm:text-sm whitespace-nowrap">
+              {visiblePurchases.map((purchase) => (
+                <tr key={purchase.id} className="group">
+                  <td className="whitespace-nowrap">
                     {formatDate(purchase.date)}
                   </td>
-                  <td className="py-3 px-3 sm:px-4 text-slate-100 text-xs sm:text-sm whitespace-nowrap">
+                  <td className="cell-strong whitespace-nowrap">
                     {purchase.supplier.name}
                   </td>
-                  <td className="py-3 px-3 sm:px-4">
-                    <div className="text-slate-300 text-xs sm:text-sm max-w-xs truncate">
+                  <td>
+                    <div className="max-w-xs truncate" title={purchase.products}>
                       {purchase.products}
                     </div>
                   </td>
-                  <td className="py-3 px-3 sm:px-4 text-slate-100 font-medium text-xs sm:text-sm whitespace-nowrap">
+                  <td className="cell-num whitespace-nowrap">
                     {formatCurrency(purchase.amount)}
                   </td>
-                  <td className="py-3 px-3 sm:px-4">
+                  <td>
                     {editingPurchaseId === purchase.id ? (
                       <div className="flex items-center gap-2">
                         <select
@@ -444,140 +438,83 @@ export default function PurchaseHistoryTab({
                             )
                           }
                           disabled={updating}
-                          className="px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:opacity-50 cursor-pointer"
+                          className="select w-auto"
                         >
-                          <option value="pending">Pending</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
+                          <option value="pending">বাকি আছে</option>
+                          <option value="completed">শেষ</option>
+                          <option value="cancelled">বাতিল করা</option>
                         </select>
                         <button
+                          type="button"
                           onClick={() => setEditingPurchaseId(null)}
                           disabled={updating}
-                          className="p-1 text-slate-400 hover:text-slate-300 disabled:opacity-50 cursor-pointer"
-                          title="Cancel"
+                          className="text-slate-500 hover:text-cyan-600"
+                          title="বাতিল"
+                          aria-label="বাতিল"
                         >
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
+                          <X className="h-4 w-4" />
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
                         <span
-                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                            purchase.status
-                          )}`}
+                          className={`badge ${badgeClassFor(purchase.status)}`}
                         >
-                          {purchase.status}
+                          {STATUS_LABEL[purchase.status] ?? purchase.status}
                         </span>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           {onUpdatePurchase && (
                             <button
+                              type="button"
                               onClick={() => setEditingPurchaseId(purchase.id)}
-                              className="p-1 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
-                              title="Edit status"
+                              className="text-slate-500 hover:text-cyan-600"
+                              title="অবস্থা বদলান"
+                              aria-label="অবস্থা বদলান"
                             >
-                              <svg
-                                className="w-3 h-3"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
+                              <Pencil className="h-4 w-4" />
                             </button>
                           )}
                           {onDeletePurchase && (
                             <button
+                              type="button"
                               onClick={() => handleDelete(purchase.id)}
-                              className="p-1 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
-                              title="Delete purchase"
+                              className="text-slate-500 hover:text-rose-600"
+                              title="ডিলিট করুন"
+                              aria-label="ডিলিট করুন"
                             >
-                              <svg
-                                className="w-3 h-3"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           )}
                         </div>
                       </div>
                     )}
                   </td>
-                  <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
+                  <td className="whitespace-nowrap">
                     {purchase.proof_url ? (
-                      <div className="flex items-center gap-2">
-                        {purchase.proof_url.toLowerCase().includes(".pdf") ? (
-                          <a
-                            href={purchase.proof_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors text-xs cursor-pointer"
-                          >
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                              />
-                            </svg>
-                            PDF
-                          </a>
-                        ) : (
-                          <button
-                            onClick={() =>
-                              window.open(purchase.proof_url, "_blank")
-                            }
-                            className="flex items-center gap-1 px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20 transition-colors text-xs cursor-pointer"
-                          >
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                            Image
-                          </button>
-                        )}
-                      </div>
+                      purchase.proof_url.toLowerCase().includes(".pdf") ? (
+                        <a
+                          href={purchase.proof_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-slate-500 hover:text-cyan-600"
+                        >
+                          <FileText className="h-4 w-4" />
+                          PDF
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            window.open(purchase.proof_url, "_blank")
+                          }
+                          className="inline-flex items-center gap-1 text-slate-500 hover:text-cyan-600"
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                          ছবি
+                        </button>
+                      )
                     ) : (
-                      <span className="text-slate-500 text-xs">No proof</span>
+                      <span className="text-slate-500">প্রমাণ নেই</span>
                     )}
                   </td>
                 </tr>
@@ -585,7 +522,7 @@ export default function PurchaseHistoryTab({
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 }

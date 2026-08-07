@@ -1,3 +1,4 @@
+from core.ownership import OwnedRelationsMixin
 from rest_framework import serializers
 
 from .models import (
@@ -11,20 +12,26 @@ from .models import (
 )
 
 
-class PaymentInformationSerializer(serializers.ModelSerializer):
+class PaymentInformationSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("employee",)
+
     class Meta:
         model = PaymentInformation
         fields = "__all__"
         extra_kwargs = {"employee": {"read_only": True}}
 
 
-class IncentiveSerializer(serializers.ModelSerializer):
+class IncentiveSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("employee",)
+
     class Meta:
         model = Incentive
         fields = "__all__"
 
 
-class IncentiveWithdrawalSerializer(serializers.ModelSerializer):
+class IncentiveWithdrawalSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("employee",)
+
     employee_name = serializers.CharField(source='employee.name', read_only=True)
     
     class Meta:
@@ -33,7 +40,9 @@ class IncentiveWithdrawalSerializer(serializers.ModelSerializer):
         extra_kwargs = {"employee": {"read_only": True}}
 
 
-class SalaryRecordSerializer(serializers.ModelSerializer):
+class SalaryRecordSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("employee",)
+
     overtime_pay = serializers.SerializerMethodField()
 
     class Meta:
@@ -48,14 +57,18 @@ class SalaryRecordSerializer(serializers.ModelSerializer):
         return float(obj.overtime_hours * obj.overtime_rate)
 
 
-class TaskSerializer(serializers.ModelSerializer):
+class TaskSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("employee",)
+
     class Meta:
         model = Task
         fields = "__all__"
         extra_kwargs = {"employee": {"read_only": True}}
 
 
-class DocumentSerializer(serializers.ModelSerializer):
+class DocumentSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("employee",)
+
     file_type = serializers.CharField(read_only=True)
     url = serializers.SerializerMethodField()
     employee_id = serializers.IntegerField(write_only=True, required=False)
@@ -83,6 +96,10 @@ class EmployeeSerializer(serializers.ModelSerializer):
     tasks = TaskSerializer(many=True, read_only=True)
     documents = DocumentSerializer(many=True, read_only=True)
 
+    # Whether this person can sign in, so the list can show it without a
+    # second request per row.
+    login_status = serializers.SerializerMethodField()
+
     # Calculate fields
     total_incentives = serializers.SerializerMethodField()
     completion_rate = serializers.SerializerMethodField()
@@ -91,6 +108,12 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = "__all__"
+        # Ownership comes from the request, not the payload — otherwise a PATCH
+        # could hand this employee over to another account.
+        read_only_fields = ["user"]
+
+    def get_login_status(self, obj):
+        return _login_status(obj)
 
     def get_total_incentives(self, obj):
         return float(sum(incentive.amount for incentive in obj.incentives.all()))
@@ -104,9 +127,19 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return obj.tasks.filter(status__in=["pending", "in_progress"]).count()
 
 
+def _login_status(employee):
+    access = getattr(employee, "access", None)
+    if access is None:
+        return "none"
+    return "enabled" if access.is_enabled else "disabled"
+
+
 class EmployeeListSerializer(serializers.ModelSerializer):
     """Simplified serializer for employee list view"""
 
+    #: "none" | "enabled" | "disabled" — shown as a badge in the list so the
+    #: owner can see at a glance who can sign in.
+    login_status = serializers.SerializerMethodField()
     total_incentives = serializers.SerializerMethodField()
     completion_rate = serializers.SerializerMethodField()
     pending_tasks = serializers.SerializerMethodField()
@@ -129,12 +162,16 @@ class EmployeeListSerializer(serializers.ModelSerializer):
             "status",
             "tasks_assigned",
             "tasks_completed",
+            "login_status",
             "total_incentives",
             "completion_rate",
             "pending_tasks",
             "created_at",
             "updated_at",
         ]
+
+    def get_login_status(self, obj):
+        return _login_status(obj)
 
     def get_total_incentives(self, obj):
         return float(sum(incentive.amount for incentive in obj.incentives.all()))

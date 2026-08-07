@@ -1,3 +1,4 @@
+from core.scoping import HasPermission, owner_for
 import csv
 import io
 import json
@@ -19,6 +20,7 @@ from .serializers import (
     ProductDetailSerializer,
     ProductListSerializer,
     ProductPhotoSerializer,
+    ProductSearchSerializer,
     ProductStockMovementSerializer,
     ProductVariantSerializer,
 )
@@ -26,8 +28,17 @@ from .serializers import (
 
 class ProductViewSet(viewsets.ModelViewSet):
     """ViewSet for managing products"""
+    # Staff logins are held to these; owners are unrestricted.
+    required_permissions = {
+        "GET": "products.view",
+        "POST": "products.add",
+        "PUT": "products.edit",
+        "PATCH": "products.edit",
+        "DELETE": "products.delete",
+    }
 
-    permission_classes = [IsAuthenticated]
+
+    permission_classes = [IsAuthenticated, HasPermission]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [
         DjangoFilterBackend,
@@ -49,7 +60,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Return products for the authenticated user"""
         return (
-            Product.objects.filter(user=self.request.user)
+            Product.objects.filter(user=owner_for(self.request))
             .select_related("category", "supplier")
             .prefetch_related("variants", "photos")
         )
@@ -490,7 +501,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
                         # Check for existing product with same name for this user
                         if Product.objects.filter(
-                            name=name, user=request.user
+                            name=name, user=owner_for(request)
                         ).exists():
                             products_errors.append(
                                 f"Row {row_num}: Product '{name}' already exists"
@@ -594,7 +605,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                                     # If category doesn't exist, create a new one
                                     category = Category.objects.create(
                                         name=category_name,
-                                        user=request.user,
+                                        user=owner_for(request),
                                         is_active=True,
                                     )
                                 product_data["category"] = category
@@ -613,13 +624,13 @@ class ProductViewSet(viewsets.ModelViewSet):
                                 # First try to get existing supplier by name and user
                                 try:
                                     supplier = Supplier.objects.get(
-                                        name=supplier_name, user=request.user
+                                        name=supplier_name, user=owner_for(request)
                                     )
                                 except Supplier.DoesNotExist:
                                     # If supplier doesn't exist for this user, create a new one
                                     supplier = Supplier.objects.create(
                                         name=supplier_name,
-                                        user=request.user,
+                                        user=owner_for(request),
                                         is_active=True,
                                     )
                                 product_data["supplier"] = supplier
@@ -943,12 +954,45 @@ class ProductViewSet(viewsets.ModelViewSet):
             {"results": results, "total": search_results.count(), "query": query}
         )
 
+    @action(detail=False, methods=["get"], url_path="fast-search")
+    def fast_search(self, request):
+        """Fast lightweight search for product selection in orders/invoices.
+        Returns only essential fields with variants for quick product picking."""
+        query = request.query_params.get("q", "").strip()
+        limit = min(int(request.query_params.get("limit", 20)), 50)
+
+        if not query or len(query) < 1:
+            return Response({"results": [], "count": 0})
+
+        queryset = (
+            Product.objects.filter(user=owner_for(request), is_active=True)
+            .filter(
+                Q(name__icontains=query)
+                | Q(product_code__icontains=query)
+                | Q(category__name__icontains=query)
+            )
+            .select_related("category")
+            .prefetch_related("variants")[:limit]
+        )
+
+        serializer = ProductSearchSerializer(queryset, many=True)
+        return Response({"results": serializer.data, "count": len(serializer.data)})
+
 
 class ProductStockMovementViewSet(viewsets.ModelViewSet):
     """ViewSet for viewing and managing stock movements"""
+    # Staff logins are held to these; owners are unrestricted.
+    required_permissions = {
+        "GET": "products.view",
+        "POST": "products.stock",
+        "PUT": "products.stock",
+        "PATCH": "products.stock",
+        "DELETE": "products.stock",
+    }
+
 
     serializer_class = ProductStockMovementSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["product", "variant", "movement_type"]
     ordering_fields = ["created_at"]
@@ -957,8 +1001,12 @@ class ProductStockMovementViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Return stock movements for the authenticated user"""
         return ProductStockMovement.objects.filter(
-            user=self.request.user
+            user=owner_for(self.request)
         ).select_related("product", "variant")
+
+    def perform_create(self, serializer):
+        """Stamp the movement with the caller — never trust a posted user id."""
+        serializer.save(user=owner_for(self.request))
 
     def destroy(self, request, *args, **kwargs):
         """Delete a stock movement and recalculate product buy price"""

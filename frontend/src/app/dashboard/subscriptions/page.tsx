@@ -1,9 +1,12 @@
 "use client";
 
+import { Check, Loader2, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { ApiService } from "../../../lib/api";
+import { useConfirm, useToast } from "@/components/ui/Feedback";
+import Pagination from "@/components/ui/Pagination";
 
 interface SubscriptionPlan {
   id?: number;
@@ -106,26 +109,30 @@ export default function SubscriptionsPage() {
   const [historyFilter, setHistoryFilter] = useState<
     "all" | "subscription" | "sms_package"
   >("all");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPerPage, setHistoryPerPage] = useState(10);
 
   const verifiedOrderIdRef = useRef<string | null>(null);
 
   const { user, profile, refreshProfile } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
 
   // Function to validate if user profile is complete for payment
-  const validateProfileForPayment = () => {
+  const validateProfileForPayment = async () => {
     if (!user) {
-      alert("Please log in to continue.");
+      toast.error("চালিয়ে যেতে আগে লগইন করুন।");
       return false;
     }
 
     const requiredFields = {
-      "First Name": user.first_name,
-      Address: profile?.address,
-      City: profile?.city,
-      Phone: profile?.phone || profile?.contact_number,
-      "Post Code": profile?.post_code,
+      "নাম": user.first_name,
+      "ঠিকানা": profile?.address,
+      "শহর": profile?.city,
+      "ফোন": profile?.phone || profile?.contact_number,
+      "পোস্ট কোড": profile?.post_code,
     };
 
     const missingFields = Object.entries(requiredFields)
@@ -134,9 +141,11 @@ export default function SubscriptionsPage() {
 
     if (missingFields.length > 0) {
       const missingFieldsList = missingFields.join(", ");
-      const confirmRedirect = confirm(
-        `Your profile is incomplete. The following fields are required for payment: ${missingFieldsList}\n\nWould you like to complete your profile now?`
-      );
+      const confirmRedirect = await confirm({
+        title: "প্রোফাইল পুরো করা নেই",
+        message: `পেমেন্টের জন্য এগুলো লাগবে: ${missingFieldsList}। এখনই প্রোফাইল পুরো করবেন?`,
+        confirmLabel: "প্রোফাইলে যান",
+      });
 
       if (confirmRedirect) {
         router.push("/dashboard/profile");
@@ -185,7 +194,7 @@ export default function SubscriptionsPage() {
       }
     } catch (error: any) {
       console.error("Failed to fetch payment history:", error);
-      setHistoryError(error?.message || "Failed to load purchase history");
+      setHistoryError(error?.message || "কেনাকাটার হিস্ট্রি লোড করা যায়নি");
       setPaymentHistory([]);
     } finally {
       setIsLoadingHistory(false);
@@ -235,8 +244,8 @@ export default function SubscriptionsPage() {
             if (paymentType === "subscription") {
               setSuccessMessage(
                 applied
-                  ? "🎉 Your subscription is now active."
-                  : "Payment verified successfully. Subscription activation is pending."
+                  ? "🎉 আপনার সাবস্ক্রিপশন এখন চালু।"
+                  : "পেমেন্ট যাচাই হয়ে গেছে। সাবস্ক্রিপশন চালু হতে একটু সময় লাগবে।"
               );
               setShowSuccessMessage(true);
             } else if (paymentType === "sms_package") {
@@ -248,12 +257,12 @@ export default function SubscriptionsPage() {
                   : 0;
               setSuccessMessage(
                 applied
-                  ? `✅ SMS package purchased successfully! ${creditsAdded.toLocaleString()} SMS credits have been added to your account.`
-                  : "Payment verified successfully. SMS credits will be added shortly."
+                  ? `✅ এসএমএস প্যাকেজ কেনা হয়ে গেছে! আপনার অ্যাকাউন্টে ${creditsAdded.toLocaleString()} এসএমএস ক্রেডিট যোগ হয়েছে।`
+                  : "পেমেন্ট যাচাই হয়ে গেছে। এসএমএস ক্রেডিট একটু পরেই যোগ হবে।"
               );
               setShowSuccessMessage(true);
             } else {
-              setSuccessMessage("Payment verified successfully!");
+              setSuccessMessage("পেমেন্ট যাচাই হয়ে গেছে!");
               setShowSuccessMessage(true);
             }
 
@@ -386,7 +395,7 @@ export default function SubscriptionsPage() {
           ? plansData.map((plan: SubscriptionPlan) => ({
               ...plan,
               cta:
-                plan.name === "free" ? "Start Free" : `Upgrade to ${plan.name}`,
+                plan.name === "free" ? "ফ্রি শুরু করুন" : `${plan.name} নিন`,
               popular: plan.is_popular || false,
             }))
           : [];
@@ -444,11 +453,11 @@ export default function SubscriptionsPage() {
         // Refresh subscription data
         await refreshSubscriptionData();
       } else {
-        alert("Failed to upgrade subscription. Please try again.");
+        toast.error("প্ল্যান আপগ্রেড করা যায়নি। আবার চেষ্টা করুন।");
       }
     } catch (error) {
       console.error("Failed to upgrade subscription:", error);
-      alert("Failed to upgrade subscription. Please try again.");
+      toast.error("প্ল্যান আপগ্রেড করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setIsProcessing(false);
     }
@@ -462,7 +471,7 @@ export default function SubscriptionsPage() {
       setIsSmsPaymentLoading(true);
 
       // Validate profile completeness before proceeding
-      if (!validateProfileForPayment()) {
+      if (!(await validateProfileForPayment())) {
         return;
       }
 
@@ -520,7 +529,7 @@ export default function SubscriptionsPage() {
         const errorMessage =
           payment?.error ||
           payment?.message ||
-          "Failed to get payment URL. Please try again later.";
+          "পেমেন্টের লিংক পাওয়া যায়নি। একটু পরে আবার চেষ্টা করুন।";
 
         throw new Error(errorMessage);
       }
@@ -534,10 +543,10 @@ export default function SubscriptionsPage() {
           ? error.message
           : typeof error === "string"
           ? error
-          : "Failed to purchase SMS package. Please try again.";
+          : "এসএমএস প্যাকেজ কেনা যায়নি। আবার চেষ্টা করুন।";
 
       console.error("Error message:", errorMessage);
-      alert(`Payment Error: ${errorMessage}`);
+      toast.error(`পেমেন্টে সমস্যা: ${errorMessage}`);
     } finally {
       setIsSmsPaymentLoading(false);
     }
@@ -551,7 +560,7 @@ export default function SubscriptionsPage() {
       setIsSubscriptionPaymentLoading(true);
 
       // Validate profile completeness before proceeding
-      if (!validateProfileForPayment()) {
+      if (!(await validateProfileForPayment())) {
         return;
       }
 
@@ -602,7 +611,7 @@ export default function SubscriptionsPage() {
         const errorMessage =
           payment?.error ||
           payment?.message ||
-          "Failed to get payment URL. Please check your information and try again.";
+          "পেমেন্টের লিংক পাওয়া যায়নি। তথ্যগুলো ঠিক আছে কি না দেখে আবার চেষ্টা করুন।";
 
         throw new Error(errorMessage);
       }
@@ -616,251 +625,225 @@ export default function SubscriptionsPage() {
           ? error.message
           : typeof error === "string"
           ? error
-          : "Failed to process subscription payment. Please try again.";
+          : "সাবস্ক্রিপশনের পেমেন্ট করা যায়নি। আবার চেষ্টা করুন।";
 
       console.error("Error message:", errorMessage);
 
       // Show more specific error message
-      alert(`Payment Error: ${errorMessage}`);
+      toast.error(`পেমেন্টে সমস্যা: ${errorMessage}`);
     } finally {
       setIsSubscriptionPaymentLoading(false);
     }
   };
 
+  const historyTotalItems = paymentHistory.length;
+  const historyTotalPages = Math.max(
+    1,
+    Math.ceil(historyTotalItems / historyPerPage)
+  );
+
+  // Reset to the first page whenever the history filter changes
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historyFilter]);
+
+  // Never leave the user stranded past the last page
+  useEffect(() => {
+    setHistoryPage((prev) => Math.min(Math.max(prev, 1), historyTotalPages));
+  }, [historyTotalPages]);
+
+  const paginatedPaymentHistory = useMemo(() => {
+    const start = (historyPage - 1) * historyPerPage;
+    return paymentHistory.slice(start, start + historyPerPage);
+  }, [paymentHistory, historyPage, historyPerPage]);
+
   if (loading) {
     return (
-      <div className="w-full max-w-6xl mx-auto sm:p-6 p-2 space-y-10">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-            Subscriptions
-          </h1>
-          <p className="text-gray-400 text-base mt-2">
-            Loading subscription plans...
-          </p>
+      <div className="page">
+        <header className="page-head">
+          <div>
+            <h1 className="page-title">সাবস্ক্রিপশন</h1>
+            <p className="page-sub">প্ল্যান লোড হচ্ছে…</p>
+          </div>
+        </header>
+        <div className="plane">
+          <div className="empty">লোড হচ্ছে…</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto sm:p-6 p-2 space-y-10">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-          Subscriptions
-        </h1>
-        <p className="text-gray-400 text-base mt-2">
-          Choose the best plan for your business and buy SMS packages as needed.
-        </p>
-      </div>
-
-      {/* Success Message Banner */}
-      {showSuccessMessage && (
-        <div className="relative bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg mb-8">
-          <button
-            onClick={() => setShowSuccessMessage(false)}
-            className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors cursor-pointer"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-          <div className="flex items-center">
-            <svg
-              className="w-8 h-8 mr-4 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            <div>
-              <h3 className="text-lg font-semibold mb-1">
-                Payment Successful!
-              </h3>
-              <p className="text-sm opacity-90">{successMessage}</p>
-            </div>
-          </div>
+    <div className="page">
+      <header className="page-head">
+        <div>
+          <h1 className="page-title">সাবস্ক্রিপশন</h1>
+          <p className="page-sub">
+            ব্যবসার জন্য ঠিক প্ল্যানটা বেছে নিন, দরকার মতো এসএমএস প্যাকেজ কিনুন
+          </p>
         </div>
-      )}
+      </header>
 
-      {/* Plans */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-        {plans.map((plan) => (
-          <div
-            key={plan.id}
-            className={`relative bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-6 flex flex-col items-center transition-all duration-200 ${
-              plan.popular
-                ? "border-cyan-500 ring-2 ring-cyan-500"
-                : "border-slate-700/50"
-            } ${
-              currentPlan === plan.name
-                ? currentPlan === "pro"
-                  ? "ring-2 ring-green-500 bg-gradient-to-br from-green-500/10 to-green-600/10"
-                  : "ring-2 ring-green-500"
-                : ""
-            }`}
-          >
-            {plan.popular && (
-              <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-4 py-1 rounded-full text-xs font-semibold shadow">
-                Most Popular
-              </span>
-            )}
-            {currentPlan === plan.name && plan.name === "pro" && (
-              <span className="absolute -top-4 right-4 bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow">
-                ✓ Active
-              </span>
-            )}
-            <h2 className="text-xl font-bold text-white mb-2">{plan.name}</h2>
-            <p className="text-gray-300 mb-4 text-center text-sm">
-              {plan.description}
-            </p>
-            <div className="mb-6">
-              <span className="text-3xl font-bold text-white">
-                {plan.price === 0 ? "Free" : `৳${plan.price}`}
-              </span>
-              {plan.price !== 0 && (
-                <span className="text-slate-400 ml-1 text-base">
-                  / {plan.period}
-                </span>
-              )}
+      <div className="plane">
+        {/* Success message */}
+        {showSuccessMessage && (
+          <div className="plane-section flex items-start gap-3 bg-emerald-50">
+            <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-700" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-emerald-700">
+                পেমেন্ট হয়ে গেছে!
+              </p>
+              <p className="mt-0.5 text-sm text-slate-600">{successMessage}</p>
             </div>
-            <ul className="mb-6 space-y-2 w-full">
-              {(plan.features || []).map((feature, idx) => (
-                <li
-                  key={idx}
-                  className="flex items-center text-slate-300 text-sm"
-                >
-                  <svg
-                    className="w-4 h-4 text-cyan-400 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  {typeof feature === "string"
-                    ? feature
-                    : feature?.name || feature?.description || "Feature"}
-                </li>
-              ))}
-            </ul>
             <button
-              className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-200 mt-auto text-sm ${
-                currentPlan === plan.name ||
-                isProcessing ||
-                isSubscriptionPaymentLoading ||
-                isUpdatingPlan ||
-                (plan.name === "free" && currentPlan === "pro") // Disable free plan when user has pro
-                  ? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
-                  : plan.popular
-                  ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
-                  : "bg-slate-700 text-white hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 cursor-pointer"
-              }`}
-              disabled={
-                currentPlan === plan.name ||
-                isProcessing ||
-                isSubscriptionPaymentLoading ||
-                isUpdatingPlan ||
-                (plan.name === "free" && currentPlan === "pro") // Disable free plan when user has pro
-              }
-              onClick={() => {
-                if (plan.price > 0) {
-                  handleSubscriptionPayment(plan.name, plan.price);
-                } else {
-                  handlePlanSelect(plan.name);
-                }
-              }}
+              onClick={() => setShowSuccessMessage(false)}
+              aria-label="বার্তাটা সরান"
+              className="text-slate-400 hover:text-slate-700"
             >
-              {currentPlan === plan.name
-                ? "Current Plan"
-                : isProcessing || isSubscriptionPaymentLoading
-                ? "Processing..."
-                : isUpdatingPlan
-                ? "Updating Plan..."
-                : plan.name === "free" && currentPlan === "pro"
-                ? "Pro Active"
-                : plan.price > 0
-                ? `Pay ৳${plan.price} - Upgrade to ${
-                    plan.name.charAt(0).toUpperCase() + plan.name.slice(1)
-                  }`
-                : plan.cta}
+              <X className="h-4 w-4" />
             </button>
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* SMS Packages */}
-      <div className="mt-12">
-        <h3 className="text-lg font-bold text-white mb-2 text-center">
-          SMS Packages
-        </h3>
-        <p className="text-gray-400 text-sm text-center mb-8">
-          Buy SMS credits for your marketing campaigns. Credits never expire.
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-          {smsPackages.map((pkg, idx) => (
-            <div
-              key={idx}
-              className={`relative bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm p-6 flex flex-col items-center transition-all duration-200 ${
-                pkg.popular
-                  ? "border-orange-500 ring-2 ring-orange-500"
-                  : "border-slate-700/50"
-              }`}
-            >
-              {pkg.popular && (
-                <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow">
-                  Popular
-                </span>
-              )}
-              <div className="text-xl font-bold text-white mb-2">
-                {(pkg.sms || pkg.sms_count).toLocaleString()} SMS
-              </div>
-              <div className="text-lg text-cyan-400 font-semibold mb-4">
-                ৳{pkg.price.toLocaleString()}
-              </div>
-              <div className="text-xs text-slate-400 mb-4">
-                ৳{(pkg.price / (pkg.sms || pkg.sms_count)).toFixed(2)} per SMS
-              </div>
-              <button
-                className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-2 px-4 rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                onClick={() =>
-                  pkg.id && handleSmsPackagePurchase(pkg.id, pkg.price)
-                }
-                disabled={isProcessing || isSmsPaymentLoading}
-              >
-                {isProcessing || isSmsPaymentLoading
-                  ? "Processing..."
-                  : `Pay ৳${pkg.price} - Purchase`}
-              </button>
-            </div>
-          ))}
+        {/* Plans */}
+        <div className="plane-section">
+          <div className="section-title">প্ল্যান</div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {plans.map((plan) => {
+              const isCurrent = currentPlan === plan.name;
+              const isDisabled =
+                isCurrent ||
+                isProcessing ||
+                isSubscriptionPaymentLoading ||
+                isUpdatingPlan ||
+                (plan.name === "free" && currentPlan === "pro"); // Disable free plan when user has pro
+
+              return (
+                <div
+                  key={plan.id}
+                  className={`flex flex-col rounded-lg border p-4 ${
+                    isCurrent ? "border-cyan-600" : "border-slate-200"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-[15px] font-semibold text-slate-900">
+                      {plan.name}
+                    </h2>
+                    {plan.popular && (
+                      <span className="badge badge-info">সবচেয়ে জনপ্রিয়</span>
+                    )}
+                    {isCurrent && (
+                      <span className="badge badge-success">চালু আছে</span>
+                    )}
+                  </div>
+
+                  <p className="mt-1 text-sm text-slate-600">
+                    {plan.description}
+                  </p>
+
+                  <div className="mt-3">
+                    <span className="text-2xl font-semibold text-slate-900 num">
+                      {plan.price === 0 ? "ফ্রি" : `৳${plan.price}`}
+                    </span>
+                    {plan.price !== 0 && (
+                      <span className="ml-1 text-sm text-slate-500">
+                        / {plan.period}
+                      </span>
+                    )}
+                  </div>
+
+                  <ul className="mt-3 mb-4 space-y-1.5">
+                    {(plan.features || []).map((feature, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-start gap-2 text-sm text-slate-600"
+                      >
+                        <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-cyan-600" />
+                        {typeof feature === "string"
+                          ? feature
+                          : feature?.name || feature?.description || "সুবিধা"}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    className="btn btn-primary mt-auto w-full"
+                    disabled={isDisabled}
+                    onClick={() => {
+                      if (plan.price > 0) {
+                        handleSubscriptionPayment(plan.name, plan.price);
+                      } else {
+                        handlePlanSelect(plan.name);
+                      }
+                    }}
+                  >
+                    {isCurrent
+                      ? "এখন এটাই চলছে"
+                      : isProcessing || isSubscriptionPaymentLoading
+                      ? "কাজ চলছে…"
+                      : isUpdatingPlan
+                      ? "প্ল্যান আপডেট হচ্ছে…"
+                      : plan.name === "free" && currentPlan === "pro"
+                      ? "প্রো চালু আছে"
+                      : plan.price > 0
+                      ? `৳${plan.price} দিয়ে ${
+                          plan.name.charAt(0).toUpperCase() + plan.name.slice(1)
+                        } নিন`
+                      : plan.cta}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      <div className="mt-12">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-white">Purchase History</h3>
+        {/* SMS Packages */}
+        <div className="plane-section">
+          <div className="section-title">এসএমএস প্যাকেজ</div>
+          <p className="mb-3 text-sm text-slate-600">
+            মার্কেটিং-এর জন্য এসএমএস কিনে রাখুন। ক্রেডিটের মেয়াদ শেষ হয় না।
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {smsPackages.map((pkg, idx) => (
+              <div
+                key={idx}
+                className="flex flex-col rounded-lg border border-slate-200 p-4"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-base font-semibold text-slate-900 num">
+                    {(pkg.sms || pkg.sms_count).toLocaleString()} এসএমএস
+                  </span>
+                  {pkg.popular && (
+                    <span className="badge badge-warn">জনপ্রিয়</span>
+                  )}
+                </div>
+                <div className="mt-1 text-lg font-semibold text-slate-900 num">
+                  ৳{pkg.price.toLocaleString()}
+                </div>
+                <div className="mb-3 text-xs text-slate-500">
+                  প্রতি এসএমএস ৳
+                  {(pkg.price / (pkg.sms || pkg.sms_count)).toFixed(2)}
+                </div>
+                <button
+                  className="btn btn-primary mt-auto w-full"
+                  onClick={() =>
+                    pkg.id && handleSmsPackagePurchase(pkg.id, pkg.price)
+                  }
+                  disabled={isProcessing || isSmsPaymentLoading}
+                >
+                  {isProcessing || isSmsPaymentLoading
+                    ? "কাজ চলছে…"
+                    : `৳${pkg.price} দিয়ে কিনুন`}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Purchase history */}
+        <div className="plane-section">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="section-title mb-0">কেনাকাটার হিস্ট্রি</div>
             <select
               value={historyFilter}
               onChange={(e) =>
@@ -868,138 +851,110 @@ export default function SubscriptionsPage() {
                   e.target.value as "all" | "subscription" | "sms_package"
                 )
               }
-              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              className="select w-auto"
+              aria-label="কেনাকাটার টাইপ"
             >
-              <option value="all">All</option>
-              <option value="subscription">Subscription</option>
-              <option value="sms_package">SMS</option>
+              <option value="all">সব</option>
+              <option value="subscription">সাবস্ক্রিপশন</option>
+              <option value="sms_package">এসএমএস</option>
             </select>
           </div>
+        </div>
 
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-sm overflow-hidden">
-            {isLoadingHistory ? (
-              <div className="p-6 text-center text-slate-300">
-                Loading history...
-              </div>
-            ) : historyError ? (
-              <div className="p-6 text-center text-red-300">{historyError}</div>
-            ) : paymentHistory.length === 0 ? (
-              <div className="p-6 text-center text-slate-300">
-                No purchases found.
-              </div>
-            ) : (
-              <div className="w-full overflow-x-auto">
-                <table className="min-w-full">
-                  <thead className="bg-black/20">
-                    <tr>
-                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
-                        Date
-                      </th>
-                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
-                        Type
-                      </th>
-                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
-                        Amount
-                      </th>
-                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
-                        Status
-                      </th>
-                      <th className="text-left text-xs font-semibold text-slate-300 px-4 py-3">
-                        Order
-                      </th>
+        {isLoadingHistory ? (
+          <div className="empty">হিস্ট্রি লোড হচ্ছে…</div>
+        ) : historyError ? (
+          <div className="empty text-rose-600">{historyError}</div>
+        ) : paymentHistory.length === 0 ? (
+          <div className="empty">কোনো কেনাকাটা পাওয়া যায়নি।</div>
+        ) : (
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>তারিখ</th>
+                  <th>টাইপ</th>
+                  <th className="cell-num">টাকার পরিমাণ</th>
+                  <th>অবস্থা</th>
+                  <th>অর্ডার</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedPaymentHistory.map((tx: any) => {
+                  const dateStr = tx.created_at
+                    ? new Date(tx.created_at).toLocaleString()
+                    : "-";
+                  const typeLabel =
+                    tx.payment_type === "subscription"
+                      ? "সাবস্ক্রিপশন"
+                      : tx.payment_type === "sms_package"
+                      ? "এসএমএস"
+                      : "জানা নেই";
+                  const amountStr =
+                    tx.amount !== null && tx.amount !== undefined
+                      ? `৳${Number(tx.amount).toLocaleString()}`
+                      : "-";
+                  const statusLabel = tx.is_applied
+                    ? "চালু হয়েছে"
+                    : tx.is_successful
+                    ? "পরিশোধ"
+                    : "বাকি আছে";
+                  const statusClass = tx.is_applied
+                    ? "badge-success"
+                    : tx.is_successful
+                    ? "badge-info"
+                    : "badge-warn";
+
+                  return (
+                    <tr key={tx.id}>
+                      <td className="whitespace-nowrap num">{dateStr}</td>
+                      <td className="whitespace-nowrap">{typeLabel}</td>
+                      <td className="cell-num">{amountStr}</td>
+                      <td>
+                        <span className={`badge ${statusClass}`}>
+                          {statusLabel}
+                        </span>
+                      </td>
+                      <td className="num">
+                        {tx.customer_order_id || tx.sp_order_id || "-"}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/10">
-                    {paymentHistory.map((tx: any) => {
-                      const dateStr = tx.created_at
-                        ? new Date(tx.created_at).toLocaleString()
-                        : "-";
-                      const typeLabel =
-                        tx.payment_type === "subscription"
-                          ? "Subscription"
-                          : tx.payment_type === "sms_package"
-                          ? "SMS"
-                          : "Unknown";
-                      const amountStr =
-                        tx.amount !== null && tx.amount !== undefined
-                          ? `৳${Number(tx.amount).toLocaleString()}`
-                          : "-";
-                      const statusLabel = tx.is_applied
-                        ? "Applied"
-                        : tx.is_successful
-                        ? "Paid"
-                        : "Pending";
-                      const statusClass = tx.is_applied
-                        ? "text-green-300"
-                        : tx.is_successful
-                        ? "text-cyan-300"
-                        : "text-yellow-300";
-
-                      return (
-                        <tr
-                          key={tx.id}
-                          className="hover:bg-white/5 transition-colors"
-                        >
-                          <td className="text-sm text-slate-200 px-4 py-3 whitespace-nowrap">
-                            {dateStr}
-                          </td>
-                          <td className="text-sm text-slate-200 px-4 py-3 whitespace-nowrap">
-                            {typeLabel}
-                          </td>
-                          <td className="text-sm text-slate-200 px-4 py-3 whitespace-nowrap">
-                            {amountStr}
-                          </td>
-                          <td
-                            className={`text-sm px-4 py-3 whitespace-nowrap ${statusClass}`}
-                          >
-                            {statusLabel}
-                          </td>
-                          <td className="text-xs text-slate-300 px-4 py-3">
-                            {tx.customer_order_id || tx.sp_order_id || "-"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
+        )}
+
+        <div className="plane-section">
+          <Pagination
+            currentPage={historyPage}
+            totalPages={historyTotalPages}
+            totalItems={historyTotalItems}
+            itemsPerPage={historyPerPage}
+            onPageChange={setHistoryPage}
+            onPageSizeChange={(pageSize) => {
+              setHistoryPerPage(pageSize);
+              setHistoryPage(1);
+            }}
+          />
         </div>
       </div>
 
       {/* Payment Error Modal */}
       {showError && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div className="text-center">
-              {/* Error Icon */}
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
-                <svg
-                  className="h-8 w-8 text-red-600 dark:text-red-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </div>
-
-              {/* Error Message */}
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Payment Verification Failed
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                We couldn&apos;t verify your payment. Please contact support if
-                you believe this is an error.
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-head">
+              <h2 className="modal-title">পেমেন্ট যাচাই করা যায়নি</h2>
+            </div>
+            <div className="modal-body">
+              <p className="text-sm text-slate-600">
+                আপনার পেমেন্ট যাচাই করা গেল না। ভুল কিছু মনে হলে সাপোর্টে
+                যোগাযোগ করুন।
               </p>
-
-              {/* Close Button */}
+            </div>
+            <div className="modal-foot">
               <button
                 onClick={() => {
                   setShowError(false);
@@ -1008,9 +963,9 @@ export default function SubscriptionsPage() {
                   url.searchParams.delete("order_id");
                   window.history.replaceState({}, "", url.toString());
                 }}
-                className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200 font-medium cursor-pointer"
+                className="btn btn-danger"
               >
-                Close
+                বন্ধ করুন
               </button>
             </div>
           </div>
@@ -1019,15 +974,13 @@ export default function SubscriptionsPage() {
 
       {/* Payment Verification Loader */}
       {paymentVerificationLoader && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Verifying Payment
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Please wait while we verify your payment...
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-body text-center">
+              <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-cyan-600" />
+              <h2 className="modal-title">পেমেন্ট যাচাই হচ্ছে</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                একটু অপেক্ষা করুন, আপনার পেমেন্ট যাচাই করা হচ্ছে…
               </p>
             </div>
           </div>

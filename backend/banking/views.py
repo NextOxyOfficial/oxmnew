@@ -1,5 +1,8 @@
-from datetime import timedelta
+from core.scoping import HasPermission, owner_for
+from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
 
+from django.db import transaction as db_transaction
 from django.db.models import Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -7,13 +10,28 @@ from employees.models import Employee
 from rest_framework import filters, generics, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from core.uploads import document_error
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Sum
 
-from .models import BankAccount, BankingPlan, Transaction, UserBankingPlan
+from .models import (
+    BankAccount,
+    BankingPlan,
+    Loan,
+    LoanPayment,
+    RecurringCost,
+    RecurringCostPayment,
+    Transaction,
+    UserBankingPlan,
+)
 from .serializers import (
+    LoanPaymentSerializer,
+    LoanSerializer,
+    RecurringCostPaymentSerializer,
+    RecurringCostSerializer,
     BankAccountSerializer,
     BankingPlanSerializer,
     TransactionCreateSerializer,
@@ -39,8 +57,17 @@ def has_active_banking_plan(user):
 
 
 class BankAccountViewSet(viewsets.ModelViewSet):
+    # Staff logins are held to these; owners are unrestricted.
+    required_permissions = {
+        "GET": "banking.view",
+        "POST": "banking.transact",
+        "PUT": "banking.transact",
+        "PATCH": "banking.transact",
+        "DELETE": "banking.transact",
+    }
+
     serializer_class = BankAccountSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -53,8 +80,7 @@ class BankAccountViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return accounts based on user permissions"""
-        user = self.request.user
-
+        user = owner_for(self.request)
         # Ensure user has a Main account
         self.ensure_main_account(user)
 
@@ -87,7 +113,7 @@ class BankAccountViewSet(viewsets.ModelViewSet):
         import logging
         logger = logging.getLogger(__name__)
         
-        user = self.request.user
+        user = owner_for(self.request)
         logger.info(f"🏦 User {user.username} attempting to create bank account")
         
         # Get existing active accounts count
@@ -134,7 +160,7 @@ class BankAccountViewSet(viewsets.ModelViewSet):
     def my_accounts(self, request):
         """Get current user's accounts only"""
         accounts = (
-            BankAccount.objects.filter(owner=request.user, is_active=True)
+            BankAccount.objects.filter(owner=owner_for(request), is_active=True)
             .extra(select={"is_main": "CASE WHEN name = 'Main' THEN 0 ELSE 1 END"})
             .order_by("is_main", "-created_at")
         )
@@ -235,21 +261,29 @@ class BankAccountViewSet(viewsets.ModelViewSet):
 
 
 class TransactionViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    # Staff logins are held to these; owners are unrestricted.
+    required_permissions = {
+        "GET": "banking.view",
+        "POST": "banking.transact",
+        "PUT": "banking.transact",
+        "PATCH": "banking.transact",
+        "DELETE": "banking.transact",
+    }
+
+    permission_classes = [IsAuthenticated, HasPermission]
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
         filters.OrderingFilter,
     ]
-    filterset_fields = ["account", "type", "status", "verified_by"]
+    filterset_fields = ["account", "type", "nature", "category", "status", "verified_by"]
     search_fields = ["purpose", "reference_number"]
     ordering_fields = ["date", "amount", "type"]
     ordering = ["-date"]
 
     def get_queryset(self):
         """Return transactions based on user permissions"""
-        user = self.request.user
-
+        user = owner_for(self.request)
         # If user is staff/admin, they can see all transactions
         if user.is_staff or user.is_superuser:
             return Transaction.objects.all()
@@ -279,7 +313,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def my_transactions(self, request):
         """Get current user's transactions only"""
-        transactions = Transaction.objects.filter(account__owner=request.user)
+        transactions = Transaction.objects.filter(account__owner=owner_for(request))
 
         # Apply same filtering as regular endpoint
         transaction_type = request.query_params.get("type")
@@ -325,7 +359,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
         """Get list of employees who can verify transactions"""
         # Filter employees by current user (store owner)
         employees = (
-            Employee.objects.filter(user=request.user, status="active")
+            Employee.objects.filter(user=owner_for(request), status="active")
             .select_related("user")
             .order_by("name")
         )
@@ -376,7 +410,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
         transaction.status = "verified"
         # Get the employee associated with the current user
         try:
-            employee = Employee.objects.get(user=request.user, status="active")
+            employee = Employee.objects.get(user=owner_for(request), status="active")
             transaction.verified_by = employee
         except Employee.DoesNotExist:
             return Response(
@@ -592,7 +626,7 @@ class BankingPlanListView(generics.ListAPIView):
 
     queryset = BankingPlan.objects.filter(is_active=True)
     serializer_class = BankingPlanSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
 
 
 @api_view(["POST"])
@@ -620,16 +654,16 @@ def activate_banking_plan(request):
         # Try to get the specific account first
         account = None
         try:
-            account = BankAccount.objects.get(id=account_id, owner=request.user)
+            account = BankAccount.objects.get(id=account_id, owner=owner_for(request))
         except BankAccount.DoesNotExist:
             # Check if user has any existing accounts
-            user_accounts = BankAccount.objects.filter(owner=request.user)
+            user_accounts = BankAccount.objects.filter(owner=owner_for(request))
             if user_accounts.exists():
                 account = user_accounts.first()
             else:
                 account_name = f"{request.user.first_name or request.user.username}'s Banking Account"
                 account = BankAccount.objects.create(
-                    owner=request.user, name=account_name, balance=0.00
+                    owner=owner_for(request), name=account_name, balance=0.00
                 )
 
         # Calculate expiry date based on plan period
@@ -643,7 +677,7 @@ def activate_banking_plan(request):
 
         # Create or update user banking plan
         user_plan, created = UserBankingPlan.objects.get_or_create(
-            user=request.user,
+            user=owner_for(request),
             account=account,
             defaults={
                 "plan": plan,
@@ -702,11 +736,11 @@ class UserBankingPlanView(generics.RetrieveAPIView):
     Get current user's banking plan
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
 
     def get(self, request):
         try:
-            user_plan = UserBankingPlan.objects.get(user=request.user)
+            user_plan = UserBankingPlan.objects.get(user=owner_for(request))
             from .serializers import UserBankingPlanSerializer
 
             return Response(UserBankingPlanSerializer(user_plan).data)
@@ -743,3 +777,391 @@ def activate_banking_plan_v2(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+class LoanViewSet(viewsets.ModelViewSet):
+    """Loans the shop is repaying, and the installments paid against them."""
+    # Staff logins are held to these; owners are unrestricted.
+    required_permissions = {
+        "GET": "banking.view",
+        "POST": "banking.loans",
+        "PUT": "banking.loans",
+        "PATCH": "banking.loans",
+        "DELETE": "banking.loans",
+    }
+
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    serializer_class = LoanSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["status", "account"]
+    search_fields = ["lender", "purpose"]
+    ordering_fields = ["created_at", "start_date", "installment_amount"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        return (
+            Loan.objects.filter(user=owner_for(self.request))
+            .select_related("account")
+            .prefetch_related("payments")
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(user=owner_for(self.request))
+
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        """Totals for the loan header, plus what falls due this month.
+
+        `monthly_due` is the figure analytics treats as a fixed running cost —
+        it leaves the business whether or not anything sells.
+        """
+        loans = self.get_queryset().filter(status="active")
+        monthly = sum((loan.installment_amount for loan in loans), Decimal("0"))
+        outstanding = sum((loan.remaining_amount for loan in loans), Decimal("0"))
+        overdue = [loan for loan in loans if loan.is_overdue]
+        return Response(
+            {
+                "active_count": loans.count(),
+                "monthly_due": monthly,
+                "outstanding": outstanding,
+                "overdue_count": len(overdue),
+                "overdue_amount": sum(
+                    (loan.installment_amount for loan in overdue), Decimal("0")
+                ),
+                "next_due": min(
+                    (loan.next_due_date for loan in loans if loan.next_due_date),
+                    default=None,
+                ),
+            }
+        )
+
+    @action(
+        detail=True,
+        methods=["post", "delete"],
+        url_path=r"payments/(?P<payment_id>\d+)/receipt",
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_receipt(self, request, pk=None, payment_id=None):
+        """Attach the money receipt to an installment already paid, or drop it."""
+        loan = self.get_object()
+        try:
+            payment = loan.payments.get(id=payment_id)
+        except LoanPayment.DoesNotExist:
+            return Response(
+                {"error": "এই কিস্তিটা পাওয়া যায়নি।"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if request.method == "DELETE":
+            # Clear the field first so a missing file on disk still detaches
+            # the row instead of leaving a link that 404s.
+            if payment.receipt:
+                payment.receipt.delete(save=False)
+            payment.receipt = None
+            payment.save(update_fields=["receipt"])
+            return Response(
+                LoanSerializer(
+                    self.get_queryset().get(pk=loan.pk), context={"request": request}
+                ).data
+            )
+
+        receipt = request.FILES.get("receipt")
+        if receipt is None:
+            return Response(
+                {"error": "ফাইল পাওয়া যায়নি।"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        problem = document_error(receipt)
+        if problem:
+            return Response({"error": problem}, status=status.HTTP_400_BAD_REQUEST)
+        # Replacing a receipt must not leave the old file orphaned in MEDIA_ROOT.
+        if payment.receipt:
+            payment.receipt.delete(save=False)
+        payment.receipt = receipt
+        payment.save(update_fields=["receipt"])
+        return Response(
+            LoanSerializer(
+                self.get_queryset().get(pk=loan.pk), context={"request": request}
+            ).data
+        )
+
+    @action(
+        detail=True,
+        methods=["delete"],
+        url_path=r"payments/(?P<payment_id>\d+)",
+    )
+    def remove_payment(self, request, pk=None, payment_id=None):
+        """Undo an installment entered by mistake.
+
+        LoanPayment.delete() also removes the bank transaction and credits the
+        balance back, so the books do not keep a payment that never happened.
+        A closed loan reopens, since it is no longer fully repaid.
+        """
+        loan = self.get_object()
+        try:
+            payment = loan.payments.get(id=payment_id)
+        except LoanPayment.DoesNotExist:
+            return Response(
+                {"error": "এই কিস্তিটা পাওয়া যায়নি।"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        with db_transaction.atomic():
+            payment.delete()
+            if loan.status == "closed":
+                loan.status = "active"
+                loan.save(update_fields=["status"])
+
+        return Response(
+            {
+                "message": "কিস্তিটা বাতিল হয়েছে।",
+                "loan": LoanSerializer(
+                    self.get_queryset().get(pk=loan.pk), context={"request": request}
+                ).data,
+            }
+        )
+
+    @action(detail=True, methods=["post"])
+    def pay(self, request, pk=None):
+        """Record an installment.
+
+        Writes the bank transaction too, so the money is not counted twice:
+        analytics reads loan cost from LoanPayment and skips any transaction
+        already attached to one.
+        """
+        loan = self.get_object()
+        if loan.status != "active":
+            return Response(
+                {"error": "এই লোনটা আর চালু নেই।"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            amount = Decimal(str(request.data.get("amount") or loan.installment_amount))
+        except (InvalidOperation, TypeError):
+            return Response(
+                {"error": "টাকার অঙ্কটা ঠিক নেই।"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        if amount <= 0:
+            return Response(
+                {"error": "টাকার পরিমাণ শূন্যের বেশি হতে হবে।"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        paid_on = request.data.get("paid_on") or timezone.localdate().isoformat()
+        reference = request.data.get("reference") or ""
+
+        with db_transaction.atomic():
+            txn = None
+            if loan.account_id:
+                txn = Transaction.objects.create(
+                    account=loan.account,
+                    type="debit",
+                    nature="payment",
+                    category="other",
+                    amount=amount,
+                    purpose=f"লোনের কিস্তি — {loan.lender}",
+                    status="verified",
+                )
+            payment = LoanPayment.objects.create(
+                loan=loan,
+                amount=amount,
+                paid_on=paid_on,
+                transaction=txn,
+                reference=reference,
+            )
+            # Close the loan once it is fully repaid, so it drops out of the
+            # monthly cost projection instead of lingering forever.
+            if loan.remaining_amount <= 0 or loan.paid_count >= loan.installment_count:
+                loan.status = "closed"
+                loan.save(update_fields=["status"])
+
+        return Response(
+            {
+                "message": "কিস্তি জমা হয়েছে।",
+                "payment": LoanPaymentSerializer(payment).data,
+                "loan": LoanSerializer(
+                    self.get_queryset().get(pk=loan.pk), context={"request": request}
+                ).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def expense_categories(request):
+    """Suggestions for the খাত picker: the presets plus whatever this shop
+    has already typed, so a custom category only has to be spelled once."""
+    used = (
+        Transaction.objects.filter(account__owner=owner_for(request))
+        .exclude(category="")
+        .values_list("category", flat=True)
+        .distinct()
+    )
+    presets = [key for key, _ in Transaction.CATEGORY_CHOICES]
+    extra = sorted(set(used) - set(presets))
+    return Response({"presets": presets, "custom": extra})
+
+
+class RecurringCostViewSet(viewsets.ModelViewSet):
+    """Fixed monthly bills — office rent and the like."""
+    # Staff logins are held to these; owners are unrestricted.
+    required_permissions = {
+        "GET": "banking.view",
+        "POST": "banking.costs",
+        "PUT": "banking.costs",
+        "PATCH": "banking.costs",
+        "DELETE": "banking.costs",
+    }
+
+
+    permission_classes = [IsAuthenticated, HasPermission]
+    serializer_class = RecurringCostSerializer
+    # A receipt upload is multipart; the rest of the viewset stays JSON.
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ["is_active", "category"]
+    search_fields = ["title", "notes"]
+
+    def get_queryset(self):
+        return (
+            RecurringCost.objects.filter(user=owner_for(self.request))
+            .select_related("account")
+            .prefetch_related("payments")
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(user=owner_for(self.request))
+
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        costs = self.get_queryset().filter(is_active=True)
+        overdue = [cost for cost in costs if cost.is_overdue]
+        unpaid = [cost for cost in costs if not cost.paid_this_month]
+        return Response(
+            {
+                "active_count": costs.count(),
+                "monthly_total": sum((c.amount for c in costs), Decimal("0")),
+                "unpaid_count": len(unpaid),
+                "unpaid_amount": sum((c.amount for c in unpaid), Decimal("0")),
+                "overdue_count": len(overdue),
+            }
+        )
+
+    @action(detail=True, methods=["post"])
+    def pay(self, request, pk=None):
+        """Settle one month.
+
+        The period defaults to the current month; `unique_together` on
+        (cost, period) is what stops the same month being paid twice.
+        """
+        cost = self.get_object()
+        period_raw = request.data.get("period")
+        period = (
+            date.fromisoformat(period_raw) if period_raw else cost.current_period
+        ).replace(day=1)
+
+        if cost.payments.filter(period=period).exists():
+            return Response(
+                {"error": "এই মাসের টাকা আগেই দেওয়া হয়েছে।"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            amount = Decimal(str(request.data.get("amount") or cost.amount))
+        except (InvalidOperation, TypeError):
+            return Response(
+                {"error": "টাকার অঙ্কটা ঠিক নেই।"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with db_transaction.atomic():
+            txn = None
+            if cost.account_id:
+                txn = Transaction.objects.create(
+                    account=cost.account,
+                    type="debit",
+                    nature="expense",
+                    category=cost.category,
+                    amount=amount,
+                    purpose=f"{cost.title} — {period:%B %Y}",
+                    status="verified",
+                )
+            payment = RecurringCostPayment.objects.create(
+                cost=cost, period=period, amount=amount, transaction=txn
+            )
+
+        return Response(
+            {
+                "message": "টাকা জমা হয়েছে।",
+                "payment": RecurringCostPaymentSerializer(
+                    payment, context={"request": request}
+                ).data,
+                "cost": RecurringCostSerializer(self.get_queryset().get(pk=cost.pk)).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=True,
+        methods=["post", "delete"],
+        url_path=r"payments/(?P<payment_id>\d+)/receipt",
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_receipt(self, request, pk=None, payment_id=None):
+        """Attach the money receipt to a month already paid, or drop it."""
+        cost = self.get_object()
+        try:
+            payment = cost.payments.get(id=payment_id)
+        except RecurringCostPayment.DoesNotExist:
+            return Response(
+                {"error": "এই মাসের রেকর্ড পাওয়া যায়নি।"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if request.method == "DELETE":
+            if payment.receipt:
+                payment.receipt.delete(save=False)
+            payment.receipt = None
+            payment.save(update_fields=["receipt"])
+            return Response(
+                RecurringCostPaymentSerializer(
+                    payment, context={"request": request}
+                ).data
+            )
+        receipt = request.FILES.get("receipt")
+        if receipt is None:
+            return Response(
+                {"error": "ফাইল পাওয়া যায়নি।"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        problem = document_error(receipt)
+        if problem:
+            return Response({"error": problem}, status=status.HTTP_400_BAD_REQUEST)
+        # Replacing a receipt must not leave the old file orphaned in MEDIA_ROOT.
+        if payment.receipt:
+            payment.receipt.delete(save=False)
+        payment.receipt = receipt
+        payment.save(update_fields=["receipt"])
+        return Response(
+            RecurringCostPaymentSerializer(payment, context={"request": request}).data
+        )
+
+    @action(
+        detail=True,
+        methods=["delete"],
+        url_path=r"payments/(?P<payment_id>\d+)",
+    )
+    def remove_payment(self, request, pk=None, payment_id=None):
+        """Undo a month entered by mistake; the bank transaction goes too."""
+        cost = self.get_object()
+        try:
+            payment = cost.payments.get(id=payment_id)
+        except RecurringCostPayment.DoesNotExist:
+            return Response(
+                {"error": "এই মাসের রেকর্ড পাওয়া যায়নি।"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        payment.delete()
+        return Response(
+            {
+                "message": "বাতিল হয়েছে।",
+                "cost": RecurringCostSerializer(self.get_queryset().get(pk=cost.pk)).data,
+            }
+        )

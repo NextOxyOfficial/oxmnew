@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { CheckCircle2, X } from 'lucide-react';
 
 interface Supplier {
   id: number;
@@ -50,147 +51,126 @@ export default function CreatePurchaseModal({
   if (!isOpen || !supplier) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto scrollbar-hide">
-      <div className="bg-slate-800 border border-slate-700/50 rounded-lg p-6 w-full max-w-md my-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h4 className="text-lg font-medium text-slate-100">Create Purchase Order</h4>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-300 cursor-pointer"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Supplier Info */}
-        <div className="bg-slate-700/30 border border-slate-600/50 rounded-lg p-3 mb-4">
-          <h5 className="text-sm font-medium text-slate-200 mb-1">Supplier</h5>
-          <p className="text-slate-300 text-sm">{supplier.name}</p>
-          <p className="text-slate-400 text-xs">{supplier.address}</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Purchase Date *
-            </label>
-            <input
-              type="date"
-              name="date"
-              value={purchaseForm.date}
-              onChange={handleInputChange}
-              required
-              className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Total Amount *
-            </label>
-            <input
-              type="number"
-              name="amount"
-              value={purchaseForm.amount}
-              onChange={handleInputChange}
-              required
-              min="0"
-              step="0.01"
-              className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-              placeholder="Enter amount"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Status *
-            </label>
-            <select
-              name="status"
-              value={purchaseForm.status}
-              onChange={handleInputChange}
-              required
-              className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
-            >
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Products/Items *
-            </label>
-            <textarea
-              name="products"
-              value={purchaseForm.products}
-              onChange={handleInputChange}
-              required
-              rows={3}
-              className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
-              placeholder="Enter products/items (e.g., Laptops, Keyboards, Mice)"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Notes
-            </label>
-            <textarea
-              name="notes"
-              value={purchaseForm.notes}
-              onChange={handleInputChange}
-              rows={2}
-              className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
-              placeholder="Additional notes (optional)"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Payment Proof / Receipt
-            </label>
-            <div className="space-y-3">
-              <input
-                type="file"
-                accept="image/*,.pdf"
-                onChange={handleFileChange}
-                className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-cyan-600 file:text-white hover:file:bg-cyan-700 file:cursor-pointer"
-              />
-              {purchaseForm.proofFile && (
-                <div className="flex items-center gap-2 p-2 bg-slate-700/30 border border-slate-600/50 rounded-lg">
-                  <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-slate-300 text-sm">{purchaseForm.proofFile.name}</span>
-                  <span className="text-slate-400 text-xs">
-                    ({(purchaseForm.proofFile.size / 1024 / 1024).toFixed(2)} MB)
-                  </span>
-                </div>
-              )}
-              <p className="text-xs text-slate-400">
-                Upload receipt, invoice, or payment proof (Images and PDF files accepted)
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
+    <div className="modal-backdrop">
+      <div className="modal">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-col">
+          <div className="modal-head">
+            <h2 className="modal-title">নতুন কেনাকাটা যোগ করুন</h2>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-600 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 cursor-pointer"
+              aria-label="বন্ধ করুন"
+              className="text-slate-400 hover:text-slate-700"
             >
-              Cancel
+              <X className="h-4 w-4" />
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer disabled:cursor-not-allowed"
-            >
-              {loading ? 'Creating...' : 'Create Purchase'}
+          </div>
+
+          <div className="modal-body min-h-0 flex-1">
+            <div className="mb-4">
+              <div className="section-title">সাপ্লায়ার</div>
+              <p className="text-sm text-slate-900">{supplier.name}</p>
+              <p className="text-xs text-slate-500">{supplier.address}</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label">কেনার তারিখ *</label>
+                <input
+                  type="date"
+                  name="date"
+                  value={purchaseForm.date}
+                  onChange={handleInputChange}
+                  required
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">সব মিলিয়ে টাকা *</label>
+                <input
+                  type="number"
+                  name="amount"
+                  value={purchaseForm.amount}
+                  onChange={handleInputChange}
+                  required
+                  min="0"
+                  step="0.01"
+                  className="input"
+                  placeholder="টাকার পরিমাণ লিখুন"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="label">অবস্থা *</label>
+                <select
+                  name="status"
+                  value={purchaseForm.status}
+                  onChange={handleInputChange}
+                  required
+                  className="select"
+                >
+                  <option value="pending">বাকি আছে</option>
+                  <option value="completed">শেষ</option>
+                  <option value="cancelled">বাতিল করা</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="label">কী কী প্রোডাক্ট *</label>
+                <textarea
+                  name="products"
+                  value={purchaseForm.products}
+                  onChange={handleInputChange}
+                  required
+                  rows={3}
+                  className="textarea resize-none"
+                  placeholder="প্রোডাক্টের নাম লিখুন (যেমন: ল্যাপটপ, কীবোর্ড, মাউস)"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="label">নোট</label>
+                <textarea
+                  name="notes"
+                  value={purchaseForm.notes}
+                  onChange={handleInputChange}
+                  rows={2}
+                  className="textarea resize-none"
+                  placeholder="বাড়তি কিছু লিখতে চাইলে (না দিলেও চলবে)"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="label">পেমেন্টের প্রমাণ / রসিদ</label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleFileChange}
+                  className="input"
+                />
+                {purchaseForm.proofFile && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <span className="truncate">{purchaseForm.proofFile.name}</span>
+                    <span className="text-xs text-slate-500">
+                      ({(purchaseForm.proofFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  </div>
+                )}
+                <p className="mt-2 text-xs text-slate-500">
+                  রসিদ, ইনভয়েস বা পেমেন্টের প্রমাণ আপলোড করুন (ছবি আর PDF চলবে)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-foot">
+            <button type="button" onClick={onClose} className="btn btn-ghost">
+              বাতিল
+            </button>
+            <button type="submit" disabled={loading} className="btn btn-primary">
+              {loading ? 'সেভ হচ্ছে…' : 'কেনাকাটা যোগ করুন'}
             </button>
           </div>
         </form>

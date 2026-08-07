@@ -1,0 +1,22 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% comment %}
+  OxyManager admin shell — branding + the light theme stylesheet on top of
+  Django's own template, so framework upgrades stay painless.
+{% endcomment %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | OxyManager{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/oxm-admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+  <h1 id="site-name">
+    <a href="{% url 'admin:index' %}">OxyManager অ্যাডমিন</a>
+  </h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

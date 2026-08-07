@@ -1,52 +1,235 @@
+/* ─────────────────────────────────────────────────────────────
+   Invoice print sheet — the ONE place print rules live.
+
+   Why here and not globals.css: this file is imported only by
+   app/invoice/[id]/page.tsx, so the rules are scoped to the single
+   screen that is ever meant to be printed. Putting a @media print
+   block in globals.css would apply it to every page in the app and
+   force every rule to carry a route guard.
+
+   Two screen-side rules also live here (.invoice-print-only and the
+   signature block). They are the counterpart of the print rules that
+   reveal those blocks — keeping the hide and the show side by side is
+   what stops them drifting apart.
+   ───────────────────────────────────────────────────────────── */
+
+/* Blocks that exist only on paper (signature lines). */
+.invoice-print-only {
+  display: none;
+}
+
 @media print {
-  /* Hide everything first */
-  * {
-    visibility: hidden;
+  /* A4 with a comfortable binding-safe margin on every edge. */
+  @page {
+    size: A4;
+    margin: 14mm;
   }
-  
-  /* Only show invoice content */
-  .invoice-content, .invoice-content * {
-    visibility: visible;
-  }
-  
-  /* Position invoice content to fill page */
-  .invoice-content {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-  
-  /* Hide browser chrome and website elements */
-  header, nav, footer, .header, .nav, .footer, 
-  [role="banner"], [role="navigation"], [role="contentinfo"],
-  .print\:hidden,
-  .navbar, .nav-bar, .navigation, .site-header, .site-footer,
-  .page-header, .page-footer, .main-nav, .main-navigation,
-  .top-bar, .bottom-bar, .sidebar, .menu {
+
+  /* ── App chrome ─────────────────────────────────────────────────
+     Everything that is navigation or action, not invoice. The action
+     bar (back arrow, পরিশোধ badge, ডাউনলোড, প্রিন্ট) carries
+     .invoice-actions; the rest are generic shells and portals
+     (toasts, confirm dialogs, Next's route announcer). */
+  .invoice-actions,
+  nav,
+  header,
+  footer,
+  aside,
+  [role="banner"],
+  [role="navigation"],
+  [role="contentinfo"],
+  [role="status"],
+  [role="alert"],
+  [role="dialog"],
+  .modal-backdrop,
+  .sidebar,
+  .navbar,
+  .site-header,
+  .site-footer,
+  next-route-announcer {
     display: none !important;
-    visibility: hidden !important;
   }
-  
-  /* Reset html and body for clean print */
-  html, body { 
-    -webkit-print-color-adjust: exact;
+
+  /* ── The paper ──────────────────────────────────────────────────
+     Drop the slate canvas tint so the sheet prints white, and let the
+     document flow past the viewport height so long item lists paginate. */
+  html,
+  body {
+    background: #ffffff !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: white !important;
     height: auto !important;
+    min-height: 0 !important;
     overflow: visible !important;
   }
-  
-  /* Page settings */
-  @page { 
-    margin: 0 0.5in 0.5in 0.5in;
-    size: A4;
+
+  body {
+    font-size: 10.5pt;
+    line-height: 1.45;
+    color: #000000;
   }
-  
-  .page-break { 
-    page-break-after: always; 
+
+  .invoice-sheet {
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  /* Mono-printer first: black on white everywhere. The two places
+     where colour actually carries meaning opt back in below. */
+  .invoice-sheet,
+  .invoice-sheet * {
+    color: #000000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Due/paid figures lost their red/green — carry the emphasis with
+     weight instead so the meaning survives a grayscale printer. */
+  .invoice-sheet .money-neg,
+  .invoice-sheet .money-pos {
+    font-weight: 700 !important;
+  }
+
+  /* Screen hairlines (#e2e8f0) all but vanish on paper. */
+  .invoice-sheet .plane-section + .plane-section,
+  .invoice-sheet .tbl tbody td,
+  .invoice-sheet .tbl tbody tr:last-child td,
+  .invoice-sheet .invoice-rule {
+    border-color: #64748b !important;
+  }
+  .invoice-sheet .tbl tbody tr:last-child td {
+    border-bottom-width: 0 !important;
+  }
+
+  /* Section padding in points so it scales with the paper, not the viewport. */
+  .invoice-sheet .plane-section {
+    padding: 9pt 0 !important;
+  }
+  .invoice-sheet .plane-section:first-child {
+    padding-top: 0 !important;
+  }
+  .invoice-sheet .tbl {
+    font-size: 10pt !important;
+  }
+  .invoice-sheet .tbl thead th,
+  .invoice-sheet .tbl tbody td {
+    padding: 5pt 6pt !important;
+  }
+  .invoice-sheet .tbl thead th:first-child,
+  .invoice-sheet .tbl tbody td:first-child {
+    padding-left: 2pt !important;
+  }
+  .invoice-sheet .tbl thead th:last-child,
+  .invoice-sheet .tbl tbody td:last-child {
+    padding-right: 2pt !important;
+  }
+
+  /* ── Colour that genuinely carries meaning ──────────────────────
+     1. The payment status badge: পরিশোধ vs বাকি is the first thing a
+        shopkeeper looks for, and green vs red says it at a glance.
+     2. The table header band: the tint is what separates the header
+        row from the items when a long list runs over a page break. */
+  .invoice-status {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    padding: 2pt 7pt !important;
+    font-size: 9pt !important;
+  }
+  .invoice-status.badge-success {
+    background: #ecfdf5 !important;
+    color: #047857 !important;
+    border: 1px solid #047857 !important;
+  }
+  .invoice-status.badge-danger {
+    background: #fff1f2 !important;
+    color: #be123c !important;
+    border: 1px solid #be123c !important;
+  }
+
+  .invoice-sheet .tbl thead th {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-bottom: 1pt solid #334155 !important;
+    /* Sticky headers confuse paginated layout — pin them back to flow. */
+    position: static !important;
+  }
+
+  /* ── Pagination ─────────────────────────────────────────────────
+     Repeat the column headings on every page, and never split a line
+     item, the totals block or the signatures across a page break. */
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .invoice-totals,
+  .invoice-words,
+  .invoice-signatures,
+  .invoice-parties {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  /* A scroll container clips its overflow when printed — let it grow. */
+  .invoice-sheet .tbl-wrap {
+    overflow: visible !important;
+  }
+
+  /* ── Layout locks ───────────────────────────────────────────────
+     The screen layout switches to two columns at the `sm` breakpoint.
+     Some browsers lay print out at a narrower viewport, which would
+     drop the sheet into its stacked mobile form — pin the two-column
+     shape explicitly instead of trusting the breakpoint. */
+  .invoice-parties {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0 !important;
+  }
+  .invoice-parties > * + * {
+    padding-left: 16pt !important;
+    border-left: 1px solid #64748b !important;
+  }
+
+  .invoice-bottom {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 20pt !important;
+  }
+  .invoice-totals {
+    width: 44% !important;
+    flex: none !important;
+  }
+
+  /* ── Print-only blocks ──────────────────────────────────────── */
+  .invoice-print-only {
+    display: block;
+  }
+  .invoice-signatures {
+    display: flex;
+    justify-content: space-between;
+    gap: 24pt;
+    margin-top: 6pt;
+  }
+  .invoice-sign {
+    width: 44%;
+    margin-top: 34pt;
+    padding-top: 4pt;
+    border-top: 1px solid #334155 !important;
+    text-align: center;
+    font-size: 9pt;
   }
 }

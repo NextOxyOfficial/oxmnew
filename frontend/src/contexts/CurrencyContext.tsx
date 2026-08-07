@@ -23,7 +23,7 @@ const CurrencyContext = createContext<CurrencyContextType | undefined>(
 );
 
 // Currency code to symbol mapping (fallback for when backend doesn't provide symbol)
-const CURRENCY_SYMBOLS: Record<string, string> = {
+export const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
   EUR: "€",
   GBP: "£",

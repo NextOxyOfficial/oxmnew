@@ -51,21 +51,21 @@ export default function ProductsTab({
       try {
         setIsLoading(true);
         setError(null);
-        
+
         console.log('ProductsTab: Fetching suppliers...');
-        
+
         const suppliersData = await ApiService.getSuppliers();
-        
+
         console.log('ProductsTab: Raw suppliers response:', suppliersData);
-        
+
         const suppliersList = Array.isArray(suppliersData) ? suppliersData : suppliersData?.results || [];
-        
+
         console.log('ProductsTab: Processed suppliers list:', suppliersList);
-        
+
         setSuppliers(suppliersList);
       } catch (error) {
         console.error("ProductsTab: Error fetching suppliers:", error);
-        setError(error instanceof Error ? error.message : "Failed to load suppliers");
+        setError(error instanceof Error ? error.message : "সাপ্লায়ারের তালিকা আনা যায়নি");
       } finally {
         setIsLoading(false);
       }
@@ -87,24 +87,24 @@ export default function ProductsTab({
       try {
         setIsLoadingProducts(true);
         setError(null);
-        
+
         console.log('ProductsTab: Fetching products for supplier:', selectedProductSupplier, 'page:', currentPage);
-        
+
         // Find supplier by name to get supplier ID
         const supplier = suppliers.find(s => s.name === selectedProductSupplier);
         if (!supplier) {
           console.error('Supplier not found:', selectedProductSupplier);
           return;
         }
-        
+
         const productsData = await ApiService.getProducts({
           page: currentPage,
           page_size: productsPerPage,
           supplier: supplier.id.toString()
         });
-        
+
         console.log('ProductsTab: Raw products response:', productsData);
-        
+
         // Handle paginated response
         if (productsData && productsData.results) {
           setProducts(productsData.results);
@@ -120,10 +120,10 @@ export default function ProductsTab({
           setTotalProducts(0);
           setTotalPages(0);
         }
-        
+
       } catch (error) {
         console.error("ProductsTab: Error fetching products:", error);
-        setError(error instanceof Error ? error.message : "Failed to load products");
+        setError(error instanceof Error ? error.message : "প্রোডাক্টের তালিকা আনা যায়নি");
       } finally {
         setIsLoadingProducts(false);
       }
@@ -151,7 +151,7 @@ export default function ProductsTab({
   // Calculate total value for a product based on stock and price
   const calculateProductValue = (product: BackendProduct): number => {
     const stock = product.has_variants ? (product.total_stock || 0) : product.stock;
-    const price = product.has_variants 
+    const price = product.has_variants
       ? (product.average_sell_price || product.sell_price || product.price || 0)
       : (product.sell_price || product.price || 0);
     return stock * Number(price);
@@ -182,241 +182,238 @@ export default function ProductsTab({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h4 className="text-base sm:text-lg font-medium text-slate-100 mb-4">Products</h4>
-        {/* Filter by Supplier */}
-        <div className="space-y-4 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full min-w-0">
-            <div className="relative w-full sm:w-auto" ref={dropdownRef}>
-              {/* ...existing dropdown code... */}
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full sm:min-w-[200px] px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer flex items-center justify-between"
-              >
-                <span className="truncate">
-                  {selectedProductSupplier === 'all' ? 'All Suppliers' : selectedProductSupplier}
-                </span>
-                <svg className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+    <>
+      {/* Supplier filter */}
+      <div className="plane-section">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-auto" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="btn btn-ghost w-full sm:w-auto sm:min-w-[200px] justify-between"
+            >
+              <span className="truncate">
+                {selectedProductSupplier === 'all' ? 'সব সাপ্লায়ার' : selectedProductSupplier}
+              </span>
+              <svg className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-              {isDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700/50 rounded-lg shadow-lg z-10 max-h-64 overflow-hidden">
-                  <div className="p-2 border-b border-slate-700/50">
-                    <input
-                      type="text"
-                      placeholder="Search suppliers..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-                      autoFocus
-                    />
-                  </div>
-                  <div className="max-h-48 overflow-y-auto">
+            {isDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 z-10 max-h-64 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                <div className="border-b border-slate-200 p-2">
+                  <input
+                    type="text"
+                    placeholder="সাপ্লায়ার খুঁজুন"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="input"
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleSupplierSelect('all')}
+                    className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-100 ${
+                      selectedProductSupplier === 'all' ? 'bg-slate-100 text-cyan-600' : 'text-slate-600'
+                    }`}
+                  >
+                    সব সাপ্লায়ার
+                  </button>
+                  {filteredSuppliers.map((supplier) => (
                     <button
-                      onClick={() => handleSupplierSelect('all')}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors ${
-                        selectedProductSupplier === 'all' ? 'bg-slate-700/50 text-cyan-400' : 'text-slate-300'
+                      key={supplier}
+                      type="button"
+                      onClick={() => handleSupplierSelect(supplier)}
+                      className={`w-full truncate px-3 py-2 text-left text-sm hover:bg-slate-100 ${
+                        selectedProductSupplier === supplier ? 'bg-slate-100 text-cyan-600' : 'text-slate-600'
                       }`}
                     >
-                      All Suppliers
+                      {supplier}
                     </button>
-                    {filteredSuppliers.map((supplier) => (
-                      <button
-                        key={supplier}
-                        onClick={() => handleSupplierSelect(supplier)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700/50 transition-colors cursor-pointer truncate overflow-hidden whitespace-nowrap ${
-                          selectedProductSupplier === supplier ? 'bg-slate-700/50 text-cyan-400' : 'text-slate-300'
-                        }`}
-                      >
-                        {supplier}
-                      </button>
-                    ))}
-                    {filteredSuppliers.length === 0 && searchTerm && (
-                      <div className="px-3 py-2 text-sm text-slate-400">
-                        No suppliers found
-                      </div>
-                    )}
-                  </div>
+                  ))}
+                  {filteredSuppliers.length === 0 && searchTerm && (
+                    <div className="px-3 py-2 text-sm text-slate-500">
+                      কিছু পাওয়া যায়নি
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {selectedProductSupplier !== 'all' && (
-              <button
-                onClick={() => setSelectedProductSupplier('all')}
-                className="self-start sm:self-auto px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
-              >
-                Clear Filter
-              </button>
+              </div>
             )}
           </div>
 
-          {/* Results Summary - Under the filter row when supplier is selected */}
           {selectedProductSupplier !== 'all' && (
-            <div className="text-sm text-slate-400 border-t border-slate-700/30 pt-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                  <span className="break-words">Showing {totalProducts} products for {selectedProductSupplier}</span>
-                  <span className="text-cyan-400">
-                    Total Value: {formatCurrency(products.reduce((sum: number, product: BackendProduct) => sum + calculateProductValue(product), 0))}
-                  </span>
-                </div>
-                {totalPages > 1 && (
-                  <span className="text-xs">
-                    Page {currentPage} of {totalPages} ({products.length} shown)
-                  </span>
-                )}
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedProductSupplier('all')}
+              className="btn btn-ghost"
+            >
+              ফিল্টার সরান
+            </button>
           )}
         </div>
+      </div>
 
-        {/* Products List or Selection Message */}
-        {selectedProductSupplier === 'all' ? (
-          <div className="text-center py-12">
-            <div className="text-slate-400 mb-4">
-              <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
+      {/* Summary figures for the selected supplier */}
+      {selectedProductSupplier !== 'all' && (
+        <div className="stat-strip">
+          <div className="stat">
+            <div className="stat-label">সাপ্লায়ার</div>
+            <div className="stat-value truncate" title={selectedProductSupplier}>
+              {selectedProductSupplier}
             </div>
-            <p className="text-slate-300 text-lg font-medium mb-2">Select a supplier to see their products</p>
-            <p className="text-slate-400 text-sm">Choose a supplier from the dropdown above to view their product inventory</p>
+            <div className="stat-meta">এখন যেটা দেখছেন</div>
           </div>
-        ) : (
-          <>
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-slate-400">Loading suppliers...</p>
-              </div>
-            ) : isLoadingProducts ? (
-              <div className="text-center py-8">
-                <div className="animate-spin w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-slate-400">Loading products...</p>
-              </div>
-            ) : error ? (
-              <div className="text-center py-8">
-                <div className="text-red-400 mb-4">
-                  <svg className="w-8 h-8 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <p className="text-red-400 text-sm mb-4">{error}</p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
-                >
-                  Try Again
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {getCurrentPageProducts().map((product) => (
-                  <div key={product.id} className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 sm:p-4 hover:bg-slate-800/50 transition-colors duration-200">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      {/* Left side - Product Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <h5 className="text-slate-100 font-medium text-sm truncate">{product.name}</h5>
-                          <span className="bg-slate-700/50 text-slate-300 px-2 py-1 rounded-md text-xs">
-                            {product.category_name || 'No Category'}
-                          </span>
-                          {product.has_variants && (
-                            <span className="bg-cyan-500/20 text-cyan-300 px-2 py-1 rounded-md text-xs">
-                              Has Variants
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs">
-                          <div>
-                            <span className="text-slate-400">Supplier</span>
-                            <p className="text-slate-100 font-medium truncate">{product.supplier_name || 'No Supplier'}</p>
-                          </div>
-                          <div>
-                            <span className="text-slate-400">Unit Price</span>
-                            <p className="text-slate-100 font-medium">
-                              {formatCurrency(Number(product.has_variants 
-                                ? (product.average_sell_price || product.sell_price || product.price || 0)
-                                : (product.sell_price || product.price || 0)
-                              ))}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-slate-400">Total Value</span>
-                            <p className="text-cyan-300 font-medium">{formatCurrency(calculateProductValue(product))}</p>
-                          </div>
-                          <div>
-                            <span className="text-slate-400">Updated</span>
-                            <p className="text-slate-100 font-medium">{formatDate(product.updated_at)}</p>
-                          </div>
-                        </div>
-                      </div>
+          <div className="stat">
+            <div className="stat-label">মোট প্রোডাক্ট</div>
+            <div className="stat-value num">{totalProducts}</div>
+            <div className="stat-meta">{products.length} টা এই পাতায়</div>
+          </div>
+          <div className="stat">
+            <div className="stat-label">স্টকের মোট দাম</div>
+            <div className="stat-value num">
+              {formatCurrency(products.reduce((sum: number, product: BackendProduct) => sum + calculateProductValue(product), 0))}
+            </div>
+            <div className="stat-meta">এই পাতার প্রোডাক্ট মিলিয়ে</div>
+          </div>
+          <div className="stat">
+            <div className="stat-label">পাতা</div>
+            <div className="stat-value num">
+              {currentPage} / {totalPages || 1}
+            </div>
+            <div className="stat-meta">প্রতি পাতায় {productsPerPage} টা</div>
+          </div>
+        </div>
+      )}
 
-                      {/* Right side - Stock Badge */}
-                      <div className="sm:ml-6 self-start sm:self-center">
-                        <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 text-cyan-300 px-3 py-2 rounded-lg text-center min-w-[80px]">
-                          <div className="text-lg font-bold">
+      {/* Products list or selection message */}
+      {selectedProductSupplier === 'all' ? (
+        <div className="empty">
+          <p className="text-slate-600">সাপ্লায়ার বেছে নিলে তার প্রোডাক্টগুলো দেখতে পাবেন</p>
+          <p className="mt-1 text-slate-500">উপরের তালিকা থেকে একজন সাপ্লায়ার বেছে নিন</p>
+        </div>
+      ) : (
+        <>
+          {isLoading ? (
+            <div className="empty">সাপ্লায়ার লোড হচ্ছে…</div>
+          ) : isLoadingProducts ? (
+            <div className="empty">প্রোডাক্ট লোড হচ্ছে…</div>
+          ) : error ? (
+            <div className="empty">
+              <p className="text-slate-600">{error}</p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="btn btn-ghost mt-3"
+              >
+                আবার চেষ্টা করুন
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>প্রোডাক্ট</th>
+                      <th>সাপ্লায়ার</th>
+                      <th className="cell-num">দাম</th>
+                      <th className="cell-num">স্টক</th>
+                      <th className="cell-num">মোট দাম</th>
+                      <th>আপডেট</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.length === 0 ? (
+                      <tr>
+                        <td colSpan={6}>
+                          <div className="empty">
+                            {selectedProductSupplier} এর কোনো প্রোডাক্ট পাওয়া যায়নি
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      getCurrentPageProducts().map((product) => (
+                        <tr key={product.id}>
+                          <td className="cell-strong">
+                            <div className="truncate max-w-[16rem]" title={product.name}>
+                              {product.name}
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1">
+                              <span className="badge badge-muted">
+                                {product.category_name || 'ক্যাটাগরি নেই'}
+                              </span>
+                              {product.has_variants && (
+                                <span className="badge badge-info">ভ্যারিয়েন্ট আছে</span>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="truncate max-w-[12rem]" title={product.supplier_name || ''}>
+                              {product.supplier_name || 'সাপ্লায়ার নেই'}
+                            </div>
+                          </td>
+                          <td className="cell-num">
+                            {formatCurrency(Number(product.has_variants
+                              ? (product.average_sell_price || product.sell_price || product.price || 0)
+                              : (product.sell_price || product.price || 0)
+                            ))}
+                          </td>
+                          <td className="cell-num">
                             {product.has_variants ? (product.total_stock || 0) : product.stock}
-                          </div>
-                          <div className="text-xs text-cyan-400">in stock</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                          </td>
+                          <td className="cell-num">{formatCurrency(calculateProductValue(product))}</td>
+                          <td>{formatDate(product.updated_at)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-700/30 pt-4 mt-6">
-                    <div className="text-xs sm:text-sm text-slate-400">
-                      Showing {((currentPage - 1) * productsPerPage) + 1} to {Math.min(currentPage * productsPerPage, totalProducts)} of {totalProducts} products
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="plane-section">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-sm text-slate-500">
+                      {totalProducts} টার মধ্যে {((currentPage - 1) * productsPerPage) + 1} থেকে {Math.min(currentPage * productsPerPage, totalProducts)} নম্বর প্রোডাক্ট দেখাচ্ছে
                     </div>
-                    
+
                     <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                       {/* Previous Button */}
                       <button
+                        type="button"
                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1 || isLoadingProducts}
-                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                          currentPage === 1 || isLoadingProducts
-                            ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed'
-                            : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:text-white'
-                        }`}
+                        className="btn btn-ghost btn-sm"
                       >
-                        Previous
+                        আগের
                       </button>
 
                       {/* Page Numbers */}
-                      <div className="flex items-center gap-1 flex-nowrap">
+                      <div className="flex flex-nowrap items-center gap-1">
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
                           // Show first page, last page, current page, and pages around current
-                          const showPage = page === 1 || 
-                                         page === totalPages || 
+                          const showPage = page === 1 ||
+                                         page === totalPages ||
                                          Math.abs(page - currentPage) <= 1;
-                          
+
                           if (!showPage) {
                             // Show ellipsis for gaps
-                            if (page === 2 && currentPage > 4) return <span key={page} className="text-slate-500 px-2">...</span>;
-                            if (page === totalPages - 1 && currentPage < totalPages - 3) return <span key={page} className="text-slate-500 px-2">...</span>;
+                            if (page === 2 && currentPage > 4) return <span key={page} className="px-2 text-slate-500">...</span>;
+                            if (page === totalPages - 1 && currentPage < totalPages - 3) return <span key={page} className="px-2 text-slate-500">...</span>;
                             return null;
                           }
 
                           return (
                             <button
                               key={page}
+                              type="button"
                               onClick={() => setCurrentPage(page)}
                               disabled={isLoadingProducts}
-                              className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                                currentPage === page
-                                  ? 'bg-cyan-600 text-white'
-                                  : isLoadingProducts
-                                  ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed'
-                                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:text-white'
-                              }`}
+                              className={`btn btn-sm ${currentPage === page ? 'btn-primary' : 'btn-ghost'}`}
                             >
                               {page}
                             </button>
@@ -426,38 +423,21 @@ export default function ProductsTab({
 
                       {/* Next Button */}
                       <button
+                        type="button"
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                         disabled={currentPage === totalPages || isLoadingProducts}
-                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                          currentPage === totalPages || isLoadingProducts
-                            ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed'
-                            : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:text-white'
-                        }`}
+                        className="btn btn-ghost btn-sm"
                       >
-                        Next
+                        পরের
                       </button>
                     </div>
                   </div>
-                )}
-
-                {/* Empty State for when supplier is selected but no products found */}
-                {products.length === 0 && !isLoadingProducts && (
-                  <div className="text-center py-8">
-                    <div className="text-slate-400 mb-2">
-                      <svg className="w-8 h-8 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    </div>
-                    <p className="text-slate-400 text-sm">
-                      No products found for {selectedProductSupplier}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </>
   );
 }

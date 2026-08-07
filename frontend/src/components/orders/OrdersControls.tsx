@@ -38,17 +38,15 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
   }, []);
 
   return (
-    <div className="flex flex-col gap-4 mb-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h3 className="text-xl font-bold text-slate-200">Sales History</h3>
+    <div className="plane-section">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="section-title mb-0">বিক্রির খাতা</div>
 
         {/* Create A Sale Button */}
         <button
           onClick={onAddOrder}
           disabled={isNavigating}
-          className={`px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg whitespace-nowrap flex items-center justify-center gap-2 flex-shrink-0 ml-auto ${
-            isNavigating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-          }`}
+          className="btn btn-primary"
         >
           {isNavigating ? (
             <>
@@ -71,7 +69,7 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              Loading...
+              লোড হচ্ছে…
             </>
           ) : (
             <>
@@ -88,28 +86,120 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
                   d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                 />
               </svg>
-              Create A Sale
+              নতুন বিক্রি
             </>
           )}
         </button>
       </div>
 
-      {/* Filters Row */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        {/* Search */}
+        <div className="relative w-full sm:max-w-md">
+          <input
+            type="text"
+            placeholder="অর্ডার বা কাস্টমার খুঁজুন (#১১০ দিলে অর্ডার আইডি, #০০১০ দিলে অর্ডার নম্বর)"
+            value={searchInput}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className={`input pr-16 ${
+              searchInput.trim().startsWith("#") ? "pl-24" : "pl-9"
+            }`}
+          />
+          <svg
+            className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+
+          {/* Search type indicator */}
+          {searchInput.trim().startsWith("#") && (
+            <div className="absolute left-9 top-1/2 -translate-y-1/2">
+              <span className="badge badge-info">অর্ডার নং</span>
+            </div>
+          )}
+
+          {/* Quick tip */}
+          {!searchInput.trim() && (
+            <div className="absolute right-9 top-1/2 -translate-y-1/2 hidden sm:block">
+              <div className="group relative">
+                <svg
+                  className="w-4 h-4 text-slate-500 hover:text-cyan-600 cursor-help"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div className="absolute right-0 top-6 hidden group-hover:block z-10 w-52 p-2 bg-white border border-slate-200 rounded-lg shadow-lg text-xs text-slate-600">
+                  <p className="font-medium text-cyan-600 mb-1">
+                    খোঁজার টিপস:
+                  </p>
+                  <p>
+                    • <span className="text-cyan-600">#১১০</span> লিখলে অর্ডার
+                    আইডি দিয়ে খুঁজবে
+                  </p>
+                  <p>
+                    • <span className="text-cyan-600">#০০১০</span> লিখলে অর্ডার
+                    নম্বর দিয়ে খুঁজবে
+                  </p>
+                  <p>• কাস্টমারের নাম বা ফোন দিয়ে খুঁজুন</p>
+                  <p>• প্রোডাক্টের নাম দিয়ে খুঁজুন</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Search loading indicator */}
+          {(searchInput !== searchTerm || isSearching) && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <svg
+                className="w-4 h-4 text-cyan-600 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            </div>
+          )}
+        </div>
+
         {/* Customer Filter */}
         <select
           value={filterCustomer}
           onChange={(e) => onFilterChange(e.target.value)}
-          className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-2 sm:px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm cursor-pointer w-full"
+          className="select sm:w-auto"
+          aria-label="কাস্টমার ফিল্টার"
         >
-          <option value="all" className="bg-slate-800">
-            {isMobile ? "All" : "All Orders"}
+          <option value="all">{isMobile ? "সব" : "সব অর্ডার"}</option>
+          <option value="with_customer">
+            {isMobile ? "কাস্টমারসহ" : "কাস্টমার আছে"}
           </option>
-          <option value="with_customer" className="bg-slate-800">
-            {isMobile ? "With" : "With Customer"}
-          </option>
-          <option value="without_customer" className="bg-slate-800">
-            {isMobile ? "Without" : "Without Customer"}
+          <option value="without_customer">
+            {isMobile ? "কাস্টমার ছাড়া" : "কাস্টমার নেই"}
           </option>
         </select>
 
@@ -117,118 +207,27 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
         <select
           value={sortBy}
           onChange={(e) => onSortChange(e.target.value)}
-          className="bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm cursor-pointer w-full"
+          className="select sm:w-auto"
+          aria-label="সাজানোর নিয়ম"
         >
-          <option value="date" className="bg-slate-800">
-            {isMobile ? "Date" : "Date (Newest)"}
+          <option value="date">{isMobile ? "তারিখ" : "তারিখ (নতুন আগে)"}</option>
+          <option value="product">{isMobile ? "প্রোডাক্ট" : "প্রোডাক্টের নাম"}</option>
+          <option value="customer">
+            {isMobile ? "কাস্টমার" : "কাস্টমারের নাম"}
           </option>
-          <option value="product" className="bg-slate-800">
-            {isMobile ? "Product" : "Product Name"}
+          <option value="amount-high">
+            {isMobile ? "টাকা ↓" : "টাকা: বেশি থেকে কম"}
           </option>
-          <option value="customer" className="bg-slate-800">
-            {isMobile ? "Customer" : "Customer Name"}
+          <option value="amount-low">
+            {isMobile ? "টাকা ↑" : "টাকা: কম থেকে বেশি"}
           </option>
-          <option value="amount-high" className="bg-slate-800">
-            {isMobile ? "Amount ↓" : "Amount: High to Low"}
+          <option value="quantity-high">
+            {isMobile ? "পরিমাণ ↓" : "পরিমাণ: বেশি থেকে কম"}
           </option>
-          <option value="amount-low" className="bg-slate-800">
-            {isMobile ? "Amount ↑" : "Amount: Low to High"}
-          </option>
-          <option value="quantity-high" className="bg-slate-800">
-            {isMobile ? "Qty ↓" : "Quantity: High to Low"}
-          </option>
-          <option value="quantity-low" className="bg-slate-800">
-            {isMobile ? "Qty ↑" : "Quantity: Low to High"}
+          <option value="quantity-low">
+            {isMobile ? "পরিমাণ ↑" : "পরিমাণ: কম থেকে বেশি"}
           </option>
         </select>
-      </div>
-
-      {/* Search */}
-      <div className="relative w-full">
-        <input
-          type="text"
-          placeholder="Search orders, customers... (Type #110 for order ID, #0010 for order number)"
-          value={searchInput}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className={`bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 pr-20 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 text-sm ${
-            searchInput.trim().startsWith('#') ? 'pl-24' : 'pl-10'
-          }`}
-        />
-        <svg
-          className="w-5 h-5 text-gray-400 absolute left-3 top-2.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-        
-        {/* Search type indicator */}
-        {searchInput.trim().startsWith('#') && (
-          <div className="absolute left-10 top-1.5">
-            <span className="text-xs text-cyan-400 font-medium bg-cyan-400/10 px-1.5 py-1 rounded border border-cyan-400/20 whitespace-nowrap">
-              Order #
-            </span>
-          </div>
-        )}
-        
-        {/* Quick tip */}
-        {!searchInput.trim() && (
-          <div className="absolute right-12 top-2.5 hidden sm:block">
-            <div className="group relative">
-              <svg
-                className="w-4 h-4 text-gray-500 hover:text-cyan-400 cursor-help"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <div className="absolute right-0 top-6 hidden group-hover:block z-10 w-48 p-2 bg-slate-800 border border-slate-700 rounded-lg shadow-lg text-xs text-slate-300">
-                <p className="font-medium text-cyan-400 mb-1">Search Tips:</p>
-                <p>• Type <span className="text-cyan-400">#110</span> to search by order ID</p>
-                <p>• Type <span className="text-cyan-400">#0010</span> to search by order number</p>
-                <p>• Search by customer name or phone</p>
-                <p>• Search by product name</p>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Search loading indicator */}
-        {(searchInput !== searchTerm || isSearching) && (
-          <div className="absolute right-3 top-2.5">
-            <svg
-              className="w-5 h-5 text-cyan-400 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-          </div>
-        )}
       </div>
     </div>
   );

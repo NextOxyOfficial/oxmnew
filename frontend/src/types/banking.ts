@@ -19,6 +19,10 @@ export interface Transaction {
   id: string;
   account: string;
   type: "debit" | "credit";
+  /** What the money was for — income / expense / payment / withdrawal. */
+  nature?: string;
+  /** Cost bucket; free text, so a shop's own category comes through as typed. */
+  category?: string;
   amount: number;
   purpose: string;
   verified_by: string | null;
@@ -87,6 +91,8 @@ export interface DashboardStats {
 
 export interface TransactionFilters {
   type?: "credit" | "debit" | "all";
+  /** What the money was for — drives the খরচ / পেমেন্ট tabs. */
+  nature?: string;
   status?: "pending" | "verified" | "cancelled" | "all";
   date_from?: string;
   date_to?: string;

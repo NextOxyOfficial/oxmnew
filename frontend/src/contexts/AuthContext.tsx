@@ -20,6 +20,14 @@ interface User {
   is_active?: boolean;
   is_staff?: boolean;
   is_superuser?: boolean;
+  /** True when this is a staff login rather than the shop owner. */
+  is_employee?: boolean;
+  employee_name?: string | null;
+  employee_id?: number | null;
+  /** Whose shop this login works in. */
+  store_owner?: string | null;
+  /** null for an owner — an owner has no restrictions. */
+  permissions?: string[] | null;
 }
 
 interface UserProfile {

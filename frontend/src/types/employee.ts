@@ -1,4 +1,6 @@
 export interface Employee {
+  /** Whether this person has a login: "none" | "enabled" | "disabled". */
+  login_status?: "none" | "enabled" | "disabled";
   id: number;
   employee_id: string;
   name: string;

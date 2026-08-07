@@ -1,3 +1,4 @@
+from core.scoping import HasPermission, owner_for
 from datetime import datetime, timedelta
 
 from core.models import Achievement, Gift, Level
@@ -37,7 +38,14 @@ from .serializers import (
 class CustomerListCreateView(generics.ListCreateAPIView):
     """List all customers or create a new customer"""
 
-    permission_classes = [IsAuthenticated]
+    required_permissions = {
+        "GET": "customers.view",
+        "POST": "customers.add",
+        "PUT": "customers.add",
+        "PATCH": "customers.add",
+        "DELETE": "customers.add",
+    }
+    permission_classes = [IsAuthenticated, HasPermission]
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -49,7 +57,7 @@ class CustomerListCreateView(generics.ListCreateAPIView):
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        return Customer.objects.filter(user=self.request.user)
+        return Customer.objects.filter(user=owner_for(self.request))
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -60,11 +68,18 @@ class CustomerListCreateView(generics.ListCreateAPIView):
 class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a customer"""
 
-    permission_classes = [IsAuthenticated]
+    required_permissions = {
+        "GET": "customers.view",
+        "POST": "customers.edit",
+        "PUT": "customers.edit",
+        "PATCH": "customers.edit",
+        "DELETE": "customers.delete",
+    }
+    permission_classes = [IsAuthenticated, HasPermission]
     serializer_class = CustomerDetailSerializer
 
     def get_queryset(self):
-        return Customer.objects.filter(user=self.request.user)
+        return Customer.objects.filter(user=owner_for(self.request))
 
     def get_serializer_class(self):
         if self.request.method in ["PUT", "PATCH"]:
@@ -75,135 +90,191 @@ class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
 class CustomerGiftListCreateView(generics.ListCreateAPIView):
     """List all customer gifts or create a new gift for a customer"""
 
+    required_permissions = {
+        "GET": "customers.view",
+        "POST": "customers.edit",
+        "PUT": "customers.edit",
+        "PATCH": "customers.edit",
+        "DELETE": "customers.edit",
+    }
     serializer_class = CustomerGiftSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["status", "customer", "gift"]
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        return CustomerGift.objects.filter(user=self.request.user)
+        return CustomerGift.objects.filter(user=owner_for(self.request))
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user=owner_for(self.request))
 
 
 class CustomerGiftDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a customer gift"""
 
+    required_permissions = {
+        "GET": "customers.view",
+        "POST": "customers.edit",
+        "PUT": "customers.edit",
+        "PATCH": "customers.edit",
+        "DELETE": "customers.edit",
+    }
     serializer_class = CustomerGiftSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
 
     def get_queryset(self):
-        return CustomerGift.objects.filter(user=self.request.user)
+        return CustomerGift.objects.filter(user=owner_for(self.request))
 
 
 class CustomerAchievementListCreateView(generics.ListCreateAPIView):
     """List all customer achievements or create a new achievement for a customer"""
 
+    required_permissions = {
+        "GET": "customers.view",
+        "POST": "customers.edit",
+        "PUT": "customers.edit",
+        "PATCH": "customers.edit",
+        "DELETE": "customers.edit",
+    }
     serializer_class = CustomerAchievementSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["customer", "achievement"]
     ordering = ["-earned_date"]
 
     def get_queryset(self):
-        return CustomerAchievement.objects.filter(user=self.request.user)
+        return CustomerAchievement.objects.filter(user=owner_for(self.request))
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user=owner_for(self.request))
 
 
 class CustomerAchievementDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a customer achievement"""
 
+    required_permissions = {
+        "GET": "customers.view",
+        "POST": "customers.edit",
+        "PUT": "customers.edit",
+        "PATCH": "customers.edit",
+        "DELETE": "customers.edit",
+    }
     serializer_class = CustomerAchievementSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
 
     def get_queryset(self):
-        return CustomerAchievement.objects.filter(user=self.request.user)
+        return CustomerAchievement.objects.filter(user=owner_for(self.request))
 
 
 class CustomerLevelListCreateView(generics.ListCreateAPIView):
     """List all customer levels or assign a new level to a customer"""
 
+    required_permissions = {
+        "GET": "customers.view",
+        "POST": "customers.edit",
+        "PUT": "customers.edit",
+        "PATCH": "customers.edit",
+        "DELETE": "customers.edit",
+    }
     serializer_class = CustomerLevelSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["customer", "level", "is_current"]
     ordering = ["-assigned_date"]
 
     def get_queryset(self):
-        return CustomerLevel.objects.filter(assigned_by=self.request.user)
+        return CustomerLevel.objects.filter(assigned_by=owner_for(self.request))
 
     def perform_create(self, serializer):
-        serializer.save(assigned_by=self.request.user)
+        serializer.save(assigned_by=owner_for(self.request))
 
 
 class CustomerLevelDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a customer level"""
 
+    required_permissions = {
+        "GET": "customers.view",
+        "POST": "customers.edit",
+        "PUT": "customers.edit",
+        "PATCH": "customers.edit",
+        "DELETE": "customers.edit",
+    }
     serializer_class = CustomerLevelSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
 
     def get_queryset(self):
-        return CustomerLevel.objects.filter(assigned_by=self.request.user)
+        return CustomerLevel.objects.filter(assigned_by=owner_for(self.request))
 
 
 class DuePaymentListCreateView(generics.ListCreateAPIView):
     """List all due payments or create a new due payment"""
 
+    required_permissions = {
+        "GET": "customers.due",
+        "POST": "customers.due",
+        "PUT": "customers.due",
+        "PATCH": "customers.due",
+        "DELETE": "customers.due",
+    }
     serializer_class = DuePaymentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["customer", "payment_type", "status"]
     ordering_fields = ["due_date", "created_at", "amount"]
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        queryset = DuePayment.objects.filter(user=self.request.user).select_related(
+        queryset = DuePayment.objects.filter(user=owner_for(self.request)).select_related(
             "customer", "order"
         )
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user=owner_for(self.request))
 
 
 class DuePaymentDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a due payment"""
 
+    required_permissions = {
+        "GET": "customers.due",
+        "POST": "customers.due",
+        "PUT": "customers.due",
+        "PATCH": "customers.due",
+        "DELETE": "customers.due",
+    }
     serializer_class = DuePaymentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
 
     def get_queryset(self):
-        return DuePayment.objects.filter(user=self.request.user)
+        return DuePayment.objects.filter(user=owner_for(self.request))
 
 
 class TransactionListCreateView(generics.ListCreateAPIView):
     """List all transactions or create a new transaction"""
 
     serializer_class = TransactionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["customer", "transaction_type"]
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        return Transaction.objects.filter(user=self.request.user)
+        return Transaction.objects.filter(user=owner_for(self.request))
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user=owner_for(self.request))
 
 
 class TransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a transaction"""
 
     serializer_class = TransactionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission]
 
     def get_queryset(self):
-        return Transaction.objects.filter(user=self.request.user)
+        return Transaction.objects.filter(user=owner_for(self.request))
 
 
 # API views for frontend data requirements
@@ -211,7 +282,7 @@ class TransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
 @permission_classes([IsAuthenticated])
 def available_gifts(request):
     """Get all available gifts that can be assigned to customers"""
-    gifts = Gift.objects.filter(user=request.user, is_active=True).order_by("name")
+    gifts = Gift.objects.filter(user=owner_for(request), is_active=True).order_by("name")
     serializer = GiftForCustomerSerializer(gifts, many=True)
     return Response(serializer.data)
 
@@ -221,7 +292,7 @@ def available_gifts(request):
 def available_achievements(request):
     """Get all available achievements that can be earned by customers"""
     achievements = Achievement.objects.filter(
-        user=request.user, is_active=True
+        user=owner_for(request), is_active=True
     ).order_by("name")
     serializer = AchievementForCustomerSerializer(achievements, many=True)
     return Response(serializer.data)
@@ -231,7 +302,7 @@ def available_achievements(request):
 @permission_classes([IsAuthenticated])
 def available_levels(request):
     """Get all available levels that can be assigned to customers"""
-    levels = Level.objects.filter(user=request.user, is_active=True).order_by("name")
+    levels = Level.objects.filter(user=owner_for(request), is_active=True).order_by("name")
     serializer = LevelForCustomerSerializer(levels, many=True)
     return Response(serializer.data)
 
@@ -241,7 +312,7 @@ def available_levels(request):
 def redeem_gift(request, gift_id):
     """Redeem a customer gift"""
     try:
-        gift = CustomerGift.objects.get(id=gift_id, user=request.user, status="active")
+        gift = CustomerGift.objects.get(id=gift_id, user=owner_for(request), status="active")
         gift.status = "used"
         gift.used_date = timezone.now()
         gift.save()
@@ -266,7 +337,7 @@ def redeem_gift(request, gift_id):
 def redeem_points(request, customer_id):
     """Redeem customer achievement points"""
     try:
-        customer = Customer.objects.get(id=customer_id, user=request.user)
+        customer = Customer.objects.get(id=customer_id, user=owner_for(request))
         amount = request.data.get("amount", 0)
 
         if amount <= 0:
@@ -287,7 +358,7 @@ def redeem_points(request, customer_id):
             transaction_type="adjustment",
             amount=-amount,  # Negative for points deduction
             notes=f"Points redemption: {amount} points",
-            user=request.user,
+            user=owner_for(request),
         )
 
         return Response(
@@ -313,7 +384,7 @@ def send_sms(request, customer_id):
     import re
 
     try:
-        customer = Customer.objects.get(id=customer_id, user=request.user)
+        customer = Customer.objects.get(id=customer_id, user=owner_for(request))
         message = request.data.get("message", "")
 
         if not message:
@@ -337,12 +408,18 @@ def send_sms(request, customer_id):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # The shop's name goes on before the message is measured, so the
+        # credit count matches what the customer actually receives.
+        from core.sms_identity import with_store_signature
+
+        message = with_store_signature(message, owner_for(request))
+
         # Calculate SMS count (160 characters per SMS)
         sms_count = max(1, (len(message) + 159) // 160)
 
         # Check if user has sufficient SMS credits
         try:
-            user_sms_credit = UserSMSCredit.objects.get(user=request.user)
+            user_sms_credit = UserSMSCredit.objects.get(user=owner_for(request))
             if user_sms_credit.credits < sms_count:
                 return Response(
                     {
@@ -369,7 +446,7 @@ def send_sms(request, customer_id):
             customer=customer,
             message=message,
             phone_number=customer.phone,
-            user=request.user,
+            user=owner_for(request),
         )
 
         # Here you would integrate with an actual SMS service
@@ -387,7 +464,7 @@ def send_sms(request, customer_id):
 
             # Log the SMS transaction in subscription history
             SMSSentHistory.objects.create(
-                user=request.user,
+                user=owner_for(request),
                 recipient=customer.phone,
                 message=message,
                 status="sent",
@@ -409,7 +486,7 @@ def send_sms(request, customer_id):
 
             # Log failed SMS attempt in subscription history (but don't deduct credits)
             SMSSentHistory.objects.create(
-                user=request.user,
+                user=owner_for(request),
                 recipient=customer.phone,
                 message=message,
                 status="failed",
@@ -432,8 +509,7 @@ def send_sms(request, customer_id):
 @permission_classes([IsAuthenticated])
 def customer_statistics(request):
     """Get customer statistics for dashboard"""
-    user = request.user
-
+    user = owner_for(request)
     # Basic statistics
     total_customers = Customer.objects.filter(user=user).count()
     active_customers = Customer.objects.filter(user=user, status="active").count()
@@ -473,14 +549,14 @@ def customer_statistics(request):
 def customer_summary(request, customer_id):
     """Get a summary of customer data for the detail page"""
     try:
-        customer = Customer.objects.get(id=customer_id, user=request.user)
+        customer = Customer.objects.get(id=customer_id, user=owner_for(request))
 
         # Get recent orders from orders app
         from orders.models import Order
         from orders.serializers import OrderSerializer
 
         recent_orders = Order.objects.filter(
-            customer=customer, user=request.user
+            customer=customer, user=owner_for(request)
         ).order_by("-created_at")[:10]
 
         # Get active gifts
@@ -533,7 +609,7 @@ def customer_summary(request, customer_id):
 def customer_orders(request, customer_id):
     """Get all orders for a specific customer with pagination support"""
     try:
-        customer = Customer.objects.get(id=customer_id, user=request.user)
+        customer = Customer.objects.get(id=customer_id, user=owner_for(request))
 
         # Get pagination parameters
         page = int(request.GET.get("page", 1))
@@ -544,7 +620,7 @@ def customer_orders(request, customer_id):
         from orders.serializers import OrderSerializer
         from django.core.paginator import Paginator
 
-        orders = Order.objects.filter(customer=customer, user=request.user).order_by(
+        orders = Order.objects.filter(customer=customer, user=owner_for(request)).order_by(
             "-created_at"
         )
 
@@ -575,7 +651,7 @@ def customer_orders(request, customer_id):
 def customer_due_payments(request, customer_id):
     """Get all due payments for a specific customer with pagination"""
     try:
-        customer = Customer.objects.get(id=customer_id, user=request.user)
+        customer = Customer.objects.get(id=customer_id, user=owner_for(request))
 
         # Get pagination parameters
         page = int(request.GET.get("page", 1))
@@ -584,7 +660,7 @@ def customer_due_payments(request, customer_id):
         from django.core.paginator import Paginator
 
         due_payments = DuePayment.objects.filter(
-            customer=customer, user=request.user
+            customer=customer, user=owner_for(request)
         ).order_by("-created_at")
 
         # Apply pagination
@@ -614,7 +690,7 @@ def customer_due_payments(request, customer_id):
 def customer_gifts(request, customer_id):
     """Get all gifts for a specific customer with pagination"""
     try:
-        customer = Customer.objects.get(id=customer_id, user=request.user)
+        customer = Customer.objects.get(id=customer_id, user=owner_for(request))
 
         # Get pagination parameters
         page = int(request.GET.get("page", 1))
@@ -623,7 +699,7 @@ def customer_gifts(request, customer_id):
         from django.core.paginator import Paginator
 
         customer_gifts = CustomerGift.objects.filter(
-            customer=customer, user=request.user
+            customer=customer, user=owner_for(request)
         ).order_by("-created_at")
 
         # Apply pagination
@@ -653,7 +729,7 @@ def customer_gifts(request, customer_id):
 def customer_achievements(request, customer_id):
     """Get all achievements for a specific customer with pagination"""
     try:
-        customer = Customer.objects.get(id=customer_id, user=request.user)
+        customer = Customer.objects.get(id=customer_id, user=owner_for(request))
 
         # Get pagination parameters
         page = int(request.GET.get("page", 1))
@@ -662,7 +738,7 @@ def customer_achievements(request, customer_id):
         from django.core.paginator import Paginator
 
         achievements = CustomerAchievement.objects.filter(
-            customer=customer, user=request.user
+            customer=customer, user=owner_for(request)
         ).order_by("-earned_date")
 
         # Apply pagination
@@ -699,7 +775,7 @@ def duebook_customers(request):
 
         # Base queryset - customers with due payments
         customers_with_due = Customer.objects.filter(
-            user=request.user, due_payments__status="pending"
+            user=owner_for(request), due_payments__status="pending"
         ).distinct()
 
         # Apply search filter

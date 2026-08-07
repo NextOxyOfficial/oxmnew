@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ApiService } from '@/lib/api';
+import { useToast, useConfirm } from '@/components/ui/Feedback';
 
 interface CustomDomainSettingsProps {
   loading: boolean;
@@ -23,6 +24,9 @@ interface DNSRecord {
 }
 
 export default function CustomDomainSettings({ loading, onSave }: CustomDomainSettingsProps) {
+  const toast = useToast();
+  const confirm = useConfirm();
+
   const [settings, setSettings] = useState<CustomDomainSettings>({
     customDomain: '',
     isConfigured: false
@@ -72,7 +76,7 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
 
   const handleSave = async () => {
     if (!settings.customDomain.trim()) {
-      alert('Please enter a domain name');
+      toast.error('ডোমেইনের নামটা লিখুন');
       return;
     }
 
@@ -81,16 +85,16 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
       const domainData = {
         domain: settings.customDomain
       };
-      
+
       await ApiService.post('/custom-domain/', domainData);
       await loadDomainSettings(); // Reload the settings
       setIsEditing(false);
-      
+
       // Call the parent onSave if needed
       await onSave(settings);
     } catch (error) {
       console.error('Error saving custom domain settings:', error);
-      alert('Failed to save domain settings. Please try again.');
+      toast.error('ডোমেইনের সেটিংস সেভ করা গেল না। আরেকবার চেষ্টা করুন।');
     } finally {
       setIsSaving(false);
     }
@@ -103,7 +107,7 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
 
   const addDnsRecord = async () => {
     if (!newRecord.name || !newRecord.value) {
-      alert('Please fill in all DNS record fields');
+      toast.error('DNS রেকর্ডের সব ঘর পূরণ করুন');
       return;
     }
 
@@ -118,12 +122,18 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
       });
     } catch (error) {
       console.error('Error adding DNS record:', error);
-      alert('Failed to add DNS record. Please try again.');
+      toast.error('DNS রেকর্ড যোগ করা গেল না। আরেকবার চেষ্টা করুন।');
     }
   };
 
   const deleteDnsRecord = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this DNS record?')) {
+    const ok = await confirm({
+      title: 'DNS রেকর্ড ডিলিট করবেন?',
+      message: 'এই DNS রেকর্ডটা ডিলিট করে দেবেন?',
+      confirmLabel: 'ডিলিট করুন',
+      danger: true
+    });
+    if (!ok) {
       return;
     }
 
@@ -132,17 +142,23 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
       await loadDomainSettings(); // Reload to get updated records
     } catch (error) {
       console.error('Error deleting DNS record:', error);
-      alert('Failed to delete DNS record. Please try again.');
+      toast.error('DNS রেকর্ড ডিলিট করা গেল না। আরেকবার চেষ্টা করুন।');
     }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+    toast.success('কপি হয়ে গেছে!');
   };
 
   const deleteDomain = async () => {
-    if (confirm('Are you sure you want to delete this custom domain? This action cannot be undone.')) {
+    const ok = await confirm({
+      title: 'ডোমেইন ডিলিট করবেন?',
+      message: 'এই ডোমেইনটা ডিলিট করে দেবেন? একবার মুছলে আর ফেরত আসবে না।',
+      confirmLabel: 'ডিলিট করুন',
+      danger: true
+    });
+    if (ok) {
       try {
         await ApiService.delete('/custom-domain/delete/');
         setSettings({
@@ -152,197 +168,183 @@ export default function CustomDomainSettings({ loading, onSave }: CustomDomainSe
         setDnsRecords([]);
       } catch (error) {
         console.error('Error deleting domain:', error);
-        alert('Failed to delete domain. Please try again.');
+        toast.error('ডোমেইন ডিলিট করা গেল না। আরেকবার চেষ্টা করুন।');
       }
     }
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h4 className="text-lg font-medium text-white mb-2">Custom Domain Setup</h4>
-          <p className="text-sm text-gray-400">
-            Configure your custom domain and DNS settings
-          </p>
+    <>
+      <div className="plane-section">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="section-title">নিজের ডোমেইন</div>
+            <p className="text-xs text-slate-500">
+              নিজের ডোমেইন আর DNS সেটিংস এখানে ঠিক করুন
+              {isLoading ? ' — লোড হচ্ছে…' : ''}
+            </p>
+          </div>
+          {!isEditing && !settings.isConfigured && (
+            <button onClick={() => setIsEditing(true)} className="btn btn-primary btn-sm">
+              ডোমেইন যোগ করুন
+            </button>
+          )}
+          {settings.isConfigured && (
+            <span className="badge badge-success">সেট করা আছে</span>
+          )}
         </div>
-        {!isEditing && !settings.isConfigured && (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg cursor-pointer"
-          >
-            Add Domain
-          </button>
-        )}
-        {settings.isConfigured && (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-            Configured
-          </span>
-        )}
       </div>
 
       {isEditing ? (
-        <div className="space-y-6">
-          {/* Domain Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Domain Name *
-            </label>
-            <input
-              type="text"
-              value={settings.customDomain}
-              onChange={(e) => setSettings({ ...settings, customDomain: e.target.value })}
-              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-              placeholder="e.g., yourdomain.com"
-              required
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Enter your domain name without www or protocol
-            </p>
-          </div>
+        <div className="plane-section">
+          <label className="label" htmlFor="custom-domain">ডোমেইনের নাম *</label>
+          <input
+            id="custom-domain"
+            type="text"
+            value={settings.customDomain}
+            onChange={(e) => setSettings({ ...settings, customDomain: e.target.value })}
+            className="input max-w-md"
+            placeholder="যেমন: yourdomain.com"
+            required
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            www বা https:// ছাড়া শুধু ডোমেইনের নামটা লিখুন
+          </p>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-white/10">
-            <button
-              onClick={handleCancel}
-              className="px-4 py-2 bg-white/10 text-gray-300 text-sm font-medium rounded-lg hover:bg-white/20 border border-white/20 transition-all duration-200 cursor-pointer"
-            >
-              Cancel
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <button onClick={handleCancel} className="btn btn-ghost">
+              বাতিল
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving || loading}
-              className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
+              className="btn btn-primary"
             >
-              {isSaving ? 'Saving...' : 'Save Domain'}
+              {isSaving ? 'সেভ হচ্ছে…' : 'ডোমেইন সেভ করুন'}
             </button>
           </div>
         </div>
       ) : settings.isConfigured ? (
-        <div className="space-y-6">
-          {/* Configured Domain */}
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h5 className="text-sm font-medium text-white mb-1">Current Domain</h5>
-                <p className="text-lg text-blue-400 font-medium">{settings.customDomain}</p>
+        <>
+          <div className="plane-section">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs text-slate-500">এখনকার ডোমেইন</div>
+                <p className="truncate text-base font-medium text-cyan-600" title={settings.customDomain}>
+                  {settings.customDomain}
+                </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-3 py-1 bg-white/10 text-gray-300 text-sm font-medium rounded-lg hover:bg-white/20 border border-white/20 transition-all duration-200 cursor-pointer"
-                >
-                  Edit
+              <div className="flex items-center gap-2">
+                <button onClick={() => setIsEditing(true)} className="btn btn-ghost btn-sm">
+                  এডিট করুন
                 </button>
                 <button
                   onClick={deleteDomain}
-                  className="p-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 border border-red-400/30 transition-all duration-200 cursor-pointer"
-                  title="Delete domain"
+                  className="btn btn-danger btn-sm"
+                  title="ডোমেইন ডিলিট করুন"
+                  aria-label="ডোমেইন ডিলিট করুন"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
+                  ডিলিট
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Nameservers */}
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <h5 className="text-sm font-medium text-white mb-3">Required Nameservers</h5>
-            <p className="text-xs text-gray-400 mb-3">
-              Point your domain to these nameservers at your domain registrar:
+          <div className="plane-section">
+            <div className="section-title">যে নেমসার্ভার দিতে হবে</div>
+            <p className="mb-3 text-xs text-slate-500">
+              যেখান থেকে ডোমেইন কিনেছেন সেখানে গিয়ে এই নেমসার্ভারগুলো বসিয়ে দিন:
             </p>
             <div className="space-y-2">
               {nameservers.map((ns, index) => (
-                <div key={index} className="flex items-center justify-between bg-white/5 rounded-md p-2">
-                  <span className="text-sm text-gray-300 font-mono">{ns}</span>
-                  <button
-                    onClick={() => copyToClipboard(ns)}
-                    className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded hover:bg-blue-500/30 transition-colors cursor-pointer"
-                  >
-                    Copy
+                <div key={index} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <span className="truncate font-mono text-sm text-slate-600">{ns}</span>
+                  <button onClick={() => copyToClipboard(ns)} className="btn btn-ghost btn-sm">
+                    কপি
                   </button>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* DNS Records Management */}
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <h5 className="text-sm font-medium text-white mb-3">DNS Records</h5>
-            
-            {/* Add New Record */}
-            <div className="grid grid-cols-4 gap-2 mb-4">
+          <div className="plane-section">
+            <div className="section-title">DNS রেকর্ড</div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <select
                 value={newRecord.record_type}
                 onChange={(e) => setNewRecord({ ...newRecord, record_type: e.target.value })}
-                className="px-2 py-2 bg-white/10 border border-white/20 rounded text-white text-xs backdrop-blur-sm"
+                className="select"
+                aria-label="রেকর্ডের টাইপ"
               >
-                <option value="A" className="bg-gray-800">A</option>
-                <option value="AAAA" className="bg-gray-800">AAAA</option>
-                <option value="CNAME" className="bg-gray-800">CNAME</option>
-                <option value="MX" className="bg-gray-800">MX</option>
-                <option value="TXT" className="bg-gray-800">TXT</option>
+                <option value="A">A</option>
+                <option value="AAAA">AAAA</option>
+                <option value="CNAME">CNAME</option>
+                <option value="MX">MX</option>
+                <option value="TXT">TXT</option>
               </select>
               <input
                 type="text"
                 value={newRecord.name}
                 onChange={(e) => setNewRecord({ ...newRecord, name: e.target.value })}
-                placeholder="Name"
-                className="px-2 py-2 bg-white/10 border border-white/20 rounded text-white placeholder-gray-400 text-xs backdrop-blur-sm"
+                placeholder="নাম"
+                aria-label="রেকর্ডের নাম"
+                className="input"
               />
               <input
                 type="text"
                 value={newRecord.value}
                 onChange={(e) => setNewRecord({ ...newRecord, value: e.target.value })}
-                placeholder="Value"
-                className="px-2 py-2 bg-white/10 border border-white/20 rounded text-white placeholder-gray-400 text-xs backdrop-blur-sm"
+                placeholder="মান"
+                aria-label="রেকর্ডের মান"
+                className="input"
               />
-              <button
-                onClick={addDnsRecord}
-                className="px-2 py-2 bg-green-500/20 text-green-300 text-xs rounded hover:bg-green-500/30 border border-green-400/30 transition-colors cursor-pointer"
-              >
-                Add
+              <button onClick={addDnsRecord} className="btn btn-primary">
+                যোগ করুন
               </button>
             </div>
+          </div>
 
-            {/* DNS Records List */}
-            <div className="space-y-2">
-              {dnsRecords.map((record) => (
-                <div key={record.id} className="flex items-center justify-between bg-white/5 rounded-md p-2">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded border border-blue-400/30">
-                      {record.record_type}
-                    </span>
-                    <span className="text-sm text-gray-300 font-mono">{record.name}</span>
-                    <span className="text-sm text-gray-400">→</span>
-                    <span className="text-sm text-gray-300 font-mono">{record.value}</span>
-                  </div>
-                  <button
-                    onClick={() => deleteDnsRecord(record.id)}
-                    className="px-2 py-1 bg-red-500/20 text-red-300 text-xs rounded hover:bg-red-500/30 border border-red-400/30 transition-colors cursor-pointer"
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))}
+          {dnsRecords.length === 0 ? (
+            <div className="empty">এখনো কোনো DNS রেকর্ড যোগ করা হয়নি।</div>
+          ) : (
+            <div className="tbl-wrap">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>টাইপ</th>
+                    <th>নাম</th>
+                    <th>মান</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dnsRecords.map((record) => (
+                    <tr key={record.id}>
+                      <td><span className="badge badge-info">{record.record_type}</span></td>
+                      <td className="cell-strong font-mono">{record.name}</td>
+                      <td className="break-all font-mono">{record.value}</td>
+                      <td className="text-right">
+                        <button onClick={() => deleteDnsRecord(record.id)} className="btn btn-danger btn-sm">
+                          ডিলিট
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       ) : (
-        <div className="text-center py-8 text-gray-400">
-          <div className="mb-4">
-            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
-              </svg>
-            </div>
-            <p className="text-sm">No custom domain configured</p>
-            <p className="text-xs text-gray-500 mt-1">Click "Add Domain" to configure your custom domain</p>
-          </div>
+        <div className="empty">
+          <div className="mb-1 font-medium text-slate-600">এখনো কোনো ডোমেইন সেট করা হয়নি</div>
+          <div>&ldquo;ডোমেইন যোগ করুন&rdquo; চেপে নিজের ডোমেইনটা বসিয়ে নিন</div>
         </div>
       )}
-    </div>
+    </>
   );
 }

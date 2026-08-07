@@ -1,13 +1,18 @@
 "use client";
 
+import { ApiService } from "@/lib/api";
+import SmsReminderButton from "@/components/ui/SmsReminderButton";
+
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
+  ArrowLeft,
   User,
   Gift,
   DollarSign,
   ClipboardList,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Employee,
@@ -17,9 +22,11 @@ import {
   Document,
 } from "@/types/employee";
 import employeeAPI from "@/lib/employeeAPI";
+import { useToast } from "@/components/ui/Feedback";
 
 // Import the new components
 import EmployeeHeader from "@/components/employees/details/EmployeeHeader";
+import RoleSettingsTab from "@/components/settings/RoleSettingsTab";
 import EmployeeDetailsTab from "@/components/employees/details/EmployeeDetailsTab";
 import IncentivesTab from "@/components/employees/details/IncentivesTab";
 import SalaryTab from "@/components/employees/details/SalaryTab";
@@ -28,6 +35,7 @@ import TasksAndDocumentsTab from "@/components/employees/details/TasksAndDocumen
 export default function EmployeeDetailsPage() {
   const router = useRouter();
   const params = useParams();
+  const toast = useToast();
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
@@ -133,19 +141,23 @@ export default function EmployeeDetailsPage() {
 
     setIsUploadingPhoto(true);
     try {
-      const formData = new FormData();
-      formData.append("photo", selectedPhoto);
-
-      // For now, just simulate the upload since the API method might not exist
-      console.log("Would upload photo for employee:", employee.id);
-      
+      const updated = await ApiService.uploadEmployeePhoto(
+        employee.id,
+        selectedPhoto
+      );
+      // Reflect the saved URL straight away so the avatar updates without a
+      // page reload.
+      setEmployee((prev) => (prev ? { ...prev, photo: updated?.photo } : prev));
       setShowPhotoModal(false);
       setSelectedPhoto(null);
       setPhotoPreview(null);
-      alert("Profile photo would be updated (API not implemented)!");
+      toast.success("প্রোফাইল ছবি আপডেট হয়েছে");
     } catch (error) {
-      console.error("Error uploading photo:", error);
-      alert("Failed to upload photo. Please try again.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "ছবি আপলোড করা যায়নি। আরেকবার চেষ্টা করুন।"
+      );
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -160,19 +172,15 @@ export default function EmployeeDetailsPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="sm:p-6 p-1 space-y-6">
-        <div className="max-w-7xl">
-          <div className="animate-pulse">
-            <div className="h-8 bg-slate-700 rounded w-48 mb-6"></div>
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6">
-              <div className="h-6 bg-slate-700 rounded w-32 mb-4"></div>
-              <div className="space-y-3">
-                <div className="h-4 bg-slate-700 rounded w-full"></div>
-                <div className="h-4 bg-slate-700 rounded w-3/4"></div>
-                <div className="h-4 bg-slate-700 rounded w-1/2"></div>
-              </div>
-            </div>
+      <div className="page">
+        <header className="page-head">
+          <div>
+            <h1 className="page-title">কর্মচারী</h1>
+            <p className="page-sub">তথ্য আনা হচ্ছে…</p>
           </div>
+        </header>
+        <div className="plane">
+          <div className="empty">লোড হচ্ছে…</div>
         </div>
       </div>
     );
@@ -180,20 +188,19 @@ export default function EmployeeDetailsPage() {
 
   if (!employee) {
     return (
-      <div className="sm:p-6 p-1 space-y-6">
-        <div className="max-w-7xl">
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium text-slate-100 mb-2">
-              Employee Not Found
-            </h3>
-            <p className="text-slate-400 mb-4">
-              The employee you're looking for doesn't exist or has been removed.
+      <div className="page">
+        <header className="page-head">
+          <div>
+            <h1 className="page-title">কর্মচারী</h1>
+          </div>
+        </header>
+        <div className="plane">
+          <div className="empty">
+            <p className="mb-3">
+              এই কর্মচারীকে পাওয়া যায়নি — হয়তো ডিলিট হয়ে গেছে।
             </p>
-            <button
-              onClick={() => router.back()}
-              className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg hover:bg-cyan-500/30 transition-colors"
-            >
-              Go Back
+            <button onClick={() => router.back()} className="btn btn-ghost">
+              ফিরে যান
             </button>
           </div>
         </div>
@@ -202,48 +209,77 @@ export default function EmployeeDetailsPage() {
   }
 
   return (
-    <div className="sm:p-6 p-1 space-y-6">
-      <div className="max-w-7xl">
-        {/* Employee Header Component */}
+    <div className="page">
+      <header className="page-head">
+        <div className="min-w-0">
+          <button
+            onClick={() => router.back()}
+            className="mb-1 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-cyan-600"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            কর্মচারীর তালিকায় ফিরে যান
+          </button>
+          <h1 className="page-title truncate" title={employee.name}>
+            {employee.name}
+          </h1>
+          <p className="page-sub truncate">
+            {employee.email} · {employee.phone}
+          </p>
+        </div>
+
+        <SmsReminderButton
+          name={employee.name}
+          phone={employee.phone}
+          mode="message"
+          label="এসএমএস"
+          title={`${employee.name}-কে এসএমএস`}
+          className="btn btn-ghost"
+        />
+      </header>
+
+      <div className="plane">
+        {/* Employee KPI strip */}
         <EmployeeHeader
           employee={employee}
           incentives={incentives}
           tasks={tasks}
-          onBack={() => router.back()}
         />
 
         {/* Tabs */}
-        <div className="max-w-6xl">
-          <div className="flex border-b border-slate-700/50 mb-6 overflow-x-auto">
+        <div className="plane-section">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
             {[
               {
                 key: "details",
-                label: "Employee Details",
+                label: "কর্মচারীর তথ্য",
                 icon: <User className="w-4 h-4" />,
               },
               {
                 key: "incentives",
-                label: "Incentives",
+                label: "ইনসেনটিভ",
                 icon: <Gift className="w-4 h-4" />,
               },
               {
                 key: "salary",
-                label: "Salary",
+                label: "বেতন",
                 icon: <DollarSign className="w-4 h-4" />,
               },
               {
                 key: "tasks",
-                label: "Tasks & Documents",
+                label: "কাজ আর কাগজপত্র",
                 icon: <ClipboardList className="w-4 h-4" />,
+              },
+              {
+                key: "roles",
+                label: "রোল সেটিংস",
+                icon: <ShieldCheck className="w-4 h-4" />,
               },
             ].map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-                  activeTab === tab.key
-                    ? "border-cyan-400 text-cyan-400"
-                    : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600"
+                className={`btn btn-sm ${
+                  activeTab === tab.key ? "btn-primary" : "btn-ghost"
                 }`}
               >
                 {tab.icon}
@@ -251,113 +287,107 @@ export default function EmployeeDetailsPage() {
               </button>
             ))}
           </div>
-
-          {/* Tab Content */}
-          <div className="max-w-6xl">
-            {/* Employee Details Tab */}
-            {activeTab === "details" && (
-              <EmployeeDetailsTab
-                employee={employee}
-                onEmployeeUpdate={setEmployee}
-                onPhotoSelect={handlePhotoSelect}
-              />
-            )}
-
-            {/* Incentives Tab */}
-            {activeTab === "incentives" && (
-              <IncentivesTab
-                incentives={incentives}
-                employeeId={getEmployeeId() || ''}
-                onIncentivesUpdate={setIncentives}
-                onRefresh={refreshIncentives}
-              />
-            )}
-
-            {/* Salary Tab */}
-            {activeTab === "salary" && (
-              <SalaryTab
-                salaryRecords={salaryRecords}
-                employeeId={getEmployeeId() || ''}
-                onSalaryRecordsUpdate={setSalaryRecords}
-              />
-            )}
-
-            {/* Tasks & Documents Tab */}
-            {activeTab === "tasks" && (
-              <TasksAndDocumentsTab
-                tasks={tasks}
-                documents={documents}
-                employeeId={getEmployeeId() || ''}
-                onTasksUpdate={setTasks}
-                onDocumentsUpdate={setDocuments}
-              />
-            )}
-          </div>
         </div>
 
-        {/* Photo Upload Modal */}
-        {showPhotoModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-            <div className="min-h-full flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                  <h2 className="text-xl font-semibold text-slate-100">
-                    Update Profile Photo
-                  </h2>
-                  <button
-                    onClick={handleCancelPhotoUpload}
-                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5 text-slate-400" />
-                  </button>
-                </div>
+        {/* Employee Details Tab */}
+        {activeTab === "details" && (
+          <EmployeeDetailsTab
+            employee={employee}
+            onEmployeeUpdate={setEmployee}
+            onPhotoSelect={handlePhotoSelect}
+          />
+        )}
 
-                {/* Modal Body */}
-                <div className="p-6">
-                  {photoPreview && (
-                    <div className="mb-4">
-                      <p className="text-sm font-medium text-slate-300 mb-2">
-                        Preview:
-                      </p>
-                      <div className="flex justify-center">
-                        <img
-                          src={photoPreview}
-                          alt="Photo preview"
-                          className="w-32 h-32 rounded-lg object-cover border border-slate-600"
-                        />
-                      </div>
-                    </div>
-                  )}
+        {/* Incentives Tab */}
+        {activeTab === "incentives" && (
+          <IncentivesTab
+            incentives={incentives}
+            employeeId={getEmployeeId() || ''}
+            onIncentivesUpdate={setIncentives}
+            onRefresh={refreshIncentives}
+          />
+        )}
 
-                  <div className="text-sm text-slate-400 space-y-1">
-                    <p>• Supported formats: JPEG, PNG, WebP</p>
-                    <p>• Maximum file size: 5MB</p>
-                    <p>• Recommended size: 400x400 pixels</p>
-                  </div>
-                </div>
+        {/* Salary Tab */}
+        {activeTab === "salary" && (
+          <SalaryTab
+            salaryRecords={salaryRecords}
+            employeeId={getEmployeeId() || ''}
+            onSalaryRecordsUpdate={setSalaryRecords}
+          />
+        )}
 
-                {/* Modal Footer */}
-                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
-                  <button
-                    onClick={handleCancelPhotoUpload}
-                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handlePhotoUpload}
-                    disabled={isUploadingPhoto || !selectedPhoto}
-                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                  >
-                    {isUploadingPhoto ? "Uploading..." : "Upload Photo"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Tasks & Documents Tab */}
+        {activeTab === "tasks" && (
+          <TasksAndDocumentsTab
+            tasks={tasks}
+            documents={documents}
+            employeeId={getEmployeeId() || ''}
+            onTasksUpdate={setTasks}
+            onDocumentsUpdate={setDocuments}
+          />
+        )}
+
+        {/* Role settings — the same screen as সেটিংস, narrowed to this person */}
+        {activeTab === "roles" && (
+          <RoleSettingsTab employeeId={Number(getEmployeeId())} />
         )}
       </div>
+
+      {/* Photo Upload Modal */}
+      {showPhotoModal && (
+        <div className="modal-backdrop">
+          <div className="modal" style={{ maxWidth: "28rem" }}>
+            <div className="modal-head">
+              <h2 className="modal-title">প্রোফাইল ছবি বদলান</h2>
+              <button
+                onClick={handleCancelPhotoUpload}
+                aria-label="বন্ধ করুন"
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {photoPreview && (
+                <div className="mb-4">
+                  <p className="label">যেমন দেখাবে</p>
+                  <div className="flex justify-center">
+                    <img
+                      src={photoPreview}
+                      alt="নতুন ছবির প্রিভিউ"
+                      className="w-32 h-32 rounded-lg object-cover border border-slate-200"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="text-sm text-slate-500 space-y-1">
+                <p>• যেসব ফরম্যাট চলবে: JPEG, PNG, WebP</p>
+                <p>• ফাইলের সাইজ সর্বোচ্চ ৫ MB</p>
+                <p>• সবচেয়ে ভালো হয় ৪০০x৪০০ পিক্সেল</p>
+              </div>
+            </div>
+
+            <div className="modal-foot">
+              <button
+                onClick={handleCancelPhotoUpload}
+                className="btn btn-ghost"
+              >
+                বাতিল
+              </button>
+              <button
+                onClick={handlePhotoUpload}
+                disabled={isUploadingPhoto || !selectedPhoto}
+                className="btn btn-primary"
+              >
+                {isUploadingPhoto ? "আপলোড হচ্ছে…" : "ছবি আপলোড করুন"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

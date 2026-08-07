@@ -1,4 +1,5 @@
 from django.urls import path
+from . import password_reset
 from . import views
 from . import api_views
 
@@ -21,6 +22,13 @@ urlpatterns = [
     path('auth/change-password/', views.change_password, name='change-password'),
     path('auth/request-password-reset/',
          views.request_password_reset, name='request-password-reset'),
+    # Forgotten-password flow (no login required): request → verify → confirm.
+    path('auth/password-reset/request/',
+         password_reset.request_reset, name='password-reset-request'),
+    path('auth/password-reset/verify/',
+         password_reset.verify_code, name='password-reset-verify'),
+    path('auth/password-reset/confirm/',
+         password_reset.confirm_reset, name='password-reset-confirm'),
     path('categories/', views.categories, name='categories'),
     path('categories/<int:category_id>/',
          views.category_detail, name='category-detail'),

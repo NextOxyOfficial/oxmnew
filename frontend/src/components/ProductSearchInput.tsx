@@ -44,8 +44,8 @@ const ProductSearchInput = forwardRef<
         spellCheck="false"
         placeholder={
           isSearching
-            ? "Searching products..."
-            : "Search products by name, product code, category..."
+            ? "খোঁজা হচ্ছে…"
+            : "প্রোডাক্টের নাম, কোড বা ক্যাটাগরি দিয়ে খুঁজুন"
         }
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -57,11 +57,10 @@ const ProductSearchInput = forwardRef<
           }
         }}
         disabled={isLoading} // Only disable when loading initial data, not during search
-        className={`w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 rounded-lg py-2 px-3 pr-24 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 truncate cursor-text ${
+        className={`input pr-24 truncate ${
           isLoading ? "opacity-75 cursor-wait" : isSearching ? "opacity-90" : ""
         }`}
         style={{
-          caretColor: '#ffffff',
           userSelect: 'text'
         }}
       />
@@ -70,20 +69,21 @@ const ProductSearchInput = forwardRef<
         <button
           type="button"
           onClick={onClear}
-          className="absolute right-14 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-slate-700/50 whitespace-nowrap"
-          title="Clear search"
+          className="absolute right-11 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors whitespace-nowrap"
+          title="খোঁজা মুছে দিন"
+          aria-label="খোঁজা মুছে দিন"
         >
-          Clear
+          মুছুন
         </button>
       )}
       {/* Search icon or loading spinner */}
       {isSearching ? (
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-          <div className="animate-spin h-4 w-4 border-2 border-gray-400 border-t-cyan-500 rounded-full"></div>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+          <div className="animate-spin h-4 w-4 border-2 border-slate-200 border-t-cyan-600 rounded-full"></div>
         </div>
       ) : (
         <svg
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+          className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

@@ -1,3 +1,4 @@
+from core.ownership import OwnedRelationsMixin
 from core.models import Achievement, Gift, Level
 from rest_framework import serializers
 
@@ -58,7 +59,9 @@ class CustomerSerializer(serializers.ModelSerializer):
         return None
 
 
-class CustomerGiftSerializer(serializers.ModelSerializer):
+class CustomerGiftSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("customer",)
+
     gift_name = serializers.CharField(source="gift.name", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True)
 
@@ -81,7 +84,9 @@ class CustomerGiftSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_at", "updated_at"]
 
 
-class CustomerAchievementSerializer(serializers.ModelSerializer):
+class CustomerAchievementSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("customer",)
+
     achievement_name = serializers.CharField(source="achievement.name", read_only=True)
     achievement_type = serializers.CharField(source="achievement.type", read_only=True)
     achievement_points = serializers.IntegerField(
@@ -105,7 +110,9 @@ class CustomerAchievementSerializer(serializers.ModelSerializer):
         read_only_fields = ["earned_date"]
 
 
-class CustomerLevelSerializer(serializers.ModelSerializer):
+class CustomerLevelSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("customer",)
+
     level_name = serializers.CharField(source="level.name", read_only=True)
     customer_name = serializers.CharField(source="customer.name", read_only=True)
     assigned_by_name = serializers.CharField(
@@ -129,7 +136,9 @@ class CustomerLevelSerializer(serializers.ModelSerializer):
         read_only_fields = ["assigned_date", "assigned_by", "assigned_by_name"]
 
 
-class DuePaymentSerializer(serializers.ModelSerializer):
+class DuePaymentSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("customer", "order",)
+
     customer_name = serializers.CharField(source="customer.name", read_only=True)
     order_number = serializers.CharField(source="order.order_number", read_only=True)
 
@@ -152,7 +161,9 @@ class DuePaymentSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_at", "updated_at"]
 
 
-class TransactionSerializer(serializers.ModelSerializer):
+class TransactionSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("customer", "order",)
+
     customer_name = serializers.CharField(source="customer.name", read_only=True)
     order_number = serializers.CharField(source="order.order_number", read_only=True)
 
@@ -178,7 +189,9 @@ class TransactionSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_at", "updated_at"]
 
 
-class SMSLogSerializer(serializers.ModelSerializer):
+class SMSLogSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("customer", "order",)
+
     customer_name = serializers.CharField(source="customer.name", read_only=True)
 
     class Meta:

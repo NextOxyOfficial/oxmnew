@@ -1,20 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  ChevronRight, 
-  Home, 
-  Settings, 
-  HelpCircle, 
-  Sun, 
-  Moon, 
+import {
+  ChevronRight,
+  Home,
+  Settings,
+  HelpCircle,
+  Menu,
   User,
   LogOut,
   Crown,
-  Activity,
   Calendar,
   Clock
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -45,23 +44,20 @@ interface HeaderProps {
   onToggleDarkMode?: () => void;
 }
 
-export default function Header({ 
-  user, 
-  onLogout, 
-  onMenuClick, 
-  title, 
+export default function Header({
+  user,
+  onLogout,
+  onMenuClick,
+  title,
   breadcrumbs,
-  smsCredits = 1250,
-  darkMode = true,
-  onToggleDarkMode
 }: HeaderProps) {
   const pathname = usePathname();
-  const { subscriptionStatus, isPro, isLoading: subscriptionLoading } = useSubscription();
+  const { isPro, isLoading: subscriptionLoading } = useSubscription();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-  
-  
+
+
   // Add click outside handlers for dropdowns
   const userMenuRef = React.useRef<HTMLDivElement>(null);
 
@@ -83,8 +79,8 @@ export default function Header({
   const updateDhakaTime = () => {
     const now = new Date();
     const dhakaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Dhaka"}));
-    
-    setCurrentTime(dhakaTime.toLocaleTimeString('en-US', { 
+
+    setCurrentTime(dhakaTime.toLocaleTimeString('en-US', {
       hour12: false,
       hour: '2-digit',
       minute: '2-digit',
@@ -105,172 +101,190 @@ export default function Header({
     return () => clearInterval(interval);
   }, []);
 
-  // Get current time
-  // Removed old static declarations
-  
+  const planLabel = subscriptionLoading ? '…' : isPro ? 'প্রো অ্যাকাউন্ট' : 'ফ্রি অ্যাকাউন্ট';
+
   return (
-    <header className="bg-slate-950 border-b border-slate-800 relative z-50">
-      <div className="px-[2px] py-2 sm:px-4 lg:px-6">
-        <div className="flex items-center justify-between h-12">
+    <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+      <div className="px-3 sm:px-4 lg:px-6">
+        <div className="flex items-center justify-between h-16 gap-2">
           {/* Left Section - Logo & Breadcrumb */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 min-w-0">
             {/* Mobile menu button */}
             <button
               onClick={onMenuClick}
-              className="lg:hidden p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all cursor-pointer"
+              aria-label="মেনু খুলুন"
+              className="lg:hidden h-9 w-9 -ml-1 inline-flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <span className="sr-only">Open sidebar</span>
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <Menu className="h-5 w-5" />
             </button>
-            
-            {/* Logo & Brand */}
-            <Link href="/dashboard" className="flex items-center gap-2.5">
-              <div className="w-7 h-7 bg-cyan-500 rounded-lg flex items-center justify-center">
-                <span className="text-slate-900 font-bold text-xs">OX</span>
-              </div>
-              <div className="hidden sm:block">
-                <span className="text-base font-bold text-white">OxyManager</span>
-                <div className="text-[10px] text-slate-500 -mt-0.5">Business Suite</div>
-              </div>
+
+            {/* On mobile the sidebar is hidden, so the brand still needs a
+                home here; on desktop the rail carries it. */}
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 min-w-0 lg:hidden"
+            >
+              <Image
+                src="/logo-mark.png"
+                alt="OxyManager"
+                width={28}
+                height={28}
+                className="h-7 w-7 shrink-0 rounded-lg"
+                priority
+              />
+              <span className="text-[15px] font-semibold text-slate-900 truncate">
+                OxyManager
+              </span>
             </Link>
 
-            {/* Breadcrumb Separator */}
-            <div className="hidden lg:block h-5 w-px bg-slate-700"></div>
-
             {/* Breadcrumbs */}
-            <nav className="hidden lg:flex items-center gap-1.5 text-sm">
-              <Link 
-                href="/dashboard" 
-                className="flex items-center gap-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            <nav aria-label="ব্রেডক্রাম্ব" className="hidden lg:flex items-center gap-1.5 text-[13px] min-w-0">
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-1 text-slate-500 hover:text-slate-900 transition-colors"
               >
                 <Home className="h-3.5 w-3.5" />
-                <span>Dashboard</span>
+                <span>ড্যাশবোর্ড</span>
               </Link>
               {breadcrumbs && breadcrumbs.map((item, index) => (
                 <React.Fragment key={`${item.name}-${index}`}>
-                  <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                   {item.href ? (
-                    <Link 
-                      href={item.href} 
-                      className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    <Link
+                      href={item.href}
+                      className="text-slate-500 hover:text-slate-900 transition-colors truncate max-w-[10rem]"
+                      title={item.name}
                     >
                       {item.name}
                     </Link>
                   ) : (
-                    <span className="text-white">{item.name}</span>
+                    <span className="text-slate-900 font-medium truncate max-w-[12rem]" title={item.name}>
+                      {item.name}
+                    </span>
                   )}
                 </React.Fragment>
               ))}
               {!breadcrumbs && pathname !== '/dashboard' && (
                 <>
-                  <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
-                  <span className="text-white">{title}</span>
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <span className="text-slate-900 font-medium truncate max-w-[12rem]" title={title}>{title}</span>
                 </>
               )}
             </nav>
           </div>
-          
+
           {/* Right Section */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Time & Date Display */}
-            <div className="hidden md:flex items-center gap-4 text-slate-400 text-sm">
-              <div className="flex items-center gap-1.5">
+            <div className="hidden xl:flex items-center gap-3 text-slate-500">
+              <span className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
-                <span className="font-mono text-xs">{currentTime}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
+                <span className="text-xs num">{currentTime}</span>
+              </span>
+              <span className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />
                 <span className="text-xs">{currentDate}</span>
-              </div>
+              </span>
             </div>
 
             {/* Online Status */}
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full">
-              <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
-              <span className="text-emerald-400 text-xs font-medium">Online</span>
-            </div>
+            <span className="hidden sm:block">
+              <span className="badge badge-success">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
+                অনলাইন
+              </span>
+            </span>
 
-            {/* Help Button */}
-            <button className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all cursor-pointer">
+            {/* Help — routes to the in-app help page (was a dead button) */}
+            <Link
+              href="/dashboard/help"
+              aria-label="সাহায্য"
+              title="সাহায্য"
+              className="hidden sm:inline-flex h-9 w-9 items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            >
               <HelpCircle className="h-4 w-4" />
-            </button>
+            </Link>
 
             {/* User Menu */}
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-1 pr-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                aria-label="অ্যাকাউন্ট মেনু"
+                aria-expanded={showUserMenu}
+                className="flex items-center gap-2 h-9 pl-1 pr-1.5 sm:pr-2 rounded-lg hover:bg-slate-100 transition-colors"
               >
-                <div className="w-7 h-7 bg-cyan-500 rounded-full flex items-center justify-center text-slate-900 font-semibold text-xs">
+                <span className="h-7 w-7 shrink-0 bg-cyan-600 rounded-full flex items-center justify-center text-white font-semibold text-xs">
                   {(user.first_name?.[0] || user.username[0]).toUpperCase()}
-                </div>
-                <div className="hidden sm:block text-left">
-                  <div className="text-sm font-medium text-white leading-tight">
+                </span>
+                <span className="hidden md:block text-left">
+                  <span className="block text-[13px] font-medium text-slate-900 leading-tight truncate max-w-[9rem]">
                     {user.first_name || user.username}
-                  </div>
-                  <div className="text-[10px] text-slate-500 flex items-center gap-1">
-                    <Crown className={`h-2.5 w-2.5 ${isPro ? 'text-amber-400' : 'text-slate-500'}`} />
-                    {subscriptionLoading ? '...' : (isPro ? 'Pro Account' : 'Free Account')}
-                  </div>
-                </div>
+                  </span>
+                  <span className="block text-[11px] text-slate-500 leading-tight">
+                    {planLabel}
+                  </span>
+                </span>
               </button>
 
               {/* User Dropdown */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-64 bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl z-50">
-                  <div className="p-4 border-b border-slate-700/50">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-full flex items-center justify-center text-slate-900 font-bold">
+                <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-200">
+                    <div className="flex items-center gap-3">
+                      <span className="h-10 w-10 shrink-0 bg-cyan-600 rounded-full flex items-center justify-center text-white font-semibold">
                         {(user.first_name?.[0] || user.username[0]).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-slate-200">
-                          {user.first_name && user.last_name 
-                            ? `${user.first_name} ${user.last_name}` 
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-medium text-slate-900 truncate">
+                          {user.first_name && user.last_name
+                            ? `${user.first_name} ${user.last_name}`
                             : user.username}
                         </div>
-                        <div className="text-xs text-slate-400">{user.email}</div>
-                        <div className={`text-xs flex items-center gap-1 mt-1 ${isPro ? 'text-amber-400' : 'text-slate-500'}`}>
-                          <Crown className="h-3 w-3" />
-                          {subscriptionLoading ? 'Loading...' : (isPro ? 'Pro Account' : 'Free Account')}
+                        <div className="text-xs text-slate-500 truncate" title={user.email}>{user.email}</div>
+                        <div className="mt-1.5">
+                          <span className={`badge ${isPro ? 'badge-warn' : 'badge-muted'}`}>
+                            <Crown className="h-3 w-3" />
+                            {subscriptionLoading ? 'লোড হচ্ছে…' : isPro ? 'প্রো' : 'ফ্রি'}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="py-2">
+
+                  <div className="py-1">
                     <Link
                       href="/dashboard/profile"
-                      className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors cursor-pointer"
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-3 px-4 h-9 text-[13px] text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
                     >
-                      <User className="h-4 w-4 mr-3" />
-                      My Profile
+                      <User className="h-4 w-4 text-slate-400" />
+                      আমার প্রোফাইল
                     </Link>
                     <Link
                       href="/dashboard/settings"
-                      className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors cursor-pointer"
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-3 px-4 h-9 text-[13px] text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
                     >
-                      <Settings className="h-4 w-4 mr-3" />
-                      Settings
+                      <Settings className="h-4 w-4 text-slate-400" />
+                      সেটিংস
                     </Link>
                     <Link
                       href="/dashboard/subscriptions"
-                      className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors cursor-pointer"
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-3 px-4 h-9 text-[13px] text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
                     >
-                      <Crown className="h-4 w-4 mr-3 text-amber-400" />
-                      Subscription
+                      <Crown className="h-4 w-4 text-slate-400" />
+                      সাবস্ক্রিপশন
                     </Link>
                   </div>
-                  
-                  <div className="border-t border-slate-700/50">
+
+                  <div className="border-t border-slate-200 py-1">
                     <button
                       onClick={onLogout}
-                      className="flex items-center w-full px-4 py-3 text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-colors cursor-pointer"
+                      className="flex items-center gap-3 w-full px-4 h-9 text-[13px] text-rose-600 hover:bg-rose-50 transition-colors"
                     >
-                      <LogOut className="h-4 w-4 mr-3" />
-                      Sign Out
+                      <LogOut className="h-4 w-4" />
+                      লগ আউট
                     </button>
                   </div>
                 </div>

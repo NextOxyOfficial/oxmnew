@@ -111,7 +111,7 @@ export default function EditOrderPage() {
       try {
         setIsLoadingOrder(true);
         const orderId = params?.id;
-        if (!orderId) { setError("Order ID is required"); setIsLoadingOrder(false); return; }
+        if (!orderId) { setError("অর্ডার আইডি দরকার"); setIsLoadingOrder(false); return; }
         const fetchedOrder = await ApiService.getOrder(parseInt(orderId as string));
         setOrderForm({
           customer: { name: fetchedOrder.customer_name || "", email: fetchedOrder.customer_email || "", phone: fetchedOrder.customer_phone || "", address: fetchedOrder.customer_address || "", company: fetchedOrder.customer_company || "" },
@@ -146,16 +146,16 @@ export default function EditOrderPage() {
           setCustomerSearch(`${fetchedOrder.customer_name}${fetchedOrder.customer_email ? ` (${fetchedOrder.customer_email})` : ""}${fetchedOrder.customer_phone ? ` - ${fetchedOrder.customer_phone}` : ""}`);
         } else { setCustomerType("guest"); }
         if (fetchedOrder.employee) { setEmployeeSearch(`${fetchedOrder.employee.name} - ${fetchedOrder.employee.role || fetchedOrder.employee.department || "Employee"}`); }
-      } catch (e) { console.error("Error fetching order:", e); setError("Failed to load order. Please try again."); }
+      } catch (e) { console.error("Error fetching order:", e); setError("অর্ডার লোড করা যায়নি। আবার চেষ্টা করুন।"); }
       finally { setIsLoadingOrder(false); }
     };
     const init = async () => { fetchProducts(); fetchCustomers(); fetchEmployees(); if (params?.id) fetchOrder(); };
     init();
   }, [params?.id]);
 
-  const fetchProducts = async () => { try { setIsLoadingProducts(true); const response = await ApiService.getProducts(); const productsData = Array.isArray(response) ? response : response?.results || []; setProducts(productsData); } catch (error) { console.error("Error fetching products:", error); setError("Failed to load products"); } finally { setIsLoadingProducts(false); } };
-  const fetchCustomers = async () => { try { setIsLoadingCustomers(true); const response = await ApiService.getCustomers(); const customersData = Array.isArray(response) ? response : response?.results || []; setCustomers(customersData); } catch (error) { console.error("Error fetching customers:", error); setError("Failed to load customers"); } finally { setIsLoadingCustomers(false); } };
-  const fetchEmployees = async () => { try { setIsLoadingEmployees(true); const response = await ApiService.getEmployees(); const employeesData = Array.isArray(response) ? response : response?.results || []; setEmployees(employeesData); } catch (error) { console.error("Error fetching employees:", error); setError("Failed to load employees"); } finally { setIsLoadingEmployees(false); } };
+  const fetchProducts = async () => { try { setIsLoadingProducts(true); const response = await ApiService.getProducts(); const productsData = Array.isArray(response) ? response : response?.results || []; setProducts(productsData); } catch (error) { console.error("Error fetching products:", error); setError("প্রোডাক্ট লোড করা যায়নি"); } finally { setIsLoadingProducts(false); } };
+  const fetchCustomers = async () => { try { setIsLoadingCustomers(true); const response = await ApiService.getCustomers({ page_size: 500 }); const customersData = Array.isArray(response) ? response : response?.results || []; setCustomers(customersData); } catch (error) { console.error("Error fetching customers:", error); setError("কাস্টমার লোড করা যায়নি"); } finally { setIsLoadingCustomers(false); } };
+  const fetchEmployees = async () => { try { setIsLoadingEmployees(true); const response = await ApiService.getEmployees(); const employeesData = Array.isArray(response) ? response : response?.results || []; setEmployees(employeesData); } catch (error) { console.error("Error fetching employees:", error); setError("কর্মচারী লোড করা যায়নি"); } finally { setIsLoadingEmployees(false); } };
 
   const calculateTotals = (
     items: OrderItemT[],
@@ -207,8 +207,8 @@ export default function EditOrderPage() {
       | "cancelled"
       | "refunded"
   ) => {
-    if (orderForm.items.length === 0) { setError("Please add at least one item to the order"); return; }
-    if (!orderForm.customer.name) { setError("Please enter customer name"); return; }
+    if (orderForm.items.length === 0) { setError("অর্ডারে অন্তত একটা প্রোডাক্ট যোগ করুন"); return; }
+    if (!orderForm.customer.name) { setError("কাস্টমারের নাম লিখুন"); return; }
     try {
       setIsSubmitting(true); setError(null);
       const orderId = params.id as string;
@@ -247,15 +247,10 @@ export default function EditOrderPage() {
         incentive_amount: round(orderForm.incentive_amount || 0)
       };
       
-      console.log('💾 Saving order with employee data:', {
-        employee_id: orderForm.employee_id,
-        incentive_amount: orderForm.incentive_amount,
-        orderUpdateData: orderUpdateData
-      });
       await ApiService.updateOrder(parseInt(orderId), orderUpdateData);
       router.push("/dashboard/orders?updated=true");
     } catch (error) {
-      let msg = "Failed to update order. Please try again.";
+      let msg = "অর্ডার আপডেট করা যায়নি। আবার চেষ্টা করুন।";
       if (error && typeof error === 'object') { if ('response' in error && (error as any).response?.data) { const data = (error as any).response.data; msg = typeof data === 'string' ? data : data.error || data.detail || JSON.stringify(data); } else if ('message' in error) { msg = (error as any).message; } }
       setError(msg);
     } finally { setIsSubmitting(false); }
@@ -269,9 +264,9 @@ export default function EditOrderPage() {
       setIsSearchingProducts(true);
       const response = await ApiService.searchProducts(query.trim());
       const results = Array.isArray(response) ? response : response?.results || [];
-      const filtered = results.filter((p: any) => { const s = query.toLowerCase().trim(); const name = p.name ? p.name.toLowerCase() : ''; const code = p.product_code ? p.product_code.toLowerCase() : ''; return name.includes(s) || code.includes(s); });
-      setSearchResults(filtered.length ? filtered : products.filter((p) => { const s = query.toLowerCase().trim(); const name = p.name ? p.name.toLowerCase() : ''; const code = p.product_code ? p.product_code.toLowerCase() : ''; return name.includes(s) || code.includes(s); }));
+      setSearchResults(results);
     } catch (e) {
+      // Fallback to local filter if API fails
       const local = products.filter((p) => { const s = query.toLowerCase().trim(); const name = p.name ? p.name.toLowerCase() : ''; const code = p.product_code ? p.product_code.toLowerCase() : ''; return name.includes(s) || code.includes(s); });
       setSearchResults(local);
     } finally { setIsSearchingProducts(false); }
@@ -281,7 +276,7 @@ export default function EditOrderPage() {
     setProductSearch(query);
     isActivelyTypingRef.current = true;
     if (searchTimeout) clearTimeout(searchTimeout);
-    const timeout = setTimeout(() => { isActivelyTypingRef.current = false; searchProducts(query); }, 300);
+    const timeout = setTimeout(() => { isActivelyTypingRef.current = false; searchProducts(query); }, 250);
     setSearchTimeout(timeout);
   }, [searchProducts, searchTimeout]);
 
@@ -506,7 +501,7 @@ export default function EditOrderPage() {
       }
       
       if (!productToAdd) {
-        setError("Product not found. Please try searching again.");
+        setError("প্রোডাক্টটা পাওয়া যায়নি। আবার খুঁজে দেখুন।");
         return;
       }
 
@@ -536,7 +531,7 @@ export default function EditOrderPage() {
       // Only check stock if the product requires stock tracking
       const requiresStockTracking = !selectedProduct.no_stock_required;
       if (requiresStockTracking && availableStock <= 0) {
-        setError("Product is out of stock");
+        setError("প্রোডাক্টটা স্টকে নেই");
         setProductSearch("");
         setIsProductDropdownOpen(false);
         return;
@@ -555,7 +550,7 @@ export default function EditOrderPage() {
 
         // Only check stock limits if the product requires stock tracking
         if (requiresStockTracking && newQuantity > availableStock) {
-          setError(`Only ${availableStock} items available in stock`);
+          setError(`স্টকে আছে মাত্র ${availableStock}টি`);
           setProductSearch("");
           setIsProductDropdownOpen(false);
           return;
@@ -658,7 +653,7 @@ export default function EditOrderPage() {
 
       if (existingCustomer) {
         setCustomerValidationError(
-          `This ${field} is already associated with customer "${existingCustomer.name}". Click to select this customer instead.`
+          `এই ${field} আগে থেকেই "${existingCustomer.name}" নামের কাস্টমারের সাথে আছে। চাইলে তাকেই বেছে নিন।`
         );
         setMatchedCustomer(existingCustomer);
         setDuplicateField(field);
@@ -833,7 +828,7 @@ export default function EditOrderPage() {
 
     return parts.map((part, index) =>
       regex.test(part) ? (
-        <span key={index} className="bg-cyan-400/20 text-cyan-300 font-medium">
+        <span key={index} className="bg-cyan-400/20 text-cyan-600 font-medium">
           {part}
         </span>
       ) : (
@@ -844,12 +839,12 @@ export default function EditOrderPage() {
 
   if (isLoadingOrder) {
     return (
-      <div className="min-h-screen bg-slate-900">
-        <div className="sm:p-6 p-1 space-y-6">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="flex items-center gap-3 text-slate-300">
+      <div className="page page-narrow">
+        <div className="plane">
+          <div className="empty">
+            <span className="inline-flex items-center gap-2">
               <svg
-                className="w-6 h-6 animate-spin"
+                className="w-4 h-4 animate-spin text-cyan-600"
                 fill="none"
                 viewBox="0 0 24 24"
               >
@@ -867,8 +862,8 @@ export default function EditOrderPage() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              <span>Loading order...</span>
-            </div>
+              অর্ডার লোড হচ্ছে…
+            </span>
           </div>
         </div>
       </div>
@@ -876,190 +871,320 @@ export default function EditOrderPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-slate-900 ${isProductDropdownOpen ? 'dropdown-page' : ''}`}>
+    /* Same width cap as the add page — the two screens are the same form, so
+       a wider one here made the fields stretch and look like a different app. */
+    <div
+      className={`page page-narrow ${isProductDropdownOpen ? "dropdown-page" : ""}`}
+    >
       <style jsx>{`
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .dropdown-scroll { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,0.3) transparent; }
-        .dropdown-scroll::-webkit-scrollbar { width: 6px; }
-        .dropdown-scroll::-webkit-scrollbar-track { background: transparent; }
-        .dropdown-scroll::-webkit-scrollbar-thumb { background-color: rgba(148,163,184,0.3); border-radius: 3px; }
-        .dropdown-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(148,163,184,0.5); }
-        input, textarea, select { cursor: text !important; }
-        button, .clickable, [role="button"] { cursor: pointer !important; }
-        input[type="checkbox"], input[type="radio"] { cursor: pointer !important; }
-        .dropdown-item, .dropdown-option { cursor: pointer !important; }
-        input:disabled, textarea:disabled, select:disabled { cursor: not-allowed !important; }
-        button:disabled { cursor: not-allowed !important; }
-        body { background-color: rgb(15, 23, 42) !important; }
-        .dropdown-page { min-height: calc(100vh + 400px); }
+        /* Keeps room under the page while the product dropdown is open */
+        .dropdown-page {
+          min-height: calc(100vh + 400px);
+        }
       `}</style>
-      <div className="sm:p-6 p-1 space-y-6">
-        <div className="max-w-7xl">
-          {/* Error Display */}
-          {error && (
-              <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-red-400 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <p className="text-red-300 text-sm">{error}</p>
+
+      {/* Page Header */}
+      <header className="page-head">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            className="btn btn-ghost"
+            aria-label="ফিরে যান"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+          <div>
+            <h1 className="page-title">অর্ডার এডিট করুন</h1>
+            <p className="page-sub">অর্ডারের প্রোডাক্ট, টাকা আর কাস্টমারের তথ্য বদলান</p>
+          </div>
+        </div>
+        {/* Same header summary the add page carries, plus the status this
+            screen alone can show. */}
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span
+            className={`badge ${
+              orderForm.status === "draft" ? "badge-warn" : "badge-success"
+            }`}
+          >
+            {orderForm.status === "draft" ? "ড্রাফট" : "কমপ্লিট"}
+          </span>
+          <span className="badge badge-muted">
+            প্রোডাক্ট <span className="num">{orderForm.items.length}</span>
+          </span>
+          <span className="badge badge-success">
+            মোট <span className="num">{formatCurrency(orderForm.total)}</span>
+          </span>
+        </div>
+      </header>
+
+      {/* Error Display */}
+      {error && (
+        <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+          {error}
+        </div>
+      )}
+
+      <div className="plane">
+        {/* Customer */}
+        <div className="plane-section">
+          <div className="section-title">কাস্টমারের তথ্য</div>
+
+          <CustomerSelector
+            orderForm={orderForm}
+            setOrderForm={setOrderForm}
+            customers={customers}
+            customerType={customerType}
+            setCustomerType={setCustomerType}
+            selectedCustomerId={selectedCustomerId}
+            setSelectedCustomerId={setSelectedCustomerId}
+            customerSearch={customerSearch}
+            setCustomerSearch={setCustomerSearch}
+            isCustomerDropdownOpen={isCustomerDropdownOpen}
+            setIsCustomerDropdownOpen={setIsCustomerDropdownOpen}
+            highlightText={highlightText}
+            formatCurrency={formatCurrency}
+          />
+
+          {customerType === "guest" && (
+            <div className="mt-4">
+              {customerValidationError && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-4">
+                  <p className="text-amber-700 text-sm font-medium">খেয়াল করুন</p>
+                  <p className="text-amber-700 text-sm">
+                    এই{" "}
+                    {duplicateField === "email"
+                      ? "ইমেইল"
+                      : duplicateField === "phone"
+                      ? "ফোন"
+                      : "তথ্য"}{" "}
+                    দিয়ে আগে থেকেই একজন কাস্টমার আছে:{" "}
+                    <button
+                      type="button"
+                      onClick={handleSelectMatchedCustomer}
+                      className="text-cyan-600 hover:text-cyan-700 underline font-medium transition-colors"
+                    >
+                      {matchedCustomer?.name}
+                    </button>
+                    । চাইলে তাকেই বেছে নিন, নয়তো অন্য{" "}
+                    {duplicateField === "email"
+                      ? "ইমেইল"
+                      : duplicateField === "phone"
+                      ? "ফোন"
+                      : "তথ্য"}{" "}
+                    দিন। তবে এভাবেও অর্ডারটা করা যাবে।
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="label">কাস্টমারের নাম *</label>
+                  <input
+                    type="text"
+                    value={orderForm.customer.name}
+                    onChange={(e) => handleCustomerChange("name", e.target.value)}
+                    className="input"
+                    placeholder="কাস্টমারের নাম লিখুন"
+                  />
+                </div>
+                <div>
+                  <label className="label">প্রতিষ্ঠান</label>
+                  <input
+                    type="text"
+                    value={orderForm.customer.company}
+                    onChange={(e) =>
+                      handleCustomerChange("company", e.target.value)
+                    }
+                    className="input"
+                    placeholder="প্রতিষ্ঠানের নাম (না দিলেও চলবে)"
+                  />
+                </div>
+                <div>
+                  <label className="label">ইমেইল (না দিলেও চলবে)</label>
+                  <input
+                    type="email"
+                    value={orderForm.customer.email}
+                    onChange={(e) =>
+                      handleCustomerChange("email", e.target.value)
+                    }
+                    className="input"
+                    placeholder="customer@email.com"
+                  />
+                </div>
+                <div>
+                  <label className="label">ফোন (না দিলেও চলবে)</label>
+                  <input
+                    type="tel"
+                    value={orderForm.customer.phone}
+                    onChange={(e) =>
+                      handleCustomerChange("phone", e.target.value)
+                    }
+                    className="input"
+                    placeholder="ফোন নম্বর"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="label">ঠিকানা (না দিলেও চলবে)</label>
+                  <textarea
+                    value={orderForm.customer.address}
+                    onChange={(e) =>
+                      handleCustomerChange("address", e.target.value)
+                    }
+                    rows={2}
+                    className="textarea"
+                    placeholder="কাস্টমারের ঠিকানা"
+                  />
+                </div>
               </div>
             </div>
           )}
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg">
-                <div className="sm:p-4 p-2">
-                  <div className="flex items-center gap-1 mb-4">
-                    <button onClick={() => router.back()} className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                    <h3 className="text-lg font-semibold text-slate-200">Edit Order</h3>
-                    <div className="ml-3">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${orderForm.status === 'draft' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>
-                        {orderForm.status === 'draft' ? 'DRAFT' : 'COMPLETED'}
-                      </span>
-                    </div>
-                  </div>
+        {/* Order Items */}
+        <div className="plane-section">
+          <div className="section-title mb-0">
+            অর্ডারের প্রোডাক্ট ({orderForm.items.length})
+          </div>
+        </div>
 
-                  <div className="mb-6">
-                    <CustomerSelector
-                      orderForm={orderForm}
-                      setOrderForm={setOrderForm}
-                      customers={customers}
-                      customerType={customerType}
-                      setCustomerType={setCustomerType}
-                      selectedCustomerId={selectedCustomerId}
-                      setSelectedCustomerId={setSelectedCustomerId}
-                      customerSearch={customerSearch}
-                      setCustomerSearch={setCustomerSearch}
-                      isCustomerDropdownOpen={isCustomerDropdownOpen}
-                      setIsCustomerDropdownOpen={setIsCustomerDropdownOpen}
-                      highlightText={highlightText}
-                      formatCurrency={formatCurrency}
-                    />
-                  </div>
+        <OrderItemsTable
+          orderForm={orderForm}
+          setOrderForm={setOrderForm}
+          products={products}
+          canIncreaseQuantity={canIncreaseQuantity}
+          formatCurrency={formatCurrency}
+          removeItem={removeItem}
+          updateItemQuantity={updateItemQuantity}
+          updateItemUnitPrice={updateItemUnitPrice}
+        />
 
-                  {customerType === "guest" && (
-                    <div>
-                      {customerValidationError && (
-                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
-                          <div className="flex items-start gap-2">
-                            <svg className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                            </svg>
-                            <div>
-                              <p className="text-amber-400 text-sm font-medium">Note:</p>
-                              <p className="text-amber-300 text-sm">
-                                A customer with this {duplicateField || 'field'} already exists: {" "}
-                                <button type="button" onClick={handleSelectMatchedCustomer} className="text-cyan-400 hover:text-cyan-300 underline font-medium transition-colors duration-200">
-                                  {matchedCustomer?.name}
-                                </button>
-                                . You may want to select them from existing customers instead, or use a different {duplicateField || 'field'}. You can still proceed with creating this order.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+        {/* Add New Item */}
+        <div className="plane-section">
+          <div className="section-title">নতুন প্রোডাক্ট যোগ করুন</div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Customer Name *</label>
-                          <input type="text" value={orderForm.customer.name} onChange={(e) => handleCustomerChange("name", e.target.value)} className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text" placeholder="Enter customer name" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Company</label>
-                          <input type="text" value={orderForm.customer.company} onChange={(e) => handleCustomerChange("company", e.target.value)} className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text" placeholder="Company name (optional)" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Email (Optional)</label>
-                          <input type="email" value={orderForm.customer.email} onChange={(e) => handleCustomerChange("email", e.target.value)} className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text" placeholder="customer@email.com (optional)" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Phone (Optional)</label>
-                          <input type="tel" value={orderForm.customer.phone} onChange={(e) => handleCustomerChange("phone", e.target.value)} className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text" placeholder="Phone number (optional)" />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Address (Optional)</label>
-                          <textarea value={orderForm.customer.address} onChange={(e) => handleCustomerChange("address", e.target.value)} rows={2} className="w-full bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-gray-400 placeholder:text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 cursor-text" placeholder="Customer address (optional)" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-visible">
-                <div className="sm:p-4 p-2">
-                  <h3 className="text-lg font-semibold text-slate-200 mb-4">Order Items</h3>
-
-                  <OrderItemsTable orderForm={orderForm} setOrderForm={setOrderForm} products={products} canIncreaseQuantity={canIncreaseQuantity} formatCurrency={formatCurrency} removeItem={removeItem} updateItemQuantity={updateItemQuantity} updateItemUnitPrice={updateItemUnitPrice} />
-
-                  <div className="border-t border-slate-700/50 pt-4">
-                    {error && (<div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4"><p className="text-red-400">{error}</p></div>)}
-                    <h4 className="text-sm font-medium text-slate-300 mb-3">Add New Item</h4>
-                    <div className="space-y-4 pb-20">
-                      <div className="flex flex-col md:flex-row gap-4 items-end">
-                        <div className="flex-1 md:flex-[2] relative">
-                          <label className="block text-xs font-medium text-slate-400 mb-1">Product Search (Click product name to add to order)</label>
-                          <ProductSearchInput ref={productSearchInputRef} value={productSearch} onChange={handleSearchChange} onFocus={handleSearchFocus} onClear={handleSearchClear} isSearching={isSearchingProducts} isLoading={isLoadingProducts} />
-                          <ProductDropdown isOpen={isProductDropdownOpen} searchQuery={productSearch} searchResults={searchResults} isLoading={isLoadingProducts} isSearching={isSearchingProducts} onProductSelect={handleProductSelect} onClose={handleDropdownClose} highlightText={highlightText} />
-                        </div>
-                        <div className="md:col-span-3">
-                          <button onClick={addItemToOrder} disabled={!selectedProduct || newItem.quantity <= 0} className={`w-full px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${selectedProduct && newItem.quantity > 0 ? "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500" : "bg-slate-700/50 text-slate-400 cursor-not-allowed"}`}>Add Item</button>
-                        </div>
-                      </div>
-                      {selectedProduct?.has_variants && (
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1.5">Select Variant</label>
-                          <select value={newItem.variant} onChange={(e) => handleNewItemChange("variant", e.target.value)} className="w-full bg-slate-800/50 border border-slate-700/50 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200">
-                            <option value="">Select a variant</option>
-                            {availableVariants.map((variant) => (<option key={variant.id} value={variant.id}>{variant.size} {variant.color} - Stock: {variant.stock}</option>))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+          <div className="pb-20 space-y-3">
+            <div>
+              <label className="label">
+                প্রোডাক্ট খুঁজুন (নামের উপর চাপ দিলে অর্ডারে যোগ হবে)
+              </label>
+              <div className="relative">
+                <ProductSearchInput
+                  ref={productSearchInputRef}
+                  value={productSearch}
+                  onChange={handleSearchChange}
+                  onFocus={handleSearchFocus}
+                  onClear={handleSearchClear}
+                  isSearching={isSearchingProducts}
+                  isLoading={isLoadingProducts}
+                />
+                <ProductDropdown
+                  isOpen={isProductDropdownOpen}
+                  searchQuery={productSearch}
+                  searchResults={searchResults}
+                  isLoading={isLoadingProducts}
+                  isSearching={isSearchingProducts}
+                  onProductSelect={handleProductSelect}
+                  onClose={handleDropdownClose}
+                  highlightText={highlightText}
+                />
               </div>
             </div>
 
-            <div className="space-y-6">
-              <BillSummary orderForm={orderForm} setOrderForm={setOrderForm} currencySymbol={currencySymbol} formatCurrency={formatCurrency} />
-              <PaymentsSection orderForm={orderForm} setOrderForm={setOrderForm} formatCurrency={formatCurrency} />
-              <SalesIncentive orderForm={orderForm} setOrderForm={setOrderForm} employees={employees} isEmployeeDropdownOpen={isEmployeeDropdownOpen} setIsEmployeeDropdownOpen={setIsEmployeeDropdownOpen} employeeSearch={employeeSearch} setEmployeeSearch={setEmployeeSearch} formatCurrency={formatCurrency} isOpen={isSalesIncentiveOpen} setIsOpen={setIsSalesIncentiveOpen} />
-              <div className="flex gap-3">
-                <button
-                  onClick={() =>
-                    handleSubmit(
-                      (orderForm.status === "draft"
-                        ? "completed"
-                        : (orderForm.status as any))
-                    )
-                  }
-                  disabled={isSubmitting}
-                  className={`flex-1 px-6 py-3 text-white text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-all duration-200 shadow-lg ${orderForm.status === 'draft' ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 focus:ring-green-500' : 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 focus:ring-cyan-500'}`}
+            {selectedProduct?.has_variants && (
+              <div>
+                <label className="label">ভ্যারিয়েন্ট সিলেক্ট করুন</label>
+                <select
+                  value={newItem.variant}
+                  onChange={(e) => handleNewItemChange("variant", e.target.value)}
+                  className="select"
                 >
-                  {isSubmitting ? (orderForm.status === 'draft' ? "Completing..." : "Updating...") : (orderForm.status === 'draft' ? "Complete Order" : "Update Order")}
-                </button>
-                <button
-                  onClick={() => handleSubmit("draft")}
-                  disabled={isSubmitting}
-                  className="flex-1 px-6 py-3 bg-slate-600 text-slate-100 text-sm font-medium rounded-lg hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 transition-all duration-200"
-                >
-                  Save as Draft
-                </button>
+                  <option value="">ভ্যারিয়েন্ট সিলেক্ট করুন</option>
+                  {availableVariants.map((variant) => (
+                    <option key={variant.id} value={variant.id}>
+                      {variant.size} {variant.color} - স্টক: {variant.stock}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
+            )}
+
+            <button
+              onClick={addItemToOrder}
+              disabled={!selectedProduct || newItem.quantity <= 0}
+              className="btn btn-primary"
+            >
+              প্রোডাক্ট যোগ করুন
+            </button>
+          </div>
+        </div>
+
+        <BillSummary
+          orderForm={orderForm}
+          setOrderForm={setOrderForm}
+          currencySymbol={currencySymbol}
+          formatCurrency={formatCurrency}
+        />
+
+        <PaymentsSection
+          orderForm={orderForm}
+          setOrderForm={setOrderForm}
+          formatCurrency={formatCurrency}
+        />
+
+        <SalesIncentive
+          orderForm={orderForm}
+          setOrderForm={setOrderForm}
+          employees={employees}
+          isEmployeeDropdownOpen={isEmployeeDropdownOpen}
+          setIsEmployeeDropdownOpen={setIsEmployeeDropdownOpen}
+          employeeSearch={employeeSearch}
+          setEmployeeSearch={setEmployeeSearch}
+          formatCurrency={formatCurrency}
+          isOpen={isSalesIncentiveOpen}
+          setIsOpen={setIsSalesIncentiveOpen}
+        />
+
+        {/* Actions */}
+        <div className="plane-section">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() =>
+                handleSubmit(
+                  orderForm.status === "draft"
+                    ? "completed"
+                    : (orderForm.status as any)
+                )
+              }
+              disabled={isSubmitting}
+              className="btn btn-primary flex-1"
+            >
+              {isSubmitting
+                ? orderForm.status === "draft"
+                  ? "কমপ্লিট হচ্ছে…"
+                  : "আপডেট হচ্ছে…"
+                : orderForm.status === "draft"
+                ? "অর্ডার কমপ্লিট করুন"
+                : "অর্ডার আপডেট করুন"}
+            </button>
+            <button
+              onClick={() => handleSubmit("draft")}
+              disabled={isSubmitting}
+              className="btn btn-ghost flex-1"
+            >
+              ড্রাফট হিসেবে রাখুন
+            </button>
           </div>
         </div>
       </div>

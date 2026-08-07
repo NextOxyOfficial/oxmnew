@@ -19,6 +19,13 @@ export interface Product {
   profit_margin?: number;
   variant_count?: number;
   main_photo?: string;
+
+  // Serial-tracked units (bikes/CNGs/cars) registered against this model.
+  // For a vehicle model these — not `stock` — are the real shelf counts,
+  // because each unit is one row carrying its own engine/chassis number.
+  is_vehicle?: boolean;
+  vehicle_stock?: number;
+  vehicle_sold?: number;
   variants?: ProductVariant[];
   photos?: ProductPhoto[];
   is_active: boolean;

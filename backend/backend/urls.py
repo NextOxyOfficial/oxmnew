@@ -3,6 +3,12 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+# Admin branding comes from JAZZMIN_SETTINGS in settings.py. The custom
+# OxmAdminSite (KPI dashboard for the plain-Django theme) is parked in
+# _design_backup/css_only_admin_from_other_chat/ — it renders through a
+# template Jazzmin replaces, so the two cannot be active together.
+admin.site.index_title = "ব্যবস্থাপনা প্যানেল"
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("core.urls")),
@@ -20,6 +26,8 @@ urlpatterns = [
         "api/public/", include("public_api.urls")
     ),  # Public API endpoints for external access
     path("api/", include("notebook.urls")),  # Added notebook app endpoints
+    path("api/", include("vehicles.urls")),  # Serial-tracked vehicles
+    path("api/", include("analytics.urls")),  # Business analytics
 ]
 
 # Serve media files during development

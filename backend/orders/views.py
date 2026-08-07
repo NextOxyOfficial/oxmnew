@@ -1,8 +1,10 @@
+from core.scoping import HasPermission, owner_for
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Order
@@ -39,6 +41,16 @@ class OrdersPagination(PageNumberPagination):
 
 class OrderViewSet(viewsets.ModelViewSet):
     """ViewSet for Order model with backward compatibility for ProductSale API"""
+    permission_classes = [IsAuthenticated, HasPermission]
+    # Staff logins are held to these; owners are unrestricted.
+    required_permissions = {
+        "GET": "orders.view",
+        "POST": "orders.add",
+        "PUT": "orders.edit",
+        "PATCH": "orders.edit",
+        "DELETE": "orders.delete",
+    }
+
 
     serializer_class = OrderSerializer
     pagination_class = OrdersPagination
@@ -68,7 +80,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         from django.utils import timezone
 
         queryset = (
-            Order.objects.filter(user=self.request.user)
+            Order.objects.filter(user=owner_for(self.request))
             .select_related("customer")
             .prefetch_related("items__product", "items__variant", "payments")
             .order_by("-created_at")
@@ -241,7 +253,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         from .models import OrderItem
 
         items_qs = OrderItem.objects.filter(
-            order__user=request.user
+            order__user=owner_for(request)
         ).exclude(order__status__in=["cancelled", "refunded"])
 
         # Date filtering (reuse logic similar to orders list)
@@ -369,7 +381,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         last_customer_sub = OrderItem.objects.filter(
             product=OuterRef("product"),
             variant=OuterRef("variant"),
-            order__user=request.user,
+            order__user=owner_for(request),
         ).order_by("-order__created_at").values("order__customer_name")[:1]
         computed = computed.annotate(last_sold_customer=Subquery(last_customer_sub))
 
@@ -423,7 +435,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         from django.utils import timezone
 
         # Get all user orders
-        queryset = Order.objects.filter(user=request.user)
+        queryset = Order.objects.filter(user=owner_for(request))
 
         # Basic stats
         total_orders = queryset.count()
@@ -474,7 +486,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             method=method,
             reference=reference,
             notes=notes,
-            user=request.user,
+            user=owner_for(request),
         )
 
         serializer = OrderSerializer(order, context={"request": request})
@@ -607,7 +619,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             try:
                 from django.db import transaction as db_transaction
                 with db_transaction.atomic():
-                    product = Product.objects.select_for_update().get(id=product_id, user=request.user)
+                    product = Product.objects.select_for_update().get(id=product_id, user=owner_for(request))
 
                     # Check stock
                     if product.has_variants and variant_id:

@@ -9,6 +9,7 @@ import {
   PurchaseHistoryTab,
   SuppliersTab,
 } from "@/components/suppliers";
+import { useConfirm } from "@/components/ui/Feedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
@@ -68,6 +69,7 @@ interface Supplier {
 export default function SuppliersPage() {
   const { user } = useAuth();
   const formatCurrency = useCurrencyFormatter();
+  const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState("suppliers");
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -250,7 +252,7 @@ export default function SuppliersPage() {
             hasNextPage: false,
             isLoadingMore: false,
           });
-          showNotification("error", "Failed to load suppliers");
+          showNotification("error", "সাপ্লায়ার লোড করা যায়নি");
         }
 
         // Fetch purchases
@@ -263,7 +265,7 @@ export default function SuppliersPage() {
         } catch (purchasesError) {
           console.error("Error fetching purchases:", purchasesError);
           setPurchases([]); // Set empty array as fallback
-          showNotification("error", "Failed to load purchases");
+          showNotification("error", "কেনাকাটার হিস্ট্রি লোড করা যায়নি");
         }
 
         // Fetch payments
@@ -274,11 +276,11 @@ export default function SuppliersPage() {
         } catch (paymentsError) {
           console.error("Error fetching payments:", paymentsError);
           setPayments([]); // Set empty array as fallback
-          showNotification("error", "Failed to load payments");
+          showNotification("error", "পেমেন্ট লোড করা যায়নি");
         }
       } catch (error) {
         console.error("Error in fetchData:", error);
-        showNotification("error", "Failed to load data");
+        showNotification("error", "কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন");
       } finally {
         setLoading(false);
       }
@@ -327,7 +329,7 @@ export default function SuppliersPage() {
     } catch (error) {
       console.error("Error loading more suppliers:", error);
       setSuppliersPagination((prev) => ({ ...prev, isLoadingMore: false }));
-      showNotification("error", "Failed to load more suppliers");
+      showNotification("error", "আরও সাপ্লায়ার লোড করা যায়নি");
     }
   };
 
@@ -414,7 +416,7 @@ export default function SuppliersPage() {
       if (supplierExists) {
         showNotification(
           "error",
-          "Supplier already exists with this name. Please use a different name."
+          "এই নামে একজন সাপ্লায়ার আগেই আছে। অন্য নাম দিন।"
         );
         setLoading(false);
         return;
@@ -439,7 +441,7 @@ export default function SuppliersPage() {
           )
         );
         setEditingSupplier(null);
-        showNotification("success", "Supplier updated successfully!");
+        showNotification("success", "সাপ্লায়ারের তথ্য আপডেট হয়ে গেছে!");
       } else {
         // Create new supplier
         const newSupplier = await ApiService.createSupplier({
@@ -458,7 +460,7 @@ export default function SuppliersPage() {
         };
 
         setSuppliers((prev) => [...prev, supplierWithDefaults]);
-        showNotification("success", "Supplier created successfully!");
+        showNotification("success", "নতুন সাপ্লায়ার যোগ হয়ে গেছে!");
       }
 
       setSupplierForm({
@@ -471,10 +473,10 @@ export default function SuppliersPage() {
       setShowCreateForm(false);
     } catch (error) {
       console.error("Error saving supplier:", error);
-      const action = editingSupplier ? "update" : "create";
+      const action = editingSupplier ? "আপডেট" : "যোগ";
       showNotification(
         "error",
-        `Failed to ${action} supplier. Please try again.`
+        `সাপ্লায়ার ${action} করা যায়নি। আবার চেষ্টা করুন।`
       );
     } finally {
       setLoading(false);
@@ -529,7 +531,7 @@ export default function SuppliersPage() {
 
       setShowCreatePurchaseModal(false);
       setSelectedSupplierForAction(null);
-      showNotification("success", "Purchase order created successfully!");
+      showNotification("success", "কেনাকাটা যোগ হয়ে গেছে!");
 
       // Refresh purchases list to make sure we have the latest data
       try {
@@ -540,7 +542,7 @@ export default function SuppliersPage() {
       }
     } catch (error) {
       console.error("Error creating purchase:", error);
-      showNotification("error", "Failed to create purchase. Please try again.");
+      showNotification("error", "কেনাকাটা যোগ করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setLoading(false);
     }
@@ -584,7 +586,7 @@ export default function SuppliersPage() {
 
       setShowCreatePaymentModal(false);
       setSelectedSupplierForAction(null);
-      showNotification("success", "Payment record created successfully!");
+      showNotification("success", "পেমেন্ট যোগ হয়ে গেছে!");
 
       // Refresh payments list to make sure we have the latest data
       try {
@@ -595,7 +597,7 @@ export default function SuppliersPage() {
       }
     } catch (error) {
       console.error("Error creating payment:", error);
-      showNotification("error", "Failed to create payment. Please try again.");
+      showNotification("error", "পেমেন্ট যোগ করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setLoading(false);
     }
@@ -657,14 +659,14 @@ export default function SuppliersPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-green-500/20 text-green-300 border-green-400/30";
+        return "badge badge-success";
       case "pending":
-        return "bg-yellow-500/20 text-yellow-300 border-yellow-400/30";
+        return "badge badge-warn";
       case "cancelled":
       case "failed":
-        return "bg-red-500/20 text-red-300 border-red-400/30";
+        return "badge badge-danger";
       default:
-        return "bg-slate-500/20 text-slate-300 border-slate-400/30";
+        return "badge badge-muted";
     }
   };
 
@@ -726,17 +728,20 @@ export default function SuppliersPage() {
     setEditingSupplier(supplier);
     showNotification(
       "success",
-      `Edit mode for ${supplier.name} - Update the form and save changes`
+      `${supplier.name} এডিট করছেন — তথ্য ঠিক করে সেভ করুন`
     );
   };
 
   const handleDeleteSupplier = async (supplier: Supplier) => {
     // Confirmation dialog before deletion
-    if (
-      window.confirm(
-        `Are you sure you want to delete ${supplier.name}? This action cannot be undone.`
-      )
-    ) {
+    const confirmed = await confirm({
+      title: "সাপ্লায়ার ডিলিট করবেন?",
+      message: `${supplier.name} কে ডিলিট করবেন? এটা আর ফেরানো যাবে না।`,
+      confirmLabel: "ডিলিট করুন",
+      danger: true,
+    });
+
+    if (confirmed) {
       try {
         setLoading(true);
         await ApiService.deleteSupplier(supplier.id);
@@ -748,13 +753,13 @@ export default function SuppliersPage() {
 
         showNotification(
           "success",
-          `${supplier.name} has been deleted successfully`
+          `${supplier.name} ডিলিট হয়ে গেছে`
         );
       } catch (error) {
         console.error("Error deleting supplier:", error);
         showNotification(
           "error",
-          "Failed to delete supplier. Please try again."
+          "সাপ্লায়ার ডিলিট করা যায়নি। আবার চেষ্টা করুন।"
         );
       } finally {
         setLoading(false);
@@ -785,7 +790,7 @@ export default function SuppliersPage() {
         )
       );
 
-      showNotification("success", "Purchase status updated successfully");
+      showNotification("success", "কেনাকাটার অবস্থা আপডেট হয়ে গেছে");
     } catch (error) {
       console.error("Error updating purchase:", error);
       console.error("Error details:", {
@@ -795,7 +800,7 @@ export default function SuppliersPage() {
       });
       showNotification(
         "error",
-        "Failed to update purchase status. Please try again."
+        "কেনাকাটার অবস্থা আপডেট করা যায়নি। আবার চেষ্টা করুন।"
       );
       throw error; // Re-throw to let the component handle the error
     }
@@ -818,12 +823,12 @@ export default function SuppliersPage() {
         )
       );
 
-      showNotification("success", "Payment status updated successfully");
+      showNotification("success", "পেমেন্টের অবস্থা আপডেট হয়ে গেছে");
     } catch (error) {
       console.error("Error updating payment:", error);
       showNotification(
         "error",
-        "Failed to update payment status. Please try again."
+        "পেমেন্টের অবস্থা আপডেট করা যায়নি। আবার চেষ্টা করুন।"
       );
       throw error; // Re-throw to let the component handle the error
     }
@@ -831,12 +836,12 @@ export default function SuppliersPage() {
 
   const handleDeletePurchase = async (purchaseId: number) => {
     const purchase = purchases.find((p) => p.id === purchaseId);
-    const supplierName = purchase?.supplier.name || "Unknown Supplier";
+    const supplierName = purchase?.supplier.name || "অজানা সাপ্লায়ার";
 
     setConfirmDialog({
       isOpen: true,
-      title: "Delete Purchase",
-      message: `Are you sure you want to delete this purchase from ${supplierName}? This action cannot be undone.`,
+      title: "কেনাকাটা ডিলিট করবেন?",
+      message: `${supplierName} এর কাছ থেকে করা এই কেনাকাটাটা ডিলিট করবেন? এটা আর ফেরানো যাবে না।`,
       type: "delete",
       onConfirm: async () => {
         try {
@@ -847,12 +852,12 @@ export default function SuppliersPage() {
             prev.filter((purchase) => purchase.id !== purchaseId)
           );
 
-          showNotification("success", "Purchase deleted successfully");
+          showNotification("success", "কেনাকাটা ডিলিট হয়ে গেছে");
         } catch (error) {
           console.error("Error deleting purchase:", error);
           showNotification(
             "error",
-            "Failed to delete purchase. Please try again."
+            "কেনাকাটা ডিলিট করা যায়নি। আবার চেষ্টা করুন।"
           );
         } finally {
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
@@ -866,12 +871,12 @@ export default function SuppliersPage() {
 
   const handleDeletePayment = async (paymentId: number) => {
     const payment = payments.find((p) => p.id === paymentId);
-    const supplierName = payment?.supplier.name || "Unknown Supplier";
+    const supplierName = payment?.supplier.name || "অজানা সাপ্লায়ার";
 
     setConfirmDialog({
       isOpen: true,
-      title: "Delete Payment",
-      message: `Are you sure you want to delete this payment to ${supplierName}? This action cannot be undone.`,
+      title: "পেমেন্ট ডিলিট করবেন?",
+      message: `${supplierName} কে দেওয়া এই পেমেন্টটা ডিলিট করবেন? এটা আর ফেরানো যাবে না।`,
       type: "delete",
       onConfirm: async () => {
         try {
@@ -882,12 +887,12 @@ export default function SuppliersPage() {
             prev.filter((payment) => payment.id !== paymentId)
           );
 
-          showNotification("success", "Payment deleted successfully");
+          showNotification("success", "পেমেন্ট ডিলিট হয়ে গেছে");
         } catch (error) {
           console.error("Error deleting payment:", error);
           showNotification(
             "error",
-            "Failed to delete payment. Please try again."
+            "পেমেন্ট ডিলিট করা যায়নি। আবার চেষ্টা করুন।"
           );
         } finally {
           setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
@@ -900,276 +905,200 @@ export default function SuppliersPage() {
   };
 
   const tabs = [
-    { id: "suppliers", label: "Suppliers" },
-    { id: "purchases", label: "Purchase History" },
-    { id: "payments", label: "Payments" },
-    { id: "products", label: "Products" },
+    { id: "suppliers", label: "সাপ্লায়ার" },
+    { id: "purchases", label: "কেনাকাটার হিস্ট্রি" },
+    { id: "payments", label: "পেমেন্ট" },
+    { id: "products", label: "প্রোডাক্ট" },
   ];
 
   return (
     <ClientOnly>
-      <div className="w-full max-w-full overflow-x-hidden px-2 py-4 sm:p-6 space-y-4 sm:space-y-6">
-        <div className="w-full">
+      <div className="page">
+        <header className="page-head">
+          <div>
+            <h1 className="page-title">সাপ্লায়ার</h1>
+            <p className="page-sub">
+              সাপ্লায়ার, কেনাকাটা আর পেমেন্টের হিসাব এক জায়গায়
+            </p>
+          </div>
+        </header>
+
+        <div className="plane">
           {/* Notification */}
           {notification.isVisible && (
-            <div
-              className={`p-4 rounded-lg border ${
-                notification.type === "success"
-                  ? "bg-green-500/10 border-green-400/30 text-green-300"
-                  : "bg-red-500/10 border-red-400/30 text-red-300"
-              }`}
-            >
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  {notification.type === "success" ? (
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  )}
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium">{notification.message}</p>
-                </div>
-              </div>
+            <div className="plane-section flex flex-wrap items-center gap-2">
+              <span
+                className={`badge ${
+                  notification.type === "success"
+                    ? "badge-success"
+                    : "badge-danger"
+                }`}
+              >
+                {notification.type === "success" ? "হয়ে গেছে" : "সমস্যা"}
+              </span>
+              <p className="text-sm text-slate-600">{notification.message}</p>
             </div>
           )}
 
           {/* Tabs */}
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-hidden">
-            <div className="border-b border-slate-700/50 overflow-x-auto scrollbar-hide max-w-full">
-              <nav className="flex flex-nowrap space-x-4 sm:space-x-8 px-3 sm:px-6 pt-4 sm:pt-6 min-w-max">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`py-2 px-2 border-b-2 font-medium text-sm transition-all duration-200 cursor-pointer whitespace-nowrap shrink-0 ${
-                      activeTab === tab.id
-                        ? "border-cyan-400 text-cyan-400"
-                        : "border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            <div className="p-2 sm:p-6">
-              {/* Suppliers Tab */}
-              {activeTab === "suppliers" && (
-                <SuppliersTab
-                  suppliers={suppliers}
-                  showCreateForm={showCreateForm}
-                  setShowCreateForm={setShowCreateForm}
-                  supplierForm={supplierForm}
-                  handleInputChange={handleInputChange}
-                  handleCreateSupplier={handleCreateSupplier}
-                  handleCancelSupplierForm={handleCancelSupplierForm}
-                  isEditing={!!editingSupplier}
-                  loading={loading}
-                  formatCurrency={formatCurrency}
-                  onCreatePurchase={handleCreatePurchaseFromSupplier}
-                  onCreatePayment={handleCreatePaymentFromSupplier}
-                  onEditSupplier={handleEditSupplier}
-                  onDeleteSupplier={handleDeleteSupplier}
-                  // Pagination props
-                  hasNextPage={suppliersPagination.hasNextPage}
-                  isLoadingMore={suppliersPagination.isLoadingMore}
-                  totalCount={suppliersPagination.count}
-                  onLoadMore={loadMoreSuppliers}
-                />
-              )}
-
-              {/* Purchase History Tab */}
-              {activeTab === "purchases" && (
-                <div>
-                  {loading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
-                      <span className="ml-3 text-slate-400">
-                        Loading purchases...
-                      </span>
-                    </div>
-                  ) : (
-                    <PurchaseHistoryTab
-                      purchases={purchases}
-                      selectedSupplier={selectedSupplier}
-                      setSelectedSupplier={setSelectedSupplier}
-                      getFilteredPurchases={getFilteredPurchases}
-                      getUniqueSuppliers={getUniqueSuppliers}
-                      formatCurrency={formatCurrency}
-                      formatDate={formatDate}
-                      getStatusColor={getStatusColor}
-                      onUpdatePurchase={handleUpdatePurchase}
-                      onDeletePurchase={handleDeletePurchase}
-                    />
-                  )}
-
-                  {!loading && purchases.length === 0 && (
-                    <div className="text-center py-8">
-                      <p className="text-slate-400">
-                        No purchases found. Create your first purchase order!
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Payments Tab */}
-              {activeTab === "payments" && (
-                <PaymentsTab
-                  payments={payments}
-                  selectedPaymentSupplier={selectedPaymentSupplier}
-                  setSelectedPaymentSupplier={setSelectedPaymentSupplier}
-                  getFilteredPayments={getFilteredPayments}
-                  getUniqueSuppliersFromPayments={
-                    getUniqueSuppliersFromPayments
-                  }
-                  formatCurrency={formatCurrency}
-                  formatDate={formatDate}
-                  getStatusColor={getStatusColor}
-                  getPaymentMethodIcon={getPaymentMethodIcon}
-                  onUpdatePayment={handleUpdatePayment}
-                  onDeletePayment={handleDeletePayment}
-                />
-              )}
-
-              {/* Products Tab */}
-              {activeTab === "products" && (
-                <ProductsTab
-                  formatCurrency={formatCurrency}
-                  formatDate={formatDate}
-                />
-              )}
+          <div className="plane-section">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`btn btn-sm ${
+                    activeTab === tab.id ? "btn-primary" : "btn-ghost"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Create Purchase Modal */}
-          <CreatePurchaseModal
-            isOpen={showCreatePurchaseModal}
-            onClose={() => {
-              setShowCreatePurchaseModal(false);
-              setSelectedSupplierForAction(null);
-            }}
-            supplier={selectedSupplierForAction}
-            purchaseForm={purchaseForm}
-            handleInputChange={handlePurchaseInputChange}
-            handleFileChange={handlePurchaseFileChange}
-            handleSubmit={handleCreatePurchase}
-            loading={loading}
-          />
+          {/* Suppliers Tab */}
+          {activeTab === "suppliers" && (
+            <SuppliersTab
+              suppliers={suppliers}
+              showCreateForm={showCreateForm}
+              setShowCreateForm={setShowCreateForm}
+              supplierForm={supplierForm}
+              handleInputChange={handleInputChange}
+              handleCreateSupplier={handleCreateSupplier}
+              handleCancelSupplierForm={handleCancelSupplierForm}
+              isEditing={!!editingSupplier}
+              loading={loading}
+              formatCurrency={formatCurrency}
+              onCreatePurchase={handleCreatePurchaseFromSupplier}
+              onCreatePayment={handleCreatePaymentFromSupplier}
+              onEditSupplier={handleEditSupplier}
+              onDeleteSupplier={handleDeleteSupplier}
+              // Pagination props
+              hasNextPage={suppliersPagination.hasNextPage}
+              isLoadingMore={suppliersPagination.isLoadingMore}
+              totalCount={suppliersPagination.count}
+              onLoadMore={loadMoreSuppliers}
+            />
+          )}
 
-          {/* Create Payment Modal */}
-          <CreatePaymentModal
-            isOpen={showCreatePaymentModal}
-            onClose={() => {
-              setShowCreatePaymentModal(false);
-              setSelectedSupplierForAction(null);
-            }}
-            supplier={selectedSupplierForAction}
-            paymentForm={paymentForm}
-            handleInputChange={handlePaymentInputChange}
-            handleFileChange={handlePaymentFileChange}
-            handleSubmit={handleCreatePayment}
-            loading={loading}
-          />
+          {/* Purchase History Tab */}
+          {activeTab === "purchases" && (
+            <>
+              {loading ? (
+                <div className="empty">কেনাকাটার হিস্ট্রি লোড হচ্ছে…</div>
+              ) : (
+                <PurchaseHistoryTab
+                  purchases={purchases}
+                  selectedSupplier={selectedSupplier}
+                  setSelectedSupplier={setSelectedSupplier}
+                  getFilteredPurchases={getFilteredPurchases}
+                  getUniqueSuppliers={getUniqueSuppliers}
+                  formatCurrency={formatCurrency}
+                  formatDate={formatDate}
+                  getStatusColor={getStatusColor}
+                  onUpdatePurchase={handleUpdatePurchase}
+                  onDeletePurchase={handleDeletePurchase}
+                />
+              )}
 
-          {/* Confirmation Modal */}
-          {confirmDialog.isOpen && (
-            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50">
-              <div className="bg-slate-800/95 backdrop-blur border border-slate-700/50 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    {confirmDialog.type === "delete" ? (
-                      <div className="w-12 h-12 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-6 h-6 text-red-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 bg-yellow-500/20 border border-yellow-500/30 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-6 h-6 text-yellow-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-slate-100 mb-3">
-                      {confirmDialog.title}
-                    </h3>
-                    <p className="text-slate-300 text-sm leading-relaxed">
-                      {confirmDialog.message}
-                    </p>
-                  </div>
+              {!loading && purchases.length === 0 && (
+                <div className="empty">
+                  এখনো কোনো কেনাকাটা নেই। প্রথম কেনাকাটাটা যোগ করুন!
                 </div>
+              )}
+            </>
+          )}
 
-                <div className="flex justify-end gap-3 mt-8">
-                  <button
-                    onClick={confirmDialog.onCancel}
-                    className="px-6 py-2.5 text-slate-300 hover:text-slate-100 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 hover:border-slate-500 rounded-lg transition-all duration-200 font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDialog.onConfirm}
-                    className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-lg ${
-                      confirmDialog.type === "delete"
-                        ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        : "bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
-                    }`}
-                  >
-                    {confirmDialog.type === "delete" ? "Delete" : "Confirm"}
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* Payments Tab */}
+          {activeTab === "payments" && (
+            <PaymentsTab
+              payments={payments}
+              selectedPaymentSupplier={selectedPaymentSupplier}
+              setSelectedPaymentSupplier={setSelectedPaymentSupplier}
+              getFilteredPayments={getFilteredPayments}
+              getUniqueSuppliersFromPayments={getUniqueSuppliersFromPayments}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              getStatusColor={getStatusColor}
+              getPaymentMethodIcon={getPaymentMethodIcon}
+              onUpdatePayment={handleUpdatePayment}
+              onDeletePayment={handleDeletePayment}
+            />
+          )}
+
+          {/* Products Tab */}
+          {activeTab === "products" && (
+            <ProductsTab
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+            />
           )}
         </div>
+
+        {/* Create Purchase Modal */}
+        <CreatePurchaseModal
+          isOpen={showCreatePurchaseModal}
+          onClose={() => {
+            setShowCreatePurchaseModal(false);
+            setSelectedSupplierForAction(null);
+          }}
+          supplier={selectedSupplierForAction}
+          purchaseForm={purchaseForm}
+          handleInputChange={handlePurchaseInputChange}
+          handleFileChange={handlePurchaseFileChange}
+          handleSubmit={handleCreatePurchase}
+          loading={loading}
+        />
+
+        {/* Create Payment Modal */}
+        <CreatePaymentModal
+          isOpen={showCreatePaymentModal}
+          onClose={() => {
+            setShowCreatePaymentModal(false);
+            setSelectedSupplierForAction(null);
+          }}
+          supplier={selectedSupplierForAction}
+          paymentForm={paymentForm}
+          handleInputChange={handlePaymentInputChange}
+          handleFileChange={handlePaymentFileChange}
+          handleSubmit={handleCreatePayment}
+          loading={loading}
+        />
+
+        {/* Confirmation Modal */}
+        {confirmDialog.isOpen && (
+          <div className="modal-backdrop">
+            <div className="modal" style={{ maxWidth: "28rem" }}>
+              <div className="modal-head">
+                <h2 className="modal-title">{confirmDialog.title}</h2>
+              </div>
+              <div className="modal-body">
+                <p className="text-sm text-slate-600">
+                  {confirmDialog.message}
+                </p>
+              </div>
+              <div className="modal-foot">
+                <button
+                  onClick={confirmDialog.onCancel}
+                  className="btn btn-ghost"
+                >
+                  বাতিল
+                </button>
+                <button
+                  onClick={confirmDialog.onConfirm}
+                  className={`btn ${
+                    confirmDialog.type === "delete"
+                      ? "btn-danger"
+                      : "btn-primary"
+                  }`}
+                >
+                  {confirmDialog.type === "delete" ? "ডিলিট করুন" : "ঠিক আছে"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ClientOnly>
   );

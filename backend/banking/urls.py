@@ -6,8 +6,17 @@ from . import views
 router = DefaultRouter()
 router.register(r"accounts", views.BankAccountViewSet, basename="bankaccount")
 router.register(r"transactions", views.TransactionViewSet, basename="transaction")
+router.register(r"loans", views.LoanViewSet, basename="loan")
+router.register(
+    r"recurring-costs", views.RecurringCostViewSet, basename="recurringcost"
+)
 
 urlpatterns = [
+    path(
+        "banking/expense-categories/",
+        views.expense_categories,
+        name="expense-categories",
+    ),
     path(
         "banking/activate-plan/",
         views.activate_banking_plan,

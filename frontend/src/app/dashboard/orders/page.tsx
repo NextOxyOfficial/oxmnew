@@ -4,10 +4,14 @@ import OrdersControls from "@/components/orders/OrdersControls";
 import OrdersHeader from "@/components/orders/OrdersHeader";
 import OrdersList from "@/components/orders/OrdersList";
 import OrdersStats from "@/components/orders/OrdersStats";
+import SalesRangeFilter from "@/components/orders/SalesRangeFilter";
 import SmsComposer from "@/components/sms/SmsComposer";
 import Pagination from "@/components/ui/Pagination";
+import { useToast } from "@/components/ui/Feedback";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
+import { num } from "@/lib/money";
+import { printSheet } from "@/lib/printSheet";
 import { calculateSmsSegments } from "@/lib/utils/sms";
 import { Order, OrderItem } from "@/types/order";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -38,7 +42,8 @@ export default function OrdersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const formatCurrency = useCurrencyFormatter();
-  
+  const toast = useToast();
+
   // Tab state
   const [activeTab, setActiveTab] = useState<"orders" | "products">("orders");
   
@@ -51,6 +56,9 @@ export default function OrdersPage() {
   const [searchInput, setSearchInput] = useState(""); // For immediate UI updates
   const [searchTerm, setSearchTerm] = useState(""); // For debounced API calls
   const [filterCustomer, setFilterCustomer] = useState("all");
+  // Custom range for the sales report; empty means "everything".
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [isNavigating, setIsNavigating] = useState(false);
   const [showInvoicePopup, setShowInvoicePopup] = useState(false);
@@ -371,7 +379,7 @@ export default function OrdersPage() {
   useEffect(() => {
     const updated = searchParams.get("updated");
     if (updated === "true") {
-      setSuccessMessage("Order updated successfully!");
+      setSuccessMessage("অর্ডার আপডেট হয়েছে!");
       // Clear the URL parameter
       const url = new URL(window.location.href);
       url.searchParams.delete("updated");
@@ -403,10 +411,17 @@ export default function OrdersPage() {
         search?: string;
         customer?: string;
         ordering?: string;
+        start_date?: string;
+        end_date?: string;
       } = {
         page: currentPage,
         page_size: pageSize,
       };
+
+      // The API already understands start_date/end_date; the UI just never
+      // offered a way to set them.
+      if (dateFrom) params.start_date = dateFrom;
+      if (dateTo) params.end_date = dateTo;
 
       // Add search if exists
       if (searchTerm.trim()) {
@@ -478,13 +493,13 @@ export default function OrdersPage() {
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
-      setError("Failed to load orders");
+      setError("অর্ডার লোড করা যায়নি");
       setOrders([]); // Clear orders on error
     } finally {
       setIsLoading(false);
       setIsSearching(false);
     }
-  }, [currentPage, pageSize, searchTerm, filterCustomer, sortBy]);
+  }, [currentPage, pageSize, searchTerm, filterCustomer, sortBy, dateFrom, dateTo]);
 
   // Fetch product sales summary (server-side pagination)
   const fetchProductSales = useCallback(async () => {
@@ -654,6 +669,72 @@ export default function OrdersPage() {
     updateOrdersUrlParams({ page: 1, pageSize: newPageSize });
   }, []);
 
+  /**
+   * Sales report for whatever range is on screen.
+   *
+   * Fetches the whole filtered set rather than printing the current page —
+   * a report of "page 3 of the sales" would be useless.
+   */
+  const handleDownloadSalesReport = useCallback(async () => {
+    try {
+      const response = await ApiService.getOrdersList({
+        page_size: 500,
+        search: searchTerm.trim().replace(/^#/, "") || undefined,
+        customer: filterCustomer !== "all" ? filterCustomer : undefined,
+        start_date: dateFrom || undefined,
+        end_date: dateTo || undefined,
+        ordering: "-created_at",
+      });
+      const rows: Order[] = Array.isArray(response)
+        ? response
+        : response?.results ?? [];
+
+      if (rows.length === 0) {
+        toast.error("এই সময়ে কোনো বিক্রি নেই");
+        return;
+      }
+
+      const total = rows.reduce((sum, o) => sum + num(o.total_amount), 0);
+      const cost = rows.reduce((sum, o) => sum + num(o.total_buy_price), 0);
+      const paid = rows.reduce((sum, o) => sum + num(o.paid_amount), 0);
+      const rangeLabel =
+        dateFrom || dateTo
+          ? `${dateFrom || "শুরু"} — ${dateTo || "আজ"}`
+          : "সব সময়";
+
+      const opened = printSheet({
+        title: "বিক্রির রিপোর্ট",
+        subtitle: rangeLabel,
+        cards: [
+          { label: "অর্ডার", value: String(rows.length) },
+          { label: "মোট বিক্রি", value: formatCurrency(total) },
+          { label: "কেনা দাম", value: formatCurrency(cost) },
+          { label: "নিট লাভ", value: formatCurrency(total - cost) },
+        ],
+        head: ["অর্ডার", "তারিখ", "কাস্টমার", "কেনা", "মোট", "জমা", "লাভ"],
+        numericColumns: [3, 4, 5, 6],
+        rows: rows.map((o) => [
+          `#${o.id}`,
+          new Date(o.sale_date).toLocaleDateString("bn-BD"),
+          o.customer_name || "—",
+          formatCurrency(num(o.total_buy_price)),
+          formatCurrency(num(o.total_amount)),
+          formatCurrency(num(o.paid_amount)),
+          formatCurrency(num(o.total_amount) - num(o.total_buy_price)),
+        ]),
+        footNote: `মোট বিক্রি ${formatCurrency(total)} · জমা ${formatCurrency(
+          paid
+        )} · নিট লাভ ${formatCurrency(total - cost)}`,
+      });
+
+      if (!opened) {
+        toast.error("প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "রিপোর্ট বানানো গেল না");
+    }
+  }, [searchTerm, filterCustomer, dateFrom, dateTo, formatCurrency, toast]);
+
   const handleAddOrder = useCallback(() => {
     setIsNavigating(true);
     setTimeout(() => {
@@ -661,9 +742,12 @@ export default function OrdersPage() {
     }, 300);
   }, [router]);
 
+  // Clicking a row opens that order's invoice — the app has no separate
+  // order-details route, and the invoice is the full view of an order.
+  // (Previously this only logged to the console, so rows looked clickable
+  // but did nothing.)
   const handleOrderClick = useCallback((order: Order) => {
-    // TODO: Navigate to order details page
-    console.log("Order clicked:", order);
+    window.open(`/invoice/${order.id}`, "_blank");
   }, []);
 
   const handleCustomerClick = useCallback(
@@ -671,13 +755,13 @@ export default function OrdersPage() {
       event.stopPropagation(); // Prevent order click event
 
       if (!order.customer_name && !order.customer_phone) {
-        alert("No customer information available");
+        toast.error("কাস্টমারের কোনো তথ্য নেই");
         return;
       }
 
       try {
         // Look up customer by name and phone to get customer ID
-        const customers = await ApiService.getCustomers();
+        const customers = await ApiService.getCustomers({ page_size: 500 });
         const customer = customers.find((c: any) => {
           const nameMatch =
             c.name?.toLowerCase().trim() ===
@@ -693,14 +777,14 @@ export default function OrdersPage() {
             router.push(`/dashboard/customers/${customer.id}`);
           }, 300);
         } else {
-          alert("Customer not found in the system");
+          toast.error("সিস্টেমে এই কাস্টমারকে পাওয়া যায়নি");
         }
       } catch (error) {
         console.error("Error finding customer:", error);
-        alert("Failed to lookup customer information");
+        toast.error("কাস্টমারের তথ্য বের করা যায়নি");
       }
     },
-    [router]
+    [router, toast]
   );
 
   const handleEditInvoice = useCallback(
@@ -744,12 +828,18 @@ export default function OrdersPage() {
       event.stopPropagation(); // Prevent order click event
 
       if (!order.customer_phone) {
-        alert("No phone number available for this customer");
+        toast.error("এই কাস্টমারের ফোন নম্বর দেওয়া নেই", {
+          label: "নম্বর যোগ করুন",
+          href: "/dashboard/customers",
+        });
         return;
       }
 
       if (!userProfile?.profile?.company) {
-        alert("Store name not found in profile");
+        toast.error("প্রোফাইলে স্টোরের নাম দেওয়া নেই", {
+          label: "নাম যোগ করুন",
+          href: "/dashboard/settings?tab=store",
+        });
         return;
       }
 
@@ -766,7 +856,7 @@ export default function OrdersPage() {
         if (order.customer_name && order.customer_phone) {
           try {
             // Try to get customer due amount from backend
-            const customers = await ApiService.getCustomers();
+            const customers = await ApiService.getCustomers({ page_size: 500 });
             console.log("All customers:", customers);
 
             const customer = customers.find((c: any) => {
@@ -881,10 +971,10 @@ export default function OrdersPage() {
         setShowSmsComposer(true);
       } catch (error) {
         console.error("Error preparing SMS:", error);
-        alert("Failed to prepare SMS. Please try again.");
+        toast.error("এসএমএস তৈরি করা যায়নি। আবার চেষ্টা করুন।");
       }
     },
-    [formatCurrency, userProfile]
+    [formatCurrency, userProfile, toast]
   );
 
   // Handle actual SMS sending from composer
@@ -917,10 +1007,8 @@ export default function OrdersPage() {
         // Use actual credits used from backend response, fallback to frontend calculation
         const creditsUsed =
           response.credits_used || calculateSmsSegments(message).segments;
-        alert(
-          `SMS sent successfully! Used ${creditsUsed} SMS credit${
-            creditsUsed > 1 ? "s" : ""
-          }.`
+        toast.success(
+          `এসএমএস পাঠানো হয়েছে! ${creditsUsed}টি এসএমএস ক্রেডিট খরচ হয়েছে।`
         );
 
         // Close composer
@@ -931,7 +1019,7 @@ export default function OrdersPage() {
         console.error("Error sending SMS:", error);
 
         // Show more detailed error message
-        let errorMessage = "Failed to send SMS. Please try again.";
+        let errorMessage = "এসএমএস পাঠানো যায়নি। আবার চেষ্টা করুন।";
         if (error instanceof Error) {
           errorMessage = error.message;
         } else if (
@@ -942,13 +1030,13 @@ export default function OrdersPage() {
           errorMessage = (error as any).error;
         }
 
-        alert(`SMS Error: ${errorMessage}`);
+        toast.error(`এসএমএস সমস্যা: ${errorMessage}`);
       } finally {
         // Clear loading state
         setIsSendingSms(null);
       }
     },
-    [smsOrder]
+    [smsOrder, toast]
   );
 
   // Handle SMS composer cancel
@@ -1071,35 +1159,35 @@ export default function OrdersPage() {
         salesData = response;
       } else {
         console.error("Unexpected response format:", response);
-        throw new Error("Invalid response format from API");
+        throw new Error("সার্ভার থেকে ঠিক তথ্য আসেনি");
       }
 
       console.log("Processing", salesData.length, "products for export");
 
       if (salesData.length === 0) {
-        alert("No data found for the selected date range");
+        toast.info("এই তারিখের মধ্যে কোনো তথ্য পাওয়া যায়নি");
         return;
       }
 
       // Create Excel data directly from the API response
       // Convert string values to numbers before using toFixed
       const excelData = salesData.map((product: ProductSale) => ({
-        'Product Name': product.product_name || 'Unknown Product',
-        'Variant': product.variant_display || '',
-        'Total Sold': Number(product.total_quantity) || 0,
-        'Sell Price': Number(product.avg_unit_price || 0).toFixed(2),
-        'Buy Price': Number(product.avg_buy_price || 0).toFixed(2),
-        'Total Revenue': Number(product.total_revenue || 0).toFixed(2),
-        'Total Profit': Number(product.total_profit || 0).toFixed(2),
-        'Profit Margin (%)': Number(product.profit_margin || 0).toFixed(2),
-        'Available Stock': product.available_stock ?? product.stock_remaining ?? 'N/A',
-        'Last Sold': product.last_sold ? new Date(product.last_sold).toLocaleDateString() : 'N/A',
+        'প্রোডাক্টের নাম': product.product_name || 'নাম নেই',
+        'ভ্যারিয়েন্ট': product.variant_display || '',
+        'মোট বিক্রি': Number(product.total_quantity) || 0,
+        'বিক্রির দাম': Number(product.avg_unit_price || 0).toFixed(2),
+        'কেনা দাম': Number(product.avg_buy_price || 0).toFixed(2),
+        'মোট বিক্রির টাকা': Number(product.total_revenue || 0).toFixed(2),
+        'মোট লাভ': Number(product.total_profit || 0).toFixed(2),
+        'লাভের হার (%)': Number(product.profit_margin || 0).toFixed(2),
+        'স্টকে আছে': product.available_stock ?? product.stock_remaining ?? '—',
+        'শেষ বিক্রি': product.last_sold ? new Date(product.last_sold).toLocaleDateString() : '—',
       }));
 
       // Convert to CSV and download
       const csvContent = convertToCSV(excelData);
       if (!csvContent) {
-        throw new Error("Failed to generate CSV content");
+        throw new Error("সিএসভি ফাইল বানানো যায়নি");
       }
       
       downloadCSV(csvContent, `product-sales-${exportStartDate || 'all'}-to-${exportEndDate || 'now'}.csv`);
@@ -1108,11 +1196,13 @@ export default function OrdersPage() {
       setShowExportDialog(false);
     } catch (error) {
       console.error("Error exporting to Excel:", error);
-      alert(`Export failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `এক্সপোর্ট করা যায়নি: ${error instanceof Error ? error.message : "কিছু একটা সমস্যা হয়েছে"}`
+      );
     } finally {
       setIsExporting(false);
     }
-  }, [exportStartDate, exportEndDate]);
+  }, [exportStartDate, exportEndDate, toast]);
 
   // Handle preset date selection
   const handlePresetChange = (preset: string) => {
@@ -1217,7 +1307,7 @@ export default function OrdersPage() {
         URL.revokeObjectURL(url);
         console.log("Download completed and cleanup done");
       } else {
-        throw new Error("Browser does not support file downloads");
+        throw new Error("এই ব্রাউজারে ফাইল ডাউনলোড করা যায় না");
       }
     } catch (error) {
       console.error("Error in downloadCSV:", error);
@@ -1266,22 +1356,20 @@ export default function OrdersPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="px-1 sm:p-6 space-y-6">
-        <div className="max-w-7xl">
-          {/* Loading skeleton */}
-          <div className="animate-pulse">
-            <div className="h-8 bg-slate-700 rounded w-48 mb-6"></div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4"
-                >
-                  <div className="h-4 bg-slate-700 rounded mb-2"></div>
-                  <div className="h-8 bg-slate-700 rounded mb-2"></div>
-                  <div className="h-3 bg-slate-700 rounded"></div>
-                </div>
-              ))}
+      <div className="page">
+        <header className="page-head">
+          <div>
+            <h1 className="page-title">বিক্রি ও অর্ডার</h1>
+            <p className="page-sub">কাস্টমারের সব বিক্রি আর লেনদেনের হিসাব</p>
+          </div>
+        </header>
+        <div className="plane">
+          <div className="plane-section">
+            <div className="animate-pulse space-y-3">
+              <div className="h-5 w-40 rounded bg-slate-100"></div>
+              <div className="h-4 w-full rounded bg-slate-100"></div>
+              <div className="h-4 w-5/6 rounded bg-slate-100"></div>
+              <div className="h-4 w-2/3 rounded bg-slate-100"></div>
             </div>
           </div>
         </div>
@@ -1292,18 +1380,24 @@ export default function OrdersPage() {
   // Error state
   if (error) {
     return (
-      <div className="px-1 sm:p-6 space-y-6">
-        <div className="max-w-7xl">
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
-            <h3 className="text-lg font-semibold text-red-400 mb-2">
-              Failed to Load Orders
-            </h3>
-            <p className="text-red-400/70 mb-4">{error}</p>
+      <div className="page">
+        <header className="page-head">
+          <div>
+            <h1 className="page-title">বিক্রি ও অর্ডার</h1>
+            <p className="page-sub">কাস্টমারের সব বিক্রি আর লেনদেনের হিসাব</p>
+          </div>
+        </header>
+        <div className="plane">
+          <div className="empty">
+            <p className="text-slate-900 font-medium mb-1">
+              অর্ডার লোড করা যায়নি
+            </p>
+            <p className="mb-4">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors cursor-pointer"
+              className="btn btn-primary"
             >
-              Try Again
+              আবার চেষ্টা করুন
             </button>
           </div>
         </div>
@@ -1312,40 +1406,695 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="px-1 sm:p-6 space-y-6">
-      <div className="max-w-7xl">
-        {/* Page Header */}
-        <OrdersHeader />
+    <div className="page">
+      {/* Page Header */}
+      <OrdersHeader />
 
-        {/* Stats Cards */}
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          <svg
+            className="w-4 h-4 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          <span className="font-medium">{successMessage}</span>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="ml-auto text-emerald-700 hover:text-emerald-900"
+            aria-label="বার্তাটি বন্ধ করুন"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      <div className="plane">
+        {/* KPIs */}
         <OrdersStats
           overallStats={overallStats}
           isStatsLoading={isStatsLoading}
         />
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 mb-2">
-            <div className="flex items-center gap-3">
-              <svg
-                className="w-5 h-5 text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span className="text-green-400 font-medium">
-                {successMessage}
-              </span>
+        {/* Tab Navigation — the range picker shares this row rather than
+            taking a band of its own: the window applies to both tabs, and the
+            row was otherwise empty from the tabs to the right edge. */}
+        <div className="plane-section">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => setSuccessMessage(null)}
-                className="ml-auto text-green-400 hover:text-green-300 cursor-pointer"
+                onClick={() => handleTabChange("orders")}
+                className={`btn btn-sm ${
+                  activeTab === "orders" ? "btn-primary" : "btn-ghost"
+                }`}
+              >
+                অর্ডার
+              </button>
+              <button
+                onClick={() => handleTabChange("products")}
+                className={`btn btn-sm ${
+                  activeTab === "products" ? "btn-primary" : "btn-ghost"
+                }`}
+              >
+                বিক্রি হওয়া প্রোডাক্ট
+              </button>
+            </div>
+
+            <SalesRangeFilter
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              onDateChange={(from, to) => {
+                setDateFrom(from);
+                setDateTo(to);
+                setCurrentPage(1);
+              }}
+              onDownloadReport={handleDownloadSalesReport}
+            />
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === "orders" ? (
+          <>
+            <OrdersControls
+              searchInput={searchInput}
+              searchTerm={searchTerm}
+              isSearching={isSearching}
+              filterCustomer={filterCustomer}
+              sortBy={sortBy}
+              isNavigating={isNavigating}
+              onSearchChange={handleSearchChange}
+              onFilterChange={handleFilterChange}
+              onSortChange={handleSortChange}
+              onAddOrder={handleAddOrder}
+            />
+
+            <OrdersList
+              orders={orders}
+              totalItems={totalItems}
+              isSearching={isSearching}
+              searchInput={searchInput}
+              isSendingSms={isSendingSms}
+              onOrderClick={handleOrderClick}
+              onCustomerClick={handleCustomerClick}
+              onViewInvoice={handleViewInvoice}
+              onPrintInvoice={handlePrintInvoice}
+              onEditInvoice={handleEditInvoice}
+              onDeleteOrder={handleDeleteOrder}
+              onSendSms={handleSendSms}
+              onAddOrder={handleAddOrder}
+            />
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="plane-section">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={pageSize}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Product Sales Controls */}
+            <div className="plane-section">
+              <div className="section-title">তারিখ ফিল্টার</div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleProductDateFilterChange("all_time")}
+                  className={`btn btn-sm ${
+                    productDateFilter === "all_time" ? "btn-primary" : "btn-ghost"
+                  }`}
+                >
+                  সব সময়
+                </button>
+                <button
+                  onClick={() => handleProductDateFilterChange("today")}
+                  className={`btn btn-sm ${
+                    productDateFilter === "today" ? "btn-primary" : "btn-ghost"
+                  }`}
+                >
+                  আজকে
+                </button>
+                <button
+                  onClick={() => handleProductDateFilterChange("yesterday")}
+                  className={`btn btn-sm ${
+                    productDateFilter === "yesterday"
+                      ? "btn-primary"
+                      : "btn-ghost"
+                  }`}
+                >
+                  গতকাল
+                </button>
+                <button
+                  onClick={() => handleProductDateFilterChange("last_7_days")}
+                  className={`btn btn-sm ${
+                    productDateFilter === "last_7_days"
+                      ? "btn-primary"
+                      : "btn-ghost"
+                  }`}
+                >
+                  শেষ ৭ দিন
+                </button>
+                <button
+                  onClick={() => handleProductDateFilterChange("last_30_days")}
+                  className={`btn btn-sm ${
+                    productDateFilter === "last_30_days"
+                      ? "btn-primary"
+                      : "btn-ghost"
+                  }`}
+                >
+                  শেষ ৩০ দিন
+                </button>
+                <button
+                  onClick={() => handleProductDateFilterChange("custom")}
+                  className={`btn btn-sm ${
+                    productDateFilter === "custom" ? "btn-primary" : "btn-ghost"
+                  }`}
+                >
+                  নিজে তারিখ দিন
+                </button>
+              </div>
+
+              {productDateFilter === "custom" && (
+                <div className="mt-3 flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <input
+                    type="date"
+                    value={productStartDate}
+                    onChange={(e) => setProductStartDate(e.target.value)}
+                    className="input sm:w-auto"
+                    aria-label="শুরুর তারিখ"
+                  />
+                  <span className="text-slate-500 text-sm">থেকে</span>
+                  <input
+                    type="date"
+                    value={productEndDate}
+                    onChange={(e) => setProductEndDate(e.target.value)}
+                    className="input sm:w-auto"
+                    aria-label="শেষের তারিখ"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="plane-section">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center flex-1">
+                  {/* Search Input */}
+                  <div className="relative w-full sm:max-w-xs">
+                    <svg
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 pointer-events-none"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="প্রোডাক্ট খুঁজুন…"
+                      value={productSearchInput}
+                      onChange={(e) => handleProductSearchChange(e.target.value)}
+                      className="input pl-9 pr-9"
+                    />
+                    {isSearchingProducts && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <svg
+                          className="animate-spin h-4 w-4 text-cyan-600"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sort Dropdown */}
+                  <select
+                    value={productSortBy}
+                    onChange={(e) => handleProductSortChange(e.target.value)}
+                    className="select sm:w-auto"
+                    aria-label="সাজানোর নিয়ম"
+                  >
+                    <option value="total_quantity">সবচেয়ে বেশি বিক্রি</option>
+                    <option value="total_profit">সবচেয়ে বেশি লাভ</option>
+                    <option value="profit_margin">সবচেয়ে বেশি লাভের হার</option>
+                    <option value="last_sold">সদ্য বিক্রি হওয়া</option>
+                    <option value="product_name">প্রোডাক্টের নাম</option>
+                  </select>
+
+                  {/* Export Button */}
+                  <button
+                    onClick={() => setShowExportDialog(true)}
+                    className="btn btn-ghost"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    এক্সেলে নামান
+                  </button>
+                </div>
+
+                <div className="text-xs text-slate-500">
+                  মোট {productTotalItems}টি প্রোডাক্ট • পাতা {productCurrentPage} /{" "}
+                  {productTotalPages}
+                </div>
+              </div>
+            </div>
+
+            {/* Product Sales List */}
+            {isLoadingProducts ? (
+              <div className="empty">লোড হচ্ছে…</div>
+            ) : productSales.length === 0 ? (
+              <div className="empty">
+                <p className="text-slate-900 font-medium mb-1">
+                  কোনো প্রোডাক্ট পাওয়া যায়নি
+                </p>
+                <p>
+                  {productSearchTerm
+                    ? "খোঁজার সাথে মেলে এমন প্রোডাক্ট নেই।"
+                    : "এখনো কোনো প্রোডাক্ট বিক্রি হয়নি।"}
+                </p>
+              </div>
+            ) : (
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>প্রোডাক্ট</th>
+                      <th className="cell-num">মোট বিক্রি</th>
+                      <th className="cell-num">দাম</th>
+                      <th className="cell-num">লাভ</th>
+                      <th className="cell-num">স্টকে আছে</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productSales.map((product) => (
+                      <tr key={product.id}>
+                        <td>
+                          <div
+                            className={`font-medium ${
+                              product.product_id
+                                ? "text-cyan-600 hover:text-cyan-700 cursor-pointer transition-colors"
+                                : "text-slate-900"
+                            }`}
+                            onClick={() =>
+                              product.product_id &&
+                              handleProductClick(product.product_id)
+                            }
+                          >
+                            {product.product_name}
+                          </div>
+                          {product.variant_display && (
+                            <div className="text-xs text-slate-500 mt-0.5">
+                              {product.variant_display}
+                            </div>
+                          )}
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            {new Date(product.last_sold).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="cell-num cell-strong">
+                          {product.total_quantity}
+                        </td>
+                        <td className="cell-num">
+                          <span className="inline-flex flex-wrap items-baseline justify-end gap-x-2 gap-y-0.5">
+                            <span className="num text-slate-500">
+                              কেনা {formatCurrency(product.avg_buy_price)}
+                            </span>
+                            <span className="text-slate-300">→</span>
+                            <span className="num money-pos">
+                              বিক্রি {formatCurrency(product.avg_unit_price)}
+                            </span>
+                          </span>
+                        </td>
+                        <td className="cell-num money-pos">
+                          {formatCurrency(product.total_profit)}
+                        </td>
+                        <td className="cell-num">
+                          {product.available_stock !== undefined ? (
+                            <span
+                              className={`badge ${
+                                (product.available_stock || 0) === 0
+                                  ? "badge-danger"
+                                  : (product.available_stock || 0) < 10
+                                  ? "badge-warn"
+                                  : "badge-success"
+                              }`}
+                            >
+                              {product.available_stock}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Product Pagination Controls */}
+            {productTotalPages > 1 && (
+              <div className="plane-section">
+                <Pagination
+                  currentPage={productCurrentPage}
+                  totalPages={productTotalPages}
+                  totalItems={productTotalItems}
+                  itemsPerPage={productPageSize}
+                  onPageChange={handleProductPageChange}
+                  onPageSizeChange={handleProductPageSizeChange}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Invoice Popup Modal */}
+      {showInvoicePopup && selectedOrder && (
+        <div className="modal-backdrop" onClick={closeInvoicePopup}>
+          <div
+            className="modal max-w-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-head print:hidden">
+              <h2 className="modal-title">
+                ইনভয়েস #{selectedOrder.id}
+              </h2>
+              <div className="flex items-center gap-2">
+                <button onClick={printInvoice} className="btn btn-primary btn-sm">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                    />
+                  </svg>
+                  প্রিন্ট
+                </button>
+                <button
+                  onClick={closeInvoicePopup}
+                  className="text-slate-400 hover:text-slate-700"
+                  aria-label="বন্ধ করুন"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="modal-body">
+              {/* Invoice Header */}
+              <div className="flex items-center justify-between gap-3 mb-5">
+                <div className="flex items-center justify-start">
+                  {userProfile?.profile?.store_logo &&
+                  userProfile.profile.store_logo.trim() !== "" ? (
+                    <img
+                      src={ApiService.getImageUrl(
+                        userProfile.profile.store_logo
+                      )}
+                      alt="স্টোরের লোগো"
+                      className="h-12 max-w-48 object-contain object-left"
+                      onError={(e) => {
+                        console.log(
+                          "Image failed to load:",
+                          userProfile.profile?.store_logo
+                        );
+                        // Fallback to default logo if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = "none";
+                        const fallback =
+                          target.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = "flex";
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className={`w-12 h-12 bg-slate-100 border border-slate-200 rounded-lg items-center justify-center ${
+                      userProfile?.profile?.store_logo &&
+                      userProfile.profile.store_logo.trim() !== ""
+                        ? "hidden"
+                        : "flex"
+                    }`}
+                  >
+                    <span className="text-slate-500 font-semibold text-xs">
+                      লোগো
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-500">
+                  {new Date(selectedOrder.sale_date).toLocaleDateString()}
+                </p>
+              </div>
+
+              {/* Invoice Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 text-xs text-slate-600">
+                <div>
+                  <div className="section-title">স্টোর</div>
+                  <p className="font-medium text-slate-900">
+                    {userProfile?.profile?.company || "আপনার স্টোরের নাম"}
+                  </p>
+                  <p>
+                    {userProfile?.profile?.company_address ||
+                      "স্টোরের ঠিকানা"}
+                  </p>
+                  <p>
+                    ফোন:{" "}
+                    {userProfile?.profile?.phone ||
+                      userProfile?.profile?.contact_number ||
+                      "—"}
+                  </p>
+                  <p>ইমেইল: {userProfile?.user?.email || "—"}</p>
+                </div>
+
+                <div>
+                  <div className="section-title">কাস্টমার</div>
+                  {selectedOrder.customer_name ? (
+                    <>
+                      <p className="font-medium text-slate-900">
+                        {selectedOrder.customer_name}
+                      </p>
+                      {selectedOrder.customer_phone && (
+                        <p>{selectedOrder.customer_phone}</p>
+                      )}
+                      {selectedOrder.customer_email && (
+                        <p>{selectedOrder.customer_email}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-slate-500">সরাসরি আসা কাস্টমার</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="tbl-wrap mb-5">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>প্রোডাক্ট</th>
+                      <th className="cell-num">পরিমাণ</th>
+                      <th className="cell-num">দাম</th>
+                      <th className="cell-num">মোট</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Check if order has multiple items or is a single item order */}
+                    {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                      // Multiple items - display all items
+                      selectedOrder.items.map(
+                        (item: OrderItem, index: number) => (
+                          <tr key={index}>
+                            <td>
+                              <div className="cell-strong">
+                                {item.product_name}
+                              </div>
+                              {item.variant_details && (
+                                <div className="text-xs text-slate-500 mt-0.5">
+                                  {item.variant_details}
+                                </div>
+                              )}
+                            </td>
+                            <td className="cell-num">{item.quantity}</td>
+                            <td className="cell-num">
+                              {formatCurrency(item.unit_price || 0)}
+                            </td>
+                            <td className="cell-num cell-strong">
+                              {formatCurrency(
+                                item.total_price ||
+                                  item.quantity * item.unit_price
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      )
+                    ) : (
+                      // Single item order - display the main order data
+                      <tr>
+                        <td>
+                          <div className="cell-strong">
+                            {selectedOrder.product_name}
+                          </div>
+                          {selectedOrder.variant && (
+                            <div className="text-xs text-slate-500 mt-0.5">
+                              {selectedOrder.variant.color &&
+                                `রং: ${selectedOrder.variant.color}`}
+                              {selectedOrder.variant.size &&
+                                ` | সাইজ: ${selectedOrder.variant.size}`}
+                              {selectedOrder.variant.custom_variant &&
+                                ` | ${selectedOrder.variant.custom_variant}`}
+                            </div>
+                          )}
+                        </td>
+                        <td className="cell-num">{selectedOrder.quantity}</td>
+                        <td className="cell-num">
+                          {formatCurrency(selectedOrder.unit_price || 0)}
+                        </td>
+                        <td className="cell-num cell-strong">
+                          {formatCurrency(selectedOrder.total_amount || 0)}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals */}
+              <div className="flex justify-end">
+                <div className="w-64 space-y-2 text-sm">
+                  <div className="flex justify-between text-slate-600">
+                    <span>সাবটোটাল</span>
+                    <span className="num">
+                      {formatCurrency(
+                        selectedOrder.items && selectedOrder.items.length > 0
+                          ? selectedOrder.items.reduce(
+                              (sum, item) =>
+                                sum +
+                                (item.total_price ||
+                                  item.quantity * item.unit_price),
+                              0
+                            )
+                          : selectedOrder.total_amount || 0
+                      )}
+                    </span>
+                  </div>
+                  <div className="border-t border-slate-200 pt-2 flex justify-between font-semibold text-slate-900">
+                    <span>মোট</span>
+                    <span className="num text-cyan-600">
+                      {formatCurrency(
+                        selectedOrder.items && selectedOrder.items.length > 0
+                          ? selectedOrder.items.reduce(
+                              (sum, item) =>
+                                sum +
+                                (item.total_price ||
+                                  item.quantity * item.unit_price),
+                              0
+                            )
+                          : selectedOrder.total_amount || 0
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SMS Composer Modal */}
+      {showSmsComposer && smsOrder && (
+        <SmsComposer
+          recipientName={smsOrder.customer_name}
+          recipientPhone={smsOrder.customer_phone || ""}
+          initialMessage={smsMessage}
+          onSend={handleSendSmsFromComposer}
+          onCancel={handleCancelSms}
+          isLoading={isSendingSms === smsOrder.id}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && orderToDelete && (
+        <div className="modal-backdrop" onClick={cancelDelete}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3 className="modal-title">অর্ডারটি ডিলিট করবেন?</h3>
+              <button
+                onClick={cancelDelete}
+                className="text-slate-400 hover:text-slate-700"
+                aria-label="বন্ধ করুন"
               >
                 <svg
                   className="w-4 h-4"
@@ -1362,909 +2111,78 @@ export default function OrdersPage() {
                 </svg>
               </button>
             </div>
-          </div>
-        )}
 
-        {/* Tab Navigation */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg sm:mx-0">
-          <div className="flex border-b border-slate-700/50 overflow-x-auto">
-            <button
-              onClick={() => handleTabChange("orders")}
-              className={`px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap flex-shrink-0 ${
-                activeTab === "orders"
-                  ? "text-cyan-400 border-b-2 border-cyan-400 bg-slate-800/50"
-                  : "text-slate-400 hover:text-slate-300"
-              }`}
-            >
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <svg
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Orders
-              </div>
-            </button>
-            <button
-              onClick={() => handleTabChange("products")}
-              className={`px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer whitespace-nowrap flex-shrink-0 ${
-                activeTab === "products"
-                  ? "text-cyan-400 border-b-2 border-cyan-400 bg-slate-800/50"
-                  : "text-slate-400 hover:text-slate-300"
-              }`}
-            >
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <svg
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                  />
-                </svg>
-                Sold Products
-              </div>
-            </button>
-          </div>
+            <div className="modal-body">
+              <p className="text-sm text-slate-600 mb-2">
+                সত্যিই ডিলিট করবেন? এই অর্ডারটা ডিলিট করলে:
+              </p>
+              <ul className="text-sm text-slate-600 list-disc pl-5 space-y-1 mb-3">
+                <li>অর্ডারটি আপনার খাতা থেকে একেবারে মুছে যাবে</li>
+              </ul>
+              <p className="text-sm text-slate-500">
+                <strong>মনে রাখবেন:</strong> এটা আর ফেরানো যাবে না।
+              </p>
+            </div>
 
-          {/* Tab Content */}
-          {activeTab === "orders" ? (
-            <>
-              <div className="p-3 sm:p-4 flex-shrink-0 border-b border-slate-700/50">
-                <OrdersControls
-                  searchInput={searchInput}
-                  searchTerm={searchTerm}
-                  isSearching={isSearching}
-                  filterCustomer={filterCustomer}
-                  sortBy={sortBy}
-                  isNavigating={isNavigating}
-                  onSearchChange={handleSearchChange}
-                  onFilterChange={handleFilterChange}
-                  onSortChange={handleSortChange}
-                  onAddOrder={handleAddOrder}
-                />
-              </div>
-
-              {/* Scrollable content area */}
-              <div className="flex-1 overflow-x-auto relative">
-                <OrdersList
-                  orders={orders}
-                  totalItems={totalItems}
-                  isSearching={isSearching}
-                  searchInput={searchInput}
-                  isSendingSms={isSendingSms}
-                  onOrderClick={handleOrderClick}
-                  onCustomerClick={handleCustomerClick}
-                  onViewInvoice={handleViewInvoice}
-                  onPrintInvoice={handlePrintInvoice}
-                  onEditInvoice={handleEditInvoice}
-                  onDeleteOrder={handleDeleteOrder}
-                  onSendSms={handleSendSms}
-                  onAddOrder={handleAddOrder}
-                />
-              </div>
-
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="p-3 sm:p-4 border-t border-slate-700/50">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalItems={totalItems}
-                    itemsPerPage={pageSize}
-                    onPageChange={handlePageChange}
-                    onPageSizeChange={handlePageSizeChange}
-                  />
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              {/* Product Sales Controls */}
-              <div className="p-3 sm:p-4 flex-shrink-0 border-b border-slate-700/50">
-                {/* Date Filter Controls */}
-                <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-slate-800/30 rounded-lg border border-slate-700/50">
-                  <div className="flex flex-col sm:flex-row lg:flex-row gap-3 sm:gap-4 items-start sm:items-center">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <h3 className="text-xs sm:text-sm font-medium text-slate-200">Date Filter</h3>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-1.5 sm:gap-2 w-full sm:w-auto">
-                      <button
-                        onClick={() => handleProductDateFilterChange("all_time")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          productDateFilter === "all_time"
-                            ? "bg-cyan-500 text-white"
-                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                        }`}
-                      >
-                        All Time
-                      </button>
-                      <button
-                        onClick={() => handleProductDateFilterChange("today")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          productDateFilter === "today"
-                            ? "bg-cyan-500 text-white"
-                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                        }`}
-                      >
-                        Today
-                      </button>
-                      <button
-                        onClick={() => handleProductDateFilterChange("yesterday")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          productDateFilter === "yesterday"
-                            ? "bg-cyan-500 text-white"
-                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                        }`}
-                      >
-                        Yesterday
-                      </button>
-                      <button
-                        onClick={() => handleProductDateFilterChange("last_7_days")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          productDateFilter === "last_7_days"
-                            ? "bg-cyan-500 text-white"
-                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                        }`}
-                      >
-                        Last 7 Days
-                      </button>
-                      <button
-                        onClick={() => handleProductDateFilterChange("last_30_days")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          productDateFilter === "last_30_days"
-                            ? "bg-cyan-500 text-white"
-                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                        }`}
-                      >
-                        Last 30 Days
-                      </button>
-                      <button
-                        onClick={() => handleProductDateFilterChange("custom")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          productDateFilter === "custom"
-                            ? "bg-cyan-500 text-white"
-                            : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                        }`}
-                      >
-                        Custom Range
-                      </button>
-                    </div>
-
-                    {productDateFilter === "custom" && (
-                      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-                        <input
-                          type="date"
-                          value={productStartDate}
-                          onChange={(e) => setProductStartDate(e.target.value)}
-                          className="bg-slate-700 border border-slate-600 rounded-md px-3 py-1.5 text-white text-sm"
-                        />
-                        <span className="text-slate-400">to</span>
-                        <input
-                          type="date"
-                          value={productEndDate}
-                          onChange={(e) => setProductEndDate(e.target.value)}
-                          className="bg-slate-700 border border-slate-600 rounded-md px-3 py-1.5 text-white text-sm"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-1">
-                    {/* Search Input */}
-                    <div className="relative flex-1 max-w-md">
-                      <svg
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                      </svg>
-                      <input
-                        type="text"
-                        placeholder="Search products..."
-                        value={productSearchInput}
-                        onChange={(e) => handleProductSearchChange(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-sm"
-                      />
-                      {isSearchingProducts && (
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          <svg
-                            className="animate-spin h-4 w-4 text-slate-400"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Sort Dropdown */}
-                    <select
-                      value={productSortBy}
-                      onChange={(e) => handleProductSortChange(e.target.value)}
-                      className="px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-sm cursor-pointer"
-                    >
-                      <option value="total_quantity">Most Sold (Qty)</option>
-                      <option value="total_profit">Highest Profit</option>
-                      <option value="profit_margin">Highest Margin</option>
-                      <option value="last_sold">Recently Sold</option>
-                      <option value="product_name">Product Name</option>
-                    </select>
-
-                    {/* Export Button */}
-                    <button
-                      onClick={() => setShowExportDialog(true)}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                      Export Excel
-                    </button>
-                  </div>
-
-                  <div className="text-sm text-slate-400">
-                    {productTotalItems} products total • Page {productCurrentPage} of {productTotalPages}
-                  </div>
-                </div>
-              </div>
-
-              {/* Product Sales List */}
-              <div className="flex-1 overflow-x-auto relative">
-                {isLoadingProducts ? (
-                  <div className="p-8 text-center">
-                    <div className="animate-spin inline-block w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full mb-2"></div>
-                    <p className="text-slate-400">Loading products...</p>
-                  </div>
-                ) : productSales.length === 0 ? (
-                  <div className="p-8 text-center">
+            <div className="modal-foot">
+              <button
+                onClick={cancelDelete}
+                disabled={isDeleting}
+                className="btn btn-ghost"
+              >
+                বাতিল
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="btn btn-danger"
+              >
+                {isDeleting ? (
+                  <>
                     <svg
-                      className="w-12 h-12 text-slate-600 mx-auto mb-4"
+                      className="animate-spin h-4 w-4"
                       fill="none"
-                      stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
                       <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1}
-                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                      />
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
-                    <h3 className="text-lg font-medium text-slate-400 mb-2">
-                      No products found
-                    </h3>
-                    <p className="text-slate-500">
-                      {productSearchTerm ? "No products match your search." : "No products have been sold yet."}
-                    </p>
-                  </div>
+                    ডিলিট হচ্ছে…
+                  </>
                 ) : (
-                  <div className="overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-slate-800/50 border-b border-slate-700/50">
-                        <tr>
-                          <th className="text-left p-4 text-slate-300 font-medium text-sm">Product</th>
-                          <th className="text-center p-4 text-slate-300 font-medium text-sm">Total Sold</th>
-                          <th className="text-right p-4 text-slate-300 font-medium text-sm">Price</th>
-                          <th className="text-right p-4 text-slate-300 font-medium text-sm">Profit</th>
-                          <th className="text-center p-4 text-slate-300 font-medium text-sm">Available Stock</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700/50">
-                        {productSales.map((product) => (
-                          <tr
-                            key={product.id}
-                            className="hover:bg-slate-800/30 transition-colors cursor-pointer"
-                          >
-                            <td className="p-4">
-                              <div>
-                                <div 
-                                  className={`font-medium ${
-                                    product.product_id 
-                                      ? "text-cyan-400 hover:text-cyan-300 cursor-pointer transition-colors" 
-                                      : "text-slate-100"
-                                  }`}
-                                  onClick={() => product.product_id && handleProductClick(product.product_id)}
-                                >
-                                  {product.product_name}
-                                </div>
-                                {product.variant_display && (
-                                  <div className="text-xs text-slate-400 mt-1">
-                                    {product.variant_display}
-                                  </div>
-                                )}
-                                <div className="text-xs text-slate-400 mt-1">
-                                  {new Date(product.last_sold).toLocaleDateString()}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-4 text-center">
-                              <div>
-                                <span className="text-slate-100 font-medium">
-                                  {product.total_quantity}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="p-4 text-right">
-                              <div className="space-y-1">
-                                <div className="text-green-400 font-medium text-sm">
-                                  Sell: {formatCurrency(product.avg_unit_price)}
-                                </div>
-                                <div className="text-orange-400 font-medium text-xs">
-                                  Buy: {formatCurrency(product.avg_buy_price)}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-4 text-right">
-                              <span className="text-cyan-400 font-medium">
-                                {formatCurrency(product.total_profit)}
-                              </span>
-                            </td>
-                            <td className="p-4 text-center">
-                              <span className={`text-sm font-medium ${
-                                (product.available_stock || 0) === 0
-                                  ? "text-red-400"
-                                  : (product.available_stock || 0) < 10
-                                  ? "text-yellow-400"
-                                  : "text-green-400"
-                              }`}>
-                                {product.available_stock !== undefined ? product.available_stock : "N/A"}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  "ডিলিট করুন"
                 )}
-              </div>
-
-              {/* Product Pagination Controls */}
-              {productTotalPages > 1 && (
-                <div className="p-4 border-t border-slate-700/50">
-                  <Pagination
-                    currentPage={productCurrentPage}
-                    totalPages={productTotalPages}
-                    totalItems={productTotalItems}
-                    itemsPerPage={productPageSize}
-                    onPageChange={handleProductPageChange}
-                    onPageSizeChange={handleProductPageSizeChange}
-                  />
-                </div>
-              )}
-            </>
-          )}
+              </button>
+            </div>
+          </div>
         </div>
-
-        {/* Invoice Popup Modal */}
-        {showInvoicePopup && selectedOrder && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto pt-20 print:pt-0 print:p-0">
-            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-xl shadow-2xl max-w-4xl w-full mb-8 print:bg-white print:border-none print:shadow-none print:max-w-none print:my-0 print:mb-0">
-              {/* Modal Header */}
-              <div className="flex justify-end items-center p-6 border-b border-slate-700/50 print:hidden">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={printInvoice}
-                    className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 flex items-center gap-2 shadow-lg cursor-pointer"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                      />
-                    </svg>
-                    Print
-                  </button>
-                  <button
-                    onClick={closeInvoicePopup}
-                    className="p-2 text-slate-400 hover:text-slate-200 transition-colors rounded-lg hover:bg-slate-800/50 cursor-pointer"
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Invoice Content */}
-              <div className="p-6 print:px-0 print:bg-white print:w-full">
-                {/* Invoice Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center justify-start">
-                    {userProfile?.profile?.store_logo &&
-                    userProfile.profile.store_logo.trim() !== "" ? (
-                      <img
-                        src={ApiService.getImageUrl(
-                          userProfile.profile.store_logo
-                        )}
-                        alt="Store Logo"
-                        className="h-12 max-w-48 object-contain object-left"
-                        onError={(e) => {
-                          console.log(
-                            "Image failed to load:",
-                            userProfile.profile?.store_logo
-                          );
-                          // Fallback to default logo if image fails to load
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = "none";
-                          const fallback =
-                            target.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = "flex";
-                        }}
-                      />
-                    ) : null}
-                    <div
-                      className={`w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center print:bg-gray-800 ${
-                        userProfile?.profile?.store_logo &&
-                        userProfile.profile.store_logo.trim() !== ""
-                          ? "hidden"
-                          : "flex"
-                      }`}
-                    >
-                      <span className="text-white font-bold text-xs print:text-white">
-                        Logo
-                      </span>
-                    </div>
-                  </div>
-                  <h2 className="text-lg font-bold text-slate-100 print:text-gray-900">
-                    Invoice #{selectedOrder.id}
-                  </h2>
-                  <p className="text-sm text-slate-300 print:text-gray-600">
-                    {new Date(selectedOrder.sale_date).toLocaleDateString()}
-                  </p>
-                </div>
-
-                {/* Invoice Details */}
-                <div className="grid grid-cols-1 print:grid-cols-2 md:grid-cols-2 gap-6 mb-6">
-                  <div className="bg-slate-800/50 rounded-lg p-3 print:bg-transparent">
-                    <div className="text-slate-300 print:text-gray-600 space-y-0.5 text-xs">
-                      <p className="font-medium text-slate-100 print:text-gray-900">
-                        {userProfile?.profile?.company || "Your Store Name"}
-                      </p>
-                      <p>
-                        {userProfile?.profile?.company_address ||
-                          "123 Business Street"}
-                      </p>
-                      {!userProfile?.profile?.company_address && (
-                        <p>City, State 12345</p>
-                      )}
-                      <p>
-                        Phone:{" "}
-                        {userProfile?.profile?.phone ||
-                          userProfile?.profile?.contact_number ||
-                          "(555) 123-4567"}
-                      </p>
-                      <p>
-                        Email:{" "}
-                        {userProfile?.user?.email || "store@yourstore.com"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-800/50 rounded-lg p-3 print:bg-transparent">
-                    {selectedOrder.customer_name ? (
-                      <div className="text-slate-300 print:text-gray-600 space-y-0.5 text-xs">
-                        <p className="font-medium text-slate-100 print:text-gray-900">
-                          {selectedOrder.customer_name}
-                        </p>
-                        {selectedOrder.customer_phone && (
-                          <p>{selectedOrder.customer_phone}</p>
-                        )}
-                        {selectedOrder.customer_email && (
-                          <p>{selectedOrder.customer_email}</p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-slate-400 italic print:text-gray-500 text-xs">
-                        Walk-in Customer
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Items Table */}
-                <div className="mb-6 bg-slate-800/30 border border-slate-700/50 rounded-lg overflow-hidden print:bg-transparent print:border-gray-300">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-slate-700/50 print:bg-gray-50">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
-                          Item
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
-                          Qty
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
-                          Unit Price
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-100 print:text-gray-900 border-b border-slate-600/50 print:border-gray-300">
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* Check if order has multiple items or is a single item order */}
-                      {selectedOrder.items && selectedOrder.items.length > 0 ? (
-                        // Multiple items - display all items
-                        selectedOrder.items.map(
-                          (item: OrderItem, index: number) => (
-                            <tr
-                              key={index}
-                              className="border-b border-slate-700/30 print:border-gray-200"
-                            >
-                              <td className="px-4 py-3">
-                                <div>
-                                  <p className="text-sm font-medium text-slate-100 print:text-gray-900">
-                                    {item.product_name}
-                                  </p>
-                                  {item.variant_details && (
-                                    <p className="text-xs text-slate-400 print:text-gray-600 mt-0.5">
-                                      {item.variant_details}
-                                    </p>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-slate-200 print:text-gray-800">
-                                {item.quantity}
-                              </td>
-                              <td className="px-4 py-3 text-right text-sm text-slate-200 print:text-gray-800">
-                                {formatCurrency(item.unit_price || 0)}
-                              </td>
-                              <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400 print:text-gray-900">
-                                {formatCurrency(
-                                  item.total_price ||
-                                    item.quantity * item.unit_price
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        )
-                      ) : (
-                        // Single item order - display the main order data
-                        <tr className="border-b border-slate-700/30 print:border-gray-200">
-                          <td className="px-4 py-3">
-                            <div>
-                              <p className="text-sm font-medium text-slate-100 print:text-gray-900">
-                                {selectedOrder.product_name}
-                              </p>
-                              {selectedOrder.variant && (
-                                <p className="text-xs text-slate-400 print:text-gray-600 mt-0.5">
-                                  {selectedOrder.variant.color &&
-                                    `Color: ${selectedOrder.variant.color}`}
-                                  {selectedOrder.variant.size &&
-                                    ` | Size: ${selectedOrder.variant.size}`}
-                                  {selectedOrder.variant.custom_variant &&
-                                    ` | ${selectedOrder.variant.custom_variant}`}
-                                </p>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-center text-sm text-slate-200 print:text-gray-800">
-                            {selectedOrder.quantity}
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm text-slate-200 print:text-gray-800">
-                            {formatCurrency(selectedOrder.unit_price || 0)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm font-semibold text-cyan-400 print:text-gray-900">
-                            {formatCurrency(selectedOrder.total_amount || 0)}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Totals */}
-                <div className="flex justify-end mb-6">
-                  <div className="w-64 bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 print:bg-transparent print:border-gray-300">
-                    <div className="space-y-2">
-                      <div className="flex justify-between py-1 text-slate-300 print:text-gray-600 text-sm">
-                        <span>Subtotal:</span>
-                        <span className="font-semibold">
-                          {formatCurrency(
-                            selectedOrder.items &&
-                              selectedOrder.items.length > 0
-                              ? selectedOrder.items.reduce(
-                                  (sum, item) =>
-                                    sum +
-                                    (item.total_price ||
-                                      item.quantity * item.unit_price),
-                                  0
-                                )
-                              : selectedOrder.total_amount || 0
-                          )}
-                        </span>
-                      </div>
-                      <div className="border-t border-slate-600/50 print:border-gray-300 pt-2">
-                        <div className="flex justify-between text-base font-bold text-slate-100 print:text-gray-900">
-                          <span>Total:</span>
-                          <span className="text-cyan-400 print:text-gray-900">
-                            {formatCurrency(
-                              selectedOrder.items &&
-                                selectedOrder.items.length > 0
-                                ? selectedOrder.items.reduce(
-                                    (sum, item) =>
-                                      sum +
-                                      (item.total_price ||
-                                        item.quantity * item.unit_price),
-                                    0
-                                  )
-                                : selectedOrder.total_amount || 0
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* SMS Composer Modal */}
-        {showSmsComposer && smsOrder && (
-          <SmsComposer
-            recipientName={smsOrder.customer_name}
-            recipientPhone={smsOrder.customer_phone || ""}
-            initialMessage={smsMessage}
-            onSend={handleSendSmsFromComposer}
-            onCancel={handleCancelSms}
-            isLoading={isSendingSms === smsOrder.id}
-          />
-        )}
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteConfirm && orderToDelete && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-xl shadow-2xl max-w-md w-full">
-              {/* Modal Header */}
-              <div className="p-6 border-b border-slate-700/50">
-                <h3 className="text-xl font-semibold text-slate-100 flex items-center gap-2">
-                  <svg
-                    className="w-6 h-6 text-red-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                    />
-                  </svg>
-                  Confirm Delete
-                </h3>
-              </div>
-
-              {/* Modal Content */}
-              <div className="p-6">
-                <p className="text-slate-300 mb-4">
-                  Are you sure you want to delete this order? This action will:
-                </p>
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 mb-4">
-                  <ul className="space-y-2 text-sm text-slate-300">
-                    <li className="flex items-start gap-2">
-                      <svg
-                        className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                      Permanently remove this order from your records
-                    </li>
-                  </ul>
-                </div>
-                <p className="text-sm text-slate-400">
-                  <strong>Note:</strong> This action cannot be undone.
-                </p>
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex justify-end gap-3 p-6 border-t border-slate-700/50">
-                <button
-                  onClick={cancelDelete}
-                  disabled={isDeleting}
-                  className="px-4 py-2 text-slate-300 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 rounded-lg transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  disabled={isDeleting}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
-                >
-                  {isDeleting ? (
-                    <>
-                      <svg
-                        className="animate-spin h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Deleting...
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                      Delete Order
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Export Dialog */}
       {showExportDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-slate-100 mb-4">Export Product Sales</h3>
-            
-            <div className="space-y-4">
-              {/* Preset Options */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Quick Date Selection
-                </label>
-                <select
-                  value={exportPreset}
-                  onChange={(e) => handlePresetChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-                >
-                  <option value="">All Time</option>
-                  <option value="today">Today</option>
-                  <option value="yesterday">Yesterday</option>
-                  <option value="this_week">This Week</option>
-                  <option value="last_week">Last Week</option>
-                  <option value="this_month">This Month</option>
-                  <option value="last_month">Last Month</option>
-                  <option value="custom">Custom Date Range</option>
-                </select>
-              </div>
-
-              {/* Custom Date Inputs */}
-              {(exportPreset === "custom" || exportPreset === "") && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Start Date (Optional)
-                    </label>
-                    <input
-                      type="date"
-                      value={exportStartDate}
-                      onChange={(e) => setExportStartDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      End Date (Optional)
-                    </label>
-                    <input
-                      type="date"
-                      value={exportEndDate}
-                      onChange={(e) => setExportEndDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Show selected date range for presets */}
-              {exportPreset && exportPreset !== "custom" && exportStartDate && (
-                <div className="text-sm text-slate-400 bg-slate-700/50 p-2 rounded">
-                  <strong>Selected Range:</strong> {exportStartDate} to {exportEndDate}
-                </div>
-              )}
-              
-              <div className="text-sm text-slate-400">
-                {exportPreset === "" ? "Leave dates empty to export all product sales data." : ""}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            setShowExportDialog(false);
+            setExportPreset("");
+            setExportStartDate("");
+            setExportEndDate("");
+          }}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3 className="modal-title">প্রোডাক্ট বিক্রির হিসাব নামান</h3>
               <button
                 onClick={() => {
                   setShowExportDialog(false);
@@ -2272,31 +2190,128 @@ export default function OrdersPage() {
                   setExportStartDate("");
                   setExportEndDate("");
                 }}
-                className="px-4 py-2 text-slate-300 hover:text-slate-100 transition-colors"
+                className="text-slate-400 hover:text-slate-700"
+                aria-label="বন্ধ করুন"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="modal-body space-y-3">
+              {/* Preset Options */}
+              <div>
+                <label className="label">তারিখ বেছে নিন</label>
+                <select
+                  value={exportPreset}
+                  onChange={(e) => handlePresetChange(e.target.value)}
+                  className="select"
+                >
+                  <option value="">সব সময়</option>
+                  <option value="today">আজকে</option>
+                  <option value="yesterday">গতকাল</option>
+                  <option value="this_week">এই সপ্তাহ</option>
+                  <option value="last_week">গত সপ্তাহ</option>
+                  <option value="this_month">এই মাস</option>
+                  <option value="last_month">গত মাস</option>
+                  <option value="custom">নিজে তারিখ দিন</option>
+                </select>
+              </div>
+
+              {/* Custom Date Inputs */}
+              {(exportPreset === "custom" || exportPreset === "") && (
+                <>
+                  <div>
+                    <label className="label">শুরুর তারিখ (না দিলেও চলবে)</label>
+                    <input
+                      type="date"
+                      value={exportStartDate}
+                      onChange={(e) => setExportStartDate(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">শেষের তারিখ (না দিলেও চলবে)</label>
+                    <input
+                      type="date"
+                      value={exportEndDate}
+                      onChange={(e) => setExportEndDate(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Show selected date range for presets */}
+              {exportPreset && exportPreset !== "custom" && exportStartDate && (
+                <div className="text-sm text-slate-500 bg-slate-100 p-2 rounded-lg">
+                  <strong>সিলেক্ট করা সময়:</strong> {exportStartDate} থেকে{" "}
+                  {exportEndDate}
+                </div>
+              )}
+
+              {exportPreset === "" && (
+                <p className="text-sm text-slate-500">
+                  তারিখ খালি রাখলে সব প্রোডাক্টের বিক্রির হিসাব নামবে।
+                </p>
+              )}
+            </div>
+
+            <div className="modal-foot">
+              <button
+                onClick={() => {
+                  setShowExportDialog(false);
+                  setExportPreset("");
+                  setExportStartDate("");
+                  setExportEndDate("");
+                }}
+                className="btn btn-ghost"
                 disabled={isExporting}
               >
-                Cancel
+                বাতিল
               </button>
               <button
                 onClick={exportToExcel}
                 disabled={isExporting}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                className="btn btn-primary"
               >
                 {isExporting ? (
                   <>
-                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
-                    Exporting...
+                    ডাউনলোড হচ্ছে…
                   </>
                 ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Export
-                  </>
+                  "নামান"
                 )}
               </button>
             </div>

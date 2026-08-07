@@ -1,0 +1,146 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static log %}
+
+{% comment %}
+  OxyManager admin dashboard.
+
+  Extends Jazzmin's base_site so the navbar/sidebar chrome stays intact;
+  only the content block is ours. Stats come from
+  core.admin_dashboard.dashboard_context.
+
+  Layout, top to bottom:
+    1. KPI strip          — 2 cols on phones → 3 → 4 → 8 on very wide screens
+    2. Insight row        — "needs attention" + "recent activity" side by side
+    3. Sections catalogue — full width, columns fill the available space
+  Everything collapses to a single column on small screens.
+{% endcomment %}
+
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+{% block content_title %}ড্যাশবোর্ড{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+{% comment %}
+  Jazzmin wraps this block in a Bootstrap `.row` (display:flex). Without a
+  single full-width column wrapper, every top-level element below becomes
+  its own flex item and they line up side by side instead of stacking —
+  which squeezed the sections grid into one narrow column.
+  NOTE: `{# ... #}` only comments a SINGLE line; multi-line notes must use
+  {% templatetag openblock %} comment {% templatetag closeblock %}.
+{% endcomment %}
+<div class="col-12">
+
+{# ── 1. KPIs ─────────────────────────────────────────────── #}
+{% if oxm_kpis %}
+  <div class="oxm-dash-title">এক নজরে</div>
+  <div class="oxm-kpis">
+    {% for kpi in oxm_kpis %}
+      <div class="oxm-kpi oxm-kpi--{{ kpi.tone }}">
+        <span class="oxm-kpi__icon"><i class="{{ kpi.icon }}"></i></span>
+        <div class="oxm-kpi__body">
+          <div class="oxm-kpi__label" title="{{ kpi.label }}">{{ kpi.label }}</div>
+          <div class="oxm-kpi__value">{{ kpi.value }}</div>
+          {% if kpi.meta %}
+            <div class="oxm-kpi__meta" title="{{ kpi.meta }}">{{ kpi.meta }}</div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{# ── 2. Needs attention / recent activity ────────────────── #}
+<div class="oxm-insights">
+
+  <div class="oxm-insight">
+    <div class="oxm-dash-title">নজর দেওয়া দরকার</div>
+    <div class="oxm-panel">
+      {% if oxm_alerts %}
+        {% for a in oxm_alerts %}
+          <a href="{{ a.url }}" class="oxm-alert-row">
+            <span class="oxm-alert-row__label">
+              <i class="{{ a.icon }}"></i> {{ a.label }}
+            </span>
+            <span class="oxm-badge oxm-badge--{% if a.tone == 'danger' %}danger{% elif a.tone == 'warn' %}warn{% else %}info{% endif %}">দেখুন</span>
+          </a>
+        {% endfor %}
+      {% else %}
+        <div class="oxm-alert-row">
+          <span class="oxm-alert-row__label">
+            <i class="fas fa-check-circle" style="color:#047857;"></i>
+            সব ঠিক আছে — এখন কিছু করার নেই
+          </span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="oxm-insight">
+    <div class="oxm-dash-title">সাম্প্রতিক কাজ</div>
+    <div class="oxm-panel">
+      {% get_admin_log 8 as admin_log for_user user %}
+      {% if not admin_log %}
+        <div class="oxm-alert-row">
+          <span class="oxm-alert-row__label">এখনো কিছু করা হয়নি</span>
+        </div>
+      {% else %}
+        <ul class="oxm-activity">
+          {% for entry in admin_log %}
+            <li>
+              {% if entry.is_addition %}<span class="oxm-tag oxm-tag--add">নতুন</span>
+              {% elif entry.is_change %}<span class="oxm-tag oxm-tag--change">এডিট</span>
+              {% else %}<span class="oxm-tag oxm-tag--delete">ডিলিট</span>{% endif %}
+              {% if entry.is_deletion or not entry.get_admin_url %}
+                {{ entry.object_repr }}
+              {% else %}
+                <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+              {% endif %}
+              <div class="oxm-activity__meta">
+                {% if entry.content_type %}{{ entry.content_type.name|capfirst }} · {% endif %}
+                {{ entry.action_time|timesince }} আগে
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{# ── 3. Sections catalogue ───────────────────────────────── #}
+<div class="oxm-dash-title">সব সেকশন</div>
+{% if app_list %}
+  <div class="oxm-apps">
+    {% for app in app_list %}
+      <div class="oxm-app">
+        <div class="oxm-app__head">
+          <span class="oxm-app__title" title="{{ app.name }}">{{ app.name }}</span>
+        </div>
+        {% for model in app.models %}
+          <div class="oxm-model">
+            {% if model.admin_url %}
+              <a href="{{ model.admin_url }}" class="oxm-model__name" title="{{ model.name }}">{{ model.name }}</a>
+            {% else %}
+              <span class="oxm-model__name" title="{{ model.name }}">{{ model.name }}</span>
+            {% endif %}
+            {% if model.add_url %}
+              <a href="{{ model.add_url }}" class="oxm-model__add">নতুন</a>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="oxm-panel">
+    <div class="oxm-alert-row">
+      <span class="oxm-alert-row__label">
+        {% translate "You don't have permission to view or edit anything." %}
+      </span>
+    </div>
+  </div>
+{% endif %}
+
+</div>
+{% endblock %}

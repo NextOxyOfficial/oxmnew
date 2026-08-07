@@ -1,3 +1,4 @@
+from core.scoping import HasPermission, owner_for
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -16,7 +17,16 @@ from .serializers import (
 
 class NotebookViewSet(viewsets.ModelViewSet):
     """ViewSet for managing notebooks"""
-    permission_classes = [permissions.IsAuthenticated]
+    # Staff logins are held to these; owners are unrestricted.
+    required_permissions = {
+        "GET": "notebook.use",
+        "POST": "notebook.use",
+        "PUT": "notebook.use",
+        "PATCH": "notebook.use",
+        "DELETE": "notebook.use",
+    }
+
+    permission_classes = [permissions.IsAuthenticated, HasPermission]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['name', 'description', 'tags']
     ordering_fields = ['created_at', 'updated_at', 'name']
@@ -25,7 +35,7 @@ class NotebookViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return notebooks for current user only"""
-        return Notebook.objects.filter(created_by=self.request.user)
+        return Notebook.objects.filter(created_by=owner_for(self.request))
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
@@ -38,7 +48,7 @@ class NotebookViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set current user as notebook creator"""
-        serializer.save(created_by=self.request.user)
+        serializer.save(created_by=owner_for(self.request))
     
     @action(detail=True, methods=['post'])
     def toggle_pin(self, request, pk=None):
@@ -133,7 +143,7 @@ class NotebookViewSet(viewsets.ModelViewSet):
             'total_notebooks': user_notebooks.count(),
             'active_notebooks': user_notebooks.filter(is_active=True).count(),
             'pinned_notebooks': user_notebooks.filter(is_pinned=True).count(),
-            'total_sections': NotebookSection.objects.filter(notebook__created_by=request.user).count(),
+            'total_sections': NotebookSection.objects.filter(notebook__created_by=owner_for(request)).count(),
             'most_used_tags': most_used_tags,
             'recent_notebooks': user_notebooks.order_by('-updated_at')[:5]
         }
@@ -144,7 +154,16 @@ class NotebookViewSet(viewsets.ModelViewSet):
 
 class NotebookSectionViewSet(viewsets.ModelViewSet):
     """ViewSet for managing notebook sections"""
-    permission_classes = [permissions.IsAuthenticated]
+    # Staff logins are held to these; owners are unrestricted.
+    required_permissions = {
+        "GET": "notebook.use",
+        "POST": "notebook.use",
+        "PUT": "notebook.use",
+        "PATCH": "notebook.use",
+        "DELETE": "notebook.use",
+    }
+
+    permission_classes = [permissions.IsAuthenticated, HasPermission]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['title', 'content']
     ordering_fields = ['order', 'created_at', 'updated_at']
@@ -153,7 +172,7 @@ class NotebookSectionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return sections for current user's notebooks only"""
-        return NotebookSection.objects.filter(notebook__created_by=self.request.user)
+        return NotebookSection.objects.filter(notebook__created_by=owner_for(self.request))
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
@@ -203,7 +222,16 @@ class NotebookSectionViewSet(viewsets.ModelViewSet):
 
 class NotebookTagViewSet(viewsets.ModelViewSet):
     """ViewSet for managing predefined tags"""
-    permission_classes = [permissions.IsAuthenticated]
+    # Staff logins are held to these; owners are unrestricted.
+    required_permissions = {
+        "GET": "notebook.use",
+        "POST": "notebook.use",
+        "PUT": "notebook.use",
+        "PATCH": "notebook.use",
+        "DELETE": "notebook.use",
+    }
+
+    permission_classes = [permissions.IsAuthenticated, HasPermission]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'usage_count', 'created_at']
@@ -211,11 +239,11 @@ class NotebookTagViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return tags created by current user"""
-        return NotebookTag.objects.filter(created_by=self.request.user)
+        return NotebookTag.objects.filter(created_by=owner_for(self.request))
     
     def get_serializer_class(self):
         return NotebookTagSerializer
     
     def perform_create(self, serializer):
         """Set current user as tag creator"""
-        serializer.save(created_by=self.request.user)
+        serializer.save(created_by=owner_for(self.request))

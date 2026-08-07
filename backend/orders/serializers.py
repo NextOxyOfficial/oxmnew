@@ -1,9 +1,12 @@
+from core.ownership import OwnedRelationsMixin
 from rest_framework import serializers
 
 from .models import Order, OrderItem, OrderPayment
 
 
-class OrderItemSerializer(serializers.ModelSerializer):
+class OrderItemSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("product", "variant",)
+
     product_name = serializers.CharField(read_only=True)
     variant_name = serializers.CharField(source="variant.name", read_only=True)
 

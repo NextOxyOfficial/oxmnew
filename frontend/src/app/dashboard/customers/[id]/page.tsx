@@ -2,6 +2,7 @@
 
 import SmsComposer from "@/components/sms/SmsComposer";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
+import CustomerVehiclesTab from "@/components/vehicles/CustomerVehiclesTab";
 import { ApiService } from "@/lib/api";
 import {
   Order as CustomerOrder,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/api/customers";
 import { calculateSmsSegments } from "@/lib/utils/sms";
 import Pagination from "@/components/ui/Pagination";
+import { useConfirm, useToast } from "@/components/ui/Feedback";
 import {
   ArrowLeft,
   DollarSign,
@@ -19,11 +21,11 @@ import {
   MapPin,
   MessageSquare,
   Phone,
-  Printer,
   ShoppingBag,
   Star,
   Trophy,
   X,
+  Bike,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -120,7 +122,14 @@ interface CustomerLevel {
 export default function CustomerDetailsPage() {
   const router = useRouter();
   const params = useParams();
+  // Same expression the data helpers below derive locally, hoisted once so
+  // child components can be handed the id directly.
+  const routeCustomerId = parseInt(
+    Array.isArray(params.id) ? params.id[0] : params.id || "0"
+  );
   const formatCurrency = useCurrencyFormatter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("profile");
@@ -189,24 +198,24 @@ export default function CustomerDetailsPage() {
     new Set()
   );
   const [isSendingSMS, setIsSendingSMS] = useState(false);
-  
+
   // SMS Composer state
   const [showSmsComposer, setShowSmsComposer] = useState(false);
   const [smsOrder, setSmsOrder] = useState<Order | null>(null);
   const [smsMessage, setSmsMessage] = useState("");
   const [isSendingSms, setIsSendingSms] = useState(false);
-  
+
   // Due Payment SMS Composer state
   const [showDuePaymentSmsComposer, setShowDuePaymentSmsComposer] = useState(false);
   const [smsPayment, setSmsPayment] = useState<DuePayment | null>(null);
   const [duePaymentSmsMessage, setDuePaymentSmsMessage] = useState("");
   const [isSendingDuePaymentSms, setIsSendingDuePaymentSms] = useState(false);
-  
+
   // Total Due SMS state
   const [isSendingTotalDueSms, setIsSendingTotalDueSms] = useState(false);
   const [showTotalDueSmsComposer, setShowTotalDueSmsComposer] = useState(false);
   const [totalDueSmsMessage, setTotalDueSmsMessage] = useState("");
-  
+
   const [redeemAmount, setRedeemAmount] = useState("");
   const [isRedeeming, setIsRedeeming] = useState(false);
 
@@ -218,7 +227,7 @@ export default function CustomerDetailsPage() {
   const [selectedLevel, setSelectedLevel] = useState("");
   const [isAssigningLevel, setIsAssigningLevel] = useState(false);
   const [levelNotes, setLevelNotes] = useState("");
-  
+
   // User profile state for store name
   const [userProfile, setUserProfile] = useState<{
     user?: { email?: string };
@@ -254,9 +263,9 @@ export default function CustomerDetailsPage() {
   const fetchOrdersWithPagination = async (page: number = 1, pageSize: number = 10) => {
     try {
       setOrdersPagination(prev => ({ ...prev, isLoading: true }));
-      
+
       const customerId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || "1");
-      
+
       const ordersResponse = await customersAPI.getOrders({
         customer: customerId,
         page,
@@ -342,9 +351,9 @@ export default function CustomerDetailsPage() {
   const fetchDuePaymentsWithPagination = async (page: number = 1, pageSize: number = 10) => {
     try {
       setDuePaymentsPagination(prev => ({ ...prev, isLoading: true }));
-      
+
       const customerId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || "1");
-      
+
       const response = await customersAPI.getCustomerDuePayments({
         customer_id: customerId,
         page,
@@ -392,9 +401,9 @@ export default function CustomerDetailsPage() {
   const fetchGiftsWithPagination = async (page: number = 1, pageSize: number = 10) => {
     try {
       setGiftsPagination(prev => ({ ...prev, isLoading: true }));
-      
+
       const customerId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || "1");
-      
+
       const response = await customersAPI.getCustomerGiftsPaginated({
         customer_id: customerId,
         page,
@@ -440,9 +449,9 @@ export default function CustomerDetailsPage() {
   const fetchAchievementsWithPagination = async (page: number = 1, pageSize: number = 10) => {
     try {
       setAchievementsPagination(prev => ({ ...prev, isLoading: true }));
-      
+
       const customerId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || "1");
-      
+
       const response = await customersAPI.getCustomerAchievements({
         customer_id: customerId,
         page,
@@ -463,7 +472,7 @@ export default function CustomerDetailsPage() {
         const formattedAchievements = paginatedData.results.map((achievement: any) => ({
           id: achievement.id,
           title: achievement.achievement_name,
-          description: achievement.notes || "Achievement earned",
+          description: achievement.notes || "অর্জন হয়েছে",
           icon: "🏆",
           date_earned: achievement.earned_date,
           points: achievement.achievement_points,
@@ -520,9 +529,9 @@ export default function CustomerDetailsPage() {
   // Handle tab change and fetch data if needed
   const handleTabChange = (newTab: string) => {
     setActiveTab(newTab);
-    
+
     const customerId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || "1");
-    
+
     // Fetch paginated data when switching to specific tabs
     switch (newTab) {
       case "orders":
@@ -625,16 +634,16 @@ export default function CustomerDetailsPage() {
         const mockAchievements: Achievement[] = [
           {
             id: 1,
-            title: "First Purchase",
-            description: "Made your first purchase",
+            title: "প্রথম কেনাকাটা",
+            description: "প্রথমবার কেনাকাটা করেছেন",
             icon: "🎉",
             date_earned: "2024-01-15",
             points: 100,
           },
           {
             id: 2,
-            title: "Loyal Customer",
-            description: "10+ orders completed",
+            title: "পুরনো কাস্টমার",
+            description: "১০টির বেশি অর্ডার হয়ে গেছে",
             icon: "🏆",
             date_earned: "2025-06-01",
             points: 500,
@@ -695,15 +704,15 @@ export default function CustomerDetailsPage() {
       const response = await customersAPI.sendSMS(customer.id, message);
 
       if (response.success) {
-        alert(
-          `SMS sent successfully to ${
+        toast.success(
+          `${
             customer.phone
-          }!\nMessage: "${message}"\nCredits used: ${
+          } নম্বরে এসএমএস চলে গেছে! ক্রেডিট খরচ: ${
             response.credits_used || 1
           }`
         );
       } else {
-        throw new Error(response.message || "Failed to send SMS");
+        throw new Error(response.message || "এসএমএস পাঠানো যায়নি");
       }
     } catch (error: unknown) {
       console.error("Failed to send SMS:", error);
@@ -716,10 +725,12 @@ export default function CustomerDetailsPage() {
         if (errorResponse.response?.status === 402) {
           const errorData = errorResponse.response.data || {};
           const errorMsg =
-            errorData.message || errorData.error || "Insufficient SMS credits.";
-          const confirmed = confirm(
-            `${errorMsg}\n\nWould you like to buy more SMS credits?`
-          );
+            errorData.message || errorData.error || "এসএমএস ক্রেডিট শেষ হয়ে গেছে।";
+          const confirmed = await confirm({
+            title: "আরও এসএমএস ক্রেডিট কিনবেন?",
+            message: errorMsg,
+            confirmLabel: "ক্রেডিট কিনুন",
+          });
           if (confirmed) {
             window.open("/dashboard/subscriptions", "_blank");
           }
@@ -728,13 +739,13 @@ export default function CustomerDetailsPage() {
           const errorMessage =
             errorResponse.response?.data?.message ||
             errorResponse.response?.data?.error ||
-            "Unknown error occurred";
-          alert(`Failed to send SMS: ${errorMessage}`);
+            "কী সমস্যা হয়েছে বোঝা যায়নি";
+          toast.error(`এসএমএস পাঠানো যায়নি: ${errorMessage}`);
         }
       } else {
-        alert(
-          `Failed to send SMS: ${
-            error instanceof Error ? error.message : "Unknown error occurred"
+        toast.error(
+          `এসএমএস পাঠানো যায়নি: ${
+            error instanceof Error ? error.message : "কী সমস্যা হয়েছে বোঝা যায়নি"
           }`
         );
       }
@@ -745,7 +756,10 @@ export default function CustomerDetailsPage() {
 
   const handleSendNotification = async (payment: DuePayment) => {
     if (!customer?.phone) {
-      alert("No phone number available for this customer");
+      toast.error("এই কাস্টমারের ফোন নম্বর দেওয়া নেই", {
+        label: "নম্বর যোগ করুন",
+        href: "/dashboard/customers",
+      });
       return;
     }
 
@@ -798,7 +812,7 @@ export default function CustomerDetailsPage() {
       }
 
       // Format the SMS message using your specified format
-      const storeName = userProfile?.profile?.company || "Your Store"; // Get actual store name
+      const storeName = userProfile?.profile?.company || "আপনার স্টোর"; // Get actual store name
       const totalDueAmount = Math.max(0, dueAmount); // Only show if positive (customer owes money)
 
       let message = `সম্মানিত কাস্টমার, আমাদের খাতায় আপনার ${formatCurrency(totalDueAmount)} টাকা বাকি রয়েছে, দয়া করে পরিশোধ করুন ${storeName}`;
@@ -811,7 +825,7 @@ export default function CustomerDetailsPage() {
       setShowDuePaymentSmsComposer(true);
     } catch (error) {
       console.error("Error preparing SMS:", error);
-      alert("Failed to prepare SMS. Please try again.");
+      toast.error("এসএমএস তৈরি করা যায়নি। আবার চেষ্টা করুন।");
     }
   };
 
@@ -829,7 +843,7 @@ export default function CustomerDetailsPage() {
         "Message:",
         message
       );
-      
+
       const response = await ApiService.sendSmsNotification(
         customer.phone,
         message
@@ -838,17 +852,13 @@ export default function CustomerDetailsPage() {
 
       // Check if the response indicates success
       if (response.success === false) {
-        throw new Error(response.error || "SMS sending failed");
+        throw new Error(response.error || "এসএমএস পাঠানো যায়নি");
       }
 
       // Use actual credits used from backend response, fallback to frontend calculation
       const creditsUsed =
         response.credits_used || calculateSmsSegments(message).segments;
-      alert(
-        `SMS sent successfully! Used ${creditsUsed} SMS credit${
-          creditsUsed > 1 ? "s" : ""
-        }.`
-      );
+      toast.success(`এসএমএস চলে গেছে! ${creditsUsed} টি এসএমএস ক্রেডিট খরচ হয়েছে।`);
 
       // Close composer
       setShowDuePaymentSmsComposer(false);
@@ -858,7 +868,7 @@ export default function CustomerDetailsPage() {
       console.error("Error sending SMS:", error);
 
       // Show more detailed error message
-      let errorMessage = "Failed to send SMS. Please try again.";
+      let errorMessage = "এসএমএস পাঠানো যায়নি। আবার চেষ্টা করুন।";
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (
@@ -869,7 +879,7 @@ export default function CustomerDetailsPage() {
         errorMessage = (error as any).error;
       }
 
-      alert(`SMS Error: ${errorMessage}`);
+      toast.error(`এসএমএস সমস্যা: ${errorMessage}`);
     } finally {
       setIsSendingDuePaymentSms(false);
     }
@@ -885,20 +895,23 @@ export default function CustomerDetailsPage() {
   // Handle total due SMS sending
   const handleSendTotalDueSms = async () => {
     if (!customer?.phone) {
-      alert("No phone number available for this customer");
+      toast.error("এই কাস্টমারের ফোন নম্বর দেওয়া নেই", {
+        label: "নম্বর যোগ করুন",
+        href: "/dashboard/customers",
+      });
       return;
     }
 
     const totalDueAmount = Math.max(0, netAmount); // Only positive amounts (customer owes money)
-    
+
     if (totalDueAmount <= 0) {
-      alert("No due amount to send SMS for");
+      toast.info("বাকি কিছু নেই, এসএমএস পাঠানোর দরকার নেই");
       return;
     }
 
     try {
       // Format the SMS message using your specified format
-      const storeName = userProfile?.profile?.company || "Your Store";
+      const storeName = userProfile?.profile?.company || "আপনার স্টোর";
       const message = `সম্মানিত কাস্টমার, আমাদের খাতায় আপনার ${formatCurrency(totalDueAmount)} টাকা বাকি রয়েছে, দয়া করে পরিশোধ করুন ${storeName}`;
 
       console.log("Preparing Total Due SMS:", message);
@@ -908,7 +921,7 @@ export default function CustomerDetailsPage() {
       setShowTotalDueSmsComposer(true);
     } catch (error) {
       console.error("Error preparing SMS:", error);
-      alert("Failed to prepare SMS. Please try again.");
+      toast.error("এসএমএস তৈরি করা যায়নি। আবার চেষ্টা করুন।");
     }
   };
 
@@ -921,7 +934,7 @@ export default function CustomerDetailsPage() {
 
       // Send SMS
       console.log("Sending Total Due SMS to:", customer.phone, "Message:", message);
-      
+
       const response = await ApiService.sendSmsNotification(
         customer.phone,
         message
@@ -930,17 +943,13 @@ export default function CustomerDetailsPage() {
 
       // Check if the response indicates success
       if (response.success === false) {
-        throw new Error(response.error || "SMS sending failed");
+        throw new Error(response.error || "এসএমএস পাঠানো যায়নি");
       }
 
       // Use actual credits used from backend response, fallback to frontend calculation
       const creditsUsed =
         response.credits_used || calculateSmsSegments(message).segments;
-      alert(
-        `SMS sent successfully! Used ${creditsUsed} SMS credit${
-          creditsUsed > 1 ? "s" : ""
-        }.`
-      );
+      toast.success(`এসএমএস চলে গেছে! ${creditsUsed} টি এসএমএস ক্রেডিট খরচ হয়েছে।`);
 
       // Close composer
       setShowTotalDueSmsComposer(false);
@@ -949,7 +958,7 @@ export default function CustomerDetailsPage() {
       console.error("Error sending SMS:", error);
 
       // Show more detailed error message
-      let errorMessage = "Failed to send SMS. Please try again.";
+      let errorMessage = "এসএমএস পাঠানো যায়নি। আবার চেষ্টা করুন।";
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (
@@ -960,7 +969,7 @@ export default function CustomerDetailsPage() {
         errorMessage = (error as any).error;
       }
 
-      alert(`SMS Error: ${errorMessage}`);
+      toast.error(`এসএমএস সমস্যা: ${errorMessage}`);
     } finally {
       setIsSendingTotalDueSms(false);
     }
@@ -974,12 +983,15 @@ export default function CustomerDetailsPage() {
 
   const handleSendSms = async (order: Order) => {
     if (!order.customer_phone) {
-      alert("No phone number available for this customer");
+      toast.error("এই কাস্টমারের ফোন নম্বর দেওয়া নেই", {
+        label: "নম্বর যোগ করুন",
+        href: "/dashboard/customers",
+      });
       return;
     }
 
     if (!customer) {
-      alert("Customer information not available");
+      toast.error("কাস্টমারের তথ্য পাওয়া যায়নি");
       return;
     }
 
@@ -1056,7 +1068,7 @@ export default function CustomerDetailsPage() {
       }
 
       // Format the SMS message
-      const storeName = userProfile?.profile?.company || "Your Store"; // Get actual store name
+      const storeName = userProfile?.profile?.company || "আপনার স্টোর"; // Get actual store name
       const amount = formatCurrency(order.total);
 
       let message = `সম্মানিত কাস্টমার, আপনার কেনাকাটা ${amount} টাকা, ${storeName} এ কেনাকাটা করার জন্য আপনাকে ধন্যবাদ!`;
@@ -1084,7 +1096,7 @@ export default function CustomerDetailsPage() {
       setShowSmsComposer(true);
     } catch (error) {
       console.error("Error preparing SMS:", error);
-      alert("Failed to prepare SMS. Please try again.");
+      toast.error("এসএমএস তৈরি করা যায়নি। আবার চেষ্টা করুন।");
     }
   };
 
@@ -1107,7 +1119,7 @@ export default function CustomerDetailsPage() {
       console.log("Phone number:", smsOrder.customer_phone);
       console.log("Message length:", message.length);
       console.log("Message content:", message);
-      
+
       const response = await ApiService.sendSmsNotification(
         smsOrder.customer_phone,
         message
@@ -1116,17 +1128,13 @@ export default function CustomerDetailsPage() {
 
       // Check if the response indicates success
       if (response.success === false) {
-        throw new Error(response.error || "SMS sending failed");
+        throw new Error(response.error || "এসএমএস পাঠানো যায়নি");
       }
 
       // Use actual credits used from backend response, fallback to frontend calculation
       const creditsUsed =
         response.credits_used || calculateSmsSegments(message).segments;
-      alert(
-        `SMS sent successfully! Used ${creditsUsed} SMS credit${
-          creditsUsed > 1 ? "s" : ""
-        }.`
-      );
+      toast.success(`এসএমএস চলে গেছে! ${creditsUsed} টি এসএমএস ক্রেডিট খরচ হয়েছে।`);
 
       // Close composer
       setShowSmsComposer(false);
@@ -1136,7 +1144,7 @@ export default function CustomerDetailsPage() {
       console.error("Error sending SMS:", error);
 
       // Show more detailed error message
-      let errorMessage = "Failed to send SMS. Please try again.";
+      let errorMessage = "এসএমএস পাঠানো যায়নি। আবার চেষ্টা করুন।";
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (
@@ -1147,7 +1155,7 @@ export default function CustomerDetailsPage() {
         errorMessage = (error as any).error;
       }
 
-      alert(`SMS Error: ${errorMessage}`);
+      toast.error(`এসএমএস সমস্যা: ${errorMessage}`);
     } finally {
       // Clear loading state
       setIsSendingSms(false);
@@ -1167,13 +1175,13 @@ export default function CustomerDetailsPage() {
     try {
       // Validate required fields
       if (!transactionForm.amount) {
-        alert("Please fill in all required fields.");
+        toast.error("দরকারি ঘরগুলো পূরণ করুন।");
         return;
       }
 
       const amount = parseFloat(transactionForm.amount);
       if (isNaN(amount) || amount <= 0) {
-        alert("Please enter a valid amount greater than 0.");
+        toast.error("০ এর বেশি সঠিক টাকার পরিমাণ লিখুন।");
         return;
       }
 
@@ -1189,21 +1197,21 @@ export default function CustomerDetailsPage() {
       // Create due payment via API
       await customersAPI.createDuePayment(duePaymentData);
 
-      alert(
-        `Due payment added successfully! ${
+      toast.success(
+        `হিসাব যোগ হয়েছে! ${
           transactionForm.notifyCustomer
-            ? "Customer will be notified via SMS."
+            ? "কাস্টমারকে এসএমএস দিয়ে জানানো হবে।"
             : ""
         }`
       );
 
       // Send SMS notification if requested
       if (transactionForm.notifyCustomer) {
-        const message = `Hello ${
+        const message = `প্রিয় ${
           customer.name
-        }, this is a notification about your ${
-          transactionForm.type === "due" ? "due payment" : "advance payment"
-        } of ${formatCurrency(amount)}.`;
+        }, আপনার ${
+          transactionForm.type === "due" ? "বাকি" : "জমা"
+        } ${formatCurrency(amount)} টাকার তথ্য জানানো হচ্ছে।`;
         await handleSendSMS(message);
       }
 
@@ -1242,7 +1250,7 @@ export default function CustomerDetailsPage() {
       handleCloseTransactionModal();
     } catch (error) {
       console.error("Failed to add due payment:", error);
-      alert("Failed to add due payment. Please try again.");
+      toast.error("হিসাব যোগ করা যায়নি। আবার চেষ্টা করুন।");
     }
   };
 
@@ -1260,10 +1268,10 @@ export default function CustomerDetailsPage() {
       });
 
       setCustomer(updatedCustomer);
-      alert("Profile updated successfully!");
+      toast.success("তথ্য সেভ হয়েছে!");
     } catch (error) {
       console.error("Failed to update profile:", error);
-      alert("Failed to update profile. Please try again.");
+      toast.error("তথ্য সেভ করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setIsSaving(false);
     }
@@ -1274,7 +1282,7 @@ export default function CustomerDetailsPage() {
 
     const value = parseFloat(giftValue);
     if (isNaN(value) || value <= 0) {
-      alert("Please enter a valid gift value greater than 0.");
+      toast.error("গিফটের দাম ০ এর বেশি লিখুন।");
       return;
     }
 
@@ -1301,10 +1309,10 @@ export default function CustomerDetailsPage() {
       setGifts((prev) => [formattedGift, ...prev]);
       setSelectedGift("");
       setGiftValue("");
-      alert("Gift added successfully!");
+      toast.success("গিফট যোগ হয়েছে!");
     } catch (error) {
       console.error("Failed to add gift:", error);
-      alert("Failed to add gift. Please try again.");
+      toast.error("গিফট যোগ করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setIsAddingGift(false);
     }
@@ -1323,10 +1331,10 @@ export default function CustomerDetailsPage() {
         )
       );
 
-      alert("Gift redeemed successfully!");
+      toast.success("গিফট ব্যবহার করা হয়েছে!");
     } catch (error) {
       console.error("Failed to redeem gift:", error);
-      alert("Failed to redeem gift. Please try again.");
+      toast.error("গিফট ব্যবহার করা যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setRedeemingGiftIds((prev) => {
         const newSet = new Set(prev);
@@ -1343,13 +1351,13 @@ export default function CustomerDetailsPage() {
     const totalPoints = customer.total_points || 0;
 
     if (!amount || amount <= 0) {
-      alert("Please enter a valid amount to redeem.");
+      toast.error("কত পয়েন্ট ভাঙাবেন সেটা ঠিকভাবে লিখুন।");
       return;
     }
 
     if (amount > totalPoints) {
-      alert(
-        "Insufficient points. You cannot redeem more than your total points."
+      toast.error(
+        "পয়েন্ট যথেষ্ট নেই। মোট পয়েন্টের বেশি ভাঙানো যাবে না।"
       );
       return;
     }
@@ -1359,7 +1367,7 @@ export default function CustomerDetailsPage() {
       // Redeem points via API
       await customersAPI.redeemPoints(customer.id, amount);
 
-      alert(`Successfully redeemed ${amount} points!`);
+      toast.success(`${amount} পয়েন্ট ভাঙানো হয়েছে!`);
       setRedeemAmount("");
 
       // Refresh customer data to get updated points
@@ -1367,7 +1375,7 @@ export default function CustomerDetailsPage() {
       setCustomer(updatedCustomer);
     } catch (error) {
       console.error("Failed to redeem points:", error);
-      alert("Failed to redeem points. Please try again.");
+      toast.error("পয়েন্ট ভাঙানো যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setIsRedeeming(false);
     }
@@ -1400,11 +1408,11 @@ export default function CustomerDetailsPage() {
         setCustomerLevel(formattedCustomerLevel);
         setSelectedLevel("");
         setLevelNotes("");
-        alert("Level assigned successfully!");
+        toast.success("লেভেল দেওয়া হয়েছে!");
       }
     } catch (error) {
       console.error("Failed to assign level:", error);
-      alert("Failed to assign level. Please try again.");
+      toast.error("লেভেল দেওয়া যায়নি। আবার চেষ্টা করুন।");
     } finally {
       setIsAssigningLevel(false);
     }
@@ -1416,26 +1424,30 @@ export default function CustomerDetailsPage() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       setCustomerLevel(null);
-      alert("Level removed successfully!");
+      toast.success("লেভেল সরানো হয়েছে!");
     } catch {
-      alert("Failed to remove level. Please try again.");
+      toast.error("লেভেল সরানো যায়নি। আবার চেষ্টা করুন।");
     }
   };
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="sm:p-6 p-1 space-y-6">
-        <div className="max-w-7xl">
-          <div className="animate-pulse">
-            <div className="h-8 bg-slate-700 rounded w-48 mb-6"></div>
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6">
-              <div className="h-6 bg-slate-700 rounded w-32 mb-4"></div>
-              <div className="space-y-3">
-                <div className="h-4 bg-slate-700 rounded w-full"></div>
-                <div className="h-4 bg-slate-700 rounded w-3/4"></div>
-                <div className="h-4 bg-slate-700 rounded w-1/2"></div>
-              </div>
+      <div className="page">
+        <header className="page-head">
+          <div>
+            <h1 className="page-title">কাস্টমারের তথ্য</h1>
+            <p className="page-sub">লোড হচ্ছে…</p>
+          </div>
+        </header>
+
+        <div className="plane">
+          <div className="plane-section">
+            <div className="animate-pulse space-y-3">
+              <div className="h-5 w-40 rounded bg-slate-100"></div>
+              <div className="h-4 w-full rounded bg-slate-100"></div>
+              <div className="h-4 w-3/4 rounded bg-slate-100"></div>
+              <div className="h-4 w-1/2 rounded bg-slate-100"></div>
             </div>
           </div>
         </div>
@@ -1445,21 +1457,23 @@ export default function CustomerDetailsPage() {
 
   if (!customer) {
     return (
-      <div className="sm:p-6 p-1 space-y-6">
-        <div className="max-w-7xl">
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium text-slate-100 mb-2">
-              Customer Not Found
-            </h3>
-            <p className="text-slate-400 mb-4">
-              The customer you&apos;re looking for doesn&apos;t exist or has
-              been removed.
+      <div className="page">
+        <header className="page-head">
+          <div>
+            <h1 className="page-title">কাস্টমার পাওয়া যায়নি</h1>
+            <p className="page-sub">কিছু একটা সমস্যা হয়েছে</p>
+          </div>
+        </header>
+
+        <div className="plane">
+          <div className="empty">
+            <p className="font-medium text-slate-600">কাস্টমার পাওয়া যায়নি</p>
+            <p className="mt-1 text-sm">
+              আপনি যে কাস্টমার খুঁজছেন সেটা নেই, নয়তো মুছে ফেলা হয়েছে।
             </p>
-            <button
-              onClick={() => router.back()}
-              className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg hover:bg-cyan-500/30 transition-colors"
-            >
-              Go Back
+            <button onClick={() => router.back()} className="btn btn-ghost mt-4">
+              <ArrowLeft className="h-4 w-4" />
+              <span>ফিরে যান</span>
             </button>
           </div>
         </div>
@@ -1484,164 +1498,134 @@ export default function CustomerDetailsPage() {
   const netAmount = totalDue - totalAdvance;
 
   return (
-    <div className="sm:p-6 p-1 space-y-6">
-      <div className="max-w-7xl">
-        {/* Back Button and Header */}
-        <div className="flex items-center gap-4 mb-6">
+    <div className="page">
+      {/* Page Header */}
+      <header className="page-head">
+        <div className="min-w-0">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
+            className="btn btn-ghost btn-sm mb-2"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Customers</span>
+            <ArrowLeft className="h-4 w-4" />
+            <span>কাস্টমারের তালিকায় ফিরে যান</span>
           </button>
-        </div>
-
-        {/* Customer Header */}
-        <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">
-                {customer.name.charAt(0).toUpperCase()}
+          <h1 className="page-title truncate" title={customer.name}>
+            {customer.name}
+          </h1>
+          <div className="page-sub flex flex-wrap items-center gap-x-4 gap-y-1">
+            {customer.email && (
+              <span className="inline-flex items-center gap-1">
+                <Mail className="h-3.5 w-3.5 shrink-0" />
+                <span className="max-w-[12rem] truncate sm:max-w-[20rem]">
+                  {customer.email}
+                </span>
               </span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-100">
-                {customer.name}
-              </h1>
-              <div className="flex items-center gap-4 mt-2">
-                <div className="flex items-center gap-1 text-slate-300">
-                  <Mail className="w-4 h-4" />
-                  <span className="text-sm">{customer.email}</span>
-                </div>
-                <div className="flex items-center gap-1 text-slate-300">
-                  <Phone className="w-4 h-4" />
-                  <span className="text-sm">{customer.phone}</span>
-                </div>
-                {customer.address && (
-                  <div className="flex items-center gap-1 text-slate-300">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm">{customer.address}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
+            {customer.phone && (
+              <span className="inline-flex items-center gap-1">
+                <Phone className="h-3.5 w-3.5" />
+                <span className="num">{customer.phone}</span>
+              </span>
+            )}
+            {customer.address && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="max-w-[12rem] truncate sm:max-w-[20rem]">
+                  {customer.address}
+                </span>
+              </span>
+            )}
           </div>
         </div>
+      </header>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6 max-w-5xl">
-          <div className="bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/30 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-cyan-300/80 text-sm">Total Orders</p>
-                <p className="text-xl font-bold text-white mt-1">
-                  {customer.total_orders}
-                </p>
-              </div>
-              <ShoppingBag className="h-7 w-7 text-cyan-400" />
+      <div className="plane">
+        {/* KPIs */}
+        <div className="stat-strip">
+          <div className="stat">
+            <div className="stat-label">মোট অর্ডার</div>
+            <div className="stat-value num">{customer.total_orders}</div>
+            <div className="stat-meta">সব মিলিয়ে</div>
+          </div>
+
+          <div className="stat">
+            <div className="stat-label">মোট কেনাকাটা</div>
+            <div className="stat-value num money-pos">
+              {formatCurrency(customer.total_spent)}
+            </div>
+            <div className="stat-meta">এই কাস্টমারের কাছ থেকে</div>
+          </div>
+
+          <div className="stat">
+            <div className="stat-label">
+              {netAmount >= 0 ? "বাকি" : "জমা"}
+            </div>
+            <div
+              className={`stat-value num ${
+                netAmount >= 0 ? "money-neg" : "money-pos"
+              }`}
+            >
+              {formatCurrency(isNaN(netAmount) ? 0 : Math.abs(netAmount))}
+            </div>
+            <div className="stat-meta">
+              {netAmount >= 0 ? "কাস্টমার দেবেন" : "কাস্টমার আগে দিয়েছেন"}
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-green-500/10 to-emerald-600/10 border border-green-500/30 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-300/80 text-sm">Total Spent</p>
-                <p className="text-xl font-bold text-green-400 mt-1">
-                  {formatCurrency(customer.total_spent)}
-                </p>
-              </div>
-              <DollarSign className="h-7 w-7 text-green-400" />
+          <div className="stat">
+            <div className="stat-label">চালু গিফট</div>
+            <div className="stat-value num">
+              {gifts.filter((gift) => gift.status === "active").length}
             </div>
-          </div>
-
-          <div
-            className={`bg-gradient-to-br ${
-              netAmount >= 0
-                ? "from-red-500/10 to-pink-600/10 border-red-500/30"
-                : "from-green-500/10 to-emerald-600/10 border-green-500/30"
-            } border rounded-lg p-3`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p
-                  className={`${
-                    netAmount >= 0 ? "text-red-300/80" : "text-green-300/80"
-                  } text-sm`}
-                >
-                  {netAmount >= 0 ? "Due Amount" : "Advance Amount"}
-                </p>
-                <p
-                  className={`text-xl font-bold ${
-                    netAmount >= 0 ? "text-red-400" : "text-green-400"
-                  } mt-1`}
-                >
-                  {formatCurrency(isNaN(netAmount) ? 0 : Math.abs(netAmount))}
-                </p>
-              </div>
-              <DollarSign
-                className={`h-7 w-7 ${
-                  netAmount >= 0 ? "text-red-400" : "text-green-400"
-                }`}
-              />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-500/10 to-violet-600/10 border border-purple-500/30 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-300/80 text-sm">Active Gifts</p>
-                <p className="text-xl font-bold text-purple-400 mt-1">
-                  {gifts.filter((gift) => gift.status === "active").length}
-                </p>
-              </div>
-              <Gift className="h-7 w-7 text-purple-400" />
-            </div>
+            <div className="stat-meta">এখনো ব্যবহার হয়নি</div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="max-w-4xl">
-          <div className="flex border-b border-slate-700/50 mb-6">
+        <div className="plane-section">
+          <div className="flex flex-wrap items-center gap-2">
             {[
               {
                 key: "profile",
-                label: "Profile",
-                icon: <Mail className="w-4 h-4" />,
+                label: "প্রোফাইল",
+                icon: <Mail className="h-4 w-4" />,
               },
               {
                 key: "orders",
-                label: "Purchase History",
-                icon: <ShoppingBag className="w-4 h-4" />,
+                label: "কেনাকাটার হিসাব",
+                icon: <ShoppingBag className="h-4 w-4" />,
+              },
+              {
+                key: "vehicles",
+                label: "কেনা বাইক",
+                icon: <Bike className="h-4 w-4" />,
               },
               {
                 key: "due-payments",
-                label: "Due/Payments",
-                icon: <DollarSign className="w-4 h-4" />,
+                label: "বাকির খাতা",
+                icon: <DollarSign className="h-4 w-4" />,
               },
               {
                 key: "gifts",
-                label: "Gifts & Rewards",
-                icon: <Gift className="w-4 h-4" />,
+                label: "গিফট ও পুরস্কার",
+                icon: <Gift className="h-4 w-4" />,
               },
               {
                 key: "achievements",
-                label: "Achievements",
-                icon: <Trophy className="w-4 h-4" />,
+                label: "অর্জন",
+                icon: <Trophy className="h-4 w-4" />,
               },
               {
                 key: "level",
-                label: "Level",
-                icon: <Star className="w-4 h-4" />,
+                label: "লেভেল",
+                icon: <Star className="h-4 w-4" />,
               },
             ].map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => handleTabChange(tab.key)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 flex items-center gap-2 cursor-pointer ${
-                  activeTab === tab.key
-                    ? "border-cyan-400 text-cyan-400"
-                    : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600"
+                className={`btn btn-sm ${
+                  activeTab === tab.key ? "btn-primary" : "btn-ghost"
                 }`}
               >
                 {tab.icon}
@@ -1649,999 +1633,886 @@ export default function CustomerDetailsPage() {
               </button>
             ))}
           </div>
-
-          {/* Tab Content */}
-          <div className="max-w-4xl">
-            {/* Profile Tab */}
-            {activeTab === "profile" && (
-              <div className="space-y-6">
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
-                  <h4 className="text-lg font-medium text-slate-100 mb-4">
-                    Customer Information
-                  </h4>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Customer Name */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Customer Name
-                      </label>
-                      <input
-                        type="text"
-                        value={customerForm.name}
-                        onChange={(e) =>
-                          setCustomerForm({
-                            ...customerForm,
-                            name: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                        placeholder="Enter customer name"
-                      />
-                    </div>
-
-                    {/* Email */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        value={customerForm.email}
-                        onChange={(e) =>
-                          setCustomerForm({
-                            ...customerForm,
-                            email: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                        placeholder="Enter email address"
-                      />
-                    </div>
-
-                    {/* Phone */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Phone Number
-                      </label>
-                      <input
-                        type="tel"
-                        value={customerForm.phone}
-                        onChange={(e) =>
-                          setCustomerForm({
-                            ...customerForm,
-                            phone: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm"
-                        placeholder="Enter phone number"
-                      />
-                    </div>
-
-                    {/* Member Since */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Member Since
-                      </label>
-                      <div className="w-full px-3 py-2 bg-slate-800/30 border border-slate-700/50 rounded-lg text-slate-400 text-sm">
-                        {new Date(customer.created_at).toLocaleDateString(
-                          "en-US",
-                          {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          }
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Address */}
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Address
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={customerForm.address}
-                        onChange={(e) =>
-                          setCustomerForm({
-                            ...customerForm,
-                            address: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none"
-                        placeholder="Enter customer address"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Save Button */}
-                  <div className="flex justify-end mt-1">
-                    <button
-                      onClick={handleSaveProfile}
-                      disabled={isSaving}
-                      className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                    >
-                      {isSaving ? "Saving..." : "Save Changes"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Purchase History Tab */}
-            {activeTab === "orders" && (
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-medium text-slate-100">
-                      Purchase History
-                    </h4>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm text-slate-300">Per page:</label>
-                        <select
-                          value={ordersPagination.pageSize}
-                          onChange={(e) => handleOrdersPageSizeChange(Number(e.target.value))}
-                          className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-slate-200 text-sm"
-                        >
-                          <option value={5}>5</option>
-                          <option value={10}>10</option>
-                          <option value={20}>20</option>
-                          <option value={50}>50</option>
-                        </select>
-                      </div>
-                      <div className="text-sm text-slate-300">
-                        Total: {ordersPagination.totalCount} orders
-                      </div>
-                    </div>
-                  </div>
-                  <div className="max-w-4xl">
-                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
-                      {/* Table Header */}
-                      <div className="px-6 py-3 bg-white/5 border-b border-white/10">
-                        <div className="grid grid-cols-8 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
-                          <div className="col-span-2">Order ID</div>
-                          <div className="col-span-2">Date</div>
-                          <div className="col-span-2">Amount</div>
-                          <div className="col-span-2">Actions</div>
-                        </div>
-                      </div>
-
-                      {/* Table Body */}
-                      <div className="divide-y divide-white/5">
-                        {ordersPagination.isLoading ? (
-                          <div className="px-6 py-8 text-center text-slate-400">
-                            <div className="flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
-                              <span className="ml-2">Loading orders...</span>
-                            </div>
-                          </div>
-                        ) : orders.length === 0 ? (
-                          <div className="px-6 py-8 text-center text-slate-400">
-                            <ShoppingBag className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-slate-400 mb-2">
-                              No Orders Yet
-                            </h3>
-                            <p className="text-slate-500">
-                              This customer hasn't placed any orders yet.
-                            </p>
-                          </div>
-                        ) : (
-                          orders.map((order) => (
-                            <div
-                              key={order.id}
-                              className="px-6 py-4 hover:bg-white/5 transition-colors"
-                            >
-                              <div className="grid grid-cols-8 gap-4 items-center">
-                                <div className="col-span-2">
-                                  <p className="text-sm font-medium text-slate-100">
-                                    #{order.id}
-                                  </p>
-                                </div>
-                                <div className="col-span-2">
-                                  <p className="text-sm text-slate-300">
-                                    {formatDate(order.date)}
-                                  </p>
-                                </div>
-                                <div className="col-span-2">
-                                  <p className="text-sm font-semibold text-green-300">
-                                    {formatCurrency(order.total)}
-                                  </p>
-                                </div>
-                                <div className="col-span-2">
-                                  <div className="flex items-center space-x-2">
-                                    <button
-                                      onClick={() => handleViewInvoice(order)}
-                                      className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
-                                    >
-                                      <FileText className="w-4 h-4" />
-                                      <span>Invoice</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleSendSms(order)}
-                                      disabled={isSendingSms}
-                                      className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
-                                      title="Send SMS notification"
-                                    >
-                                      <MessageSquare className="w-4 h-4" />
-                                      <span>
-                                        {isSendingSms ? "Sending..." : "SMS"}
-                                      </span>
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Pagination Controls */}
-                    {!ordersPagination.isLoading && orders.length > 0 && (
-                      <Pagination
-                        currentPage={ordersPagination.currentPage}
-                        totalPages={ordersPagination.totalPages}
-                        totalItems={ordersPagination.totalCount}
-                        itemsPerPage={ordersPagination.pageSize}
-                        onPageChange={handleOrdersPageChange}
-                        onPageSizeChange={handleOrdersPageSizeChange}
-                        className="mt-4"
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Due Payments Tab */}
-            {activeTab === "due-payments" && (
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <h4 className="text-lg font-medium text-slate-100">
-                          Due Payments
-                        </h4>
-                        <p className="text-sm text-red-300 mt-1">
-                          Total Due: {formatCurrency(isNaN(netAmount) ? 0 : Math.max(0, netAmount))}
-                        </p>
-                      </div>
-                      {/* SMS Button for Total Due */}
-                      {netAmount > 0 && (
-                        <button
-                          onClick={handleSendTotalDueSms}
-                          disabled={isSendingTotalDueSms}
-                          className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg cursor-pointer disabled:opacity-50"
-                          title="Send SMS for total due amount"
-                        >
-                          <MessageSquare className="w-5 h-5" />
-                        </button>
-                      )}
-                    </div>
-                    <button
-                      onClick={handleShowTransaction}
-                      className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 shadow-lg cursor-pointer"
-                    >
-                      Add Due Payment
-                    </button>
-                  </div>
-
-                  <div className="max-w-4xl">
-                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
-                      {/* Table Header */}
-                      <div className="px-6 py-3 bg-white/5 border-b border-white/10">
-                        <div className="grid grid-cols-8 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
-                          <div className="col-span-1">Serial #</div>
-                          <div className="col-span-2">Type</div>
-                          <div className="col-span-2">Amount</div>
-                          <div className="col-span-2">Date</div>
-                          <div className="col-span-1">Actions</div>
-                        </div>
-                      </div>
-
-                      {/* Table Body */}
-                      <div className="divide-y divide-white/5">
-                        {duePayments.map((payment, index) => {
-                          return (
-                            <div
-                              key={payment.id}
-                              className="px-6 py-4 hover:bg-white/5 transition-colors"
-                            >
-                              <div className="grid grid-cols-8 gap-4 items-center">
-                                <div className="col-span-1">
-                                  <p className="text-sm font-medium text-slate-100">
-                                    #{index + 1}
-                                  </p>
-                                </div>
-                                <div className="col-span-2">
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      payment.type === "due"
-                                        ? "bg-red-500/20 text-red-300 border border-red-400/30"
-                                        : "bg-green-500/20 text-green-300 border border-green-400/30"
-                                    }`}
-                                  >
-                                    {payment.type === "due" ? "Due" : "Advance"}
-                                  </span>
-                                </div>
-                                <div className="col-span-2">
-                                  <p
-                                    className={`text-sm font-semibold ${
-                                      payment.type === "due"
-                                        ? "text-red-300"
-                                        : "text-green-300"
-                                    }`}
-                                  >
-                                    {formatCurrency(
-                                      Math.abs(Number(payment.amount) || 0)
-                                    )}
-                                  </p>
-                                </div>
-                                <div className="col-span-2">
-                                  <p className="text-sm text-slate-300">
-                                    {formatDate(payment.created_at)}
-                                  </p>
-                                </div>
-                                <div className="col-span-1">
-                                  <button
-                                    onClick={() =>
-                                      handleSendNotification(payment)
-                                    }
-                                    disabled={isSendingDuePaymentSms}
-                                    className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer disabled:opacity-50"
-                                    title="Send SMS notification"
-                                  >
-                                    <MessageSquare className="w-4 h-4" />
-                                    <span>
-                                      {isSendingDuePaymentSms ? "Sending..." : "SMS"}
-                                    </span>
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Pagination Controls for Due Payments */}
-                    {!duePaymentsPagination.isLoading && duePayments.length > 0 && (
-                      <Pagination
-                        currentPage={duePaymentsPagination.currentPage}
-                        totalPages={duePaymentsPagination.totalPages}
-                        totalItems={duePaymentsPagination.totalCount}
-                        itemsPerPage={duePaymentsPagination.pageSize}
-                        onPageChange={handleDuePaymentsPageChange}
-                        onPageSizeChange={handleDuePaymentsPageSizeChange}
-                        className="mt-4"
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Gifts Tab */}
-            {activeTab === "gifts" && (
-              <div className="space-y-6">
-                <div>
-                  {/* Add Gift Section */}
-                  <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">
-                      Add New Gift
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-2xl">
-                      <select
-                        value={selectedGift}
-                        onChange={(e) => setSelectedGift(e.target.value)}
-                        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm cursor-pointer"
-                      >
-                        <option value="" className="bg-slate-800">
-                          Select a gift...
-                        </option>
-                        {availableGifts.map((gift) => (
-                          <option
-                            key={gift.id}
-                            value={gift.id.toString()}
-                            className="bg-slate-800"
-                          >
-                            {gift.name}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={giftValue}
-                        onChange={(e) => setGiftValue(e.target.value)}
-                        placeholder="Gift value ($)"
-                        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                      />
-                      <button
-                        onClick={handleAddGift}
-                        disabled={!selectedGift || !giftValue || isAddingGift}
-                        className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                      >
-                        {isAddingGift ? "Adding..." : "Add Gift"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Gifts List */}
-                  <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">
-                      Customer Gifts
-                    </h4>
-                    <div className="max-w-4xl">
-                      {gifts.length === 0 ? (
-                        <div className="text-center py-8 text-slate-400">
-                          <p>
-                            No gifts found. Add a gift above to get started.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap gap-3">
-                          {gifts.map((gift) => (
-                            <div
-                              key={gift.id}
-                              className="flex items-center gap-3 p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-200 min-w-[280px]"
-                            >
-                              {/* Status Badge */}
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                                  gift.status === "active"
-                                    ? "bg-green-500/20 text-green-300 border border-green-400/30"
-                                    : gift.status === "used"
-                                    ? "bg-gray-500/20 text-gray-300 border border-gray-400/30"
-                                    : "bg-red-500/20 text-red-300 border border-red-400/30"
-                                }`}
-                              >
-                                {gift.status === "active"
-                                  ? "Active"
-                                  : gift.status === "used"
-                                  ? "Used"
-                                  : "Expired"}
-                              </span>
-
-                              {/* Gift Info */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm font-medium text-white whitespace-nowrap">
-                                    {gift.name}
-                                  </span>
-                                  <span className="text-green-400 font-semibold text-sm">
-                                    {formatCurrency(gift.value)}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-slate-400">
-                                  Given: {formatDate(gift.date_given)}
-                                </div>
-                              </div>
-
-                              {/* Action Button */}
-                              {gift.status === "active" ? (
-                                <button
-                                  onClick={() => handleRedeemGift(gift.id)}
-                                  disabled={redeemingGiftIds.has(gift.id)}
-                                  className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-medium rounded-md hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 cursor-pointer"
-                                >
-                                  {redeemingGiftIds.has(gift.id)
-                                    ? "Redeeming..."
-                                    : "Redeem"}
-                                </button>
-                              ) : (
-                                <span className="px-3 py-1.5 bg-gray-500/20 text-gray-400 text-xs font-medium rounded-md border border-gray-500/30">
-                                  {gift.status === "used"
-                                    ? "Redeemed"
-                                    : "Expired"}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Pagination Controls for Gifts */}
-                      {!giftsPagination.isLoading && gifts.length > 0 && (
-                        <Pagination
-                          currentPage={giftsPagination.currentPage}
-                          totalPages={giftsPagination.totalPages}
-                          totalItems={giftsPagination.totalCount}
-                          itemsPerPage={giftsPagination.pageSize}
-                          onPageChange={handleGiftsPageChange}
-                          onPageSizeChange={handleGiftsPageSizeChange}
-                          className="mt-4"
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Achievements Tab */}
-            {activeTab === "achievements" && (
-              <div className="space-y-6">
-                <div>
-                  {/* Points Summary and Redeem Section */}
-                  <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">
-                      Customer Achievements
-                    </h4>
-                    <div className="flex items-center justify-between bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-2">
-                          <Trophy className="h-5 w-5 text-amber-400" />
-                          <span className="text-amber-300 font-semibold">
-                            {achievements.reduce(
-                              (total, achievement) =>
-                                total + achievement.points,
-                              0
-                            )}{" "}
-                            Total Points
-                          </span>
-                        </div>
-                        <span className="text-slate-400 text-sm">
-                          {achievements.length} achievements earned
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="number"
-                          value={redeemAmount}
-                          onChange={(e) => setRedeemAmount(e.target.value)}
-                          placeholder="Amount to redeem"
-                          min="1"
-                          max={achievements.reduce(
-                            (total, achievement) => total + achievement.points,
-                            0
-                          )}
-                          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 backdrop-blur-sm"
-                        />
-                        <button
-                          onClick={handleRedeemPoints}
-                          disabled={
-                            !redeemAmount ||
-                            isRedeeming ||
-                            parseFloat(redeemAmount) <= 0
-                          }
-                          className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                        >
-                          {isRedeeming ? "Redeeming..." : "Redeem Points"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Achievements List */}
-                  <div className="mb-8">
-                    <div className="max-w-4xl">
-                      {achievements.length === 0 ? (
-                        <div className="text-center py-8 text-slate-400">
-                          <Trophy className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-slate-400 mb-2">
-                            No Achievements Yet
-                          </h3>
-                          <p className="text-slate-500">
-                            Complete actions to earn achievements and points.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                          {achievements.map((achievement) => (
-                            <div
-                              key={achievement.id}
-                              className="group bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-all duration-200"
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 bg-amber-500/20 border border-amber-500/30 rounded-lg flex items-center justify-center text-lg">
-                                    {achievement.icon}
-                                  </div>
-                                  <div>
-                                    <h5 className="font-medium text-white text-sm leading-tight">
-                                      {achievement.title}
-                                    </h5>
-                                    <div className="flex items-center gap-1 mt-1">
-                                      <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full text-xs font-medium">
-                                        ⭐ {achievement.points} pts
-                                      </span>
-                                      <span className="px-2 py-0.5 bg-green-500/20 text-green-300 rounded-full text-xs font-medium">
-                                        Completed
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="bg-slate-900/30 rounded p-2">
-                                <div className="text-xs text-slate-300 mb-1">
-                                  <strong>Description:</strong>{" "}
-                                  {achievement.description}
-                                </div>
-                                <div className="text-xs text-slate-300">
-                                  <strong>Earned:</strong>{" "}
-                                  {formatDate(achievement.date_earned)}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Pagination Controls for Achievements */}
-                      {!achievementsPagination.isLoading && achievements.length > 0 && (
-                        <Pagination
-                          currentPage={achievementsPagination.currentPage}
-                          totalPages={achievementsPagination.totalPages}
-                          totalItems={achievementsPagination.totalCount}
-                          itemsPerPage={achievementsPagination.pageSize}
-                          onPageChange={handleAchievementsPageChange}
-                          onPageSizeChange={handleAchievementsPageSizeChange}
-                          className="mt-4"
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Level Tab */}
-            {activeTab === "level" && (
-              <div className="space-y-6">
-                <div>
-                  {/* Current Level Section */}
-                  <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">
-                      Current Level
-                    </h4>
-                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
-                      {customerLevel ? (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
-                              <Star className="w-8 h-8 text-white" />
-                            </div>
-                            <div>
-                              <h3 className="text-xl font-bold text-white mb-1">
-                                {customerLevel.level.name} Level
-                              </h3>
-                              <p className="text-slate-300 text-sm mb-2">
-                                Assigned on{" "}
-                                {formatDate(customerLevel.assigned_date)}
-                              </p>
-                              {customerLevel.notes && (
-                                <p className="text-slate-400 text-sm italic">
-                                  &ldquo;{customerLevel.notes}&rdquo;
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <button
-                            onClick={handleRemoveLevel}
-                            className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm"
-                          >
-                            Remove Level
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <Star className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-slate-400 mb-2">
-                            No Level Assigned
-                          </h3>
-                          <p className="text-slate-500">
-                            This customer doesn&apos;t have a level assigned
-                            yet.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Assign Level Section */}
-                  <div className="mb-8">
-                    <h4 className="text-lg font-medium text-slate-100 mb-4">
-                      Assign New Level
-                    </h4>
-                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Select Level
-                            </label>
-                            <select
-                              value={selectedLevel}
-                              onChange={(e) => setSelectedLevel(e.target.value)}
-                              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm cursor-pointer"
-                            >
-                              <option value="" className="bg-slate-800">
-                                Select a level...
-                              </option>
-                              {availableLevels
-                                .filter((level) => level.is_active)
-                                .map((level) => (
-                                  <option
-                                    key={level.id}
-                                    value={level.id.toString()}
-                                    className="bg-slate-800"
-                                  >
-                                    {level.name}
-                                  </option>
-                                ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Notes (Optional)
-                            </label>
-                            <input
-                              type="text"
-                              value={levelNotes}
-                              onChange={(e) => setLevelNotes(e.target.value)}
-                              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-white placeholder-gray-400 text-sm backdrop-blur-sm"
-                              placeholder="Reason for level assignment..."
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end">
-                          <button
-                            onClick={handleAssignLevel}
-                            disabled={!selectedLevel || isAssigningLevel}
-                            className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 transition-all duration-200 shadow-lg cursor-pointer"
-                          >
-                            {isAssigningLevel ? "Assigning..." : "Assign Level"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* Transaction Modal */}
-        {showTransactionModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-            <div className="min-h-full flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                  <h2 className="text-xl font-semibold text-slate-100">
-                    Add Due Payment
-                  </h2>
-                  <button
-                    onClick={handleCloseTransactionModal}
-                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <X className="w-5 h-5 text-slate-400" />
-                  </button>
-                </div>
+        {/* Profile Tab */}
+        {activeTab === "profile" && (
+          <div className="plane-section">
+            <div className="section-title">কাস্টমারের তথ্য</div>
 
-                {/* Modal Body */}
-                <div className="p-6 space-y-4">
-                  {/* Transaction Type */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Transaction Type
-                    </label>
-                    <select
-                      value={transactionForm.type}
-                      onChange={(e) =>
-                        setTransactionForm({
-                          ...transactionForm,
-                          type: e.target.value as "due" | "advance",
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 text-sm cursor-pointer"
-                    >
-                      <option value="due">Due</option>
-                      <option value="advance">Payment/Advance</option>
-                    </select>
-                  </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Customer Name */}
+              <div>
+                <label className="label">কাস্টমারের নাম</label>
+                <input
+                  type="text"
+                  value={customerForm.name}
+                  onChange={(e) =>
+                    setCustomerForm({
+                      ...customerForm,
+                      name: e.target.value,
+                    })
+                  }
+                  className="input"
+                  placeholder="কাস্টমারের নাম লিখুন"
+                />
+              </div>
 
-                  {/* Amount */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Amount
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={transactionForm.amount}
-                      onChange={(e) =>
-                        setTransactionForm({
-                          ...transactionForm,
-                          amount: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm cursor-pointer"
-                      placeholder="Enter amount"
-                      required
-                    />
-                  </div>
+              {/* Email */}
+              <div>
+                <label className="label">ইমেইল</label>
+                <input
+                  type="email"
+                  value={customerForm.email}
+                  onChange={(e) =>
+                    setCustomerForm({
+                      ...customerForm,
+                      email: e.target.value,
+                    })
+                  }
+                  className="input"
+                  placeholder="ইমেইল লিখুন"
+                />
+              </div>
 
-                  {/* Note */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Note (Optional)
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={transactionForm.note || ""}
-                      onChange={(e) =>
-                        setTransactionForm({
-                          ...transactionForm,
-                          note: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 text-slate-100 placeholder-slate-400 text-sm resize-none cursor-pointer"
-                      placeholder="Add a note for this transaction (optional)"
-                    />
-                  </div>
+              {/* Phone */}
+              <div>
+                <label className="label">ফোন নম্বর</label>
+                <input
+                  type="tel"
+                  value={customerForm.phone}
+                  onChange={(e) =>
+                    setCustomerForm({
+                      ...customerForm,
+                      phone: e.target.value,
+                    })
+                  }
+                  className="input"
+                  placeholder="ফোন নম্বর লিখুন"
+                />
+              </div>
 
-                  {/* Notify Customer */}
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="notify-customer"
-                      checked={transactionForm.notifyCustomer}
-                      onChange={(e) =>
-                        setTransactionForm({
-                          ...transactionForm,
-                          notifyCustomer: e.target.checked,
-                        })
-                      }
-                      className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-slate-600 rounded bg-slate-800 cursor-pointer"
-                    />
-                    <label
-                      htmlFor="notify-customer"
-                      className="ml-2 text-sm text-slate-300 cursor-pointer"
-                    >
-                      Notify customer via SMS
-                    </label>
-                  </div>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex justify-end space-x-3 p-6 border-t border-slate-700/50">
-                  <button
-                    onClick={handleCloseTransactionModal}
-                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-300 transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitTransaction}
-                    disabled={!transactionForm.amount}
-                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-sm font-medium rounded-lg hover:from-cyan-600 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg cursor-pointer"
-                  >
-                    Add Due Payment
-                  </button>
+              {/* Member Since */}
+              <div>
+                <label className="label">কাস্টমার হয়েছেন</label>
+                <div className="input num text-slate-500">
+                  {new Date(customer.created_at).toLocaleDateString(
+                    "en-US",
+                    {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    }
+                  )}
                 </div>
               </div>
+
+              {/* Address */}
+              <div className="md:col-span-2">
+                <label className="label">ঠিকানা</label>
+                <textarea
+                  rows={3}
+                  value={customerForm.address}
+                  onChange={(e) =>
+                    setCustomerForm({
+                      ...customerForm,
+                      address: e.target.value,
+                    })
+                  }
+                  className="textarea resize-none"
+                  placeholder="ঠিকানা লিখুন"
+                />
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={handleSaveProfile}
+                disabled={isSaving}
+                className="btn btn-primary"
+              >
+                {isSaving ? "সেভ হচ্ছে…" : "সেভ করুন"}
+              </button>
             </div>
           </div>
         )}
 
-        {/* Notes Modal */}
-        {showNotesModal && selectedDuePayment && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-            <div className="min-h-full flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-700/50 rounded-xl shadow-xl max-w-md w-full my-8">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
-                  <h2 className="text-xl font-semibold text-slate-100">
-                    Transaction Notes
-                  </h2>
-                  <button
-                    onClick={handleCloseNotes}
-                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <X className="w-5 h-5 text-slate-400" />
-                  </button>
+        {/* Purchase History Tab */}
+        {activeTab === "orders" && (
+          <>
+            <div className="plane-section">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="section-title">কেনাকাটার হিসাব</div>
+                  <p className="text-xs text-slate-500">
+                    মোট {ordersPagination.totalCount} টি অর্ডার
+                  </p>
                 </div>
+                <div className="flex items-center gap-2">
+                  <label
+                    className="text-xs text-slate-500"
+                    htmlFor="orders-page-size"
+                  >
+                    প্রতি পাতায়
+                  </label>
+                  <select
+                    id="orders-page-size"
+                    value={ordersPagination.pageSize}
+                    onChange={(e) => handleOrdersPageSizeChange(Number(e.target.value))}
+                    className="select w-auto"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
-                {/* Modal Body */}
-                <div className="p-6">
-                  <div className="mb-4">
-                    {selectedDuePayment.order_id ? (
-                      <h3 className="text-sm font-medium text-slate-300 mb-2">
-                        Order #{selectedDuePayment.order_id}
-                        {selectedDuePayment.order_number && (
-                          <span className="text-slate-400">
-                            {" "}
-                            ({selectedDuePayment.order_number})
-                          </span>
-                        )}
-                      </h3>
-                    ) : (
-                      <h3 className="text-sm font-medium text-slate-300 mb-2">
-                        General Payment (No Order)
-                      </h3>
-                    )}
-                    <p className="text-sm text-slate-400">
-                      {selectedDuePayment.type === "due"
-                        ? "Due Payment"
-                        : "Advance Payment"}{" "}
-                      -{" "}
-                      {formatCurrency(
-                        Math.abs(Number(selectedDuePayment.amount) || 0)
-                      )}
-                    </p>
-                  </div>
+            {ordersPagination.isLoading ? (
+              <div className="empty">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent"></div>
+                  <span>অর্ডার লোড হচ্ছে…</span>
+                </div>
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="empty">
+                <ShoppingBag className="mx-auto mb-3 h-10 w-10 text-slate-600" />
+                <p className="font-medium text-slate-600">
+                  এখনো কোনো অর্ডার নেই
+                </p>
+                <p className="mt-1 text-sm">
+                  এই কাস্টমার এখনো কিছু কেনেননি।
+                </p>
+              </div>
+            ) : (
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>অর্ডার</th>
+                      <th>তারিখ</th>
+                      <th className="cell-num">টাকার পরিমাণ</th>
+                      <th className="cell-num">কাজ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((order) => (
+                      <tr key={order.id}>
+                        <td className="cell-strong num">#{order.id}</td>
+                        <td>{formatDate(order.date)}</td>
+                        <td className="cell-num money-pos">
+                          {formatCurrency(order.total)}
+                        </td>
+                        <td>
+                          <div className="row-actions">
+                            <button
+                              onClick={() => handleViewInvoice(order)}
+                              className="btn btn-ghost btn-sm"
+                              title="ইনভয়েস দেখুন"
+                            >
+                              <FileText className="h-4 w-4" />
+                              <span>ইনভয়েস</span>
+                            </button>
+                            <button
+                              onClick={() => handleSendSms(order)}
+                              disabled={isSendingSms}
+                              className="btn btn-ghost btn-sm"
+                              title="এসএমএস পাঠান"
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                              <span>
+                                {isSendingSms ? "যাচ্ছে…" : "এসএমএস"}
+                              </span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 mb-4">
-                    <p className="text-slate-100 text-sm leading-relaxed">
-                      {selectedDuePayment.notes ||
-                        "No notes available for this transaction."}
-                    </p>
-                  </div>
+            {/* Pagination Controls */}
+            {!ordersPagination.isLoading && orders.length > 0 && (
+              <div className="plane-section">
+                <Pagination
+                  currentPage={ordersPagination.currentPage}
+                  totalPages={ordersPagination.totalPages}
+                  totalItems={ordersPagination.totalCount}
+                  itemsPerPage={ordersPagination.pageSize}
+                  onPageChange={handleOrdersPageChange}
+                  onPageSizeChange={handleOrdersPageSizeChange}
+                />
+              </div>
+            )}
+          </>
+        )}
 
-                  {/* SMS Notification Button */}
-                  <div className="flex justify-end">
+        {/* Due Payments Tab */}
+        {/* Vehicles bought by this customer — units, payments and papers. */}
+        {activeTab === "vehicles" && (
+          <CustomerVehiclesTab customerId={routeCustomerId} />
+        )}
+
+        {activeTab === "due-payments" && (
+          <>
+            <div className="plane-section">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="section-title">বাকির খাতা</div>
+                  <p className="text-sm">
+                    <span className="text-slate-500">মোট বাকি: </span>
+                    <span className="money-neg font-semibold">
+                      {formatCurrency(isNaN(netAmount) ? 0 : Math.max(0, netAmount))}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* SMS Button for Total Due */}
+                  {netAmount > 0 && (
                     <button
-                      onClick={() => handleSendNotification(selectedDuePayment)}
-                      disabled={isSendingSMS}
-                      className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleSendTotalDueSms}
+                      disabled={isSendingTotalDueSms}
+                      className="btn btn-ghost"
+                      title="মোট বাকির জন্য এসএমএস পাঠান"
+                      aria-label="মোট বাকির জন্য এসএমএস পাঠান"
                     >
-                      <MessageSquare className="w-4 h-4" />
-                      <span>
-                        {isSendingSMS ? "Sending SMS..." : "Send SMS Reminder"}
-                      </span>
+                      <MessageSquare className="h-4 w-4" />
+                      <span>এসএমএস</span>
                     </button>
-                  </div>
+                  )}
+                  <button
+                    onClick={handleShowTransaction}
+                    className="btn btn-primary"
+                  >
+                    নতুন হিসাব যোগ করুন
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
+
+            {duePayments.length === 0 ? (
+              <div className="empty">
+                <p className="font-medium text-slate-600">
+                  বাকির খাতায় কিছু নেই
+                </p>
+                <p className="mt-1 text-sm">
+                  বাকি বা জমার হিসাব যোগ করলে এখানে দেখা যাবে।
+                </p>
+              </div>
+            ) : (
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>ক্রমিক</th>
+                      <th>টাইপ</th>
+                      <th className="cell-num">টাকার পরিমাণ</th>
+                      <th>তারিখ</th>
+                      <th className="cell-num">কাজ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {duePayments.map((payment, index) => {
+                      return (
+                        <tr key={payment.id}>
+                          <td className="cell-strong num">#{index + 1}</td>
+                          <td>
+                            <span
+                              className={`badge ${
+                                payment.type === "due"
+                                  ? "badge-danger"
+                                  : "badge-success"
+                              }`}
+                            >
+                              {payment.type === "due" ? "বাকি" : "জমা"}
+                            </span>
+                          </td>
+                          <td
+                            className={`cell-num ${
+                              payment.type === "due" ? "money-neg" : "money-pos"
+                            }`}
+                          >
+                            {formatCurrency(
+                              Math.abs(Number(payment.amount) || 0)
+                            )}
+                          </td>
+                          <td>{formatDate(payment.created_at)}</td>
+                          <td>
+                            <div className="row-actions">
+                              <button
+                                onClick={() => handleSendNotification(payment)}
+                                disabled={isSendingDuePaymentSms}
+                                className="btn btn-ghost btn-sm"
+                                title="এসএমএস পাঠান"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                                <span>
+                                  {isSendingDuePaymentSms ? "যাচ্ছে…" : "এসএমএস"}
+                                </span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination Controls for Due Payments */}
+            {!duePaymentsPagination.isLoading && duePayments.length > 0 && (
+              <div className="plane-section">
+                <Pagination
+                  currentPage={duePaymentsPagination.currentPage}
+                  totalPages={duePaymentsPagination.totalPages}
+                  totalItems={duePaymentsPagination.totalCount}
+                  itemsPerPage={duePaymentsPagination.pageSize}
+                  onPageChange={handleDuePaymentsPageChange}
+                  onPageSizeChange={handleDuePaymentsPageSizeChange}
+                />
+              </div>
+            )}
+          </>
         )}
 
-        {/* SMS Composer Modal */}
-        {showSmsComposer && smsOrder && (
-          <SmsComposer
-            recipientName={customer?.name || ""}
-            recipientPhone={customer?.phone || ""}
-            initialMessage={smsMessage}
-            onSend={handleSendSmsFromComposer}
-            onCancel={handleCancelSms}
-            isLoading={isSendingSms}
-          />
+        {/* Gifts Tab */}
+        {activeTab === "gifts" && (
+          <>
+            {/* Add Gift Section */}
+            <div className="plane-section">
+              <div className="section-title">নতুন গিফট যোগ করুন</div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <select
+                  value={selectedGift}
+                  onChange={(e) => setSelectedGift(e.target.value)}
+                  className="select"
+                  aria-label="গিফট বেছে নিন"
+                >
+                  <option value="">গিফট বেছে নিন…</option>
+                  {availableGifts.map((gift) => (
+                    <option key={gift.id} value={gift.id.toString()}>
+                      {gift.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={giftValue}
+                  onChange={(e) => setGiftValue(e.target.value)}
+                  placeholder="গিফটের দাম"
+                  className="input"
+                  aria-label="গিফটের দাম"
+                />
+                <button
+                  onClick={handleAddGift}
+                  disabled={!selectedGift || !giftValue || isAddingGift}
+                  className="btn btn-primary"
+                >
+                  {isAddingGift ? "যোগ হচ্ছে…" : "গিফট যোগ করুন"}
+                </button>
+              </div>
+            </div>
+
+            <div className="plane-section">
+              <div className="section-title">কাস্টমারের গিফট</div>
+            </div>
+
+            {gifts.length === 0 ? (
+              <div className="empty">
+                <Gift className="mx-auto mb-3 h-10 w-10 text-slate-600" />
+                <p className="font-medium text-slate-600">কোনো গিফট নেই</p>
+                <p className="mt-1 text-sm">
+                  উপর থেকে একটা গিফট যোগ করে শুরু করুন।
+                </p>
+              </div>
+            ) : (
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>গিফট</th>
+                      <th className="cell-num">দাম</th>
+                      <th>দেওয়ার তারিখ</th>
+                      <th>অবস্থা</th>
+                      <th className="cell-num">কাজ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gifts.map((gift) => (
+                      <tr key={gift.id}>
+                        <td className="cell-strong">{gift.name}</td>
+                        <td className="cell-num money-pos">
+                          {formatCurrency(gift.value)}
+                        </td>
+                        <td>{formatDate(gift.date_given)}</td>
+                        <td>
+                          <span
+                            className={`badge ${
+                              gift.status === "active"
+                                ? "badge-success"
+                                : gift.status === "used"
+                                ? "badge-muted"
+                                : "badge-danger"
+                            }`}
+                          >
+                            {gift.status === "active"
+                              ? "চালু"
+                              : gift.status === "used"
+                              ? "ব্যবহার হয়েছে"
+                              : "মেয়াদ শেষ"}
+                          </span>
+                        </td>
+                        <td className="cell-num">
+                          {gift.status === "active" ? (
+                            <button
+                              onClick={() => handleRedeemGift(gift.id)}
+                              disabled={redeemingGiftIds.has(gift.id)}
+                              className="btn btn-primary btn-sm"
+                            >
+                              {redeemingGiftIds.has(gift.id)
+                                ? "হচ্ছে…"
+                                : "ব্যবহার করুন"}
+                            </button>
+                          ) : (
+                            <span className="text-slate-500">
+                              {gift.status === "used"
+                                ? "ব্যবহার হয়ে গেছে"
+                                : "মেয়াদ শেষ"}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination Controls for Gifts */}
+            {!giftsPagination.isLoading && gifts.length > 0 && (
+              <div className="plane-section">
+                <Pagination
+                  currentPage={giftsPagination.currentPage}
+                  totalPages={giftsPagination.totalPages}
+                  totalItems={giftsPagination.totalCount}
+                  itemsPerPage={giftsPagination.pageSize}
+                  onPageChange={handleGiftsPageChange}
+                  onPageSizeChange={handleGiftsPageSizeChange}
+                />
+              </div>
+            )}
+          </>
         )}
 
-        {/* Due Payment SMS Composer Modal */}
-        {showDuePaymentSmsComposer && smsPayment && (
-          <SmsComposer
-            recipientName={customer?.name || ""}
-            recipientPhone={customer?.phone || ""}
-            initialMessage={duePaymentSmsMessage}
-            onSend={handleSendSmsFromDuePaymentComposer}
-            onCancel={handleCancelDuePaymentSms}
-            isLoading={isSendingDuePaymentSms}
-          />
+        {/* Achievements Tab */}
+        {activeTab === "achievements" && (
+          <>
+            {/* Points Summary and Redeem Section */}
+            <div className="plane-section">
+              <div className="section-title">কাস্টমারের অর্জন</div>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-600" />
+                    <span className="num font-semibold text-slate-900">
+                      {achievements.reduce(
+                        (total, achievement) => total + achievement.points,
+                        0
+                      )}{" "}
+                      পয়েন্ট
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {achievements.length} টি অর্জন হয়েছে
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="number"
+                    value={redeemAmount}
+                    onChange={(e) => setRedeemAmount(e.target.value)}
+                    placeholder="কত পয়েন্ট ভাঙাবেন"
+                    min="1"
+                    max={achievements.reduce(
+                      (total, achievement) => total + achievement.points,
+                      0
+                    )}
+                    className="input w-40"
+                    aria-label="কত পয়েন্ট ভাঙাবেন"
+                  />
+                  <button
+                    onClick={handleRedeemPoints}
+                    disabled={
+                      !redeemAmount ||
+                      isRedeeming ||
+                      parseFloat(redeemAmount) <= 0
+                    }
+                    className="btn btn-primary"
+                  >
+                    {isRedeeming ? "হচ্ছে…" : "পয়েন্ট ভাঙান"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Achievements List */}
+            {achievements.length === 0 ? (
+              <div className="empty">
+                <Trophy className="mx-auto mb-3 h-10 w-10 text-slate-600" />
+                <p className="font-medium text-slate-600">
+                  এখনো কোনো অর্জন নেই
+                </p>
+                <p className="mt-1 text-sm">
+                  কাজ করতে থাকলে অর্জন আর পয়েন্ট জমা হবে।
+                </p>
+              </div>
+            ) : (
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>অর্জন</th>
+                      <th>বিবরণ</th>
+                      <th className="cell-num">পয়েন্ট</th>
+                      <th>তারিখ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {achievements.map((achievement) => (
+                      <tr key={achievement.id}>
+                        <td className="cell-strong">
+                          <span className="mr-2">{achievement.icon}</span>
+                          {achievement.title}
+                        </td>
+                        <td>{achievement.description}</td>
+                        <td className="cell-num">{achievement.points}</td>
+                        <td>{formatDate(achievement.date_earned)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination Controls for Achievements */}
+            {!achievementsPagination.isLoading && achievements.length > 0 && (
+              <div className="plane-section">
+                <Pagination
+                  currentPage={achievementsPagination.currentPage}
+                  totalPages={achievementsPagination.totalPages}
+                  totalItems={achievementsPagination.totalCount}
+                  itemsPerPage={achievementsPagination.pageSize}
+                  onPageChange={handleAchievementsPageChange}
+                  onPageSizeChange={handleAchievementsPageSizeChange}
+                />
+              </div>
+            )}
+          </>
         )}
 
-        {/* Total Due SMS Composer Modal */}
-        {showTotalDueSmsComposer && (
-          <SmsComposer
-            recipientName={customer?.name || ""}
-            recipientPhone={customer?.phone || ""}
-            initialMessage={totalDueSmsMessage}
-            onSend={handleSendSmsFromTotalDueComposer}
-            onCancel={handleCancelTotalDueSms}
-            isLoading={isSendingTotalDueSms}
-          />
+        {/* Level Tab */}
+        {activeTab === "level" && (
+          <>
+            {/* Current Level Section */}
+            <div className="plane-section">
+              <div className="section-title">এখনকার লেভেল</div>
+              {customerLevel ? (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Star className="h-6 w-6 text-amber-600" />
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-900">
+                        {customerLevel.level.name} লেভেল
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        দেওয়া হয়েছে {formatDate(customerLevel.assigned_date)}
+                      </p>
+                      {customerLevel.notes && (
+                        <p className="mt-1 text-sm italic text-slate-500">
+                          &ldquo;{customerLevel.notes}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button onClick={handleRemoveLevel} className="btn btn-danger">
+                    লেভেল সরান
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">
+                  এই কাস্টমারকে এখনো কোনো লেভেল দেওয়া হয়নি।
+                </p>
+              )}
+            </div>
+
+            {/* Assign Level Section */}
+            <div className="plane-section">
+              <div className="section-title">নতুন লেভেল দিন</div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="label">লেভেল বেছে নিন</label>
+                  <select
+                    value={selectedLevel}
+                    onChange={(e) => setSelectedLevel(e.target.value)}
+                    className="select"
+                  >
+                    <option value="">লেভেল বেছে নিন…</option>
+                    {availableLevels
+                      .filter((level) => level.is_active)
+                      .map((level) => (
+                        <option key={level.id} value={level.id.toString()}>
+                          {level.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">নোট (ইচ্ছে হলে)</label>
+                  <input
+                    type="text"
+                    value={levelNotes}
+                    onChange={(e) => setLevelNotes(e.target.value)}
+                    className="input"
+                    placeholder="কেন লেভেল দিচ্ছেন লিখুন…"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={handleAssignLevel}
+                  disabled={!selectedLevel || isAssigningLevel}
+                  className="btn btn-primary"
+                >
+                  {isAssigningLevel ? "দেওয়া হচ্ছে…" : "লেভেল দিন"}
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
+
+      {/* Transaction Modal */}
+      {showTransactionModal && (
+        <div className="modal-backdrop" onClick={handleCloseTransactionModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2 className="modal-title">নতুন হিসাব যোগ করুন</h2>
+              <button
+                onClick={handleCloseTransactionModal}
+                className="text-slate-500 hover:text-slate-700"
+                aria-label="বন্ধ করুন"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="modal-body space-y-4">
+              {/* Transaction Type */}
+              <div>
+                <label className="label">টাইপ</label>
+                <select
+                  value={transactionForm.type}
+                  onChange={(e) =>
+                    setTransactionForm({
+                      ...transactionForm,
+                      type: e.target.value as "due" | "advance",
+                    })
+                  }
+                  className="select"
+                >
+                  <option value="due">বাকি</option>
+                  <option value="advance">পরিশোধ / জমা</option>
+                </select>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="label">টাকার পরিমাণ</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={transactionForm.amount}
+                  onChange={(e) =>
+                    setTransactionForm({
+                      ...transactionForm,
+                      amount: e.target.value,
+                    })
+                  }
+                  className="input"
+                  placeholder="টাকার পরিমাণ লিখুন"
+                  required
+                />
+              </div>
+
+              {/* Note */}
+              <div>
+                <label className="label">নোট (ইচ্ছে হলে)</label>
+                <textarea
+                  rows={3}
+                  value={transactionForm.note || ""}
+                  onChange={(e) =>
+                    setTransactionForm({
+                      ...transactionForm,
+                      note: e.target.value,
+                    })
+                  }
+                  className="textarea resize-none"
+                  placeholder="এই হিসাবের জন্য নোট লিখুন (ইচ্ছে হলে)"
+                />
+              </div>
+
+              {/* Notify Customer */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="notify-customer"
+                  checked={transactionForm.notifyCustomer}
+                  onChange={(e) =>
+                    setTransactionForm({
+                      ...transactionForm,
+                      notifyCustomer: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                />
+                <label
+                  htmlFor="notify-customer"
+                  className="ml-2 text-sm text-slate-600"
+                >
+                  কাস্টমারকে এসএমএস দিয়ে জানান
+                </label>
+              </div>
+            </div>
+
+            <div className="modal-foot">
+              <button
+                onClick={handleCloseTransactionModal}
+                className="btn btn-ghost"
+              >
+                বাতিল
+              </button>
+              <button
+                onClick={handleSubmitTransaction}
+                disabled={!transactionForm.amount}
+                className="btn btn-primary"
+              >
+                হিসাব যোগ করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notes Modal */}
+      {showNotesModal && selectedDuePayment && (
+        <div className="modal-backdrop" onClick={handleCloseNotes}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2 className="modal-title">হিসাবের নোট</h2>
+              <button
+                onClick={handleCloseNotes}
+                className="text-slate-500 hover:text-slate-700"
+                aria-label="বন্ধ করুন"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="mb-3">
+                {selectedDuePayment.order_id ? (
+                  <h3 className="text-sm font-medium text-slate-600">
+                    অর্ডার #{selectedDuePayment.order_id}
+                    {selectedDuePayment.order_number && (
+                      <span className="text-slate-500">
+                        {" "}
+                        ({selectedDuePayment.order_number})
+                      </span>
+                    )}
+                  </h3>
+                ) : (
+                  <h3 className="text-sm font-medium text-slate-600">
+                    সাধারণ হিসাব (কোনো অর্ডার নেই)
+                  </h3>
+                )}
+                <p className="mt-1 text-sm text-slate-500">
+                  {selectedDuePayment.type === "due" ? "বাকি" : "জমা"} —{" "}
+                  {formatCurrency(
+                    Math.abs(Number(selectedDuePayment.amount) || 0)
+                  )}
+                </p>
+              </div>
+
+              <p className="text-sm leading-relaxed text-slate-600">
+                {selectedDuePayment.notes ||
+                  "এই হিসাবের কোনো নোট নেই।"}
+              </p>
+            </div>
+
+            <div className="modal-foot">
+              <button onClick={handleCloseNotes} className="btn btn-ghost">
+                বাতিল
+              </button>
+              <button
+                onClick={() => handleSendNotification(selectedDuePayment)}
+                disabled={isSendingSMS}
+                className="btn btn-primary"
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>
+                  {isSendingSMS ? "এসএমএস যাচ্ছে…" : "এসএমএস দিয়ে মনে করিয়ে দিন"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SMS Composer Modal */}
+      {showSmsComposer && smsOrder && (
+        <SmsComposer
+          recipientName={customer?.name || ""}
+          recipientPhone={customer?.phone || ""}
+          initialMessage={smsMessage}
+          onSend={handleSendSmsFromComposer}
+          onCancel={handleCancelSms}
+          isLoading={isSendingSms}
+        />
+      )}
+
+      {/* Due Payment SMS Composer Modal */}
+      {showDuePaymentSmsComposer && smsPayment && (
+        <SmsComposer
+          recipientName={customer?.name || ""}
+          recipientPhone={customer?.phone || ""}
+          initialMessage={duePaymentSmsMessage}
+          onSend={handleSendSmsFromDuePaymentComposer}
+          onCancel={handleCancelDuePaymentSms}
+          isLoading={isSendingDuePaymentSms}
+        />
+      )}
+
+      {/* Total Due SMS Composer Modal */}
+      {showTotalDueSmsComposer && (
+        <SmsComposer
+          recipientName={customer?.name || ""}
+          recipientPhone={customer?.phone || ""}
+          initialMessage={totalDueSmsMessage}
+          onSend={handleSendSmsFromTotalDueComposer}
+          onCancel={handleCancelTotalDueSms}
+          isLoading={isSendingTotalDueSms}
+        />
+      )}
     </div>
   );
 }

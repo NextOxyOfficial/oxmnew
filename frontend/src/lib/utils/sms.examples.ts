@@ -17,7 +17,7 @@ console.log('Formatted:', formatSmsInfo(shortBengaliMessage));
 console.log('---');
 
 // Example 2: Long Bengali message (multiple SMS)
-const longBengaliMessage = 'সম্মানিত কাস্টমার, আপনার কেনাকাটা ১২০০ টাকা, আমাদের দোকানে কেনাকাটা করার জন্য আপনাকে ধন্যবাদ! আমাদের খাতায় আপনার বাকি রয়েছে ৫০০ টাকা। পরবর্তীতে আরো কেনাকাটা করুন।';
+const longBengaliMessage = 'সম্মানিত কাস্টমার, আপনার কেনাকাটা ১২০০ টাকা, আমাদের স্টোরে কেনাকাটা করার জন্য আপনাকে ধন্যবাদ! আমাদের খাতায় আপনার বাকি রয়েছে ৫০০ টাকা। পরবর্তীতে আরো কেনাকাটা করুন।';
 console.log('Long Bengali message:');
 console.log('Text:', longBengaliMessage);
 console.log('Length:', longBengaliMessage.length, 'characters');

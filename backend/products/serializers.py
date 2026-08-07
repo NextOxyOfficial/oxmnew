@@ -1,3 +1,4 @@
+from core.ownership import OwnedRelationsMixin
 from rest_framework import serializers
 
 from .models import Product, ProductPhoto, ProductStockMovement, ProductVariant
@@ -67,6 +68,10 @@ class ProductListSerializer(serializers.ModelSerializer):
     profit_margin = serializers.ReadOnlyField()
     variant_count = serializers.ReadOnlyField()
     main_photo = serializers.ReadOnlyField()
+    # Serial-tracked units (bikes/CNGs/cars) counted per unit, not in bulk.
+    vehicle_stock = serializers.ReadOnlyField()
+    vehicle_sold = serializers.ReadOnlyField()
+    is_vehicle = serializers.ReadOnlyField()
 
     class Meta:
         model = Product
@@ -93,6 +98,9 @@ class ProductListSerializer(serializers.ModelSerializer):
             "profit_margin",
             "variant_count",
             "main_photo",
+            "vehicle_stock",
+            "vehicle_sold",
+            "is_vehicle",
             "is_active",
             "created_at",
             "updated_at",
@@ -148,6 +156,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "profit_margin",
             "variant_count",
             "main_photo",
+            "vehicle_stock",
+            "vehicle_sold",
+            "is_vehicle",
             "variants",
             "photos",
             "is_active",
@@ -385,7 +396,32 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         return product
 
 
-class ProductStockMovementSerializer(serializers.ModelSerializer):
+class ProductSearchSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for fast product search in orders/invoices"""
+
+    category_name = serializers.CharField(source="category.name", read_only=True)
+    variants = ProductVariantSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "product_code",
+            "category_name",
+            "has_variants",
+            "no_stock_required",
+            "buy_price",
+            "sell_price",
+            "stock",
+            "variants",
+            "is_active",
+        ]
+
+
+class ProductStockMovementSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
+    owned_relations = ("product", "variant",)
+
     """Serializer for stock movements"""
 
     product_name = serializers.CharField(source="product.name", read_only=True)
@@ -424,4 +460,6 @@ class ProductStockMovementSerializer(serializers.ModelSerializer):
             "username",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        # `user` is never taken from the request body: without this a client
+        # could post a stock movement attributed to another shop.
+        read_only_fields = ["id", "created_at", "user"]

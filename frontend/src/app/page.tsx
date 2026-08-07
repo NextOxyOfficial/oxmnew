@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import {
@@ -13,7 +13,6 @@ import {
   MessageSquare,
   BarChart3,
   Shield,
-  Zap,
   CheckCircle,
   ArrowRight,
   Star,
@@ -21,15 +20,15 @@ import {
   Clock,
   Globe,
   Smartphone,
-  Building2,
   ChevronRight,
-  Play,
+  Phone,
+  Mail,
   Menu,
   X,
 } from 'lucide-react';
 
 export default function Home() {
-  const { user, isAuthenticated, loading, logout } = useAuth();
+  const { isAuthenticated, loading, logout } = useAuth();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -37,124 +36,115 @@ export default function Home() {
   const features = [
     {
       icon: Package,
-      title: 'Inventory Management',
-      description: 'Track products, variants, stock levels with real-time alerts for low stock items.',
-      color: 'from-blue-500 to-cyan-500',
+      title: 'প্রোডাক্ট ও স্টক',
+      description: 'প্রোডাক্ট, ভ্যারিয়েন্ট আর স্টকের হিসাব এক জায়গায়। স্টক কমে গেলে সাথে সাথেই খবর পাবেন।',
     },
     {
       icon: ShoppingCart,
-      title: 'Sales & Orders',
-      description: 'Process sales, manage orders, generate invoices with complete transaction history.',
-      color: 'from-emerald-500 to-green-500',
+      title: 'বিক্রি ও অর্ডার',
+      description: 'বিক্রি করুন, অর্ডার সামলান, ইনভয়েস বানান — পুরো লেনদেনের হিসাব সেভ থাকে।',
     },
     {
       icon: Users,
-      title: 'Customer Management',
-      description: 'Maintain customer database, track purchase history, manage due payments.',
-      color: 'from-purple-500 to-pink-500',
+      title: 'কাস্টমার',
+      description: 'কাস্টমারের তালিকা, কেনাকাটার হিস্ট্রি আর বাকির হিসাব সবসময় হাতের কাছে।',
     },
     {
       icon: CreditCard,
-      title: 'Banking & Finance',
-      description: 'Multi-account banking, transaction tracking, financial reports and analytics.',
-      color: 'from-orange-500 to-amber-500',
+      title: 'ব্যাংকিং',
+      description: 'একাধিক অ্যাকাউন্ট, প্রতিটি লেনদেনের হিসাব আর টাকার রিপোর্ট এক জায়গায়।',
     },
     {
       icon: MessageSquare,
-      title: 'SMS Marketing',
-      description: 'Bulk SMS campaigns, automated notifications, customer engagement tools.',
-      color: 'from-rose-500 to-red-500',
+      title: 'এসএমএস সেন্টার',
+      description: 'একসাথে অনেক কাস্টমারকে এসএমএস, অটো নোটিফিকেশন আর অফারের খবর পাঠান।',
     },
     {
       icon: BarChart3,
-      title: 'Reports & Analytics',
-      description: 'Comprehensive dashboards, sales reports, inventory insights, profit analysis.',
-      color: 'from-indigo-500 to-violet-500',
+      title: 'রিপোর্ট',
+      description: 'ড্যাশবোর্ড, বিক্রির রিপোর্ট, স্টকের হিসাব আর লাভ-ক্ষতির পুরো চিত্র।',
     },
   ];
 
   const stats = [
-    { value: '10,00+', label: 'Active Businesses' },
-    { value: '৳11Cr+', label: 'Transactions Processed' },
-    { value: '99.9%', label: 'Uptime Guarantee' },
-    { value: '24/7', label: 'Customer Support' },
+    { value: '১০,০০০+', label: 'Active ব্যবসা' },
+    { value: '৳১১ কোটি+', label: 'লেনদেন হয়েছে' },
+    { value: '৯৯.৯%', label: 'আপটাইম' },
+    { value: '২৪/৭', label: 'সাপোর্ট' },
   ];
 
   const testimonials = [
     {
-      name: 'Rahim Uddin',
-      business: 'Fashion House BD',
-      image: '/testimonials/user1.jpg',
-      quote: 'OxyManager transformed how we manage our clothing business. Stock tracking is now effortless!',
+      name: 'রহিম উদ্দিন',
+      business: 'ফ্যাশন হাউস বিডি',
+      quote: 'OxyManager আসার পর কাপড়ের ব্যবসার হিসাব রাখা অনেক সহজ হয়ে গেছে। স্টক মেলানো নিয়ে আর ঝামেলা নেই।',
       rating: 5,
     },
     {
-      name: 'Fatima Akter',
-      business: 'Grocery Mart',
-      image: '/testimonials/user2.jpg',
-      quote: 'The SMS feature helped us increase repeat customers by 40%. Amazing tool for small businesses.',
+      name: 'ফাতেমা আক্তার',
+      business: 'গ্রোসারি মার্ট',
+      quote: 'এসএমএস সেন্টার দিয়ে পুরোনো কাস্টমারদের খবর দিই। এতে বিক্রি ৪০% বেড়েছে।',
       rating: 5,
     },
     {
-      name: 'Kamal Hossain',
-      business: 'Electronics Plus',
-      image: '/testimonials/user3.jpg',
-      quote: 'Finally a business software that understands Bangladeshi businesses. The due book feature is a lifesaver!',
+      name: 'কামাল হোসেন',
+      business: 'ইলেকট্রনিকস প্লাস',
+      quote: 'অবশেষে এমন একটা সফটওয়্যার পেলাম যেটা আমাদের দেশের ব্যবসা বোঝে। বাকির খাতাটা তো জীবন বাঁচিয়ে দিয়েছে।',
       rating: 5,
     },
   ];
 
   const pricingPlans = [
     {
-      name: 'Free',
+      name: 'ফ্রি',
       price: '০',
       period: '/মাস',
       description: 'ছোট ব্যবসার জন্য পারফেক্ট',
       features: [
-        'Up to 25 Products',
-        'Basic Inventory Management',
-        'Sales & Order Tracking',
-        'Customer Database',
-        '50 SMS Credits/month',
-        'Email Support',
+        '২৫টি প্রোডাক্ট পর্যন্ত',
+        'স্টকের সাধারণ হিসাব',
+        'বিক্রি ও অর্ডার ট্র্যাকিং',
+        'কাস্টমারের তালিকা',
+        'মাসে ৫০টি এসএমএস',
+        'ইমেইল সাপোর্ট',
       ],
-      cta: 'Start Free',
+      cta: 'ফ্রি শুরু করুন',
       popular: false,
     },
     {
-      name: 'Pro',
+      name: 'প্রো',
       price: '৩৯৯',
       period: '/মাস',
-      description: 'Growing businesses এর জন্য',
+      description: 'বাড়তে থাকা ব্যবসার জন্য',
       features: [
-        'Unlimited Products',
-        'Advanced Inventory',
-        'Multi-user Access',
-        'Banking Integration',
-        '500 SMS Credits/month',
-        'Priority Support',
-        'Custom Reports',
-        'API Access',
+        'যত খুশি প্রোডাক্ট',
+        'স্টকের বিস্তারিত হিসাব',
+        'একাধিক ইউজার',
+        'ব্যাংকিং যোগ করা',
+        'মাসে ৫০০টি এসএমএস',
+        'অগ্রাধিকার সাপোর্ট',
+        'নিজের মতো রিপোর্ট',
+        'API অ্যাক্সেস',
       ],
-      cta: 'Start Pro Trial',
+      cta: 'প্রো ট্রায়াল নিন',
       popular: true,
     },
     {
-      name: 'Enterprise',
-      price: 'Custom',
+      name: 'এন্টারপ্রাইজ',
+      price: 'কাস্টম',
       period: '',
-      description: 'Large organizations এর জন্য',
+      description: 'বড় প্রতিষ্ঠানের জন্য',
       features: [
-        'Everything in Pro',
-        'Unlimited Users',
-        'Dedicated Server',
-        'Custom Integrations',
-        'Unlimited SMS',
-        'Dedicated Account Manager',
-        'On-premise Option',
-        'SLA Guarantee',
+        'প্রো-এর সবকিছু',
+        'যত খুশি ইউজার',
+        'আলাদা সার্ভার',
+        'নিজের মতো ইন্টিগ্রেশন',
+        'যত খুশি এসএমএস',
+        'নিজস্ব অ্যাকাউন্ট ম্যানেজার',
+        'অন-প্রিমাইজ সুবিধা',
+        'SLA নিশ্চয়তা',
       ],
-      cta: 'Contact Sales',
+      cta: 'কথা বলুন',
       popular: false,
     },
   ];
@@ -167,72 +157,67 @@ export default function Home() {
   }, [testimonials.length]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden">
+    <div className="min-h-screen overflow-x-clip text-slate-900">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between gap-3">
             {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center">
-                <span className="text-slate-900 font-bold text-lg">O</span>
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                OxyManager
-              </span>
-            </div>
+            <Link href="/" className="flex items-center gap-2">
+              {/* The full lockup already contains the wordmark and tagline, so
+                  no separate text is needed beside it. */}
+              <Image
+                src="/logo.png"
+                alt="OxyManager — Your Smart Assistant"
+                width={378}
+                height={96}
+                className="h-9 w-auto"
+                priority
+              />
+            </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
-                Features
+            <div className="hidden items-center gap-7 md:flex">
+              <a href="#features" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
+                ফিচার
               </a>
-              <a href="#pricing" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
-                Pricing
+              <a href="#pricing" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
+                দাম
               </a>
-              <a href="#testimonials" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
-                Reviews
+              <a href="#testimonials" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
+                রিভিউ
               </a>
-              <a href="#faq" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
-                FAQ
+              <a href="#faq" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
+                প্রশ্ন-উত্তর
               </a>
             </div>
 
             {/* Auth Buttons */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden items-center gap-2 md:flex">
               {loading ? (
-                <div className="animate-pulse h-10 w-24 bg-slate-800 rounded-lg"></div>
+                <div className="h-9 w-24 animate-pulse rounded-lg bg-slate-100"></div>
               ) : isAuthenticated ? (
                 <>
-                  <Link
-                    href="/dashboard"
-                    className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/25"
-                  >
-                    Dashboard
+                  <Link href="/dashboard" className="btn btn-primary">
+                    ড্যাশবোর্ড
                   </Link>
                   <button
                     onClick={() => {
                       logout();
                       router.push('/');
                     }}
-                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold rounded-lg transition-all duration-300"
+                    className="btn btn-ghost"
                   >
-                    Logout
+                    লগআউট
                   </button>
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/auth/login"
-                    className="text-slate-300 hover:text-white transition-colors text-sm font-medium px-4 py-2"
-                  >
-                    Sign in
+                  <Link href="/auth/login" className="btn btn-ghost">
+                    লগইন
                   </Link>
-                  <Link
-                    href="/auth/register"
-                    className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-semibold rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/25"
-                  >
-                    Get Started Free
+                  <Link href="/auth/register" className="btn btn-primary">
+                    ফ্রি শুরু করুন
                   </Link>
                 </>
               )}
@@ -241,26 +226,27 @@ export default function Home() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-slate-400 hover:text-white"
+              aria-label={mobileMenuOpen ? 'মেনু বন্ধ করুন' : 'মেনু খুলুন'}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 md:hidden"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-slate-900 border-t border-slate-800">
-            <div className="px-4 py-4 space-y-3">
-              <a href="#features" className="block text-slate-300 hover:text-white py-2">Features</a>
-              <a href="#pricing" className="block text-slate-300 hover:text-white py-2">Pricing</a>
-              <a href="#testimonials" className="block text-slate-300 hover:text-white py-2">Reviews</a>
-              <a href="#faq" className="block text-slate-300 hover:text-white py-2">FAQ</a>
-              <div className="pt-4 border-t border-slate-800 space-y-3">
+          <div className="border-t border-slate-200 bg-white md:hidden">
+            <div className="space-y-1 px-4 py-3">
+              <a href="#features" className="block py-2 text-sm text-slate-600 hover:text-slate-900">ফিচার</a>
+              <a href="#pricing" className="block py-2 text-sm text-slate-600 hover:text-slate-900">দাম</a>
+              <a href="#testimonials" className="block py-2 text-sm text-slate-600 hover:text-slate-900">রিভিউ</a>
+              <a href="#faq" className="block py-2 text-sm text-slate-600 hover:text-slate-900">প্রশ্ন-উত্তর</a>
+              <div className="space-y-2 border-t border-slate-200 pt-3">
                 {isAuthenticated ? (
                   <>
-                    <Link href="/dashboard" className="block w-full text-center px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold rounded-lg">
-                      Dashboard
+                    <Link href="/dashboard" className="btn btn-primary w-full">
+                      ড্যাশবোর্ড
                     </Link>
                     <button
                       onClick={() => {
@@ -268,16 +254,16 @@ export default function Home() {
                         router.push('/');
                         setMobileMenuOpen(false);
                       }}
-                      className="block w-full text-center px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold rounded-lg"
+                      className="btn btn-ghost w-full"
                     >
-                      Logout
+                      লগআউট
                     </button>
                   </>
                 ) : (
                   <>
-                    <Link href="/auth/login" className="block w-full text-center text-slate-300 py-2">Sign in</Link>
-                    <Link href="/auth/register" className="block w-full text-center px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 font-semibold rounded-lg">
-                      Get Started Free
+                    <Link href="/auth/login" className="btn btn-ghost w-full">লগইন</Link>
+                    <Link href="/auth/register" className="btn btn-primary w-full">
+                      ফ্রি শুরু করুন
                     </Link>
                   </>
                 )}
@@ -288,122 +274,146 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-cyan-500/5 to-emerald-500/5 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-4xl mx-auto">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-full mb-8">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-sm text-slate-300">বাংলাদেশের #1 Business Management Software</span>
-            </div>
+      <section className="bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="badge badge-info">বাংলাদেশের ১ নম্বর বিজনেস সফটওয়্যার</span>
 
             {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 leading-tight">
+            <h1 className="mt-5 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
               আপনার ব্যবসা
-              <span className="block bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                সহজে ম্যানেজ করুন
-              </span>
+              <span className="block text-cyan-600">সহজে ম্যানেজ করুন</span>
             </h1>
 
             {/* Subheadline */}
-            <p className="text-lg sm:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-              Inventory, Sales, Customers, Banking, SMS - সব এক জায়গায়। 
-              ছোট থেকে বড় সব ব্যবসার জন্য complete business management solution।
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg">
+              স্টক, বিক্রি, কাস্টমার, ব্যাংকিং আর এসএমএস — সব এক জায়গায়। ছোট স্টোর থেকে বড় প্রতিষ্ঠান,
+              সবার হিসাব রাখার পুরো ব্যবস্থা।
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-              <Link
-                href="/auth/register"
-                className="group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-bold rounded-xl transition-all duration-300 shadow-2xl shadow-cyan-500/25 hover:shadow-cyan-500/40 flex items-center justify-center gap-2"
-              >
+            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link href="/auth/register" className="btn btn-primary w-full sm:w-auto">
                 ফ্রি শুরু করুন
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="h-4 w-4" />
               </Link>
-              <button className="group w-full sm:w-auto px-8 py-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2">
-                <Play className="w-5 h-5" />
-                Watch Demo
-              </button>
+              <a href="#features" className="btn btn-ghost w-full sm:w-auto">
+                কী কী আছে দেখুন
+              </a>
             </div>
 
             {/* Trust Badges */}
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-500" />
-                <span>No credit card required</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-500" />
-                <span>14-day free trial</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-500" />
-                <span>Cancel anytime</span>
-              </div>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-500">
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+                কার্ড লাগবে না
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+                ১৪ দিন ফ্রি ট্রায়াল
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+                যেকোনো সময় বন্ধ করুন
+              </span>
             </div>
 
             {/* Contact Info */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-400">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                <a href="tel:+8801234567890" className="hover:text-white transition-colors">+880 1234-567890</a>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <a href="mailto:support@oxymanager.com" className="hover:text-white transition-colors">support@oxymanager.com</a>
-              </div>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-500">
+              <a href="tel:+8801234567890" className="inline-flex items-center gap-1.5 hover:text-slate-900">
+                <Phone className="h-4 w-4" />
+                +880 1234-567890
+              </a>
+              <a href="mailto:support@oxymanager.com" className="inline-flex items-center gap-1.5 hover:text-slate-900">
+                <Mail className="h-4 w-4" />
+                support@oxymanager.com
+              </a>
             </div>
           </div>
 
           {/* Dashboard Preview */}
-          <div className="mt-16 relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent z-10 pointer-events-none"></div>
-            <div className="relative rounded-2xl overflow-hidden border border-slate-800 shadow-2xl shadow-cyan-500/10">
-              <div className="bg-slate-900 px-4 py-3 border-b border-slate-800 flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                </div>
-                <div className="flex-1 text-center text-xs text-slate-500">oxymanager.com/dashboard</div>
+          <div className="mx-auto mt-12 max-w-4xl">
+            <div className="plane">
+              <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5">
+                <span className="flex gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-300"></span>
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-300"></span>
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-300"></span>
+                </span>
+                <span className="flex-1 text-center text-xs text-slate-500">oxymanager.com/dashboard</span>
               </div>
-              <div className="bg-gradient-to-br from-slate-900 to-slate-800 aspect-video flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center">
-                    <BarChart3 className="w-10 h-10 text-slate-900" />
-                  </div>
-                  <p className="text-slate-400">Interactive Dashboard Preview</p>
+
+              <div className="stat-strip">
+                <div className="stat">
+                  <div className="stat-label">আজকের বিক্রি</div>
+                  <div className="stat-value num">৳৪২,৮০০</div>
+                  <div className="stat-meta">গতকালের চেয়ে বেশি</div>
                 </div>
+                <div className="stat">
+                  <div className="stat-label">মোট অর্ডার</div>
+                  <div className="stat-value num">১৩৭</div>
+                  <div className="stat-meta">এই মাসে</div>
+                </div>
+                <div className="stat">
+                  <div className="stat-label">বাকি</div>
+                  <div className="stat-value num money-neg">৳৯,২৫০</div>
+                  <div className="stat-meta">১২ জন কাস্টমার</div>
+                </div>
+                <div className="stat">
+                  <div className="stat-label">স্টক কম</div>
+                  <div className="stat-value num">৫</div>
+                  <div className="stat-meta">প্রোডাক্ট শেষ হয়ে আসছে</div>
+                </div>
+              </div>
+
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>প্রোডাক্ট</th>
+                      <th className="cell-num">পরিমাণ</th>
+                      <th className="cell-num">মোট</th>
+                      <th>অবস্থা</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="cell-strong">সুতির শার্ট</td>
+                      <td className="cell-num">১২</td>
+                      <td className="cell-num money-pos">৳৯,৬০০</td>
+                      <td><span className="badge badge-success">পরিশোধ</span></td>
+                    </tr>
+                    <tr>
+                      <td className="cell-strong">চামড়ার বেল্ট</td>
+                      <td className="cell-num">৪</td>
+                      <td className="cell-num money-pos">৳৩,২০০</td>
+                      <td><span className="badge badge-warn">পেন্ডিং</span></td>
+                    </tr>
+                    <tr>
+                      <td className="cell-strong">স্পোর্টস জুতা</td>
+                      <td className="cell-num">২</td>
+                      <td className="cell-num money-pos">৳৫,৪০০</td>
+                      <td><span className="badge badge-success">পরিশোধ</span></td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
+            <p className="mt-3 text-center text-xs text-slate-500">ড্যাশবোর্ডের এক ঝলক</p>
           </div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 border-y border-slate-800/50 bg-slate-900/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+      <section className="border-y border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 gap-px bg-slate-200 lg:grid-cols-4">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent mb-2">
+              <div key={index} className="bg-white px-4 py-8 text-center">
+                <div className="num text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
                   {stat.value}
                 </div>
-                <div className="text-slate-400 text-sm">{stat.label}</div>
+                <div className="mt-1 text-sm text-slate-500">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -411,149 +421,143 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 lg:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
-              Everything you need to
-              <span className="block bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                run your business
-              </span>
+      <section id="features" className="py-16 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              ব্যবসা চালাতে যা যা লাগে,
+              <span className="block text-cyan-600">সবই এখানে আছে</span>
             </h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              Powerful features designed specifically for Bangladeshi businesses. 
-              Simple to use, yet powerful enough for any scale.
+            <p className="mx-auto mt-3 max-w-2xl text-slate-600">
+              বাংলাদেশের ব্যবসার কথা ভেবেই বানানো। ব্যবহার করা সহজ, তবু যেকোনো মাপের ব্যবসার জন্য যথেষ্ট।
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="group p-6 bg-slate-900/50 border border-slate-800 rounded-2xl hover:border-slate-700 transition-all duration-300 hover:-translate-y-1"
-              >
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                  <feature.icon className="w-6 h-6 text-white" />
+          <div className="plane">
+            <div className="grid grid-cols-1 gap-px bg-slate-200 md:grid-cols-2 lg:grid-cols-3">
+              {features.map((feature, index) => (
+                <div key={index} className="bg-white p-6">
+                  <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
+                    <feature.icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="text-base font-semibold text-slate-900">{feature.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{feature.description}</p>
                 </div>
-                <h3 className="text-xl font-semibold mb-2 text-white">{feature.title}</h3>
-                <p className="text-slate-400 leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {/* Additional Features Grid */}
-          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { icon: Shield, label: 'Bank-grade Security' },
-              { icon: Globe, label: 'Access Anywhere' },
-              { icon: Smartphone, label: 'Mobile Friendly' },
-              { icon: Clock, label: 'Real-time Sync' },
-            ].map((item, index) => (
-              <div key={index} className="flex items-center gap-3 p-4 bg-slate-900/30 rounded-xl border border-slate-800/50">
-                <item.icon className="w-5 h-5 text-cyan-400" />
-                <span className="text-sm text-slate-300">{item.label}</span>
+            {/* Additional Features */}
+            <div className="plane-section">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  { icon: Shield, label: 'ব্যাংকের মতো নিরাপত্তা' },
+                  { icon: Globe, label: 'যেকোনো জায়গা থেকে' },
+                  { icon: Smartphone, label: 'মোবাইলেও চলে' },
+                  { icon: Clock, label: 'সাথে সাথে আপডেট' },
+                ].map((item, index) => (
+                  <div key={index} className="flex items-center gap-2.5 text-sm text-slate-600">
+                    <item.icon className="h-4 w-4 flex-shrink-0 text-cyan-600" />
+                    <span>{item.label}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section className="py-20 lg:py-32 bg-slate-900/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              শুরু করুন মাত্র <span className="text-cyan-400">৩ ধাপে</span>
+      <section className="border-y border-slate-200 bg-white py-16 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              শুরু করুন মাত্র <span className="text-cyan-600">৩ ধাপে</span>
             </h2>
-            <p className="text-slate-400 text-lg">Simple setup, powerful results</p>
+            <p className="mt-3 text-slate-600">সেটআপ সহজ, ফল সাথে সাথেই</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                step: '01',
-                title: 'Sign Up Free',
-                description: 'Create your account in 30 seconds. No credit card needed.',
-                icon: Users,
-              },
-              {
-                step: '02',
-                title: 'Add Your Products',
-                description: 'Import or manually add your inventory. Set prices and stock levels.',
-                icon: Package,
-              },
-              {
-                step: '03',
-                title: 'Start Selling',
-                description: 'Process sales, track customers, and grow your business.',
-                icon: TrendingUp,
-              },
-            ].map((item, index) => (
-              <div key={index} className="relative">
-                {index < 2 && (
-                  <div className="hidden md:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-cyan-500/50 to-transparent -translate-x-1/2"></div>
-                )}
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 mb-6">
-                    <item.icon className="w-10 h-10 text-cyan-400" />
-                  </div>
-                  <div className="text-cyan-400 font-mono text-sm mb-2">{item.step}</div>
-                  <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                  <p className="text-slate-400">{item.description}</p>
+          <div className="plane">
+            <div className="grid grid-cols-1 gap-px bg-slate-200 md:grid-cols-3">
+              {[
+                {
+                  step: '০১',
+                  title: 'ফ্রি অ্যাকাউন্ট খুলুন',
+                  description: '৩০ সেকেন্ডেই অ্যাকাউন্ট তৈরি। কোনো কার্ড লাগবে না।',
+                  icon: Users,
+                },
+                {
+                  step: '০২',
+                  title: 'প্রোডাক্ট যোগ করুন',
+                  description: 'প্রোডাক্টের তালিকা ইমপোর্ট করুন বা হাতে লিখুন। দাম আর স্টক বসিয়ে দিন।',
+                  icon: Package,
+                },
+                {
+                  step: '০৩',
+                  title: 'বিক্রি শুরু করুন',
+                  description: 'বিক্রি করুন, কাস্টমারের হিসাব রাখুন, ব্যবসা বাড়ান।',
+                  icon: TrendingUp,
+                },
+              ].map((item, index) => (
+                <div key={index} className="bg-white p-6 text-center">
+                  <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 text-cyan-600">
+                    <item.icon className="h-5 w-5" />
+                  </span>
+                  <div className="num text-xs font-semibold tracking-wider text-cyan-600">{item.step}</div>
+                  <h3 className="mt-1 text-base font-semibold text-slate-900">{item.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{item.description}</p>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section id="testimonials" className="py-20 lg:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Trusted by <span className="text-emerald-400">10,000+</span> businesses
+      <section id="testimonials" className="py-16 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              <span className="text-emerald-700">১০,০০০+</span> ব্যবসায়ীর ভরসা
             </h2>
-            <p className="text-slate-400 text-lg">See what our customers have to say</p>
+            <p className="mt-3 text-slate-600">কাস্টমাররা কী বলছেন দেখুন</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <div
-                key={index}
-                className={`p-6 rounded-2xl border transition-all duration-500 ${
-                  index === activeTestimonial
-                    ? 'bg-gradient-to-br from-cyan-500/10 to-emerald-500/10 border-cyan-500/30 scale-105'
-                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-slate-300 mb-6 leading-relaxed">&ldquo;{testimonial.quote}&rdquo;</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-900 font-bold">
-                    {testimonial.name.charAt(0)}
+          <div className="plane">
+            <div className="grid grid-cols-1 gap-px bg-slate-200 md:grid-cols-3">
+              {testimonials.map((testimonial, index) => (
+                <div
+                  key={index}
+                  className={`p-6 transition-colors ${index === activeTestimonial ? 'bg-slate-50' : 'bg-white'}`}
+                >
+                  <div className="mb-3 flex items-center gap-0.5">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-500" />
+                    ))}
                   </div>
-                  <div>
-                    <div className="font-semibold text-white">{testimonial.name}</div>
-                    <div className="text-sm text-slate-400">{testimonial.business}</div>
+                  <p className="text-sm leading-relaxed text-slate-600">&ldquo;{testimonial.quote}&rdquo;</p>
+                  <div className="mt-5 flex items-center gap-3">
+                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-sm font-semibold text-cyan-700">
+                      {testimonial.name.charAt(0)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-slate-900">{testimonial.name}</div>
+                      <div className="truncate text-xs text-slate-500">{testimonial.business}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Testimonial Dots */}
-          <div className="flex justify-center gap-2 mt-8">
+          <div className="mt-6 flex justify-center gap-2">
             {testimonials.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setActiveTestimonial(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  index === activeTestimonial ? 'bg-cyan-400 w-6' : 'bg-slate-600'
+                aria-label={`রিভিউ ${index + 1} দেখুন`}
+                className={`h-2 rounded-full transition-all ${
+                  index === activeTestimonial ? 'w-6 bg-cyan-600' : 'w-2 bg-slate-300'
                 }`}
               />
             ))}
@@ -562,103 +566,89 @@ export default function Home() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 lg:py-32 bg-slate-900/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Simple, transparent <span className="text-cyan-400">pricing</span>
+      <section id="pricing" className="border-y border-slate-200 bg-white py-16 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              সহজ আর <span className="text-cyan-600">পরিষ্কার দাম</span>
             </h2>
-            <p className="text-slate-400 text-lg">Start free, upgrade when you need</p>
+            <p className="mt-3 text-slate-600">ফ্রি দিয়ে শুরু করুন, দরকার হলে বাড়িয়ে নিন</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {pricingPlans.map((plan, index) => (
-              <div
-                key={index}
-                className={`relative p-6 rounded-2xl border transition-all duration-300 ${
-                  plan.popular
-                    ? 'bg-gradient-to-br from-cyan-500/10 to-emerald-500/10 border-cyan-500/50 scale-105 shadow-2xl shadow-cyan-500/20'
-                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 text-xs font-bold rounded-full">
-                    Most Popular
+          <div className="plane mx-auto max-w-5xl">
+            <div className="grid grid-cols-1 gap-px bg-slate-200 md:grid-cols-3">
+              {pricingPlans.map((plan, index) => (
+                <div key={index} className={`flex flex-col p-6 ${plan.popular ? 'bg-slate-50' : 'bg-white'}`}>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-slate-900">{plan.name}</h3>
+                    {plan.popular && <span className="badge badge-info">সবচেয়ে জনপ্রিয়</span>}
                   </div>
-                )}
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-slate-400">{plan.period}</span>
+                  <div className="mt-3 flex items-baseline gap-1">
+                    <span className="num text-3xl font-semibold tracking-tight text-slate-900">{plan.price}</span>
+                    <span className="text-sm text-slate-500">{plan.period}</span>
                   </div>
-                  <p className="text-sm text-slate-400 mt-2">{plan.description}</p>
+                  <p className="mt-1 text-sm text-slate-500">{plan.description}</p>
+
+                  <ul className="mt-5 mb-6 flex-1 space-y-2.5">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                        <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-600" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    href={plan.name === 'এন্টারপ্রাইজ' ? '#contact' : '/auth/register'}
+                    className={`btn w-full ${plan.popular ? 'btn-primary' : 'btn-ghost'}`}
+                  >
+                    {plan.cta}
+                  </Link>
                 </div>
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={plan.name === 'Enterprise' ? '#contact' : '/auth/register'}
-                  className={`block w-full py-3 rounded-xl font-semibold text-center transition-all ${
-                    plan.popular
-                      ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-900 hover:from-cyan-400 hover:to-emerald-400'
-                      : 'bg-slate-800 text-white hover:bg-slate-700'
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-20 lg:py-32">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Frequently Asked <span className="text-cyan-400">Questions</span>
+      <section id="faq" className="py-16 lg:py-24">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              যা প্রায়ই <span className="text-cyan-600">জিজ্ঞেস করা হয়</span>
             </h2>
           </div>
 
-          <div className="space-y-4">
+          <div className="plane">
             {[
               {
                 q: 'OxyManager কি ফ্রি?',
-                a: 'হ্যাঁ! আমাদের Free plan দিয়ে শুরু করতে পারবেন। ১০০টি প্রোডাক্ট পর্যন্ত ম্যানেজ করতে পারবেন বিনামূল্যে।',
+                a: 'হ্যাঁ! ফ্রি প্ল্যান দিয়েই শুরু করতে পারবেন। বিনামূল্যে ২৫টি প্রোডাক্ট পর্যন্ত ম্যানেজ করা যাবে।',
               },
               {
                 q: 'আমার ডাটা কি সুরক্ষিত?',
-                a: 'অবশ্যই! আমরা bank-grade encryption ব্যবহার করি এবং আপনার ডাটা নিয়মিত backup নেওয়া হয়।',
+                a: 'অবশ্যই। ব্যাংকের মতো এনক্রিপশন ব্যবহার করি আর আপনার ডাটার নিয়মিত ব্যাকআপ রাখা হয়।',
               },
               {
                 q: 'মোবাইল থেকে ব্যবহার করা যাবে?',
-                a: 'হ্যাঁ, OxyManager সম্পূর্ণ mobile responsive। যেকোনো device থেকে access করতে পারবেন।',
+                a: 'হ্যাঁ, OxyManager মোবাইলেও পুরোপুরি চলে। যেকোনো ডিভাইস থেকেই ঢুকতে পারবেন।',
               },
               {
-                q: 'SMS credit কিভাবে কিনবো?',
-                a: 'Dashboard থেকে Subscriptions এ গিয়ে SMS packages দেখতে পাবেন। bKash/Nagad/Card দিয়ে কিনতে পারবেন।',
+                q: 'এসএমএস ক্রেডিট কীভাবে কিনবো?',
+                a: 'ড্যাশবোর্ডের সাবস্ক্রিপশন থেকে এসএমএস প্যাকেজ দেখতে পাবেন। বিকাশ, নগদ বা কার্ড দিয়ে কিনতে পারবেন।',
               },
               {
-                q: 'Support কিভাবে পাবো?',
-                a: 'Free users email support পাবেন। Pro users priority support এবং live chat access পাবেন।',
+                q: 'সাপোর্ট কীভাবে পাবো?',
+                a: 'ফ্রি ইউজাররা ইমেইল সাপোর্ট পাবেন। প্রো ইউজাররা অগ্রাধিকার সাপোর্ট আর লাইভ চ্যাট পাবেন।',
               },
             ].map((faq, index) => (
-              <details
-                key={index}
-                className="group p-4 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-slate-700 transition-all"
-              >
-                <summary className="flex items-center justify-between cursor-pointer list-none">
-                  <span className="font-medium text-white">{faq.q}</span>
-                  <ChevronRight className="w-5 h-5 text-slate-400 group-open:rotate-90 transition-transform" />
+              <details key={index} className="plane-section group">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-slate-900">{faq.q}</span>
+                  <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-open:rotate-90" />
                 </summary>
-                <p className="mt-4 text-slate-400 leading-relaxed">{faq.a}</p>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600">{faq.a}</p>
               </details>
             ))}
           </div>
@@ -666,106 +656,83 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 lg:py-32">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/30">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Ready to grow your business?
-            </h2>
-            <p className="text-slate-400 text-lg mb-8 max-w-xl mx-auto">
-              Join 10,000+ businesses already using OxyManager. Start your free trial today.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                href="/auth/register"
-                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-900 font-bold rounded-xl transition-all duration-300 shadow-2xl shadow-cyan-500/25"
-              >
-                Start Free Trial
-              </Link>
-              <Link
-                href="#contact"
-                className="w-full sm:w-auto px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all border border-slate-700"
-              >
-                Contact Sales
-              </Link>
-            </div>
+      <section id="contact" className="border-t border-slate-200 bg-white py-16 lg:py-24">
+        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            ব্যবসা বাড়ানোর জন্য তৈরি?
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-slate-600">
+            ১০,০০০+ ব্যবসায়ী এখন OxyManager ব্যবহার করছেন। আজই ফ্রি ট্রায়াল শুরু করুন।
+          </p>
+          <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link href="/auth/register" className="btn btn-primary w-full sm:w-auto">
+              ফ্রি ট্রায়াল শুরু করুন
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <a href="mailto:support@oxymanager.com" className="btn btn-ghost w-full sm:w-auto">
+              কথা বলুন
+            </a>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+      <footer className="border-t border-slate-200 py-12">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center">
-                  <span className="text-slate-900 font-bold text-sm">O</span>
-                </div>
-                <span className="text-lg font-bold">OxyManager</span>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-600 text-sm font-bold text-white">
+                  O
+                </span>
+                <span className="text-base font-semibold text-slate-900">OxyManager</span>
               </div>
-              <p className="text-slate-400 text-sm mb-4">
-                Complete business management solution for Bangladeshi businesses.
+              <p className="mb-4 text-sm text-slate-500">
+                বাংলাদেশের ব্যবসার জন্য পুরো হিসাব-নিকাশের ব্যবস্থা।
               </p>
-              <div className="space-y-2 text-sm text-slate-400">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  <a href="tel:+8801234567890" className="hover:text-white transition-colors">+880 1234-567890</a>
-                </div>
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  <a href="mailto:support@oxymanager.com" className="hover:text-white transition-colors">support@oxymanager.com</a>
-                </div>
+              <div className="space-y-2 text-sm text-slate-500">
+                <a href="tel:+8801234567890" className="flex items-center gap-2 hover:text-slate-900">
+                  <Phone className="h-4 w-4 flex-shrink-0" />
+                  +880 1234-567890
+                </a>
+                <a href="mailto:support@oxymanager.com" className="flex items-center gap-2 hover:text-slate-900">
+                  <Mail className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">support@oxymanager.com</span>
+                </a>
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-sm text-slate-400">
-                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Updates</a></li>
+              <h3 className="mb-3 text-sm font-semibold text-slate-900">প্রোডাক্ট</h3>
+              <ul className="space-y-2 text-sm text-slate-500">
+                <li><a href="#features" className="hover:text-slate-900">ফিচার</a></li>
+                <li><a href="#pricing" className="hover:text-slate-900">দাম</a></li>
+                <li><a href="#faq" className="hover:text-slate-900">প্রশ্ন-উত্তর</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-sm text-slate-400">
-                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+              <h3 className="mb-3 text-sm font-semibold text-slate-900">কোম্পানি</h3>
+              <ul className="space-y-2 text-sm text-slate-500">
+                <li><a href="#testimonials" className="hover:text-slate-900">রিভিউ</a></li>
+                <li><a href="#contact" className="hover:text-slate-900">যোগাযোগ</a></li>
+                <li><a href="mailto:support@oxymanager.com" className="hover:text-slate-900">সাপোর্ট</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm text-slate-400">
-                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/terms" className="hover:text-white transition-colors">Terms & Conditions</Link></li>
-                <li><a href="mailto:support@oxymanager.com" className="hover:text-white transition-colors">Contact Support</a></li>
+              <h3 className="mb-3 text-sm font-semibold text-slate-900">আইনি</h3>
+              <ul className="space-y-2 text-sm text-slate-500">
+                <li><Link href="/privacy" className="hover:text-slate-900">প্রাইভেসি পলিসি</Link></li>
+                <li><Link href="/terms" className="hover:text-slate-900">শর্তাবলি</Link></li>
+                <li><a href="mailto:support@oxymanager.com" className="hover:text-slate-900">সাপোর্টে যোগাযোগ</a></li>
               </ul>
             </div>
           </div>
-          <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-slate-400 text-sm">
-              <p>&copy; {new Date().getFullYear()} OxyManager. All rights reserved.</p>
-              <div className="flex items-center gap-4">
-                <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-                <span className="hidden sm:inline">•</span>
-                <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-              </div>
-            </div>
+
+          <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-slate-200 pt-6 text-sm text-slate-500 sm:flex-row">
+            <p>&copy; {new Date().getFullYear()} OxyManager. সর্বস্বত্ব সংরক্ষিত।</p>
             <div className="flex items-center gap-4">
-              <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
-              </a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-              </a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
-              </a>
+              <Link href="/privacy" className="hover:text-slate-900">প্রাইভেসি</Link>
+              <span aria-hidden="true">•</span>
+              <Link href="/terms" className="hover:text-slate-900">শর্তাবলি</Link>
             </div>
           </div>
         </div>

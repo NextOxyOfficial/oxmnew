@@ -14,8 +14,8 @@ urlpatterns = [
     
     # Store settings
     path('settings/', views.StoreSettingsView.as_view(), name='store-settings'),
-    path('terms/', views.get_store_terms, name='get-store-terms'),
-    path('terms/', views.update_store_terms, name='update-store-terms'),  # Changed to POST on same endpoint
-    path('privacy/', views.get_store_privacy, name='get-store-privacy'),
-    path('privacy/', views.update_store_privacy, name='update-store-privacy'),  # Changed to POST on same endpoint
+    # One route each, handling GET (read) and POST (save). Registering the
+    # same path twice made the POST view unreachable.
+    path('terms/', views.store_terms, name='store-terms'),
+    path('privacy/', views.store_privacy, name='store-privacy'),
 ]

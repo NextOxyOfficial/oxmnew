@@ -1,10 +1,10 @@
 "use client";
 
 import SmsComposer from "@/components/sms/SmsComposer";
+import { useToast } from "@/components/ui/Feedback";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
 import { customersAPI, DueCustomer } from "@/lib/api/customers";
-import { calculateSmsSegments } from "@/lib/utils/sms";
 import {
   DollarSign,
   Download,
@@ -24,7 +24,28 @@ if (process.env.NODE_ENV === "development") {
   import("@/lib/dev-auth");
 }
 
+// Presentation-only labels for the date filter values
+const DATE_FILTER_LABELS: Record<string, string> = {
+  all: "সব সময়",
+  today: "আজ",
+  yesterday: "গতকাল",
+  this_week: "এই সপ্তাহ",
+  last_week: "গত সপ্তাহ",
+  this_month: "এই মাস",
+  last_month: "গত মাস",
+  this_year: "এই বছর",
+  custom: "নিজের মতো তারিখ",
+};
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  paid: "পরিশোধ",
+  partially_paid: "আংশিক পরিশোধ",
+  overdue: "মেয়াদ পেরিয়েছে",
+  pending: "বাকি আছে",
+};
+
 export default function DueBookPage() {
+  const toast = useToast();
   const [dueCustomers, setDueCustomers] = useState<DueCustomer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<DueCustomer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -210,7 +231,7 @@ export default function DueBookPage() {
       console.log('Fetching due history - Page:', page);
       const response = await ApiService.get(`/due-payments/?page=${page}&page_size=20`);
       console.log('Due history response:', response);
-      
+
       if (response.results) {
         setDueHistory(prev => append ? [...prev, ...response.results] : response.results);
         setHistoryPagination({
@@ -230,12 +251,12 @@ export default function DueBookPage() {
       } else {
         // Unexpected response format
         console.warn('Unexpected response format:', response);
-        setHistoryError('Received unexpected data format from server');
+        setHistoryError('সার্ভার থেকে অন্যরকম তথ্য এসেছে');
       }
     } catch (error: any) {
       console.error("Failed to fetch due history:", error);
       console.error("Error details:", error.message, error.details);
-      const errorMessage = error.message || 'Failed to load payment history';
+      const errorMessage = error.message || 'বাকি ও পরিশোধের হিসাব লোড করা যায়নি';
       setHistoryError(errorMessage);
       if (!append) {
         setDueHistory([]);
@@ -328,15 +349,15 @@ export default function DueBookPage() {
   const handleSendSMS = (customer: DueCustomer) => {
     const storeName = userProfile?.profile?.company;
     const dueAmount = customer.total_due || 0;
-    
+
     // Debug logging
     console.log("User Profile:", userProfile);
     console.log("Store Name:", storeName);
-    
+
     const defaultMessage = `সম্মানিত কাস্টমার, আমাদের খাতায় আপনার ${dueAmount} টাকা বাকি রয়েছে, দয়া করে পরিশোধ করুন${storeName ? ` (${storeName})` : ''}`;
-    
+
     console.log("SMS Message:", defaultMessage);
-    
+
     setSmsCustomer(customer);
     setSmsMessage(defaultMessage);
     setShowSmsComposer(true);
@@ -344,29 +365,29 @@ export default function DueBookPage() {
 
   const handleSendSmsFromComposer = async (message: string) => {
     if (!smsCustomer) return;
-    
+
     setIsSendingSms(true);
     try {
       console.log("Sending SMS to:", smsCustomer.phone);
       console.log("Message:", message);
-      
+
       const response = await ApiService.sendSmsNotification(smsCustomer.phone, message);
-      
+
       console.log("SMS Response:", response);
-      
+
       if (response.success) {
-        alert("SMS sent successfully!");
+        toast.success("এসএমএস পাঠানো হয়ে গেছে!");
         setShowSmsComposer(false);
       } else {
-        alert(`SMS Error: ${response.error || "Failed to send SMS"}`);
+        toast.error(`এসএমএস সমস্যা: ${response.error || "এসএমএস পাঠানো যায়নি"}`);
       }
     } catch (error: any) {
       console.error("Error sending SMS:", error);
       console.error("Error response:", error.response?.data);
-      
+
       // Show more specific error message
-      const errorMessage = error.response?.data?.error || error.message || "Failed to send SMS. Please try again.";
-      alert(`SMS Error: ${errorMessage}`);
+      const errorMessage = error.response?.data?.error || error.message || "এসএমএস পাঠানো যায়নি। আবার চেষ্টা করুন।";
+      toast.error(`এসএমএস সমস্যা: ${errorMessage}`);
     } finally {
       setIsSendingSms(false);
     }
@@ -382,12 +403,12 @@ export default function DueBookPage() {
     if (!isMounted) return;
 
     const headers = [
-      "Customer Name",
-      "Email",
-      "Phone",
-      "Due Amount",
-      "Number of Payments",
-      "Payment Details",
+      "কাস্টমারের নাম",
+      "ইমেইল",
+      "ফোন",
+      "বাকির পরিমাণ",
+      "কয়টা বাকি",
+      "বাকির বিস্তারিত",
     ];
     const csvData = filteredCustomers.map((customer) => [
       customer.name,
@@ -398,7 +419,7 @@ export default function DueBookPage() {
       customer.due_payments
         .map(
           (p) =>
-            `Order #${p.order_id}: $${p.amount} (Due: ${formatDate(
+            `অর্ডার #${p.order_id}: $${p.amount} (তারিখ: ${formatDate(
               p.due_date
             )})`
         )
@@ -431,9 +452,9 @@ export default function DueBookPage() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Due Book Report</title>
+        <title>বাকির খাতা</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
+          body { font-family: 'Inter', 'Hind Siliguri', Arial, sans-serif; margin: 20px; }
           .header { text-align: center; margin-bottom: 30px; }
           .summary { margin-bottom: 30px; padding: 15px; background: #f5f5f5; border-radius: 5px; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
@@ -445,16 +466,16 @@ export default function DueBookPage() {
       </head>
       <body>
         <div class="header">
-          <h1>Due Book Report</h1>
-          <p>Generated on ${new Date().toLocaleDateString()}</p>
+          <h1>বাকির খাতা</h1>
+          <p>তারিখ: ${new Date().toLocaleDateString()}</p>
         </div>
-        
+
         <div class="summary">
-          <h3>Summary</h3>
-          <p><strong>Total Customers with Due:</strong> ${
+          <h3>সারসংক্ষেপ</h3>
+          <p><strong>বাকি আছে এমন কাস্টমার:</strong> ${
             filteredCustomers.length
           }</p>
-          <p><strong>Total Due Amount:</strong> ${formatCurrency(
+          <p><strong>মোট বাকি:</strong> ${formatCurrency(
             getTotalDue()
           )}</p>
         </div>
@@ -462,11 +483,11 @@ export default function DueBookPage() {
         <table>
           <thead>
             <tr>
-              <th>Customer Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Due Amount</th>
-              <th>Payments</th>
+              <th>কাস্টমারের নাম</th>
+              <th>ইমেইল</th>
+              <th>ফোন</th>
+              <th>বাকির পরিমাণ</th>
+              <th>কয়টা বাকি</th>
             </tr>
           </thead>
           <tbody>
@@ -478,9 +499,7 @@ export default function DueBookPage() {
                 <td>${customer.email}</td>
                 <td>${customer.phone}</td>
                 <td class="amount">${formatCurrency(customer.total_due)}</td>
-                <td>${customer.due_payments.length} payment${
-                  customer.due_payments.length !== 1 ? "s" : ""
-                }</td>
+                <td>${customer.due_payments.length} টা</td>
               </tr>
             `
               )
@@ -489,9 +508,9 @@ export default function DueBookPage() {
         </table>
 
         <div class="footer">
-          <p>This report contains ${
+          <p>এই তালিকায় ${
             filteredCustomers.length
-          } customers with outstanding due payments.</p>
+          } জন কাস্টমারের বাকি রয়েছে।</p>
         </div>
       </body>
       </html>
@@ -511,166 +530,156 @@ export default function DueBookPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="page">
         <div className="animate-pulse">
-          <div className="h-6 bg-slate-700 rounded w-48 mb-4"></div>
-          <div className="flex gap-3 mb-4 max-w-4xl">
-            <div className="h-16 bg-slate-700 rounded-lg w-48"></div>
-            <div className="h-16 bg-slate-700 rounded-lg w-48"></div>
-          </div>
-          <div className="h-64 bg-slate-700 rounded-lg max-w-4xl"></div>
+          <div className="mb-4 h-6 w-48 rounded bg-slate-100"></div>
+          <div className="h-64 rounded-xl bg-slate-100"></div>
         </div>
       </div>
     );
   }
 
+  const outstandingDue = dueHistory
+    .filter((p: any) => p.payment_type === 'due' && p.status !== 'paid')
+    .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
+  const totalPaid = dueHistory
+    .filter((p: any) => p.status === 'paid')
+    .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Due Book</h1>
-        <p className="text-slate-400 mt-1">Manage customer due payments</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="mb-6">
-        <div className="border-b border-slate-700">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('customers')}
-              className={`
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                ${activeTab === 'customers'
-                  ? 'border-cyan-500 text-cyan-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300'
-                }
-              `}
-            >
-              <div className="flex items-center space-x-2">
-                <User className="w-4 h-4" />
-                <span>Due Customers</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                ${activeTab === 'history'
-                  ? 'border-cyan-500 text-cyan-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300'
-                }
-              `}
-            >
-              <div className="flex items-center space-x-2">
-                <FileText className="w-4 h-4" />
-                <span>Due & Payment History</span>
-              </div>
-            </button>
-          </nav>
+    <div className="page">
+      <header className="page-head">
+        <div>
+          <h1 className="page-title">বাকির খাতা</h1>
+          <p className="page-sub">কার কত বাকি আর কে কত দিলো</p>
         </div>
-      </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={exportToCSV}
+            className="btn btn-ghost"
+            title="CSV ফাইলে নামান"
+          >
+            <Download className="h-4 w-4" /> CSV
+          </button>
+          <button
+            onClick={exportToPDF}
+            className="btn btn-ghost"
+            title="PDF ফাইলে নামান"
+          >
+            <FileText className="h-4 w-4" /> PDF
+          </button>
+        </div>
+      </header>
 
-      {/* Due Customers Tab */}
-      {activeTab === 'customers' && (
-        <div className="max-w-7xl">
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-hidden">
-            <div className="p-6 border-b border-slate-700/50">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-slate-100 mb-1">
-                    Due Customers
-                  </h3>
-                  <p className="text-sm text-slate-400">
-                    {filteredCustomers.length} customers with outstanding dues
-                  </p>
+      <div className="plane">
+        {/* Tabs */}
+        <div className="plane-section flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveTab('customers')}
+            className={`btn btn-sm ${
+              activeTab === 'customers' ? 'btn-primary' : 'btn-ghost'
+            }`}
+          >
+            <User className="h-3.5 w-3.5" /> বাকি আছে যাদের
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`btn btn-sm ${
+              activeTab === 'history' ? 'btn-primary' : 'btn-ghost'
+            }`}
+          >
+            <FileText className="h-3.5 w-3.5" /> বাকি ও পরিশোধের হিসাব
+          </button>
+        </div>
+
+        {/* Due customers tab */}
+        {activeTab === 'customers' && (
+          <>
+            <div className="stat-strip">
+              <div className="stat">
+                <div className="stat-label">মোট বাকি</div>
+                <div className="stat-value money-neg">
+                  {formatCurrency(getTotalDue())}
+                </div>
+                <div className="stat-meta">এখন যা আদায় বাকি</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">বাকি আছে যাদের</div>
+                <div className="stat-value num">{filteredCustomers.length}</div>
+                <div className="stat-meta">
+                  মোট {dueCustomers.length} জনের মধ্যে
                 </div>
               </div>
+            </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-3">
-                {/* Search Input */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <div className="plane-section">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative min-w-0 flex-1 sm:max-w-xs">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Search customers..."
+                    placeholder="কাস্টমারের নাম দিয়ে খুঁজুন"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-60 pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="input pl-9"
+                    aria-label="কাস্টমার খুঁজুন"
                   />
                 </div>
 
-                {/* Date Filter Dropdown */}
-                <div className="space-y-2">
-                  <label className="text-xs text-slate-400 font-medium">
-                    Date Filter
-                  </label>
-                  <select
-                    value={dateFilterType}
-                    onChange={(e) =>
-                      setDateFilterType(
-                        e.target.value as
-                          | "all"
-                          | "today"
-                          | "yesterday"
-                          | "this_week"
-                          | "last_week"
-                          | "this_month"
-                          | "last_month"
-                          | "this_year"
-                          | "custom"
-                      )
-                    }
-                    className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
-                  >
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="yesterday">Yesterday</option>
-                    <option value="this_week">This Week</option>
-                    <option value="last_week">Last Week</option>
-                    <option value="this_month">This Month</option>
-                    <option value="last_month">Last Month</option>
-                    <option value="this_year">This Year</option>
-                    <option value="custom">Custom Range</option>
-                  </select>
-                </div>
+                <select
+                  value={dateFilterType}
+                  onChange={(e) =>
+                    setDateFilterType(
+                      e.target.value as
+                        | "all"
+                        | "today"
+                        | "yesterday"
+                        | "this_week"
+                        | "last_week"
+                        | "this_month"
+                        | "last_month"
+                        | "this_year"
+                        | "custom"
+                    )
+                  }
+                  className="select w-auto"
+                  aria-label="তারিখ দিয়ে ফিল্টার"
+                >
+                  <option value="all">সব সময়</option>
+                  <option value="today">আজ</option>
+                  <option value="yesterday">গতকাল</option>
+                  <option value="this_week">এই সপ্তাহ</option>
+                  <option value="last_week">গত সপ্তাহ</option>
+                  <option value="this_month">এই মাস</option>
+                  <option value="last_month">গত মাস</option>
+                  <option value="this_year">এই বছর</option>
+                  <option value="custom">নিজের মতো তারিখ</option>
+                </select>
 
-                {/* Custom Date Range */}
                 {dateFilterType === "custom" && (
-                  <div className="flex space-x-2">
-                    <div className="space-y-2">
-                      <label className="text-xs text-slate-400 font-medium">
-                        From
-                      </label>
-                      <input
-                        type="date"
-                        value={customDateFrom}
-                        onChange={(e) => setCustomDateFrom(e.target.value)}
-                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs text-slate-400 font-medium">
-                        To
-                      </label>
-                      <input
-                        type="date"
-                        value={customDateTo}
-                        onChange={(e) => setCustomDateTo(e.target.value)}
-                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={customDateFrom}
+                      onChange={(e) => setCustomDateFrom(e.target.value)}
+                      className="input w-auto"
+                      aria-label="শুরুর তারিখ"
+                    />
+                    <span className="text-sm text-slate-500">থেকে</span>
+                    <input
+                      type="date"
+                      value={customDateTo}
+                      onChange={(e) => setCustomDateTo(e.target.value)}
+                      className="input w-auto"
+                      aria-label="শেষ তারিখ"
+                    />
                   </div>
                 )}
 
-                {/* Active Filters Summary */}
                 {dateFilterType !== "all" && (
-                  <div className="flex items-center gap-2 p-2 bg-slate-800/20 rounded-lg border border-slate-700/30">
-                    <span className="text-xs text-slate-400 font-medium">
-                      Active Filter:
-                    </span>
-                    <span className="px-2 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded-full">
-                      Date: {dateFilterType.replace("_", " ")}
+                  <>
+                    <span className="badge badge-info">
+                      {DATE_FILTER_LABELS[dateFilterType]}
                     </span>
                     <button
                       onClick={() => {
@@ -678,375 +687,264 @@ export default function DueBookPage() {
                         setCustomDateFrom("");
                         setCustomDateTo("");
                       }}
-                      className="px-2 py-1 bg-red-500/20 text-red-300 text-xs rounded-full hover:bg-red-500/30 transition-colors"
+                      className="btn btn-ghost btn-sm"
                     >
-                      Clear
+                      ফিল্টার মুছে দিন
                     </button>
-                  </div>
+                  </>
                 )}
               </div>
-
-              <div className="flex items-center space-x-3">
-                {/* Export Buttons */}
-                <button
-                  onClick={exportToCSV}
-                  className="flex items-center space-x-1 bg-green-600 hover:bg-green-500 text-white px-3 py-2 rounded-lg transition-colors text-sm"
-                  title="Export to CSV"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>CSV</span>
-                </button>
-                <button
-                  onClick={exportToPDF}
-                  className="flex items-center space-x-1 bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-lg transition-colors text-sm"
-                  title="Export to PDF"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>PDF</span>
-                </button>
-              </div>
             </div>
-          </div>
 
-          {filteredCustomers.length > 0 ? (
-            <>
-              {/* Results Counter */}
-              <div className="px-6 py-2 bg-slate-700/30 border-b border-white/5">
-                <p className="text-xs text-slate-400">
-                  Showing {filteredCustomers.length} of {dueCustomers.length}{" "}
-                  customers
-                  {dateFilterType !== "all" &&
-                    ` • Filtered by: ${dateFilterType.replace("_", " ")}`}
-                </p>
-              </div>
-
-              {/* Table Header */}
-              <div className="px-6 py-3 bg-white/5 border-b border-white/10">
-                <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
-                  <div className="col-span-3">Customer</div>
-                  <div className="col-span-3">Contact Info</div>
-                  <div className="col-span-2">Due Amount</div>
-                  <div className="col-span-2">Payments</div>
-                  <div className="col-span-2">Actions</div>
-                </div>
-              </div>
-
-              {/* Table Body */}
-              <div className="divide-y divide-white/5">
-                {filteredCustomers.map((customer) => (
-                  <div
-                    key={customer.id}
-                    className="px-6 py-4 hover:bg-white/5 transition-colors"
-                  >
-                    <div className="grid grid-cols-12 gap-4 items-center">
-                      <div className="col-span-3">
-                        <Link
-                          href={`/dashboard/customers/${customer.id}`}
-                          className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
-                        >
-                          {customer.name}
-                        </Link>
-                      </div>
-                      <div className="col-span-3">
-                        <div className="space-y-1">
-                          {customer.email && (
-                            <div className="flex items-center space-x-1 text-xs text-slate-300">
-                              <Mail className="h-3 w-3 text-slate-400" />
-                              <span>{customer.email}</span>
-                            </div>
-                          )}
-                          {customer.phone && (
-                            <div className="flex items-center space-x-1 text-xs text-slate-300">
-                              <Phone className="h-3 w-3 text-slate-400" />
-                              <span>{customer.phone}</span>
-                            </div>
-                          )}
-                          {!customer.email && !customer.phone && (
-                            <div className="text-xs text-slate-500 italic">
-                              No contact info
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="text-sm font-semibold text-red-300">
-                          {formatCurrency(customer.total_due)}
-                        </p>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="text-xs text-slate-400">
-                          {customer.due_payments.length} payment
-                          {customer.due_payments.length !== 1 ? "s" : ""}
-                        </p>
-                      </div>
-                      <div className="col-span-2">
-                        <div className="flex items-center space-x-2">
+            {filteredCustomers.length > 0 ? (
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>কাস্টমার</th>
+                      <th>যোগাযোগ</th>
+                      <th className="cell-num">বাকি</th>
+                      <th className="cell-num">কয়টা</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.map((customer) => (
+                      <tr key={customer.id}>
+                        <td className="cell-strong">
                           <Link
                             href={`/dashboard/customers/${customer.id}`}
-                            className="flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
+                            className="text-cyan-600 hover:text-cyan-700"
                           >
-                            <Eye className="w-4 h-4" />
-                            <span>Details</span>
+                            {customer.name}
                           </Link>
-                          <button
-                            onClick={() => handleSendSMS(customer)}
-                            className="flex items-center space-x-1 text-green-400 hover:text-green-300 text-sm transition-colors cursor-pointer"
-                            title="Send Due Payment SMS"
-                          >
-                            <MessageSquare className="w-4 h-4" />
-                            <span>SMS</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                        <td>
+                          {customer.email && (
+                            <span className="flex items-center gap-1 text-xs">
+                              <Mail className="h-3 w-3 text-slate-400" />
+                              <span className="truncate" title={customer.email}>
+                                {customer.email}
+                              </span>
+                            </span>
+                          )}
+                          {customer.phone && (
+                            <span className="flex items-center gap-1 text-xs num">
+                              <Phone className="h-3 w-3 text-slate-400" />
+                              {customer.phone}
+                            </span>
+                          )}
+                          {!customer.email && !customer.phone && (
+                            <span className="text-xs text-slate-500">
+                              যোগাযোগের তথ্য নেই
+                            </span>
+                          )}
+                        </td>
+                        <td className="cell-num money-neg font-semibold">
+                          {formatCurrency(customer.total_due)}
+                        </td>
+                        <td className="cell-num">
+                          {customer.due_payments.length}
+                        </td>
+                        <td>
+                          <div className="row-actions">
+                            <Link
+                              href={`/dashboard/customers/${customer.id}`}
+                              className="btn btn-ghost btn-sm"
+                            >
+                              <Eye className="h-3.5 w-3.5" /> বিস্তারিত
+                            </Link>
+                            <button
+                              onClick={() => handleSendSMS(customer)}
+                              className="btn btn-ghost btn-sm"
+                              title="বাকির এসএমএস পাঠান"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" /> এসএমএস
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </>
-          ) : (
-            <div className="text-center py-8">
-              <DollarSign className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-              <h3 className="text-base font-medium text-slate-400 mb-2">
-                No Due Customers Found
-              </h3>
-              <p className="text-sm text-slate-500">
-                Try adjusting your search terms.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-      )}
-
-      {/* Due & Payment History Tab */}
-      {activeTab === 'history' && (
-        <div className="max-w-7xl space-y-6">
-          {/* Current Balance Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-800/50 border border-red-500/30 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-red-400 text-xs font-medium uppercase tracking-wide">Outstanding Due</p>
-                  <p className="text-2xl font-bold text-slate-100 mt-2">
-                    {formatCurrency(
-                      dueHistory
-                        .filter((p: any) => p.payment_type === 'due' && p.status !== 'paid')
-                        .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0)
-                    )}
-                  </p>
-                </div>
-                <div className="p-3 bg-red-500/10 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-red-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-800/50 border border-green-500/30 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-400 text-xs font-medium uppercase tracking-wide">Total Paid</p>
-                  <p className="text-2xl font-bold text-slate-100 mt-2">
-                    {formatCurrency(
-                      dueHistory
-                        .filter((p: any) => p.status === 'paid')
-                        .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0)
-                    )}
-                  </p>
-                </div>
-                <div className="p-3 bg-green-500/10 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-green-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-800/50 border border-cyan-500/30 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-cyan-400 text-xs font-medium uppercase tracking-wide">Total Records</p>
-                  <p className="text-2xl font-bold text-slate-100 mt-2">
-                    {dueHistory.length}
-                  </p>
-                </div>
-                <div className="p-3 bg-cyan-500/10 rounded-lg">
-                  <FileText className="h-6 w-6 text-cyan-400" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl shadow-lg overflow-hidden">
-            <div className="p-6 border-b border-slate-700/50">
-              <div>
-                <h3 className="text-xl font-semibold text-slate-100 mb-1">
-                  Payment History
-                </h3>
-                <p className="text-sm text-slate-400">
-                  Complete history of all due payments and transactions
+            ) : (
+              <div className="empty">
+                <DollarSign className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+                <p className="mb-1 font-medium text-slate-600">
+                  বাকি আছে এমন কাউকে পাওয়া যায়নি
                 </p>
+                <p className="text-sm">খোঁজা বা ফিল্টার একটু বদলে দেখুন।</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Due & payment history tab */}
+        {activeTab === 'history' && (
+          <>
+            <div className="stat-strip">
+              <div className="stat">
+                <div className="stat-label">আদায় বাকি</div>
+                <div className="stat-value money-neg">
+                  {formatCurrency(outstandingDue)}
+                </div>
+                <div className="stat-meta">এখনো পরিশোধ হয়নি</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">মোট পরিশোধ</div>
+                <div className="stat-value money-pos">
+                  {formatCurrency(totalPaid)}
+                </div>
+                <div className="stat-meta">যা আদায় হয়েছে</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">মোট এন্ট্রি</div>
+                <div className="stat-value num">{dueHistory.length}</div>
+                <div className="stat-meta">সব হিসাব মিলিয়ে</div>
               </div>
             </div>
 
             {isLoadingHistory ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-slate-400">Loading payment history...</p>
-                </div>
-              </div>
+              <div className="empty">হিসাব লোড হচ্ছে…</div>
             ) : historyError ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg mb-4 inline-block">
-                    <FileText className="h-12 w-12 text-red-400 mx-auto mb-3" />
-                    <h3 className="text-base font-medium text-red-400 mb-2">
-                      Failed to Load History
-                    </h3>
-                    <p className="text-sm text-slate-400 mb-4 max-w-md">
-                      {historyError}
-                    </p>
-                    <button
-                      onClick={() => fetchDueHistory(1, false)}
-                      className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-300 rounded-lg transition-colors text-sm font-medium"
-                    >
-                      Try Again
-                    </button>
-                  </div>
-                </div>
+              <div className="empty">
+                <FileText className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+                <p className="mb-1 font-medium text-rose-600">
+                  হিসাব লোড করা যায়নি
+                </p>
+                <p className="mb-3 text-sm">{historyError}</p>
+                <button
+                  onClick={() => fetchDueHistory(1, false)}
+                  className="btn btn-ghost"
+                >
+                  আবার চেষ্টা করুন
+                </button>
               </div>
             ) : dueHistory && dueHistory.length > 0 ? (
               <>
-                {/* Table Header */}
-                <div className="px-6 py-3 bg-slate-800/50 border-b border-slate-700/50">
-                  <div className="grid grid-cols-12 gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    <div className="col-span-2">Date</div>
-                    <div className="col-span-2">Customer</div>
-                    <div className="col-span-2">Order ID</div>
-                    <div className="col-span-1">Type</div>
-                    <div className="col-span-2">Amount</div>
-                    <div className="col-span-2">Status</div>
-                    <div className="col-span-1">Actions</div>
-                  </div>
-                </div>
-
-                {/* Table Body */}
-                <div className="divide-y divide-slate-700/30">
-                  {dueHistory.map((payment: any) => (
-                    <div
-                      key={payment.id}
-                      className="px-6 py-4 hover:bg-slate-800/30 transition-colors"
-                    >
-                      <div className="grid grid-cols-12 gap-4 items-center">
-                        <div className="col-span-2">
-                          <p className="text-sm text-slate-300">
+                <div className="tbl-wrap">
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        <th>তারিখ</th>
+                        <th>কাস্টমার</th>
+                        <th>অর্ডার</th>
+                        <th>টাইপ</th>
+                        <th className="cell-num">টাকার পরিমাণ</th>
+                        <th>অবস্থা</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dueHistory.map((payment: any) => (
+                        <tr key={payment.id}>
+                          <td className="whitespace-nowrap num">
                             {payment.due_date ? formatDate(payment.due_date) : formatDate(payment.created_at)}
-                          </p>
-                        </div>
-                        <div className="col-span-2">
-                          <Link
-                            href={`/dashboard/customers/${payment.customer}`}
-                            className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
-                          >
-                            {payment.customer_name || `Customer #${payment.customer}`}
-                          </Link>
-                        </div>
-                        <div className="col-span-2">
-                          {payment.order ? (
+                          </td>
+                          <td className="cell-strong">
                             <Link
-                              href={`/dashboard/orders/${payment.order}`}
-                              className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                              href={`/dashboard/customers/${payment.customer}`}
+                              className="text-cyan-600 hover:text-cyan-700"
                             >
-                              #{payment.order}
+                              {payment.customer_name || `কাস্টমার #${payment.customer}`}
                             </Link>
-                          ) : (
-                            <span className="text-sm text-slate-500">-</span>
-                          )}
-                        </div>
-                        <div className="col-span-1">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            payment.payment_type === 'due' 
-                              ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                              : 'bg-green-500/20 text-green-400 border border-green-500/30'
-                          }`}>
-                            {payment.payment_type}
-                          </span>
-                        </div>
-                        <div className="col-span-2">
-                          <p className={`text-sm font-semibold ${
-                            payment.payment_type === 'due' ? 'text-red-300' : 'text-green-300'
-                          }`}>
-                            {formatCurrency(Math.abs(payment.amount))}
-                          </p>
-                        </div>
-                        <div className="col-span-2">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            payment.status === 'paid' 
-                              ? 'bg-green-500/20 text-green-400'
-                              : payment.status === 'partially_paid'
-                              ? 'bg-yellow-500/20 text-yellow-400'
-                              : payment.status === 'overdue'
-                              ? 'bg-red-500/20 text-red-400'
-                              : 'bg-blue-500/20 text-blue-400'
-                          }`}>
-                            {payment.status}
-                          </span>
-                        </div>
-                        <div className="col-span-1">
-                          <Link
-                            href={`/dashboard/customers/${payment.customer}`}
-                            className="flex items-center text-cyan-400 hover:text-cyan-300 text-sm transition-colors cursor-pointer"
+                            {payment.notes && (
+                              <span className="block text-xs text-slate-500">
+                                নোট: {payment.notes}
+                              </span>
+                            )}
+                          </td>
+                          <td className="num">
+                            {payment.order ? (
+                              <Link
+                                href={`/dashboard/orders/${payment.order}`}
+                                className="text-cyan-600 hover:text-cyan-700"
+                              >
+                                #{payment.order}
+                              </Link>
+                            ) : (
+                              <span className="text-slate-500">-</span>
+                            )}
+                          </td>
+                          <td>
+                            <span
+                              className={`badge ${
+                                payment.payment_type === 'due'
+                                  ? 'badge-danger'
+                                  : 'badge-success'
+                              }`}
+                            >
+                              {payment.payment_type === 'due' ? 'বাকি' : 'পরিশোধ'}
+                            </span>
+                          </td>
+                          <td
+                            className={`cell-num font-semibold ${
+                              payment.payment_type === 'due'
+                                ? 'money-neg'
+                                : 'money-pos'
+                            }`}
                           >
-                            <Eye className="w-4 h-4" />
-                          </Link>
-                        </div>
-                      </div>
-                      {payment.notes && (
-                        <div className="mt-2 text-xs text-slate-500">
-                          Note: {payment.notes}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                            {formatCurrency(Math.abs(payment.amount))}
+                          </td>
+                          <td>
+                            <span
+                              className={`badge ${
+                                payment.status === 'paid'
+                                  ? 'badge-success'
+                                  : payment.status === 'partially_paid'
+                                  ? 'badge-warn'
+                                  : payment.status === 'overdue'
+                                  ? 'badge-danger'
+                                  : 'badge-info'
+                              }`}
+                            >
+                              {PAYMENT_STATUS_LABELS[payment.status] || payment.status}
+                            </span>
+                          </td>
+                          <td className="text-right">
+                            <Link
+                              href={`/dashboard/customers/${payment.customer}`}
+                              className="btn btn-ghost btn-sm"
+                              aria-label="কাস্টমারের বিস্তারিত দেখুন"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
 
-                {/* Load More Button */}
                 {historyPagination.hasNext && (
-                  <div className="p-4 border-t border-slate-700/50 bg-slate-800/20">
+                  <div className="plane-section flex justify-center">
                     <button
                       onClick={loadMoreHistory}
                       disabled={historyPagination.isLoadingMore}
-                      className="w-full px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-slate-100 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-slate-600/50"
+                      className="btn btn-ghost"
                     >
-                      {historyPagination.isLoadingMore ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
-                          <span>Loading More...</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                          </svg>
-                          <span>Load More History</span>
-                        </>
-                      )}
+                      {historyPagination.isLoadingMore
+                        ? "লোড হচ্ছে…"
+                        : "আরও দেখুন"}
                     </button>
                   </div>
                 )}
               </>
             ) : (
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-                <h3 className="text-base font-medium text-slate-400 mb-2">
-                  No Payment History Found
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Payment history will appear here once transactions are recorded.
+              <div className="empty">
+                <FileText className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+                <p className="mb-1 font-medium text-slate-600">
+                  কোনো হিসাব পাওয়া যায়নি
+                </p>
+                <p className="text-sm">
+                  লেনদেন হলে এখানে বাকি আর পরিশোধের হিসাব দেখাবে।
                 </p>
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       {/* SMS Composer Modal */}
       {showSmsComposer && smsCustomer && (
