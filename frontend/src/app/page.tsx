@@ -3,6 +3,12 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import {
+  AdvancedSection,
+  ComparisonSection,
+  IndustriesSection,
+  SafetySection,
+} from '@/components/home/CommercialSections';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import {
@@ -178,14 +184,14 @@ export default function Home() {
 
             {/* Desktop Navigation */}
             <div className="hidden items-center gap-7 md:flex">
+              <a href="#industries" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
+                কাদের জন্য
+              </a>
               <a href="#features" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
                 ফিচার
               </a>
               <a href="#pricing" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
                 দাম
-              </a>
-              <a href="#testimonials" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
-                রিভিউ
               </a>
               <a href="#faq" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
                 প্রশ্ন-উত্তর
@@ -238,6 +244,7 @@ export default function Home() {
         {mobileMenuOpen && (
           <div className="border-t border-slate-200 bg-white md:hidden">
             <div className="space-y-1 px-4 py-3">
+              <a href="#industries" className="block py-2 text-sm text-slate-600 hover:text-slate-900">কাদের জন্য</a>
               <a href="#features" className="block py-2 text-sm text-slate-600 hover:text-slate-900">ফিচার</a>
               <a href="#pricing" className="block py-2 text-sm text-slate-600 hover:text-slate-900">দাম</a>
               <a href="#testimonials" className="block py-2 text-sm text-slate-600 hover:text-slate-900">রিভিউ</a>
@@ -467,6 +474,10 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
+      <IndustriesSection />
+
+      <AdvancedSection />
+
       <section className="border-y border-slate-200 bg-white py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
@@ -513,6 +524,10 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
+      <ComparisonSection />
+
+      <SafetySection />
+
       <section id="testimonials" className="py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
@@ -681,12 +696,17 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             <div className="col-span-2 md:col-span-1">
-              <div className="mb-3 flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-600 text-sm font-bold text-white">
-                  O
-                </span>
-                <span className="text-base font-semibold text-slate-900">OxyManager</span>
-              </div>
+              {/* The real lockup, same asset the header uses — a hand-drawn
+                  "O" tile was standing in for it. */}
+              <Link href="/" className="mb-3 inline-block">
+                <Image
+                  src="/logo.png"
+                  alt="OxyManager — Your Smart Assistant"
+                  width={378}
+                  height={96}
+                  className="h-9 w-auto"
+                />
+              </Link>
               <p className="mb-4 text-sm text-slate-500">
                 বাংলাদেশের ব্যবসার জন্য পুরো হিসাব-নিকাশের ব্যবস্থা।
               </p>
@@ -704,7 +724,9 @@ export default function Home() {
             <div>
               <h3 className="mb-3 text-sm font-semibold text-slate-900">প্রোডাক্ট</h3>
               <ul className="space-y-2 text-sm text-slate-500">
+                <li><a href="#industries" className="hover:text-slate-900">কাদের জন্য</a></li>
                 <li><a href="#features" className="hover:text-slate-900">ফিচার</a></li>
+                <li><a href="#advanced" className="hover:text-slate-900">অ্যাডভান্সড ফিচার</a></li>
                 <li><a href="#pricing" className="hover:text-slate-900">দাম</a></li>
                 <li><a href="#faq" className="hover:text-slate-900">প্রশ্ন-উত্তর</a></li>
               </ul>

@@ -498,3 +498,54 @@ else:
     SP_RETURN = config("SP_RETURN", default="https://oxymanager.com/dashboard/verify-payment")
     SP_CANCEL = config("SP_CANCEL", default="https://oxymanager.com/dashboard/subscriptions")
 SP_PREFIX = "OXMPAY_"
+
+# ── Email ─────────────────────────────────────────────────────────────
+# Production hands mail to the local Postfix queue on 127.0.0.1:25. That
+# matters for more than tidiness: an outbound SMTP handshake to a remote host
+# can take seconds, and the password-reset request would block on it. Postfix
+# accepts in milliseconds and owns the delivery, the retries and the bounce.
+#
+# Setting EMAIL_HOST in .env overrides this — point it at the domain's own
+# mailbox provider (smtp.privateemail.com:587) and mail then leaves from an
+# address the domain's SPF record already authorises, which is the single
+# biggest thing that keeps it out of spam.
+def _env(key, default="", cast=None):
+    """Treat a blank .env value as absent.
+
+    `EMAIL_PORT=` with nothing after it is how half the file is written, and
+    decouple hands that empty string straight to `int()`.
+    """
+    raw = config(key, default="")
+    raw = str(raw).strip()
+    if raw == "":
+        return default
+    return cast(raw) if cast else raw
+
+
+def _flag(key, default=False):
+    raw = str(config(key, default="")).strip().lower()
+    if raw == "":
+        return default
+    return raw in ("1", "true", "yes", "on")
+
+
+EMAIL_BACKEND = _env(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend"
+    if DEBUG
+    else "django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST = _env("EMAIL_HOST", "127.0.0.1")
+EMAIL_PORT = _env("EMAIL_PORT", 25, int)
+EMAIL_HOST_USER = _env("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = _env("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = _flag("EMAIL_USE_TLS", False)
+EMAIL_USE_SSL = _flag("EMAIL_USE_SSL", False)
+# A short timeout so a stalled relay cannot hold a web worker open.
+EMAIL_TIMEOUT = _env("EMAIL_TIMEOUT", 10, int)
+
+DEFAULT_FROM_EMAIL = _env(
+    "DEFAULT_FROM_EMAIL", "OxyManager <support@oxymanager.com>"
+)
+SERVER_EMAIL = _env("SERVER_EMAIL", "support@oxymanager.com")
+

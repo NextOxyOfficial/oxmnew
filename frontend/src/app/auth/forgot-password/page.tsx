@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail, MessageSquare, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Inbox, Mail, MessageSquare, ShieldCheck } from "lucide-react";
 import { ApiService } from "@/lib/api";
 import { useToast } from "@/components/ui/Feedback";
 
@@ -238,6 +238,21 @@ export default function ForgotPasswordPage() {
                     কোডটা ১০ মিনিট চলবে।
                   </span>
                 </div>
+
+                {/* Mail from a new sending domain very often lands in spam the
+                    first time. Saying so here saves a support message and a
+                    second "কোড আসেনি" attempt that burns another code. */}
+                {channel === "email" && (
+                  <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm">
+                    <Inbox className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <span className="text-amber-900">
+                      <span className="font-medium">ইমেইল না পেলে</span> স্প্যাম
+                      বা জাংক ফোল্ডারটা দেখুন — অনেক সময় মেইল ওখানে চলে যায়।
+                      পেলে <span className="font-medium">&quot;Not spam&quot;</span>{" "}
+                      দিয়ে দিলে পরেরবার থেকে ইনবক্সেই আসবে।
+                    </span>
+                  </div>
+                )}
 
                 <div>
                   <label className="label" htmlFor="code">
