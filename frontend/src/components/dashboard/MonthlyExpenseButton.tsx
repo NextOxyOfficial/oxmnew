@@ -30,6 +30,7 @@ interface Section {
   note?: string;
   columns: Column[];
   rows: Record<string, string | number>[];
+  /** "দিতে হবে X · দেওয়া হয়েছে Y · বাকি Z" — both halves, never one. */
   total_text: string;
 }
 
@@ -37,9 +38,17 @@ interface Report {
   month: { key: string; label: string; start: string; end: string };
   shop: { name: string; address: string };
   calendar: { days: number; open_days: number; closed_label: string };
-  summary: { key: string; label: string; amount_text: string; count: number }[];
+  summary: {
+    key: string;
+    label: string;
+    amount_text: string;
+    paid_text: string;
+    count: number;
+  }[];
   sections: Section[];
   grand_total_text: string;
+  paid_total_text: string;
+  outstanding_total_text: string;
   per_open_day_text: string;
   months: { key: string; label: string }[];
 }
@@ -89,9 +98,12 @@ export default function MonthlyExpenseButton() {
         ]
           .filter(Boolean)
           .join(" · "),
+        // The three that matter first: what the month costs, what has gone
+        // out, what is still owed. A single "total" hid an unpaid rent.
         cards: [
-          { label: "সব মিলিয়ে খরচ", value: report.grand_total_text },
-          { label: "খোলা ছিল", value: `${report.calendar.open_days} দিন` },
+          { label: "মাসের মোট খরচ", value: report.grand_total_text },
+          { label: "দেওয়া হয়েছে", value: report.paid_total_text },
+          { label: "এখনো বাকি", value: report.outstanding_total_text },
           { label: "খোলার দিনে গড়ে", value: report.per_open_day_text },
           ...report.summary
             .filter((row) => row.count > 0)
@@ -109,7 +121,7 @@ export default function MonthlyExpenseButton() {
             .filter((index) => index >= 0),
           total: section.total_text,
         })),
-        footNote: `${report.month.label} — সব মিলিয়ে ${report.grand_total_text}`,
+        footNote: `${report.month.label} — মোট খরচ ${report.grand_total_text} · দেওয়া হয়েছে ${report.paid_total_text} · বাকি ${report.outstanding_total_text}`,
       });
 
       if (!opened) {

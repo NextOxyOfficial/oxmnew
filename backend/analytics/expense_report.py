@@ -2,25 +2,28 @@
 
 The dashboard already shows a খরচ total, but a total is not something you can
 hand to an accountant, argue with, or check against a bank statement. This is
-the month opened up: which employee got how much and when, which bill was paid
-on which date, which loan instalment went out — each as its own row under its
-own heading.
+the month opened up: which employee is owed how much and what they got, which
+bill is due and whether it was settled, which loan instalment fell due.
+
+**Two numbers per section, never one.** An earlier version reported only money
+that had already left the till, so a shop that had not yet paid August's rent
+or salaries got a report reading ৳0 while the card directly above it said
+৳3,62,997. Both figures were "true" and the pair was useless. So every section
+carries `due` (what the month costs, paid or not) and `paid` (what has actually
+gone out), and the difference is the বাকি the shopkeeper has to plan for.
 
 Built as one flat structure of titled sections rather than a nested tree, so
 the print sheet on the front end can render it without knowing what any
 particular section means. Adding a new cost type here needs no front-end change.
 
-Everything is scoped to `user` — the shop owner — and every query filters on it,
-because this report contains payroll, which is the most sensitive data the app
-holds.
+Everything is scoped to `user` — the shop owner — and every query filters on
+it, because this report contains payroll, the most sensitive data the app holds.
 """
 
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Q
-
-from banking.models import LoanPayment, RecurringCostPayment, Transaction
+from banking.models import Loan, LoanPayment, RecurringCost, RecurringCostPayment, Transaction
 from core import business_days
 from core.models import UserProfile
 from employees.models import Employee, Incentive, SalaryPayment
@@ -68,6 +71,10 @@ def _fmt(value):
     return sign + ",".join(parts + [tail])
 
 
+def _taka(value):
+    return f"৳{_fmt(value)}"
+
+
 def month_bounds(key=None, today=None):
     """(first, last, label) for a "YYYY-MM" key, defaulting to this month.
 
@@ -91,15 +98,25 @@ def month_bounds(key=None, today=None):
     return first, last, f"{MONTHS_BN[month - 1]} {year}"
 
 
-def _section(key, title, note, columns, rows, total):
+def _section(key, title, note, columns, rows, due, paid):
+    outstanding = max(ZERO, _money(due) - _money(paid))
     return {
         "key": key,
         "title": title,
         "note": note,
         "columns": columns,
         "rows": rows,
-        "total": float(_money(total)),
-        "total_text": f"৳{_fmt(total)}",
+        "due": float(_money(due)),
+        "paid": float(_money(paid)),
+        "outstanding": float(outstanding),
+        "due_text": _taka(due),
+        "paid_text": _taka(paid),
+        "outstanding_text": _taka(outstanding),
+        # What prints under the section's own table.
+        "total_text": (
+            f"দিতে হবে {_taka(due)} · দেওয়া হয়েছে {_taka(paid)}"
+            + (f" · বাকি {_taka(outstanding)}" if outstanding else "")
+        ),
         "count": len(rows),
     }
 
@@ -108,16 +125,14 @@ def _section(key, title, note, columns, rows, total):
 
 
 def _payroll(user, first, last):
-    """Who was paid what, and what is still owed — per employee, one row each.
+    """Who is owed what this month, and what they actually got.
 
-    Advances are shown beside the salary rather than folded into it: an advance
-    already left the till this month, but it is repaid out of a later salary, so
-    treating the two as one number is how a shop ends up paying twice.
+    Advances sit beside the salary rather than folded into it: an advance has
+    already left the till this month, but it is repaid out of a later salary,
+    so treating the two as one number is how a shop ends up paying twice.
     """
     payments = (
-        SalaryPayment.objects.filter(
-            employee__user=user, paid_on__range=(first, last)
-        )
+        SalaryPayment.objects.filter(employee__user=user, paid_on__range=(first, last))
         .select_related("employee")
         .order_by("paid_on")
     )
@@ -126,12 +141,7 @@ def _payroll(user, first, last):
     for payment in payments:
         row = per_employee.setdefault(
             payment.employee_id,
-            {
-                "employee": payment.employee,
-                "salary": ZERO,
-                "advance": ZERO,
-                "dates": [],
-            },
+            {"employee": payment.employee, "salary": ZERO, "advance": ZERO, "dates": []},
         )
         if payment.kind == "advance":
             row["advance"] += payment.amount
@@ -139,40 +149,48 @@ def _payroll(user, first, last):
             row["salary"] += payment.amount
         row["dates"].append(payment.paid_on)
 
-    # Active staff who were paid nothing this month still belong in the report:
-    # a blank row is the evidence that a salary is outstanding.
-    for employee in Employee.objects.filter(user=user, status="active"):
+    # Active staff who were paid nothing this month still belong here: their
+    # salary is the month's largest cost whether or not it has gone out yet.
+    active = Employee.objects.filter(user=user, status="active")
+    for employee in active:
         per_employee.setdefault(
             employee.id,
             {"employee": employee, "salary": ZERO, "advance": ZERO, "dates": []},
         )
 
+    active_ids = {employee.id for employee in active}
     rows = []
+    due = paid = ZERO
     for entry in per_employee.values():
         employee = entry["employee"]
-        paid = entry["salary"] + entry["advance"]
-        monthly = _money(employee.salary)
+        got = entry["salary"] + entry["advance"]
+        # Someone who left mid-month owes nothing going forward, but what they
+        # were paid still counts against the month.
+        owed = _money(employee.salary) if employee.id in active_ids else got
+        due += owed
+        paid += got
         rows.append(
             {
                 "name": employee.name,
                 "role": employee.role or "—",
-                "monthly": f"৳{_fmt(monthly)}",
-                "salary_paid": f"৳{_fmt(entry['salary'])}",
-                "advance": f"৳{_fmt(entry['advance'])}" if entry["advance"] else "—",
+                "monthly": _taka(owed),
+                "salary_paid": _taka(entry["salary"]),
+                "advance": _taka(entry["advance"]) if entry["advance"] else "—",
                 "paid_on": (
                     max(entry["dates"]).strftime("%d-%m-%Y") if entry["dates"] else "—"
                 ),
-                "due": f"৳{_fmt(max(ZERO, monthly - paid))}",
-                "_total": paid,
+                "due": _taka(max(ZERO, owed - got)),
+                "_owed": owed,
             }
         )
-    rows.sort(key=lambda row: row["_total"], reverse=True)
-    total = sum((row.pop("_total") for row in rows), ZERO)
+    rows.sort(key=lambda row: row["_owed"], reverse=True)
+    for row in rows:
+        row.pop("_owed")
 
     return _section(
         "payroll",
         "কর্মচারীর বেতন ও অগ্রিম",
-        "এই মাসে যা দেওয়া হয়েছে। অগ্রিম পরের বেতন থেকে কাটা যাবে।",
+        "এই মাসে যাদের বেতন দিতে হবে, আর যা যা দেওয়া হয়েছে। অগ্রিম পরের বেতন থেকে কাটা যাবে।",
         [
             {"key": "name", "label": "কর্মচারী"},
             {"key": "role", "label": "পদ"},
@@ -183,18 +201,178 @@ def _payroll(user, first, last):
             {"key": "due", "label": "বাকি", "numeric": True},
         ],
         rows,
-        total,
+        due,
+        paid,
+    )
+
+
+def _fixed(user, first, last):
+    """Rent and the other bills that fall due every month, settled or not.
+
+    Listed from the RecurringCost itself rather than from its payments: an
+    unpaid rent is the single most important line in the month's expenses, and
+    reporting only payments made it disappear from the report on exactly the
+    months it mattered most.
+    """
+    payments = list(
+        RecurringCostPayment.objects.filter(
+            cost__user=user, paid_on__range=(first, last)
+        ).select_related("cost")
+    )
+    by_cost = {}
+    for payment in payments:
+        by_cost.setdefault(payment.cost_id, []).append(payment)
+
+    rows = []
+    due = paid = ZERO
+    for cost in RecurringCost.objects.filter(user=user).order_by("-amount"):
+        settled = by_cost.pop(cost.id, [])
+        got = sum((payment.amount for payment in settled), ZERO)
+        # A cost switched off, or started after this month, owes nothing —
+        # but any payment recorded against it still counts.
+        owes = cost.is_active and cost.start_date <= last
+        owed = _money(cost.amount) if owes else got
+        if not owes and not settled:
+            continue
+
+        due += owed
+        paid += got
+        if settled:
+            state = "দেওয়া হয়েছে"
+        elif not owes:
+            state = "বন্ধ"
+        else:
+            due_on = cost.due_date
+            state = "মেয়াদ পেরিয়েছে" if due_on < date.today() else "বাকি"
+        rows.append(
+            {
+                "title": cost.title,
+                "category": CATEGORY_BN.get(cost.category, cost.category or "—"),
+                "monthly": _taka(owed),
+                "paid": _taka(got),
+                "date": (
+                    max(payment.paid_on for payment in settled).strftime("%d-%m-%Y")
+                    if settled
+                    else f"{cost.due_day} তারিখে"
+                ),
+                "state": state,
+            }
+        )
+
+    # Payments against a cost that has since been deleted still spent money.
+    for orphans in by_cost.values():
+        for payment in orphans:
+            due += payment.amount
+            paid += payment.amount
+            rows.append(
+                {
+                    "title": payment.cost.title,
+                    "category": CATEGORY_BN.get(payment.cost.category, "—"),
+                    "monthly": _taka(payment.amount),
+                    "paid": _taka(payment.amount),
+                    "date": payment.paid_on.strftime("%d-%m-%Y"),
+                    "state": "দেওয়া হয়েছে",
+                }
+            )
+
+    return _section(
+        "fixed",
+        "অফিস ভাড়া, বিল ও নির্দিষ্ট খরচ",
+        "প্রতি মাসে যেগুলো দিতেই হয় — দেওয়া হোক বা না হোক, এই মাসের হিসাবে ধরা।",
+        [
+            {"key": "title", "label": "খরচ"},
+            {"key": "category", "label": "খাত"},
+            {"key": "monthly", "label": "মাসিক টাকা", "numeric": True},
+            {"key": "paid", "label": "দেওয়া হয়েছে", "numeric": True},
+            {"key": "date", "label": "তারিখ"},
+            {"key": "state", "label": "অবস্থা"},
+        ],
+        rows,
+        due,
+        paid,
+    )
+
+
+def _loans(user, first, last):
+    """Instalments falling due inside the month, plus what was paid against them."""
+    rows = []
+    due = paid = ZERO
+    settled_ids = set()
+
+    for loan in Loan.objects.filter(user=user).order_by("lender"):
+        for item in loan.schedule:
+            if not (first <= item["due_date"] <= last):
+                continue
+            owed = _money(item["amount"])
+            got = _money(item["paid_amount"] or 0)
+            due += owed
+            paid += got
+            if item["payment_id"]:
+                settled_ids.add(item["payment_id"])
+            rows.append(
+                {
+                    "lender": loan.lender,
+                    "number": f"{item['number']} নম্বর কিস্তি",
+                    "monthly": _taka(owed),
+                    "paid": _taka(got),
+                    "date": (
+                        item["paid_on"].strftime("%d-%m-%Y")
+                        if item["paid_on"]
+                        else item["due_date"].strftime("%d-%m-%Y")
+                    ),
+                    "state": {
+                        "paid": "দেওয়া হয়েছে",
+                        "overdue": "মেয়াদ পেরিয়েছে",
+                        "upcoming": "বাকি",
+                    }[item["state"]],
+                }
+            )
+
+    # A payment made this month against an instalment due in another one is
+    # still money that left this month.
+    for payment in (
+        LoanPayment.objects.filter(loan__user=user, paid_on__range=(first, last))
+        .exclude(id__in=settled_ids)
+        .select_related("loan")
+    ):
+        due += payment.amount
+        paid += payment.amount
+        rows.append(
+            {
+                "lender": payment.loan.lender,
+                "number": "বাড়তি পেমেন্ট",
+                "monthly": _taka(payment.amount),
+                "paid": _taka(payment.amount),
+                "date": payment.paid_on.strftime("%d-%m-%Y"),
+                "state": "দেওয়া হয়েছে",
+            }
+        )
+
+    return _section(
+        "loan",
+        "লোনের কিস্তি",
+        "এই মাসে যেসব কিস্তির তারিখ পড়েছে।",
+        [
+            {"key": "lender", "label": "কার কাছ থেকে"},
+            {"key": "number", "label": "কিস্তি"},
+            {"key": "monthly", "label": "কিস্তির টাকা", "numeric": True},
+            {"key": "paid", "label": "দেওয়া হয়েছে", "numeric": True},
+            {"key": "date", "label": "তারিখ"},
+            {"key": "state", "label": "অবস্থা"},
+        ],
+        rows,
+        due,
+        paid,
     )
 
 
 def _incentives(user, first, last):
+    """Bonuses actually awarded — there is no "due" bonus to plan for."""
     rows = []
     total = ZERO
     for incentive in (
         Incentive.objects.filter(
-            employee__user=user,
-            status="paid",
-            date_awarded__date__range=(first, last),
+            employee__user=user, status="paid", date_awarded__date__range=(first, last)
         )
         .select_related("employee")
         .order_by("date_awarded")
@@ -205,7 +383,7 @@ def _incentives(user, first, last):
                 "name": incentive.employee.name,
                 "title": incentive.title,
                 "date": incentive.date_awarded.strftime("%d-%m-%Y"),
-                "amount": f"৳{_fmt(incentive.amount)}",
+                "amount": _taka(incentive.amount),
             }
         )
     return _section(
@@ -220,79 +398,12 @@ def _incentives(user, first, last):
         ],
         rows,
         total,
-    )
-
-
-def _fixed(user, first, last):
-    rows = []
-    total = ZERO
-    for payment in (
-        RecurringCostPayment.objects.filter(
-            cost__user=user, paid_on__range=(first, last)
-        )
-        .select_related("cost")
-        .order_by("paid_on")
-    ):
-        total += payment.amount
-        rows.append(
-            {
-                "title": payment.cost.title,
-                "category": CATEGORY_BN.get(payment.cost.category, payment.cost.category or "—"),
-                "period": f"{MONTHS_BN[payment.period.month - 1]} {payment.period.year}",
-                "date": payment.paid_on.strftime("%d-%m-%Y"),
-                "amount": f"৳{_fmt(payment.amount)}",
-            }
-        )
-    return _section(
-        "fixed",
-        "অফিস ভাড়া, বিল ও নির্দিষ্ট খরচ",
-        "প্রতি মাসে যেগুলো দিতেই হয়।",
-        [
-            {"key": "title", "label": "খরচ"},
-            {"key": "category", "label": "খাত"},
-            {"key": "period", "label": "কোন মাসের"},
-            {"key": "date", "label": "পেমেন্টের তারিখ"},
-            {"key": "amount", "label": "টাকা", "numeric": True},
-        ],
-        rows,
-        total,
-    )
-
-
-def _loans(user, first, last):
-    rows = []
-    total = ZERO
-    for payment in (
-        LoanPayment.objects.filter(loan__user=user, paid_on__range=(first, last))
-        .select_related("loan")
-        .order_by("paid_on")
-    ):
-        total += payment.amount
-        rows.append(
-            {
-                "lender": payment.loan.lender,
-                "reference": payment.reference or "—",
-                "date": payment.paid_on.strftime("%d-%m-%Y"),
-                "amount": f"৳{_fmt(payment.amount)}",
-            }
-        )
-    return _section(
-        "loan",
-        "লোনের কিস্তি",
-        "এই মাসে যত কিস্তি দেওয়া হয়েছে।",
-        [
-            {"key": "lender", "label": "কার কাছ থেকে"},
-            {"key": "reference", "label": "রেফারেন্স"},
-            {"key": "date", "label": "তারিখ"},
-            {"key": "amount", "label": "টাকা", "numeric": True},
-        ],
-        rows,
         total,
     )
 
 
 def _other(user, first, last):
-    """Bank debits that are not payroll, not a fixed bill, not a loan.
+    """Bank and cash debits that are not payroll, not a fixed bill, not a loan.
 
     The same exclusions as the analytics খরচ total, and for the same reason:
     those three are reported from their own tables, so counting the matching
@@ -300,9 +411,7 @@ def _other(user, first, last):
     """
     debits = (
         Transaction.objects.filter(
-            account__owner=user,
-            type="debit",
-            date__date__range=(first, last),
+            account__owner=user, type="debit", date__date__range=(first, last)
         )
         .exclude(status="cancelled")
         .exclude(nature="withdrawal")
@@ -321,12 +430,12 @@ def _other(user, first, last):
                 "purpose": txn.purpose or "—",
                 "category": CATEGORY_BN.get(txn.category, txn.category or "খাত দেওয়া হয়নি"),
                 "account": txn.account.name if txn.account else "—",
-                "amount": f"৳{_fmt(txn.amount)}",
+                "amount": _taka(txn.amount),
             }
         )
     return _section(
         "other",
-        "অন্যান্য খরচ",
+        "ব্যাংকিং ও অন্যান্য খরচ",
         "ব্যাংক ও ক্যাশ থেকে যেসব টাকা বেরিয়েছে।",
         [
             {"key": "date", "label": "তারিখ"},
@@ -336,6 +445,7 @@ def _other(user, first, last):
             {"key": "amount", "label": "টাকা", "numeric": True},
         ],
         rows,
+        total,
         total,
     )
 
@@ -348,17 +458,22 @@ def build(user, month=None, today=None):
 
     sections = [
         _payroll(user, first, last),
-        _incentives(user, first, last),
         _fixed(user, first, last),
         _loans(user, first, last),
+        _incentives(user, first, last),
         _other(user, first, last),
     ]
 
-    grand = sum((Decimal(str(section["total"])) for section in sections), ZERO)
+    due = sum((Decimal(str(section["due"])) for section in sections), ZERO)
+    settled = sum((Decimal(str(section["paid"])) for section in sections), ZERO)
+    outstanding = max(ZERO, due - settled)
+
     closed = business_days.closed_weekdays(user)
     open_days = business_days.open_days_between(first, last, closed)
 
-    profile = UserProfile.objects.filter(user=user).only("company", "company_address").first()
+    profile = (
+        UserProfile.objects.filter(user=user).only("company", "company_address").first()
+    )
     shop = (profile.company or "").strip() if profile else ""
 
     return {
@@ -381,17 +496,22 @@ def build(user, month=None, today=None):
             {
                 "key": section["key"],
                 "label": section["title"],
-                "amount": section["total"],
-                "amount_text": section["total_text"],
+                "amount": section["due"],
+                "amount_text": section["due_text"],
+                "paid_text": section["paid_text"],
                 "count": section["count"],
             }
             for section in sections
         ],
+        # A section with no rows has nothing to say; one with rows but no money
+        # yet is exactly the case this report exists for.
         "sections": [section for section in sections if section["rows"]],
-        "grand_total": float(_money(grand)),
-        "grand_total_text": f"৳{_fmt(grand)}",
-        # What the shop had to earn, on the days it was open, just to cover this.
-        "per_open_day_text": f"৳{_fmt(grand / open_days if open_days else ZERO)}",
+        "grand_total": float(_money(due)),
+        "grand_total_text": _taka(due),
+        "paid_total_text": _taka(settled),
+        "outstanding_total_text": _taka(outstanding),
+        # What the shop had to earn, on the days it was open, just to cover it.
+        "per_open_day_text": _taka(due / open_days if open_days else ZERO),
     }
 
 
@@ -401,7 +521,9 @@ def months_available(user, back=12, today=None):
     out = []
     year, month = today.year, today.month
     for _ in range(back + 1):
-        out.append({"key": f"{year}-{month:02d}", "label": f"{MONTHS_BN[month - 1]} {year}"})
+        out.append(
+            {"key": f"{year}-{month:02d}", "label": f"{MONTHS_BN[month - 1]} {year}"}
+        )
         month -= 1
         if month == 0:
             month, year = 12, year - 1
