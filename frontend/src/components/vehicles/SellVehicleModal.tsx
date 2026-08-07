@@ -166,7 +166,7 @@ export default function SellVehicleModal({ vehicle, onClose, onSold }: Props) {
               )}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="label">বিক্রির দাম *</label>
                 <input

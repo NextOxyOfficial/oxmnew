@@ -385,7 +385,7 @@ export default function DashboardPage() {
           self-contained, so a module with no data yet simply says so instead
           of leaving a hole in the grid. */}
       {feed && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           <ReportCard
             title="সামনে যেসব খরচ আসছে"
             icon={CalendarClock}

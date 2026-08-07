@@ -269,7 +269,7 @@ export default function VehicleDetailPage() {
 
         <div className="plane-section">
           <div className="section-title">বাইকের তথ্য</div>
-          <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
             {infoRows.map((row) => (
               <div
                 key={row.label}
@@ -290,7 +290,7 @@ export default function VehicleDetailPage() {
         {isSold && (
           <div className="plane-section">
             <div className="section-title">বিক্রির তথ্য</div>
-            <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
               <div className="flex items-baseline justify-between gap-3 border-b border-slate-100 py-1.5">
                 <span className="text-xs text-slate-500">কাস্টমার</span>
                 <span className="text-sm">

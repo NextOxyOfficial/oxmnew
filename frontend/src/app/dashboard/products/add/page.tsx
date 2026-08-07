@@ -229,7 +229,7 @@ export default function AddProductPage() {
           <form onSubmit={handleSubmit}>
             <div className="plane-section">
               <div className="section-title">প্রোডাক্টের তথ্য</div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <SuggestInput
                     id="product-name"
@@ -327,7 +327,7 @@ export default function AddProductPage() {
 
             <div className="plane-section">
               <div className="section-title">দামের ধরন</div>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {(
                   [
                     [false, "একটাই দাম", "সবগুলোর জন্য একটাই কেনা/বিক্রির দাম"],
@@ -374,7 +374,7 @@ export default function AddProductPage() {
                   এই প্রোডাক্টের স্টক লাগবে না (সার্ভিস, ডিজিটাল প্রোডাক্ট ইত্যাদি)
                 </label>
 
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
                     <label htmlFor="buy-price" className="label">
                       কেনা দাম {!form.noStockRequired && "*"}

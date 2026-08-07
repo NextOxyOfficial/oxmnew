@@ -210,7 +210,7 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
     <form onSubmit={handleSubmit} className="plane">
       <div className="plane-section">
         <div className="section-title">বাইকের পরিচয়</div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="label">বাইকের নাম *</label>
             {/* Free text, not a dropdown: the shopkeeper types the model. A
@@ -360,7 +360,7 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
 
       <div className="plane-section">
         <div className="section-title">কেনা ও দাম</div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="label">কেনা দাম</label>
             <input

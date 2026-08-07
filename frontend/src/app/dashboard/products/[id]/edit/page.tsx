@@ -940,7 +940,7 @@ export default function EditProductPage() {
           <div className="plane-section">
             <div className="section-title">দামের ধরন</div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {(
                 [
                   [false, "একটাই দাম", "সবগুলোর জন্য একটাই কেনা/বিক্রির দাম"],

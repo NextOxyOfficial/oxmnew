@@ -484,7 +484,7 @@ export default function RoleSettingsTab({ employeeId }: Props = {}) {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {groups.map((group) => {
                   const codes = group.items.map((i) => i.code);
                   const on = codes.filter((c) => draft.includes(c)).length;

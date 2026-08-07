@@ -141,7 +141,7 @@ export default function CreditPackages({ credits }: { credits: number | null }) 
         ) : packages.length === 0 ? (
           <div className="empty">এখন কোনো প্যাকেজ নেই।</div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {packages.map((pkg) => {
               const price = num(pkg.price);
               const perSms = pkg.sms_count > 0 ? price / pkg.sms_count : 0;

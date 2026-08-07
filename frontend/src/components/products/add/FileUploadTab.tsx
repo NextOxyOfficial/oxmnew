@@ -152,7 +152,7 @@ export default function FileUploadTab() {
     <>
       <div className="plane-section">
         <div className="section-title">কীভাবে করবেন</div>
-        <ol className="grid gap-3 sm:grid-cols-3">
+        <ol className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
             ["টেমপ্লেট নামান", "নমুনা তথ্য আর ঠিক কলাম নামসহ ফাইলটা ডাউনলোড করুন"],
             ["নিজের তথ্য বসান", "নমুনা মুছে নিজের প্রোডাক্ট লিখুন, কলামের নাম বদলাবেন না"],
@@ -329,7 +329,7 @@ export default function FileUploadTab() {
 
       <div className="plane-section">
         <div className="section-title">ফাইল কেমন হতে হবে</div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <div className="mb-1.5 text-xs font-medium text-slate-600">
               যে কলামগুলো লাগবেই

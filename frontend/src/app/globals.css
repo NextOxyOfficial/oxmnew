@@ -87,11 +87,15 @@ body {
      ═══════════════════════════════════════════════════════════════ */
 
   /* ── Page scaffold ──────────────────────────────────────────── */
+  /* On a phone the page gives its width away almost entirely: the planes and
+     cards inside carry their own padding, so text never touches the glass, and
+     a 375px screen gains 30px of usable table width. From the small breakpoint
+     up there is room to breathe again. */
   .page {
     width: 100%;
     max-width: 88rem;
     margin: 0 auto;
-    padding: 1.25rem 1rem 2.5rem;
+    padding: 1.25rem 1px 2.5rem;
   }
   @media (min-width: 640px) {
     .page { padding: 1.5rem 1.5rem 3rem; }

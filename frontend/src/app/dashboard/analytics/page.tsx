@@ -680,7 +680,7 @@ export default function AnalyticsPage() {
                         : "0";
                     return (
                       <div className="mt-3 border-t border-slate-200 pt-2.5">
-                        <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                           <div className="rounded-lg bg-slate-50 px-3 py-2">
                             <div className="flex items-baseline justify-between gap-2">
                               <span className="text-xs font-medium text-slate-700">
@@ -838,7 +838,7 @@ export default function AnalyticsPage() {
                   </Link>
                 </div>
 
-                <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
                     <div className="stat-label">মাসিক কিস্তি</div>
                     <div className="stat-value num money-neg">
@@ -918,7 +918,7 @@ export default function AnalyticsPage() {
             {/* ── money stuck in stock ────────────────────────────── */}
             <div className="plane-section">
               <div className="section-title">স্টকে আটকে থাকা টাকা</div>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <div className="stat-label">প্রোডাক্টে</div>
                   <div className="stat-value num">
