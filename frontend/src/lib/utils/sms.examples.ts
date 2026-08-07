@@ -8,7 +8,7 @@
 import { calculateSmsSegments, formatSmsInfo } from './sms';
 
 // Example 1: Short Bengali message (single SMS)
-const shortBengaliMessage = 'সম্মানিত কাস্টমার, আপনার কেনাকাটা ১২০০ টাকা';
+const shortBengaliMessage = 'সম্মানিত কাস্টমার, আপনার কেনাকাটা 1200 টাকা';
 console.log('Short Bengali message:');
 console.log('Text:', shortBengaliMessage);
 console.log('Length:', shortBengaliMessage.length, 'characters');
@@ -17,7 +17,7 @@ console.log('Formatted:', formatSmsInfo(shortBengaliMessage));
 console.log('---');
 
 // Example 2: Long Bengali message (multiple SMS)
-const longBengaliMessage = 'সম্মানিত কাস্টমার, আপনার কেনাকাটা ১২০০ টাকা, আমাদের স্টোরে কেনাকাটা করার জন্য আপনাকে ধন্যবাদ! আমাদের খাতায় আপনার বাকি রয়েছে ৫০০ টাকা। পরবর্তীতে আরো কেনাকাটা করুন।';
+const longBengaliMessage = 'সম্মানিত কাস্টমার, আপনার কেনাকাটা 1200 টাকা, আমাদের স্টোরে কেনাকাটা করার জন্য আপনাকে ধন্যবাদ! আমাদের খাতায় আপনার বাকি রয়েছে 500 টাকা। পরবর্তীতে আরো কেনাকাটা করুন।';
 console.log('Long Bengali message:');
 console.log('Text:', longBengaliMessage);
 console.log('Length:', longBengaliMessage.length, 'characters');
@@ -44,7 +44,7 @@ console.log('Formatted:', formatSmsInfo(mixedMessage));
 console.log('---');
 
 // Example 5: Typical order confirmation message
-const orderMessage = 'সম্মানিত কাস্টমার, আপনার কেনাকাটা ১,৫০০ টাকা, আমাদের স্টোরে কেনাকাটা করার জন্য আপনাকে ধন্যবাদ! আমাদের খাতায় আপনার বাকি রয়েছে ৩০০ টাকা';
+const orderMessage = 'সম্মানিত কাস্টমার, আপনার কেনাকাটা 1,500 টাকা, আমাদের স্টোরে কেনাকাটা করার জন্য আপনাকে ধন্যবাদ! আমাদের খাতায় আপনার বাকি রয়েছে 300 টাকা';
 console.log('Typical order confirmation:');
 console.log('Text:', orderMessage);
 console.log('Length:', orderMessage.length, 'characters');

@@ -183,7 +183,7 @@ export default function IncentivesTab({ incentives, employeeId, onIncentivesUpda
   const processWithdrawal = async () => {
     const amount = parseFloat(withdrawalAmount);
     if (isNaN(amount) || amount <= 0) {
-      toast.error("০ এর বেশি একটা ঠিকঠাক টাকার পরিমাণ দিন");
+      toast.error("0 এর বেশি একটা ঠিকঠাক টাকার পরিমাণ দিন");
       return;
     }
 

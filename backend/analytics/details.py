@@ -204,7 +204,7 @@ def receivables(user, begin, finish):
         )
     return _envelope(
         "কার কাছে কত বাকি",
-        "মোট %s টাকা %d জনের কাছে। ৩০ দিনের বেশি পুরনো বাকিগুলো আগে ধরুন।"
+        "মোট %s টাকা %d জনের কাছে। 30 দিনের বেশি পুরনো বাকিগুলো আগে ধরুন।"
         % (f"{services._money(full['total']):,.0f}", full["customers_count"]),
         [
             {"key": "name", "label": "কাস্টমার", "type": "link"},

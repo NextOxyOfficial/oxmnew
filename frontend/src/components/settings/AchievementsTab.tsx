@@ -48,7 +48,7 @@ export default function AchievementsTab({ achievements, setAchievements, showNot
     const points = parseInt(formData.points);
 
     if (value <= 0 || points <= 0) {
-      showNotification('error', 'লক্ষ্য আর পয়েন্ট দুটোই ০ এর বেশি হতে হবে');
+      showNotification('error', 'লক্ষ্য আর পয়েন্ট দুটোই 0 এর বেশি হতে হবে');
       return;
     }
 

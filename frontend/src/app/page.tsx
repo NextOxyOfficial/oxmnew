@@ -76,10 +76,10 @@ export default function Home() {
   ];
 
   const stats = [
-    { value: '১০,০০০+', label: 'Active ব্যবসা' },
-    { value: '৳১১ কোটি+', label: 'লেনদেন হয়েছে' },
-    { value: '৯৯.৯%', label: 'আপটাইম' },
-    { value: '২৪/৭', label: 'সাপোর্ট' },
+    { value: '10,000+', label: 'Active ব্যবসা' },
+    { value: '৳11 কোটি+', label: 'লেনদেন হয়েছে' },
+    { value: '99.9%', label: 'আপটাইম' },
+    { value: '24/7', label: 'সাপোর্ট' },
   ];
 
   const testimonials = [
@@ -92,7 +92,7 @@ export default function Home() {
     {
       name: 'ফাতেমা আক্তার',
       business: 'গ্রোসারি মার্ট',
-      quote: 'এসএমএস সেন্টার দিয়ে পুরোনো কাস্টমারদের খবর দিই। এতে বিক্রি ৪০% বেড়েছে।',
+      quote: 'এসএমএস সেন্টার দিয়ে পুরোনো কাস্টমারদের খবর দিই। এতে বিক্রি 40% বেড়েছে।',
       rating: 5,
     },
     {
@@ -106,15 +106,15 @@ export default function Home() {
   const pricingPlans = [
     {
       name: 'ফ্রি',
-      price: '০',
+      price: '0',
       period: '/মাস',
       description: 'ছোট ব্যবসার জন্য পারফেক্ট',
       features: [
-        '২৫টি প্রোডাক্ট পর্যন্ত',
+        '25টি প্রোডাক্ট পর্যন্ত',
         'স্টকের সাধারণ হিসাব',
         'বিক্রি ও অর্ডার ট্র্যাকিং',
         'কাস্টমারের তালিকা',
-        'মাসে ৫০টি এসএমএস',
+        'মাসে 50টি এসএমএস',
         'ইমেইল সাপোর্ট',
       ],
       cta: 'ফ্রি শুরু করুন',
@@ -122,7 +122,7 @@ export default function Home() {
     },
     {
       name: 'প্রো',
-      price: '৩৯৯',
+      price: '399',
       period: '/মাস',
       description: 'বাড়তে থাকা ব্যবসার জন্য',
       features: [
@@ -130,7 +130,7 @@ export default function Home() {
         'স্টকের বিস্তারিত হিসাব',
         'একাধিক ইউজার',
         'ব্যাংকিং যোগ করা',
-        'মাসে ৫০০টি এসএমএস',
+        'মাসে 500টি এসএমএস',
         'অগ্রাধিকার সাপোর্ট',
         'নিজের মতো রিপোর্ট',
         'API অ্যাক্সেস',
@@ -285,25 +285,41 @@ export default function Home() {
 
       <Hero />
 
-      {/* Stats Section */}
-      <section className="border-y border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-px bg-slate-200 lg:grid-cols-4">
+      {/* Stats — the one dark band on the page, so the numbers land. */}
+      <section className="relative overflow-hidden bg-slate-900">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_70%_80%_at_50%_50%,#000_40%,transparent_100%)]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-24 left-1/2 h-56 w-full max-w-[40rem] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl"
+        />
+        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
             {stats.map((stat, index) => (
-              <div key={index} className="bg-white px-4 py-8 text-center">
-                <div className="num text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                  {stat.value}
+              <Reveal key={index} delay={index * 70}>
+                <div className="text-center">
+                  <div className="num bg-gradient-to-b from-white to-slate-300 bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-4xl">
+                    {stat.value}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-400 sm:text-sm">
+                    {stat.label}
+                  </div>
                 </div>
-                <div className="mt-1 text-sm text-slate-500">{stat.label}</div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-16 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section id="features" className="relative overflow-hidden py-16 lg:py-24">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_40%,#000_50%,transparent_100%)]"
+        />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               ব্যবসা চালাতে যা যা লাগে,
@@ -317,13 +333,15 @@ export default function Home() {
           <div className="plane">
             <div className="grid grid-cols-1 gap-px bg-slate-200 md:grid-cols-2 lg:grid-cols-3">
               {features.map((feature, index) => (
-                <div key={index} className="bg-white p-6">
-                  <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
+                <Reveal key={index} delay={(index % 3) * 70}>
+                <div className="group h-full bg-white p-6 transition-colors hover:bg-slate-50/60">
+                  <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-600/20 transition-transform group-hover:scale-105">
                     <feature.icon className="h-5 w-5" />
                   </span>
                   <h3 className="text-base font-semibold text-slate-900">{feature.title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{feature.description}</p>
                 </div>
+                </Reveal>
               ))}
             </div>
 
@@ -356,7 +374,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              শুরু করুন মাত্র <span className="text-cyan-600">৩ ধাপে</span>
+              শুরু করুন মাত্র <span className="text-cyan-600">3 ধাপে</span>
             </h2>
             <p className="mt-3 text-slate-600">সেটআপ সহজ, ফল সাথে সাথেই</p>
           </div>
@@ -365,19 +383,19 @@ export default function Home() {
             <div className="grid grid-cols-1 gap-px bg-slate-200 md:grid-cols-3">
               {[
                 {
-                  step: '০১',
+                  step: '01',
                   title: 'ফ্রি অ্যাকাউন্ট খুলুন',
-                  description: '৩০ সেকেন্ডেই অ্যাকাউন্ট তৈরি। কোনো কার্ড লাগবে না।',
+                  description: '30 সেকেন্ডেই অ্যাকাউন্ট তৈরি। কোনো কার্ড লাগবে না।',
                   icon: Users,
                 },
                 {
-                  step: '০২',
+                  step: '02',
                   title: 'প্রোডাক্ট যোগ করুন',
                   description: 'প্রোডাক্টের তালিকা ইমপোর্ট করুন বা হাতে লিখুন। দাম আর স্টক বসিয়ে দিন।',
                   icon: Package,
                 },
                 {
-                  step: '০৩',
+                  step: '03',
                   title: 'বিক্রি শুরু করুন',
                   description: 'বিক্রি করুন, কাস্টমারের হিসাব রাখুন, ব্যবসা বাড়ান।',
                   icon: TrendingUp,
@@ -415,7 +433,7 @@ export default function Home() {
                 রিভিউ
               </span>
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                ১০,০০০+ ব্যবসায়ীর
+                10,000+ ব্যবসায়ীর
                 <span className="block text-cyan-600">ভরসা</span>
               </h2>
             </div>
@@ -484,7 +502,7 @@ export default function Home() {
             {[
               {
                 q: 'OxyManager কি ফ্রি?',
-                a: 'হ্যাঁ! ফ্রি প্ল্যান দিয়েই শুরু করতে পারবেন। বিনামূল্যে ২৫টি প্রোডাক্ট পর্যন্ত ম্যানেজ করা যাবে।',
+                a: 'হ্যাঁ! ফ্রি প্ল্যান দিয়েই শুরু করতে পারবেন। বিনামূল্যে 25টি প্রোডাক্ট পর্যন্ত ম্যানেজ করা যাবে।',
               },
               {
                 q: 'আমার ডাটা কি সুরক্ষিত?',
@@ -522,7 +540,7 @@ export default function Home() {
             ব্যবসা বাড়ানোর জন্য তৈরি?
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-slate-600">
-            ১০,০০০+ ব্যবসায়ী এখন OxyManager ব্যবহার করছেন। ফ্রি অ্যাকাউন্ট খুলে আজই শুরু করুন।
+            10,000+ ব্যবসায়ী এখন OxyManager ব্যবহার করছেন। ফ্রি অ্যাকাউন্ট খুলে আজই শুরু করুন।
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link href="/auth/register" className="btn btn-primary w-full sm:w-auto">
@@ -537,69 +555,118 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* Footer — the dark band closes the page the way the stats opened it,
+          so the whole thing reads as one designed surface. */}
+      <footer className="relative overflow-hidden bg-slate-900 text-slate-400">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_70%_70%_at_50%_0%,#000_50%,transparent_100%)]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-20 left-1/2 h-48 w-full max-w-[40rem] -translate-x-1/2 rounded-full bg-cyan-500/15 blur-3xl"
+        />
+
+        <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             <div className="col-span-2 md:col-span-1">
-              {/* The real lockup, same asset the header uses — a hand-drawn
-                  "O" tile was standing in for it. */}
-              <Link href="/" className="mb-3 inline-block">
+              <Link href="/" className="mb-4 inline-block">
                 <Image
                   src="/logo.png"
                   alt="OxyManager — Your Smart Assistant"
                   width={378}
                   height={96}
-                  className="h-9 w-auto"
+                  className="h-10 w-auto brightness-0 invert"
                 />
               </Link>
-              <p className="mb-4 text-sm text-slate-500">
-                বাংলাদেশের ব্যবসার জন্য পুরো হিসাব-নিকাশের ব্যবস্থা।
+              <p className="mb-5 text-sm leading-relaxed">
+                বাংলাদেশের ব্যবসার জন্য পুরো হিসাব-নিকাশের ব্যবস্থা। স্টক থেকে
+                বেতন — সব এক জায়গায়।
               </p>
-              <div className="space-y-2 text-sm text-slate-500">
-                <a href="tel:+8801234567890" className="flex items-center gap-2 hover:text-slate-900">
-                  <Phone className="h-4 w-4 flex-shrink-0" />
+              <div className="space-y-2.5 text-sm">
+                <a
+                  href="tel:+8801234567890"
+                  className="flex items-center gap-2.5 transition-colors hover:text-white"
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5">
+                    <Phone className="h-3.5 w-3.5" />
+                  </span>
                   +880 1234-567890
                 </a>
-                <a href="mailto:support@oxymanager.com" className="flex items-center gap-2 hover:text-slate-900">
-                  <Mail className="h-4 w-4 flex-shrink-0" />
+                <a
+                  href="mailto:support@oxymanager.com"
+                  className="flex items-center gap-2.5 transition-colors hover:text-white"
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5">
+                    <Mail className="h-3.5 w-3.5" />
+                  </span>
                   <span className="truncate">support@oxymanager.com</span>
                 </a>
               </div>
             </div>
+
+            {[
+              {
+                heading: 'প্রোডাক্ট',
+                links: [
+                  { label: 'কাদের জন্য', href: '#industries' },
+                  { label: 'ফিচার', href: '#features' },
+                  { label: 'অ্যাডভান্সড ফিচার', href: '#advanced' },
+                  { label: 'দাম', href: '#pricing' },
+                ],
+              },
+              {
+                heading: 'কোম্পানি',
+                links: [
+                  { label: 'রিভিউ', href: '#testimonials' },
+                  { label: 'প্রশ্ন-উত্তর', href: '#faq' },
+                  { label: 'যোগাযোগ', href: '#contact' },
+                  { label: 'সাপোর্ট', href: 'mailto:support@oxymanager.com' },
+                ],
+              },
+            ].map((column) => (
+              <div key={column.heading}>
+                <h3 className="mb-3 text-sm font-semibold text-white">
+                  {column.heading}
+                </h3>
+                <ul className="space-y-2.5 text-sm">
+                  {column.links.map((link) => (
+                    <li key={link.label}>
+                      <a href={link.href} className="transition-colors hover:text-white">
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-slate-900">প্রোডাক্ট</h3>
-              <ul className="space-y-2 text-sm text-slate-500">
-                <li><a href="#industries" className="hover:text-slate-900">কাদের জন্য</a></li>
-                <li><a href="#features" className="hover:text-slate-900">ফিচার</a></li>
-                <li><a href="#advanced" className="hover:text-slate-900">অ্যাডভান্সড ফিচার</a></li>
-                <li><a href="#pricing" className="hover:text-slate-900">দাম</a></li>
-                <li><a href="#faq" className="hover:text-slate-900">প্রশ্ন-উত্তর</a></li>
+              <h3 className="mb-3 text-sm font-semibold text-white">আইনি</h3>
+              <ul className="space-y-2.5 text-sm">
+                <li><Link href="/privacy" className="transition-colors hover:text-white">প্রাইভেসি পলিসি</Link></li>
+                <li><Link href="/terms" className="transition-colors hover:text-white">শর্তাবলি</Link></li>
               </ul>
-            </div>
-            <div>
-              <h3 className="mb-3 text-sm font-semibold text-slate-900">কোম্পানি</h3>
-              <ul className="space-y-2 text-sm text-slate-500">
-                <li><a href="#testimonials" className="hover:text-slate-900">রিভিউ</a></li>
-                <li><a href="#contact" className="hover:text-slate-900">যোগাযোগ</a></li>
-                <li><a href="mailto:support@oxymanager.com" className="hover:text-slate-900">সাপোর্ট</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-3 text-sm font-semibold text-slate-900">আইনি</h3>
-              <ul className="space-y-2 text-sm text-slate-500">
-                <li><Link href="/privacy" className="hover:text-slate-900">প্রাইভেসি পলিসি</Link></li>
-                <li><Link href="/terms" className="hover:text-slate-900">শর্তাবলি</Link></li>
-                <li><a href="mailto:support@oxymanager.com" className="hover:text-slate-900">সাপোর্টে যোগাযোগ</a></li>
-              </ul>
+
+              <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-3">
+                <p className="text-xs font-semibold text-white">শুরু করতে চান?</p>
+                <Link
+                  href="/auth/register"
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-cyan-500"
+                >
+                  ফ্রি অ্যাকাউন্ট খুলুন
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
           </div>
 
-          <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-slate-200 pt-6 text-sm text-slate-500 sm:flex-row">
+          <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-sm sm:flex-row">
             <p>&copy; {new Date().getFullYear()} OxyManager. সর্বস্বত্ব সংরক্ষিত।</p>
             <div className="flex items-center gap-4">
-              <Link href="/privacy" className="hover:text-slate-900">প্রাইভেসি</Link>
+              <Link href="/privacy" className="transition-colors hover:text-white">প্রাইভেসি</Link>
               <span aria-hidden="true">•</span>
-              <Link href="/terms" className="hover:text-slate-900">শর্তাবলি</Link>
+              <Link href="/terms" className="transition-colors hover:text-white">শর্তাবলি</Link>
             </div>
           </div>
         </div>

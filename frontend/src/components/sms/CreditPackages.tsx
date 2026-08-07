@@ -106,9 +106,9 @@ export default function CreditPackages({ credits }: { credits: number | null }) 
         <p className="text-xs text-slate-500">
           এখন আছে{" "}
           <span className="num font-medium text-slate-800">
-            {credits === null ? "…" : credits.toLocaleString("bn-BD")}
+            {credits === null ? "…" : credits.toLocaleString("bn-BD-u-nu-latn")}
           </span>{" "}
-          ক্রেডিট। একটা এসএমএস = একটা ক্রেডিট (১৬০ অক্ষরের বেশি হলে বেশি লাগে)।
+          ক্রেডিট। একটা এসএমএস = একটা ক্রেডিট (160 অক্ষরের বেশি হলে বেশি লাগে)।
         </p>
 
         {missing.length > 0 && (
@@ -162,7 +162,7 @@ export default function CreditPackages({ credits }: { credits: number | null }) 
                   )}
 
                   <div className="num text-2xl font-semibold text-slate-900">
-                    {pkg.sms_count.toLocaleString("bn-BD")}
+                    {pkg.sms_count.toLocaleString("bn-BD-u-nu-latn")}
                   </div>
                   <div className="text-xs text-slate-500">এসএমএস</div>
 

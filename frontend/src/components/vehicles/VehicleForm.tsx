@@ -422,7 +422,7 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
               value={values.location}
               onChange={(e) => setField("location", e.target.value)}
               className="input"
-              placeholder="যেমন: শোরুম / গোডাউন-১"
+              placeholder="যেমন: শোরুম / গোডাউন-1"
             />
           </div>
           <div>

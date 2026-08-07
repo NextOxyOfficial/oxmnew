@@ -253,14 +253,14 @@ export default function RoleSettingsTab({ employeeId }: Props = {}) {
         <div className="stat">
           <div className="stat-label">মোট কর্মচারী</div>
           <div className="stat-value num">
-            {employees.length.toLocaleString("bn-BD")}
+            {employees.length.toLocaleString("bn-BD-u-nu-latn")}
           </div>
           <div className="stat-meta">সব মিলিয়ে</div>
         </div>
         <div className="stat">
           <div className="stat-label">লগইন দেওয়া আছে</div>
           <div className="stat-value num money-pos">
-            {withLogin.toLocaleString("bn-BD")}
+            {withLogin.toLocaleString("bn-BD-u-nu-latn")}
           </div>
           <div className="stat-meta">নিজের আইডি দিয়ে ঢুকতে পারে</div>
         </div>
@@ -269,14 +269,14 @@ export default function RoleSettingsTab({ employeeId }: Props = {}) {
           <div className="stat-value num money-neg">
             {access
               .filter((a) => !a.is_enabled)
-              .length.toLocaleString("bn-BD")}
+              .length.toLocaleString("bn-BD-u-nu-latn")}
           </div>
           <div className="stat-meta">লগইন আছে কিন্তু বন্ধ করা</div>
         </div>
         <div className="stat">
           <div className="stat-label">মোট অনুমতি</div>
           <div className="stat-value num">
-            {allCodes.length.toLocaleString("bn-BD")}
+            {allCodes.length.toLocaleString("bn-BD-u-nu-latn")}
           </div>
           <div className="stat-meta">{groups.length} টা ভাগে</div>
         </div>
@@ -441,7 +441,7 @@ export default function RoleSettingsTab({ employeeId }: Props = {}) {
                   type="text"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="অন্তত ৬ অক্ষর"
+                  placeholder="অন্তত 6 অক্ষর"
                   className="input"
                   autoComplete="new-password"
                 />

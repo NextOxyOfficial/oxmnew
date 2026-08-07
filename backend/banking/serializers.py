@@ -262,7 +262,7 @@ class LoanSerializer(serializers.ModelSerializer):
 
     def validate_payment_day(self, value):
         if not 1 <= value <= 31:
-            raise serializers.ValidationError("তারিখ ১ থেকে ৩১ এর মধ্যে হতে হবে।")
+            raise serializers.ValidationError("তারিখ 1 থেকে 31 এর মধ্যে হতে হবে।")
         return value
 
     def validate(self, data):
@@ -341,5 +341,5 @@ class RecurringCostSerializer(serializers.ModelSerializer):
 
     def validate_due_day(self, value):
         if not 1 <= value <= 31:
-            raise serializers.ValidationError("তারিখ ১ থেকে ৩১ এর মধ্যে হতে হবে।")
+            raise serializers.ValidationError("তারিখ 1 থেকে 31 এর মধ্যে হতে হবে।")
         return value

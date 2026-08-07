@@ -31,7 +31,7 @@ const FILTERS = [
   ["has_variants", "ভ্যারিয়েন্ট আছে কিনা (true/false)"],
   ["is_active", "Active কিনা (true/false)"],
   ["page", "কত নম্বর পাতা"],
-  ["page_size", "এক পাতায় কয়টা (সর্বোচ্চ ৫০০)"],
+  ["page_size", "এক পাতায় কয়টা (সর্বোচ্চ 500)"],
 ];
 
 const ERRORS = [
@@ -151,7 +151,7 @@ export default function ApiDocs() {
         </table>
       </div>
 
-      <Heading>১. প্রোডাক্টের তালিকা আনুন</Heading>
+      <Heading>1. প্রোডাক্টের তালিকা আনুন</Heading>
       <CodeBlock
         label="রিকোয়েস্ট"
         code={`curl "${api}/products/?page_size=20" \\
@@ -178,7 +178,7 @@ export default function ApiDocs() {
 }`}
       />
 
-      <Heading>২. অর্ডার বানান</Heading>
+      <Heading>2. অর্ডার বানান</Heading>
       <p className="mb-2 text-sm text-slate-500">
         দাম আপনার স্টোরের রেকর্ড থেকেই নেওয়া হয় — রিকোয়েস্টে দাম পাঠালেও সেটা
         মানা হবে না, তাই কেউ নিজের ইচ্ছেমতো দামে কিনতে পারবে না।
@@ -243,11 +243,11 @@ export default function ApiDocs() {
           উত্তরে কতটা বাকি আছে লেখা থাকবে
         </div>
         <div className="text-slate-500">
-          • এক অর্ডারে সর্বোচ্চ ১০০টা আইটেম
+          • এক অর্ডারে সর্বোচ্চ 100টা আইটেম
         </div>
       </div>
 
-      <Heading>৩. অর্ডারের অবস্থা দেখুন</Heading>
+      <Heading>3. অর্ডারের অবস্থা দেখুন</Heading>
       <CodeBlock
         code={`curl "${api}/orders/ORD202608070004/" \\
   -H "Authorization: Bearer আপনার_api_key"`}

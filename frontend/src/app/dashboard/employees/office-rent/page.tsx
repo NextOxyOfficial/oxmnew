@@ -70,14 +70,14 @@ const EMPTY = {
 };
 
 /* Dates already render as Bangla numerals via `bn-BD`, so a raw due-day or
-   count next to them read as a mismatch (১৫/৮/২০২৬ beside "মাসের 15 তারিখ"). */
-const bn = (value: number) => value.toLocaleString("bn-BD");
+   count next to them read as a mismatch (15/8/2026 beside "মাসের 15 তারিখ"). */
+const bn = (value: number) => value.toLocaleString("bn-BD-u-nu-latn");
 
 const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString("bn-BD") : "—";
+  value ? new Date(value).toLocaleDateString("bn-BD-u-nu-latn") : "—";
 
 const monthName = (value: string) =>
-  new Date(value).toLocaleDateString("bn-BD", { month: "long", year: "numeric" });
+  new Date(value).toLocaleDateString("bn-BD-u-nu-latn", { month: "long", year: "numeric" });
 
 export default function OfficeRentPage() {
   const formatCurrency = useCurrencyFormatter();
@@ -98,7 +98,7 @@ export default function OfficeRentPage() {
     file: File
   ) => {
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("ফাইলটা ১০ এমবির বেশি বড় হতে পারবে না");
+      toast.error("ফাইলটা 10 এমবির বেশি বড় হতে পারবে না");
       return;
     }
     setUploadingId(paymentId);

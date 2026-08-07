@@ -159,8 +159,8 @@ export const PERIOD_OPTIONS = [
   { value: "last_week", label: "গত সপ্তাহ" },
   { value: "this_month", label: "এই মাস" },
   { value: "last_month", label: "গত মাস" },
-  { value: "last_7", label: "গত ৭ দিন" },
-  { value: "last_30", label: "গত ৩০ দিন" },
+  { value: "last_7", label: "গত 7 দিন" },
+  { value: "last_30", label: "গত 30 দিন" },
   { value: "this_year", label: "এই বছর" },
   { value: "custom", label: "নিজের সময়" },
 ] as const;

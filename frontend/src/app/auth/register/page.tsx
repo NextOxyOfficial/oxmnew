@@ -45,7 +45,7 @@ export default function RegisterPage() {
     }
 
     if (formData.password.length < 6) {
-      setError('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে');
+      setError('পাসওয়ার্ড কমপক্ষে 6 অক্ষরের হতে হবে');
       return;
     }
 
@@ -85,7 +85,7 @@ export default function RegisterPage() {
     }
 
     if (formData.password.length < 6) {
-      setError('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে');
+      setError('পাসওয়ার্ড কমপক্ষে 6 অক্ষরের হতে হবে');
       return;
     }
 
@@ -122,7 +122,7 @@ export default function RegisterPage() {
           <div className="plane-section">
             <h1 className="page-title">নতুন অ্যাকাউন্ট খুলুন</h1>
             <p className="page-sub">
-              ধাপ {step === 1 ? '১' : '২'}/২ — {step === 1 ? 'অ্যাকাউন্টের তথ্য' : 'ব্যবসার তথ্য'}
+              ধাপ {step === 1 ? '1' : '2'}/2 — {step === 1 ? 'অ্যাকাউন্টের তথ্য' : 'ব্যবসার তথ্য'}
             </p>
 
             {/* Progress Bar */}

@@ -36,7 +36,7 @@ const RANGE_OPTIONS = [
   { value: "today", label: "আজ" },
   { value: "this_week", label: "এই সপ্তাহ" },
   { value: "this_month", label: "এই মাস" },
-  { value: "last_30", label: "গত ৩০ দিন" },
+  { value: "last_30", label: "গত 30 দিন" },
 ] as const;
 
 /** How loud each focus signal is, in one word the right column can hold. */
@@ -108,7 +108,7 @@ export default function DashboardPage() {
   }, [range]);
 
   const money = (value: number) => formatCurrency(value);
-  const dateLine = new Date().toLocaleDateString("bn-BD", {
+  const dateLine = new Date().toLocaleDateString("bn-BD-u-nu-latn", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -340,7 +340,7 @@ export default function DashboardPage() {
                 {money(feed.inventory.buy_value)}
               </div>
               <div className="stat-meta">
-                {feed.inventory.product_count.toLocaleString("bn-BD")} টা আইটেম
+                {feed.inventory.product_count.toLocaleString("bn-BD-u-nu-latn")} টা আইটেম
               </div>
             </div>
             <div className="stat">
@@ -349,7 +349,7 @@ export default function DashboardPage() {
                 {money(feed.inventory.sell_value)}
               </div>
               <div className="stat-meta">
-                {feed.inventory.units.toLocaleString("bn-BD")} পিস স্টকে
+                {feed.inventory.units.toLocaleString("bn-BD-u-nu-latn")} পিস স্টকে
               </div>
             </div>
             <div className="stat">
@@ -358,7 +358,7 @@ export default function DashboardPage() {
                 {money(feed.inventory.potential_profit)}
               </div>
               <div className="stat-meta">
-                মার্জিন {feed.inventory.margin_pct.toLocaleString("bn-BD")}%
+                মার্জিন {feed.inventory.margin_pct.toLocaleString("bn-BD-u-nu-latn")}%
               </div>
             </div>
             <div className="stat">
@@ -425,7 +425,7 @@ export default function DashboardPage() {
                 href={`/dashboard/products/${row.id}`}
                 title={row.name}
                 note={row.note}
-                value={`${row.suggest_qty.toLocaleString("bn-BD")} পিস`}
+                value={`${row.suggest_qty.toLocaleString("bn-BD-u-nu-latn")} পিস`}
                 valueNote={`≈ ${money(row.buy_cost)}`}
                 tone={row.days_left <= 7 ? "neg" : "warn"}
               />
@@ -433,7 +433,7 @@ export default function DashboardPage() {
           </ReportCard>
 
           <ReportCard
-            title="শেষ ৫টা বিক্রি"
+            title="শেষ 5টা বিক্রি"
             icon={ShoppingCart}
             href="/dashboard/orders"
             meta="কাকে, কত টাকার"
@@ -454,7 +454,7 @@ export default function DashboardPage() {
           </ReportCard>
 
           <ReportCard
-            title="শেষ ৫টা এসএমএস"
+            title="শেষ 5টা এসএমএস"
             icon={MessageSquare}
             href="/dashboard/sms"
             hrefLabel="এসএমএস"
@@ -547,7 +547,7 @@ export default function DashboardPage() {
           </ReportCard>
 
           <ReportCard
-            title="শেষ ৫টা ব্যাংক লেনদেন"
+            title="শেষ 5টা ব্যাংক লেনদেন"
             icon={CreditCard}
             href="/dashboard/banking"
             hrefLabel="ব্যাংকিং"
@@ -568,7 +568,7 @@ export default function DashboardPage() {
           </ReportCard>
 
           <ReportCard
-            title="শেষ ৫ জন কাস্টমার"
+            title="শেষ 5 জন কাস্টমার"
             icon={Users}
             href="/dashboard/customers"
             hrefLabel="কাস্টমার"

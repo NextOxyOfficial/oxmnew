@@ -1163,7 +1163,7 @@ export default function AddOrderPage() {
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="কাস্টমার খুঁজে সিলেক্ট করুন (অন্তত ২ অক্ষর লিখুন)…"
+                      placeholder="কাস্টমার খুঁজে সিলেক্ট করুন (অন্তত 2 অক্ষর লিখুন)…"
                       value={customerSearchInput}
                       onChange={(e) => {
                         setCustomerSearchInput(e.target.value);
@@ -1280,7 +1280,7 @@ export default function AddOrderPage() {
                         {/* Show indicator when there are more than 10 results */}
                         {filteredCustomers.length > 10 && (
                           <div className="p-2 text-xs text-slate-500 bg-slate-100 border-t border-slate-200 text-center">
-                            {filteredCustomers.length}টির মধ্যে ১০টি দেখাচ্ছে।
+                            {filteredCustomers.length}টির মধ্যে 10টি দেখাচ্ছে।
                             আরও লিখে খোঁজ ছোট করুন।
                           </div>
                         )}

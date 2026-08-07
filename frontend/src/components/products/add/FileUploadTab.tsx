@@ -25,7 +25,7 @@ interface UploadResults {
 const VALID_EXTENSIONS = [".csv", ".xlsx", ".xls"];
 
 const REQUIRED_COLUMNS = [
-  { name: "name", note: "প্রোডাক্টের নাম (সর্বোচ্চ ২০০ অক্ষর), একই নামে দুটো চলবে না" },
+  { name: "name", note: "প্রোডাক্টের নাম (সর্বোচ্চ 200 অক্ষর), একই নামে দুটো চলবে না" },
   { name: "buy_price", note: "কেনা দাম — যেমন 50.00, 125.99" },
   { name: "sell_price", note: "বিক্রির দাম, কেনা দামের সমান বা বেশি" },
   { name: "stock", note: "স্টক, পুরো সংখ্যা — যেমন 50, 100" },
@@ -35,7 +35,7 @@ const OPTIONAL_COLUMNS = [
   { name: "product_code", note: "SKU, পার্ট নম্বর বা বারকোড" },
   { name: "category", note: "ক্যাটাগরি — নতুন হলে আপনাআপনি তৈরি হবে" },
   { name: "supplier", note: "সাপ্লায়ার — নতুন হলে আপনাআপনি তৈরি হবে" },
-  { name: "location", note: "কোথায় রাখা আছে (সর্বোচ্চ ২০০ অক্ষর)" },
+  { name: "location", note: "কোথায় রাখা আছে (সর্বোচ্চ 200 অক্ষর)" },
   { name: "details", note: "প্রোডাক্টের বিবরণ" },
 ];
 
@@ -237,8 +237,8 @@ export default function FileUploadTab() {
               ফাইলটা এখানে দিন
             </span>
             <span className="text-xs text-slate-500">
-              সিএসভি (.csv) বা এক্সেল (.xlsx, .xls) — এক্সেল সর্বোচ্চ ২৫ এমবি,
-              সিএসভি ১০ এমবি
+              সিএসভি (.csv) বা এক্সেল (.xlsx, .xls) — এক্সেল সর্বোচ্চ 25 এমবি,
+              সিএসভি 10 এমবি
             </span>
             <input
               type="file"
@@ -250,7 +250,7 @@ export default function FileUploadTab() {
         )}
 
         <p className="mt-2 text-xs text-slate-500">
-          একবারে ১০০–৫০০টা প্রোডাক্ট রাখলে সবচেয়ে ভালো চলে। ফাইল আপলোডে শুধু
+          একবারে 100–500টা প্রোডাক্ট রাখলে সবচেয়ে ভালো চলে। ফাইল আপলোডে শুধু
           একটাই দামের প্রোডাক্ট চলবে, ভ্যারিয়েন্ট চলবে না। ছবি পরে আলাদা করে
           দিতে হবে।
         </p>

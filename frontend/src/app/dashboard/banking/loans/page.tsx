@@ -206,7 +206,7 @@ export default function LoansPage() {
 
   const handleReceipt = async (loan: Loan, paymentId: number, file: File) => {
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("ফাইলটা ১০ এমবির বেশি বড় হতে পারবে না");
+      toast.error("ফাইলটা 10 এমবির বেশি বড় হতে পারবে না");
       return;
     }
     setUploadingId(paymentId);

@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError(null);
     if (code.trim().length !== 6) {
-      setError("৬ অঙ্কের কোডটা দিন");
+      setError("6 অঙ্কের কোডটা দিন");
       return;
     }
     setBusy(true);
@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError(null);
     if (password.length < 6) {
-      setError("পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে");
+      setError("পাসওয়ার্ড অন্তত 6 অক্ষরের হতে হবে");
       return;
     }
     if (password !== confirmPassword) {
@@ -235,7 +235,7 @@ export default function ForgotPasswordPage() {
                     ) : (
                       "অ্যাকাউন্ট থাকলে কোড পাঠানো হয়েছে।"
                     )}{" "}
-                    কোডটা ১০ মিনিট চলবে।
+                    কোডটা 10 মিনিট চলবে।
                   </span>
                 </div>
 
@@ -256,7 +256,7 @@ export default function ForgotPasswordPage() {
 
                 <div>
                   <label className="label" htmlFor="code">
-                    ৬ অঙ্কের কোড
+                    6 অঙ্কের কোড
                   </label>
                   <input
                     id="code"
@@ -308,7 +308,7 @@ export default function ForgotPasswordPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="input"
-                    placeholder="অন্তত ৬ অক্ষর"
+                    placeholder="অন্তত 6 অক্ষর"
                     autoComplete="new-password"
                   />
                 </div>

@@ -312,7 +312,7 @@ export default function AddProductPage() {
                     value={form.location}
                     onChange={(e) => setField("location", e.target.value)}
                     className="input"
-                    placeholder="যেমন: শোরুম / গোডাউন-১"
+                    placeholder="যেমন: শোরুম / গোডাউন-1"
                   />
                 </div>
 

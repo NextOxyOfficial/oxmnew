@@ -31,22 +31,22 @@ export default function PrivacyPolicy() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
             প্রাইভেসি পলিসি
           </h1>
-          <p className="mt-1.5 text-sm text-slate-500">সর্বশেষ আপডেট: ২৮ জানুয়ারি, ২০২৬</p>
+          <p className="mt-1.5 text-sm text-slate-500">সর্বশেষ আপডেট: 28 জানুয়ারি, 2026</p>
         </header>
 
         <article className="space-y-8 text-[0.9375rem] leading-relaxed text-slate-600">
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১. শুরুর কথা</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">1. শুরুর কথা</h2>
             <p>
               Welcome to OxyManager (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our business management software and services.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">২. আমরা কী কী তথ্য নিই</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">2. আমরা কী কী তথ্য নিই</h2>
             <div className="space-y-4">
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">২.১ ব্যক্তিগত তথ্য</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">2.1 ব্যক্তিগত তথ্য</h3>
                 <p>We collect information that you provide directly to us, including:</p>
                 <ul className="mt-2 list-disc space-y-1.5 pl-5">
                   <li>Name, email address, and phone number</li>
@@ -56,7 +56,7 @@ export default function PrivacyPolicy() {
                 </ul>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">২.২ ব্যবসার ডাটা</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">2.2 ব্যবসার ডাটা</h3>
                 <p>When you use our services, we collect:</p>
                 <ul className="mt-2 list-disc space-y-1.5 pl-5">
                   <li>Product and inventory information</li>
@@ -67,7 +67,7 @@ export default function PrivacyPolicy() {
                 </ul>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">২.৩ ব্যবহারের তথ্য</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">2.3 ব্যবহারের তথ্য</h3>
                 <p>We automatically collect certain information about your device and usage:</p>
                 <ul className="mt-2 list-disc space-y-1.5 pl-5">
                   <li>IP address, browser type, and operating system</li>
@@ -80,7 +80,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৩. তথ্য দিয়ে আমরা কী করি</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">3. তথ্য দিয়ে আমরা কী করি</h2>
             <p>We use the collected information for:</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li>Providing, maintaining, and improving our services</li>
@@ -94,7 +94,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৪. ডাটার নিরাপত্তা</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">4. ডাটার নিরাপত্তা</h2>
             <p>
               We implement industry-standard security measures to protect your information:
             </p>
@@ -108,7 +108,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৫. তথ্য কার সাথে শেয়ার করা হয়</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">5. তথ্য কার সাথে শেয়ার করা হয়</h2>
             <p>We do not sell your personal information. We may share your information with:</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li><strong>Service Providers:</strong> Third-party vendors who help us operate our services (payment processors, SMS providers, cloud hosting)</li>
@@ -119,7 +119,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৬. আপনার অধিকার</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">6. আপনার অধিকার</h2>
             <p>You have the right to:</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li><strong>Access:</strong> Request a copy of your personal information</li>
@@ -135,42 +135,42 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৭. ডাটা কতদিন রাখা হয়</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">7. ডাটা কতদিন রাখা হয়</h2>
             <p>
               We retain your information for as long as your account is active or as needed to provide services. After account deletion, we may retain certain information for legal compliance, dispute resolution, and fraud prevention purposes, typically for up to 7 years as required by Bangladeshi law.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৮. দেশের বাইরে ডাটা পাঠানো</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">8. দেশের বাইরে ডাটা পাঠানো</h2>
             <p>
               Your information may be transferred to and processed in countries other than Bangladesh. We ensure appropriate safeguards are in place to protect your information in accordance with this Privacy Policy and applicable data protection laws.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৯. শিশুদের গোপনীয়তা</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">9. শিশুদের গোপনীয়তা</h2>
             <p>
               Our services are not intended for individuals under 18 years of age. We do not knowingly collect personal information from children. If you believe we have collected information from a child, please contact us immediately.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১০. কুকি আর ট্র্যাকিং</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">10. কুকি আর ট্র্যাকিং</h2>
             <p>
               We use cookies and similar tracking technologies to enhance your experience, analyze usage, and deliver personalized content. You can control cookies through your browser settings, but disabling them may affect functionality.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১১. পলিসি বদলানো</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">11. পলিসি বদলানো</h2>
             <p>
               We may update this Privacy Policy from time to time. We will notify you of significant changes via email or through our service. Your continued use of OxyManager after changes constitutes acceptance of the updated policy.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১২. যোগাযোগ</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">12. যোগাযোগ</h2>
             <p>এই পলিসি নিয়ে কিছু জানার থাকলে আমাদের সাথে যোগাযোগ করুন:</p>
             <div className="mt-3 space-y-1.5">
               <p><strong>ইমেইল:</strong> <a href="mailto:privacy@oxymanager.com" className="text-cyan-600 hover:text-cyan-700">privacy@oxymanager.com</a></p>

@@ -27,7 +27,8 @@ DEAD_ORDER_STATES = ["cancelled", "refunded", "draft"]
 
 
 def _bn(value):
-    return str(value).translate(str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯"))
+    """Latin digits — the Bangla ১ is unreadable in the app's typeface."""
+    return str(value)
 
 
 def restock_suggestions(user, begin, finish, limit=6):

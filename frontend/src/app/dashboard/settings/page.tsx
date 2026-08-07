@@ -834,7 +834,7 @@ export default function SettingsPage() {
     }
 
     if (securitySettings.newPassword.length < 8) {
-      showNotification("error", "পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে");
+      showNotification("error", "পাসওয়ার্ড অন্তত 8 অক্ষরের হতে হবে");
       return;
     }
 
@@ -1265,7 +1265,7 @@ export default function SettingsPage() {
               </div>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="text-xs text-slate-500">
-                  পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে
+                  পাসওয়ার্ড অন্তত 8 অক্ষরের হতে হবে
                 </div>
                 <button
                   onClick={handlePasswordChange}
@@ -1504,7 +1504,7 @@ export default function SettingsPage() {
                   <div className="stat-value num">
                     {usageStats.stats_last_30_days?.total_requests?.toLocaleString() || "0"}
                   </div>
-                  <div className="stat-meta">গত ৩০ দিনে</div>
+                  <div className="stat-meta">গত 30 দিনে</div>
                 </div>
                 <div className="stat">
                   <div className="stat-label">সফল</div>

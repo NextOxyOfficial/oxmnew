@@ -28,7 +28,7 @@ export interface LoanInstallment {
   receipt_url?: string | null;
 }
 
-export const bn = (value: number) => value.toLocaleString("bn-BD");
+export const bn = (value: number) => value.toLocaleString("bn-BD-u-nu-latn");
 
 /** Local midnight, so a UTC-parsed ISO date cannot shift the day by one. */
 const atMidnight = (value: string | Date) => {
@@ -56,7 +56,7 @@ const addMonths = (from: Date, count: number) => {
  * Split a gap into whole calendar months plus leftover days.
  *
  * Dividing the day count by 30 is what made consecutive installments — all
- * exactly one month apart — read as "৭ মাস ৫ দিন", "৮ মাস ৬ দিন", "৯ মাস ৬ দিন".
+ * exactly one month apart — read as "7 মাস 5 দিন", "8 মাস 6 দিন", "9 মাস 6 দিন".
  * Month lengths differ, so the remainder crept up every row. Walking the
  * calendar keeps the leftover identical down the whole schedule.
  */
@@ -80,7 +80,7 @@ const gapText = (months: number, days: number, suffix: string) => {
 };
 
 /**
- * "৯২ দিন" tells a shopkeeper less than "৩ মাস ২ দিন" — months are how
+ * "92 দিন" tells a shopkeeper less than "3 মাস 2 দিন" — months are how
  * repayment is actually thought about.
  *
  * `from` is the date the countdown runs from. For an upcoming installment the
@@ -205,4 +205,4 @@ export const toNumber = (value: string | number | null | undefined) =>
   value === null || value === undefined ? 0 : Number(value) || 0;
 
 export const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString("bn-BD") : "—";
+  value ? new Date(value).toLocaleDateString("bn-BD-u-nu-latn") : "—";

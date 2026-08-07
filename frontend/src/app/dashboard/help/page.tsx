@@ -58,7 +58,7 @@ const faqData: FAQ[] = [
   {
     id: 6,
     question: "অর্ডার বাতিল করব কীভাবে?",
-    answer: "অর্ডার দেওয়ার ২৪ ঘণ্টার ভেতরে বাতিল করা যায়। অর্ডার পেজে গিয়ে অর্ডারটা খুঁজে বের করে 'অর্ডার বাতিল' বাটনে ক্লিক করুন, অপশনটা থাকলে কাজ হবে।",
+    answer: "অর্ডার দেওয়ার 24 ঘণ্টার ভেতরে বাতিল করা যায়। অর্ডার পেজে গিয়ে অর্ডারটা খুঁজে বের করে 'অর্ডার বাতিল' বাটনে ক্লিক করুন, অপশনটা থাকলে কাজ হবে।",
     category: 'orders'
   },
   {
@@ -114,7 +114,7 @@ export default function HelpPage() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-900">ফোনে কথা বলুন</p>
                 <p className="text-sm text-slate-600 num">+1 (555) 123-4567</p>
-                <p className="text-xs text-slate-500">শনি–বৃহস্পতি, সকাল ৯টা – সন্ধ্যা ৬টা</p>
+                <p className="text-xs text-slate-500">শনি–বৃহস্পতি, সকাল 9টা – সন্ধ্যা 6টা</p>
               </div>
             </div>
 
@@ -123,7 +123,7 @@ export default function HelpPage() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-900">ইমেইল করুন</p>
                 <p className="truncate text-sm text-slate-600" title="support@oxm.com">support@oxm.com</p>
-                <p className="text-xs text-slate-500">২৪ ঘণ্টার ভেতরে উত্তর পাবেন</p>
+                <p className="text-xs text-slate-500">24 ঘণ্টার ভেতরে উত্তর পাবেন</p>
               </div>
             </div>
 
@@ -132,7 +132,7 @@ export default function HelpPage() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-900">অফিসের ঠিকানা</p>
                 <p className="text-sm text-slate-600">
-                  ১২৩ বিজনেস স্ট্রিট, স্যুট ৪৫৬<br />
+                  123 বিজনেস স্ট্রিট, স্যুট 456<br />
                   নিউ ইয়র্ক, NY 10001
                 </p>
               </div>
@@ -150,11 +150,11 @@ export default function HelpPage() {
           <div className="grid grid-cols-1 gap-x-8 gap-y-1.5 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div className="flex justify-between gap-3">
               <span className="text-slate-500">শনি – বৃহস্পতি</span>
-              <span className="num text-slate-900">সকাল ৯টা – সন্ধ্যা ৬টা</span>
+              <span className="num text-slate-900">সকাল 9টা – সন্ধ্যা 6টা</span>
             </div>
             <div className="flex justify-between gap-3">
               <span className="text-slate-500">শুক্রবার</span>
-              <span className="num text-slate-900">সকাল ১০টা – বিকেল ৪টা</span>
+              <span className="num text-slate-900">সকাল 10টা – বিকেল 4টা</span>
             </div>
             <div className="flex justify-between gap-3">
               <span className="text-slate-500">সরকারি ছুটি</span>
@@ -238,7 +238,7 @@ export default function HelpPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-500">কখন পাওয়া যাবে</p>
-                  <p className="text-sm text-slate-900">দিনরাত ২৪ ঘণ্টা, জরুরি সমস্যার জন্য</p>
+                  <p className="text-sm text-slate-900">দিনরাত 24 ঘণ্টা, জরুরি সমস্যার জন্য</p>
                 </div>
               </div>
             </div>

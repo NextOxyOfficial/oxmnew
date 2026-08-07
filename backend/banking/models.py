@@ -363,7 +363,7 @@ class Loan(models.Model):
         today = timezone.localdate()
         # Upcoming installments are counted from the DUE DATE of the last
         # settled one — the "কবে দিতে হবে" of installment 8, not the day its
-        # money changed hands. So row 9 reads "১ মাস পর": one month after the
+        # money changed hands. So row 9 reads "1 মাস পর": one month after the
         # installment it follows. Paying early or late must not stretch or
         # shrink the gaps in a fixed schedule. Nothing paid yet → count from
         # today, since there is no earlier installment to sit behind.
@@ -400,7 +400,7 @@ class Loan(models.Model):
                         else 0
                     ),
                     # Days until the due date; negative once it is past. The UI
-                    # turns this into "৩ মাস ২ দিন পর".
+                    # turns this into "3 মাস 2 দিন পর".
                     # Lateness is always measured from today — an overdue row
                     # must never be softened by an older anchor.
                     "days_until": (

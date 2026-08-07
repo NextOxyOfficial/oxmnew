@@ -55,10 +55,10 @@ interface Account {
   balance: string | number;
 }
 
-const bn = (value: number) => value.toLocaleString("bn-BD");
+const bn = (value: number) => value.toLocaleString("bn-BD-u-nu-latn");
 
 const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString("bn-BD") : "—";
+  value ? new Date(value).toLocaleDateString("bn-BD-u-nu-latn") : "—";
 
 export default function PayrollPage() {
   const formatCurrency = useCurrencyFormatter();

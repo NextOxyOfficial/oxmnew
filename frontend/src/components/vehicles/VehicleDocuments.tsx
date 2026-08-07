@@ -187,7 +187,7 @@ export default function VehicleDocuments({
                     <div className="text-xs text-slate-500">
                       {documentTypeLabel(doc.doc_type)}
                       {doc.received_date
-                        ? ` · পাওয়া গেছে ${new Date(doc.received_date).toLocaleDateString("bn-BD")}`
+                        ? ` · পাওয়া গেছে ${new Date(doc.received_date).toLocaleDateString("bn-BD-u-nu-latn")}`
                         : ""}
                       {doc.file_name ? ` · ${doc.file_name}` : ""}
                     </div>

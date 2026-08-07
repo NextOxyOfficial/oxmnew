@@ -387,7 +387,7 @@ export default function AnalyticsPage() {
                       {
                         title: "লাভসহ দিনের টার্গেট",
                         value: data.targets.target_daily_revenue,
-                        note: "খরচের ২০% লাভ ধরে",
+                        note: "খরচের 20% লাভ ধরে",
                         done:
                           data.targets.daily_revenue >=
                           data.targets.target_daily_revenue,
@@ -521,7 +521,7 @@ export default function AnalyticsPage() {
                     </div>
                     <ul className="mt-1.5 space-y-1 text-xs text-slate-600">
                       <li>
-                        • লাভের হার {data.targets.margin_pct}% — ১০০ টাকা খরচ
+                        • লাভের হার {data.targets.margin_pct}% — 100 টাকা খরচ
                         উঠতে{" "}
                         {money(100 / (data.targets.margin_pct / 100 || 1))} টাকার
                         বিক্রি লাগে
@@ -951,7 +951,7 @@ export default function AnalyticsPage() {
                       কোন মাল আরও আনতে হবে
                     </span>
                     <span className="text-xs text-slate-500">
-                      ১৪ দিনের স্টক ধরে হিসাব
+                      14 দিনের স্টক ধরে হিসাব
                     </span>
                   </div>
                   <div className="mt-2">

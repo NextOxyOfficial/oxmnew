@@ -28,7 +28,7 @@ import {
 } from "@/lib/vehicles";
 
 const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleDateString("bn-BD") : "—";
+  value ? new Date(value).toLocaleDateString("bn-BD-u-nu-latn") : "—";
 
 export default function VehicleDetailPage() {
   const params = useParams();
@@ -349,7 +349,7 @@ export default function VehicleDetailPage() {
                     {payments.map((p) => (
                       <tr key={p.id}>
                         <td className="num">
-                          {new Date(p.created_at).toLocaleString("bn-BD")}
+                          {new Date(p.created_at).toLocaleString("bn-BD-u-nu-latn")}
                         </td>
                         <td>{paymentMethodLabel(p.method)}</td>
                         <td>{p.reference || "—"}</td>

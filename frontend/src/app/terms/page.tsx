@@ -31,41 +31,41 @@ export default function TermsAndConditions() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
             শর্তাবলি
           </h1>
-          <p className="mt-1.5 text-sm text-slate-500">সর্বশেষ আপডেট: ২৮ জানুয়ারি, ২০২৬</p>
+          <p className="mt-1.5 text-sm text-slate-500">সর্বশেষ আপডেট: 28 জানুয়ারি, 2026</p>
         </header>
 
         <article className="space-y-8 text-[0.9375rem] leading-relaxed text-slate-600">
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১. শর্ত মেনে নেওয়া</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">1. শর্ত মেনে নেওয়া</h2>
             <p>
               By accessing or using OxyManager (&quot;Service&quot;, &quot;Platform&quot;, &quot;Software&quot;), you agree to be bound by these Terms and Conditions (&quot;Terms&quot;). If you disagree with any part of these terms, you may not access the Service. These Terms apply to all visitors, users, and others who access or use the Service.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">২. সার্ভিস কী</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">2. সার্ভিস কী</h2>
             <p>
               OxyManager is a comprehensive business management software platform that provides tools for inventory management, sales tracking, customer relationship management, banking integration, SMS marketing, and related business operations. The Service is provided on a subscription basis with different pricing tiers.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৩. ইউজার অ্যাকাউন্ট</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">3. ইউজার অ্যাকাউন্ট</h2>
             <div className="space-y-4">
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৩.১ অ্যাকাউন্ট খোলা</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">3.1 অ্যাকাউন্ট খোলা</h3>
                 <p>
                   To use the Service, you must create an account. You agree to provide accurate, current, and complete information during registration and to update such information to keep it accurate, current, and complete.
                 </p>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৩.২ অ্যাকাউন্টের নিরাপত্তা</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">3.2 অ্যাকাউন্টের নিরাপত্তা</h3>
                 <p>
                   You are responsible for safeguarding your account credentials and for all activities that occur under your account. You must immediately notify us of any unauthorized access or security breach.
                 </p>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৩.৩ কারা ব্যবহার করতে পারবেন</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">3.3 কারা ব্যবহার করতে পারবেন</h3>
                 <p>
                   You must be at least 18 years old and legally capable of entering into binding contracts to use the Service. By using the Service, you represent and warrant that you meet these requirements.
                 </p>
@@ -74,34 +74,34 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৪. সাবস্ক্রিপশন আর পেমেন্ট</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">4. সাবস্ক্রিপশন আর পেমেন্ট</h2>
             <div className="space-y-4">
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৪.১ সাবস্ক্রিপশন প্ল্যান</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">4.1 সাবস্ক্রিপশন প্ল্যান</h3>
                 <p>
                   We offer various subscription plans (Free, Pro, Enterprise) with different features and limitations. Subscription fees are billed in advance on a monthly or annual basis.
                 </p>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৪.২ ফ্রি প্ল্যান</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">4.2 ফ্রি প্ল্যান</h3>
                 <p>
                   The Free plan has no time limit and requires no card. It is not a trial: it does not expire and it never converts to a paid plan on its own. Upgrading to Pro is always an explicit choice you make.
                 </p>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৪.৩ পেমেন্টের নিয়ম</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">4.3 পেমেন্টের নিয়ম</h3>
                 <p>
                   Payment is due at the beginning of each billing cycle. We accept bKash, Nagad, credit/debit cards, and other payment methods. All fees are non-refundable except as required by law or as explicitly stated in these Terms.
                 </p>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৪.৪ দাম বদলানো</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">4.4 দাম বদলানো</h3>
                 <p>
                   We reserve the right to modify subscription fees. We will provide at least 30 days&apos; notice of any price changes. Continued use after the price change constitutes acceptance of the new pricing.
                 </p>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৪.৫ বাতিল করা</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">4.5 বাতিল করা</h3>
                 <p>
                   You may cancel your subscription at any time. Cancellation will be effective at the end of your current billing period. You will retain access to paid features until the end of the billing period.
                 </p>
@@ -110,7 +110,7 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৫. ইউজারের দায়িত্ব</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">5. ইউজারের দায়িত্ব</h2>
             <p>You agree to:</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li>Use the Service only for lawful purposes and in accordance with these Terms</li>
@@ -125,22 +125,22 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৬. মেধাস্বত্ব</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">6. মেধাস্বত্ব</h2>
             <div className="space-y-4">
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৬.১ আমাদের সম্পত্তি</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">6.1 আমাদের সম্পত্তি</h3>
                 <p>
                   The Service and its original content, features, and functionality are owned by OxyManager and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
                 </p>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৬.২ আপনার ডাটা</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">6.2 আপনার ডাটা</h3>
                 <p>
                   You retain all rights to the data you input into the Service. By using the Service, you grant us a limited license to use, store, and process your data solely for the purpose of providing the Service to you.
                 </p>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৬.৩ মতামত</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">6.3 মতামত</h3>
                 <p>
                   Any feedback, suggestions, or ideas you provide to us regarding the Service become our property, and we may use them without any obligation to you.
                 </p>
@@ -149,14 +149,14 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৭. ডাটার গোপনীয়তা আর নিরাপত্তা</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">7. ডাটার গোপনীয়তা আর নিরাপত্তা</h2>
             <p>
               Your use of the Service is also governed by our Privacy Policy. We implement industry-standard security measures to protect your data, but we cannot guarantee absolute security. You acknowledge that you provide your data at your own risk.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৮. সার্ভিস চালু থাকা</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">8. সার্ভিস চালু থাকা</h2>
             <p>
               We strive to provide 99.9% uptime but do not guarantee uninterrupted access to the Service. We may:
             </p>
@@ -169,14 +169,14 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">৯. তৃতীয় পক্ষের সার্ভিস</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">9. তৃতীয় পক্ষের সার্ভিস</h2>
             <p>
               The Service may integrate with third-party services (payment processors, SMS providers, etc.). Your use of such services is subject to their respective terms and conditions. We are not responsible for the actions or policies of third-party services.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১০. দায়ের সীমা</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">10. দায়ের সীমা</h2>
             <p>
               To the maximum extent permitted by law, OxyManager shall not be liable for:
             </p>
@@ -193,14 +193,14 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১১. ক্ষতিপূরণ</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">11. ক্ষতিপূরণ</h2>
             <p>
               You agree to indemnify and hold harmless OxyManager, its officers, directors, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from your use of the Service, violation of these Terms, or infringement of any third-party rights.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১২. অ্যাকাউন্ট বন্ধ করা</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">12. অ্যাকাউন্ট বন্ধ করা</h2>
             <p>
               We may terminate or suspend your account immediately, without prior notice, for:
             </p>
@@ -216,16 +216,16 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১৩. ঝামেলা মেটানো</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">13. ঝামেলা মেটানো</h2>
             <div className="space-y-4">
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">১৩.১ প্রযোজ্য আইন</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">13.1 প্রযোজ্য আইন</h3>
                 <p>
                   These Terms shall be governed by and construed in accordance with the laws of Bangladesh, without regard to its conflict of law provisions.
                 </p>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">১৩.২ সালিশ</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">13.2 সালিশ</h3>
                 <p>
                   Any disputes arising from these Terms or the Service shall be resolved through binding arbitration in Dhaka, Bangladesh, except where prohibited by law.
                 </p>
@@ -234,14 +234,14 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১৪. শর্ত বদলানো</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">14. শর্ত বদলানো</h2>
             <p>
               We reserve the right to modify these Terms at any time. We will notify you of material changes via email or through the Service. Your continued use after changes constitutes acceptance of the modified Terms. If you do not agree to the changes, you must stop using the Service.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১৫. অন্যান্য</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">15. অন্যান্য</h2>
             <ul className="list-disc space-y-1.5 pl-5">
               <li><strong>Entire Agreement:</strong> These Terms constitute the entire agreement between you and OxyManager</li>
               <li><strong>Severability:</strong> If any provision is found unenforceable, the remaining provisions remain in effect</li>
@@ -252,7 +252,7 @@ export default function TermsAndConditions() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-lg font-semibold text-slate-900">১৬. যোগাযোগ</h2>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900">16. যোগাযোগ</h2>
             <p>শর্তাবলি নিয়ে কিছু জানার থাকলে আমাদের সাথে যোগাযোগ করুন:</p>
             <div className="mt-3 space-y-1.5">
               <p><strong>ইমেইল:</strong> <a href="mailto:legal@oxymanager.com" className="text-cyan-600 hover:text-cyan-700">legal@oxymanager.com</a></p>

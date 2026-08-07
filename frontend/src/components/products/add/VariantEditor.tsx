@@ -201,7 +201,7 @@ export default function VariantEditor({ variants, onChange }: Props) {
               value={draft.custom_variant}
               onChange={(e) => setField("custom_variant", e.target.value)}
               className="input"
-              placeholder="যেমন: ৬৪ জিবি"
+              placeholder="যেমন: 64 জিবি"
             />
           </div>
 

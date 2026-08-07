@@ -38,7 +38,7 @@ UNITS = [
     # Paperwork still pending — this is the case the optional numbers exist for.
     (2, "", "", "সিলভার", 2025, None, "new"),
     # A used trade-in, already registered.
-    (0, "GPX165E-88119002", "MLHGR165RPJ003877", "লাল", 2023, "ঢাকা মেট্রো-ল-১১-৪৪৩৩", "used"),
+    (0, "GPX165E-88119002", "MLHGR165RPJ003877", "লাল", 2023, "ঢাকা মেট্রো-ল-11-4433", "used"),
 ]
 
 # Units that get sold, as (unit index, price, amount paid, method).
@@ -128,7 +128,7 @@ class Command(BaseCommand):
                     buy_price=buy - Decimal("60000") if condition == "used" else buy,
                     sell_price=sell - Decimal("70000") if condition == "used" else sell,
                     purchase_date=today - timedelta(days=10 + index * 4),
-                    location="শোরুম" if index % 2 == 0 else "গোডাউন-১",
+                    location="শোরুম" if index % 2 == 0 else "গোডাউন-1",
                     status="in_stock",
                     notes=MARKER,
                 )

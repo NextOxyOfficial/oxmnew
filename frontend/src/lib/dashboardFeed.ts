@@ -120,14 +120,14 @@ export interface DashboardFeed {
 }
 
 /**
- * "৭ আগস্ট" — the month spelled out.
+ * "7 আগস্ট" — the month spelled out.
  *
- * The abbreviated form gave "১ সেপ", which is not a word anyone reads: Bangla
+ * The abbreviated form gave "1 সেপ", which is not a word anyone reads: Bangla
  * month names are not routinely shortened the way English ones are.
  */
 export const shortDate = (value: string) =>
   value
-    ? new Date(value).toLocaleDateString("bn-BD", {
+    ? new Date(value).toLocaleDateString("bn-BD-u-nu-latn", {
         day: "numeric",
         month: "long",
       })
@@ -136,11 +136,11 @@ export const shortDate = (value: string) =>
 /**
  * How far off something is, in words.
  *
- * A raw date makes the reader do the subtraction; "৩ দিন পর" is the thing they
+ * A raw date makes the reader do the subtraction; "3 দিন পর" is the thing they
  * actually wanted to know.
  */
 export const daysAway = (days: number) => {
-  const n = Math.abs(days).toLocaleString("bn-BD");
+  const n = Math.abs(days).toLocaleString("bn-BD-u-nu-latn");
   if (days < 0) return `${n} দিন পেরিয়ে গেছে`;
   if (days === 0) return "আজই";
   if (days === 1) return "কালই";

@@ -643,7 +643,7 @@ export default function CustomerDetailsPage() {
           {
             id: 2,
             title: "পুরনো কাস্টমার",
-            description: "১০টির বেশি অর্ডার হয়ে গেছে",
+            description: "10টির বেশি অর্ডার হয়ে গেছে",
             icon: "🏆",
             date_earned: "2025-06-01",
             points: 500,
@@ -1181,7 +1181,7 @@ export default function CustomerDetailsPage() {
 
       const amount = parseFloat(transactionForm.amount);
       if (isNaN(amount) || amount <= 0) {
-        toast.error("০ এর বেশি সঠিক টাকার পরিমাণ লিখুন।");
+        toast.error("0 এর বেশি সঠিক টাকার পরিমাণ লিখুন।");
         return;
       }
 
@@ -1282,7 +1282,7 @@ export default function CustomerDetailsPage() {
 
     const value = parseFloat(giftValue);
     if (isNaN(value) || value <= 0) {
-      toast.error("গিফটের দাম ০ এর বেশি লিখুন।");
+      toast.error("গিফটের দাম 0 এর বেশি লিখুন।");
       return;
     }
 

@@ -365,8 +365,8 @@ export default function EmployeeDetailsPage() {
 
               <div className="text-sm text-slate-500 space-y-1">
                 <p>• যেসব ফরম্যাট চলবে: JPEG, PNG, WebP</p>
-                <p>• ফাইলের সাইজ সর্বোচ্চ ৫ MB</p>
-                <p>• সবচেয়ে ভালো হয় ৪০০x৪০০ পিক্সেল</p>
+                <p>• ফাইলের সাইজ সর্বোচ্চ 5 MB</p>
+                <p>• সবচেয়ে ভালো হয় 400x400 পিক্সেল</p>
               </div>
             </div>
 

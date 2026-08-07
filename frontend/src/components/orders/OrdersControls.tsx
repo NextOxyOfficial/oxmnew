@@ -97,7 +97,7 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
         <div className="relative w-full sm:max-w-md">
           <input
             type="text"
-            placeholder="অর্ডার বা কাস্টমার খুঁজুন (#১১০ দিলে অর্ডার আইডি, #০০১০ দিলে অর্ডার নম্বর)"
+            placeholder="অর্ডার বা কাস্টমার খুঁজুন (#110 দিলে অর্ডার আইডি, #0010 দিলে অর্ডার নম্বর)"
             value={searchInput}
             onChange={(e) => onSearchChange(e.target.value)}
             className={`input pr-16 ${
@@ -147,11 +147,11 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
                     খোঁজার টিপস:
                   </p>
                   <p>
-                    • <span className="text-cyan-600">#১১০</span> লিখলে অর্ডার
+                    • <span className="text-cyan-600">#110</span> লিখলে অর্ডার
                     আইডি দিয়ে খুঁজবে
                   </p>
                   <p>
-                    • <span className="text-cyan-600">#০০১০</span> লিখলে অর্ডার
+                    • <span className="text-cyan-600">#0010</span> লিখলে অর্ডার
                     নম্বর দিয়ে খুঁজবে
                   </p>
                   <p>• কাস্টমারের নাম বা ফোন দিয়ে খুঁজুন</p>

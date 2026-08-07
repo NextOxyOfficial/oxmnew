@@ -47,7 +47,7 @@ export function printSheet({
   const isNum = (index: number) => numericColumns.includes(index);
   // about:blank has no base URL, so the logo needs an absolute path.
   const origin = window.location.origin;
-  const today = new Date().toLocaleDateString("bn-BD", {
+  const today = new Date().toLocaleDateString("bn-BD-u-nu-latn", {
     day: "numeric",
     month: "long",
     year: "numeric",

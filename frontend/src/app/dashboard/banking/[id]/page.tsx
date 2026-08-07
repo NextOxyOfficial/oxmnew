@@ -1016,7 +1016,7 @@ export default function BankAccountPage() {
               <option value="yesterday">গতকাল</option>
               <option value="week">গত সপ্তাহ</option>
               <option value="month">গত মাস</option>
-              <option value="3months">গত ৩ মাস</option>
+              <option value="3months">গত 3 মাস</option>
               <option value="custom">নিজের মতো তারিখ</option>
             </select>
 

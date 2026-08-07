@@ -46,7 +46,7 @@ export function printAnalyticsReport({
   if (!win) return false;
 
   const origin = window.location.origin;
-  const today = new Date().toLocaleDateString("bn-BD", {
+  const today = new Date().toLocaleDateString("bn-BD-u-nu-latn", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -239,7 +239,7 @@ export function buildAnalyticsSections(
   if (data.restock?.length) {
     sections.push({
       heading: "কোন মাল আরও আনতে হবে",
-      note: "১৪ দিনের স্টক ধরে হিসাব",
+      note: "14 দিনের স্টক ধরে হিসাব",
       head: ["প্রোডাক্ট", "বিক্রি", "স্টকে", "আর কত দিন", "কত পিস আনবেন"],
       numeric: [1, 2, 3, 4],
       rows: data.restock.map((row) => [

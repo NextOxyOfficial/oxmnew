@@ -56,7 +56,7 @@ function useCountUp(target: number, duration = 1400) {
   return value;
 }
 
-const taka = (n: number) => "৳" + n.toLocaleString("bn-BD");
+const taka = (n: number) => "৳" + n.toLocaleString("bn-BD-u-nu-latn");
 
 /** Bars for the seven-day trend. Fixed values — this is a picture, not a chart. */
 const TREND = [42, 58, 47, 71, 63, 88, 96];
@@ -91,10 +91,10 @@ function DashboardMock() {
             <span className="text-lg leading-none">🎯</span>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-amber-900">
-                আজ আরও ৳১২,৪০০ বিক্রি দরকার
+                আজ আরও ৳12,400 বিক্রি দরকার
               </p>
               <p className="mt-0.5 text-[11px] text-amber-800/80">
-                দিনের খরচ উঠতে ৳১৯,৬০০ লাগে
+                দিনের খরচ উঠতে ৳19,600 লাগে
               </p>
             </div>
           </div>
@@ -123,11 +123,11 @@ function DashboardMock() {
           <div className="rounded-xl border border-slate-200 p-3">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                গত ৭ দিনের বিক্রি
+                গত 7 দিনের বিক্রি
               </span>
               <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-emerald-600">
                 <ArrowUpRight className="h-3 w-3" />
-                ২৮%
+                28%
               </span>
             </div>
             <div className="flex h-16 items-end gap-1.5">
@@ -149,8 +149,8 @@ function DashboardMock() {
               <Bell className="h-3.5 w-3.5" />
             </span>
             <p className="min-w-0 truncate text-[11px] text-slate-600">
-              <span className="font-medium text-slate-800">GPX Demon</span> — আর ৪
-              দিনে স্টক শেষ, ৬ পিস আনুন
+              <span className="font-medium text-slate-800">GPX Demon</span> — আর 4
+              দিনে স্টক শেষ, 6 পিস আনুন
             </p>
           </div>
         </div>
@@ -170,7 +170,7 @@ function DashboardMock() {
         <span className="flex items-center gap-2">
           <Wallet className="h-4 w-4 text-cyan-600" />
           <span className="text-[11px] font-semibold text-slate-700">
-            ৩ জনের বেতন দেওয়া হলো
+            3 জনের বেতন দেওয়া হলো
           </span>
         </span>
       </div>
@@ -257,7 +257,7 @@ export default function Hero() {
               <p className="text-sm text-slate-600">
                 <span className="inline-flex items-center gap-1 font-semibold text-slate-900">
                   <BadgeCheck className="h-4 w-4 text-cyan-600" />
-                  ১০,০০০+
+                  10,000+
                 </span>{" "}
                 ব্যবসায়ী ব্যবহার করছেন
               </p>

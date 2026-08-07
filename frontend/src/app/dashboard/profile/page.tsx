@@ -432,7 +432,7 @@ export default function ProfilePage() {
                   value={editForm.post_code}
                   onChange={(e) => handleInputChange("post_code", e.target.value)}
                   className="input"
-                  placeholder="যেমন: ১২১৬"
+                  placeholder="যেমন: 1216"
                 />
               ) : (
                 <ReadOnlyValue value={profileData.profile.post_code} />

@@ -10,14 +10,16 @@ motivational filler the reader can't check.
 from analytics import periods, services
 
 
-_BN_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
+# Figures stay in Latin digits. The app's Bangla face renders ১ as a smudge,
+# and an unreadable money figure is worse than none — only the words around
+# the numbers are Bangla.
 
 
 def _group(digits):
     """Lakh-crore grouping: 1234567 → 12,34,567.
 
     Python's `{:,}` groups in thousands, which is not how taka is written —
-    ১,২৩৪,৫৬৭ reads wrong to anyone counting in lakh.
+    1,234,567 reads wrong to anyone counting in lakh.
     """
     if len(digits) <= 3:
         return digits
@@ -32,13 +34,12 @@ def _group(digits):
 
 
 def _money(value):
-    return "৳" + _group(str(int(round(value or 0)))).translate(_BN_DIGITS)
+    return "৳" + _group(str(int(round(value or 0))))
 
 
 def _num(value):
     """Whole numbers stay whole; a percentage keeps its one decimal."""
-    text = f"{value:g}" if isinstance(value, float) else str(int(value))
-    return text.translate(_BN_DIGITS)
+    return f"{value:g}" if isinstance(value, float) else str(int(value))
 
 
 def _net_for(user, preset):
@@ -168,7 +169,7 @@ def build_messages(user, today=None):
             "warn",
             "📉",
             f"লাভের হার কম — মাত্র {_num(margin)}%",
-            "১০০ টাকা বিক্রিতে এই কটা টাকাই থাকছে। কেনা দাম বা বিক্রির দাম একবার "
+            "100 টাকা বিক্রিতে এই কটা টাকাই থাকছে। কেনা দাম বা বিক্রির দাম একবার "
             "দেখে নিন।",
         )
 

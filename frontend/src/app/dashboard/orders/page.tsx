@@ -715,7 +715,7 @@ export default function OrdersPage() {
         numericColumns: [3, 4, 5, 6],
         rows: rows.map((o) => [
           `#${o.id}`,
-          new Date(o.sale_date).toLocaleDateString("bn-BD"),
+          new Date(o.sale_date).toLocaleDateString("bn-BD-u-nu-latn"),
           o.customer_name || "—",
           formatCurrency(num(o.total_buy_price)),
           formatCurrency(num(o.total_amount)),
@@ -1579,7 +1579,7 @@ export default function OrdersPage() {
                       : "btn-ghost"
                   }`}
                 >
-                  শেষ ৭ দিন
+                  শেষ 7 দিন
                 </button>
                 <button
                   onClick={() => handleProductDateFilterChange("last_30_days")}
@@ -1589,7 +1589,7 @@ export default function OrdersPage() {
                       : "btn-ghost"
                   }`}
                 >
-                  শেষ ৩০ দিন
+                  শেষ 30 দিন
                 </button>
                 <button
                   onClick={() => handleProductDateFilterChange("custom")}

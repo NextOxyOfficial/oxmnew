@@ -28,7 +28,7 @@ from .models import PasswordResetCode
 
 VAGUE_OK = {
     "message": (
-        "অ্যাকাউন্ট থাকলে কোড পাঠানো হয়েছে। কোডটা ১০ মিনিট পর্যন্ত চলবে।"
+        "অ্যাকাউন্ট থাকলে কোড পাঠানো হয়েছে। কোডটা 10 মিনিট পর্যন্ত চলবে।"
     )
 }
 
@@ -225,7 +225,7 @@ def confirm_reset(request):
 
     if len(password) < 6:
         return Response(
-            {"error": "পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে।"},
+            {"error": "পাসওয়ার্ড অন্তত 6 অক্ষরের হতে হবে।"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 

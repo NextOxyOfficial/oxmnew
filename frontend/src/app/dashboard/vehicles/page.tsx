@@ -351,7 +351,7 @@ export default function VehiclesPage() {
                           </td>
                           <td className="num text-xs">
                             {v.sold_at
-                              ? new Date(v.sold_at).toLocaleDateString("bn-BD")
+                              ? new Date(v.sold_at).toLocaleDateString("bn-BD-u-nu-latn")
                               : "—"}
                           </td>
                           <td className="cell-num num">

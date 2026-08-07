@@ -1,6 +1,6 @@
 """Put the shop's name on every SMS that leaves the system.
 
-A text that says only "আপনার কাছে ৳১৬৫৭৪৯ বাকি আছে" is unusable to the person
+A text that says only "আপনার কাছে ৳165749 বাকি আছে" is unusable to the person
 receiving it: they buy from several shops and have no way to tell which one is
 asking, or whether it is a scam. The name has to be on the message.
 

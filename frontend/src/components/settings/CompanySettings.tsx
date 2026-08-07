@@ -107,7 +107,7 @@ export default function CompanySettingsComponent() {
               type="text"
               value={settings.city}
               onChange={(e) => handleInputChange("city", e.target.value)}
-              placeholder="যেমন: মিরপুর, ঢাকা ১২১৬"
+              placeholder="যেমন: মিরপুর, ঢাকা 1216"
               className="input"
             />
           </div>

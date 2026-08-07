@@ -12,7 +12,7 @@ interface Props {
   phone?: string | null;
   /** Outstanding amount, used to draft the message. */
   due?: number;
-  /** Extra context for the default text, e.g. "৩ টা অর্ডার". */
+  /** Extra context for the default text, e.g. "3 টা অর্ডার". */
   note?: string;
   label?: string;
   className?: string;

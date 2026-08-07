@@ -440,7 +440,7 @@ export default function EmployeesPage() {
     // Validate salary is a positive number
     const salaryValue = parseFloat(newEmployee.salary);
     if (isNaN(salaryValue) || salaryValue <= 0) {
-      toast.error("বেতনের অঙ্কটা ০ এর বেশি একটা ঠিকঠাক সংখ্যা দিন");
+      toast.error("বেতনের অঙ্কটা 0 এর বেশি একটা ঠিকঠাক সংখ্যা দিন");
       return;
     }
 
@@ -541,7 +541,7 @@ export default function EmployeesPage() {
   const processWithdrawal = async () => {
     const amount = parseFloat(withdrawalAmount);
     if (isNaN(amount) || amount <= 0) {
-      toast.error("তোলার অঙ্কটা ০ এর বেশি একটা ঠিকঠাক সংখ্যা দিন");
+      toast.error("তোলার অঙ্কটা 0 এর বেশি একটা ঠিকঠাক সংখ্যা দিন");
       return;
     }
 
@@ -706,11 +706,11 @@ export default function EmployeesPage() {
         { label: "Active", value: String(activeCount) },
         {
           label: "মাসিক বেতন",
-          value: `${currencySymbol}${totalSalary.toLocaleString("bn-BD")}`,
+          value: `${currencySymbol}${totalSalary.toLocaleString("bn-BD-u-nu-latn")}`,
         },
         {
           label: "ইনসেনটিভ",
-          value: `${currencySymbol}${totalIncentives.toLocaleString("bn-BD")}`,
+          value: `${currencySymbol}${totalIncentives.toLocaleString("bn-BD-u-nu-latn")}`,
         },
       ],
       head: ["#", "কর্মচারী", "পদ ও ডিপার্টমেন্ট", "জয়েন", "অবস্থা", "বেতন"],
@@ -720,13 +720,13 @@ export default function EmployeesPage() {
         `${emp.name}\n${emp.phone || ""}`,
         `${emp.role}\n${emp.department}`,
         emp.hiring_date
-          ? new Date(emp.hiring_date).toLocaleDateString("bn-BD")
+          ? new Date(emp.hiring_date).toLocaleDateString("bn-BD-u-nu-latn")
           : "—",
         emp.status === "active" ? "Active" : "Inactive",
-        `${currencySymbol}${num(emp.salary).toLocaleString("bn-BD")}`,
+        `${currencySymbol}${num(emp.salary).toLocaleString("bn-BD-u-nu-latn")}`,
       ]),
       footNote: `মোট মাসিক বেতন: ${currencySymbol}${totalSalary.toLocaleString(
-        "bn-BD"
+        "bn-BD-u-nu-latn"
       )}`,
     });
 

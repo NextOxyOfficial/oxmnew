@@ -1,7 +1,7 @@
 """Paying staff: advances, balances, and who is ahead of their earnings.
 
 The shape here follows how the money actually moves in a shop. Nobody runs
-payroll once a month and stops — an assistant asks for ৳২,০০০ mid-month, takes
+payroll once a month and stops — an assistant asks for ৳2,000 mid-month, takes
 the rest after payday, and by the third month somebody has drawn more than they
 have earned. So the system tracks two separate things:
 
