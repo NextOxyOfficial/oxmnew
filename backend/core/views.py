@@ -1878,6 +1878,24 @@ def smsSend(request):
             status=status.HTTP_402_PAYMENT_REQUIRED,
         )
 
+    # Turn the gateway's own error codes into something the shopkeeper can act
+    # on. "ACCOUNT_SUSPENDED" on a screen is not an instruction; "ring the SMS
+    # provider" is.
+    SMS_GATEWAY_MESSAGES = {
+        "ACCOUNT_SUSPENDED": (
+            "এসএমএস গেটওয়ের অ্যাকাউন্টটা বন্ধ বা মেয়াদ শেষ। "
+            "smsinbd.com-এ যোগাযোগ করে চালু করিয়ে নিন — অ্যাপে কোনো সমস্যা নেই, "
+            "আপনার ক্রেডিটও কাটা হয়নি।"
+        ),
+        "INSUFFICIENT_BALANCE": (
+            "গেটওয়েতে টাকা শেষ। smsinbd.com-এ রিচার্জ করলে আবার যাবে।"
+        ),
+        "INVALID_NUMBER": "নম্বরটা ঠিক নেই — আরেকবার দেখে নিন।",
+        "INVALID_API_TOKEN": (
+            "গেটওয়ের API টোকেনটা কাজ করছে না। সেটিংসে টোকেনটা আবার বসাতে হবে।"
+        ),
+    }
+
     url = "http://api.smsinbd.com/sms-api/sendsms"
     payload = {
         "api_token": settings.API_SMS,
@@ -1890,8 +1908,22 @@ def smsSend(request):
         # Add timeout to prevent ECONNABORTED errors
         response = requests.get(url, params=payload, timeout=10)
 
-        # If SMS was sent successfully, deduct credits and log the transaction
-        if response.status_code == 200:
+        # A 200 from the gateway does NOT mean the message went. smsinbd answers
+        # 200 with {"success": false, ...} for a suspended account, a bad number
+        # or an empty gateway balance — and the old check only looked at the HTTP
+        # status, so the shop was charged a credit for a message nobody received.
+        gateway_ok = response.status_code == 200
+        gateway_error = None
+        if gateway_ok:
+            try:
+                body = response.json()
+            except ValueError:
+                body = None
+            if isinstance(body, dict) and body.get("success") is False:
+                gateway_ok = False
+                gateway_error = body.get("error") or {}
+
+        if gateway_ok:
             # Deduct SMS credits
             user_sms_credit.credits -= sms_count
             user_sms_credit.save()
@@ -1916,26 +1948,45 @@ def smsSend(request):
                 status=status.HTTP_200_OK,
             )
         else:
-            # Log failed SMS attempt (but don't deduct credits)
+            # No credits are taken — the message did not go.
             SMSSentHistory.objects.create(
-                user=request.user,
+                user=owner_for(request),
                 recipient=phone,
                 message=message,
                 status="failed",
                 sms_count=sms_count,
             )
+            if gateway_error is None:
+                try:
+                    body = response.json()
+                    gateway_error = (
+                        body.get("error") if isinstance(body, dict) else None
+                    ) or {}
+                except ValueError:
+                    gateway_error = {}
+
+            code = (gateway_error or {}).get("code", "")
+            detail = (gateway_error or {}).get("message", "") or response.text[:160]
             return Response(
                 {
                     "success": False,
-                    "error": f"SMS service failed to send message. Service response: {response.status_code}",
-                    "service_response": response.text,
+                    # The gateway is a third party; its refusal is not a fault in
+                    # this application, so 502 rather than 500. The message names
+                    # what actually went wrong so the shop knows whether to fix
+                    # the number or to ring the SMS provider.
+                    "error": SMS_GATEWAY_MESSAGES.get(
+                        code,
+                        f"এসএমএস গেটওয়ে মেসেজটা নেয়নি। ({detail})",
+                    ),
+                    "code": code or "gateway_error",
+                    "service_response": response.text[:300],
                 },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status=status.HTTP_502_BAD_GATEWAY,
             )
 
     except requests.exceptions.Timeout:
         SMSSentHistory.objects.create(
-            user=request.user,
+            user=owner_for(request),
             recipient=phone,
             message=message,
             status="failed",
@@ -1950,7 +2001,7 @@ def smsSend(request):
         )
     except requests.exceptions.ConnectionError:
         SMSSentHistory.objects.create(
-            user=request.user,
+            user=owner_for(request),
             recipient=phone,
             message=message,
             status="failed",
@@ -1965,7 +2016,7 @@ def smsSend(request):
         )
     except requests.exceptions.RequestException as e:
         SMSSentHistory.objects.create(
-            user=request.user,
+            user=owner_for(request),
             recipient=phone,
             message=message,
             status="failed",

@@ -83,9 +83,9 @@ export default function TermsAndConditions() {
                 </p>
               </div>
               <div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900">৪.২ ফ্রি ট্রায়াল</h3>
+                <h3 className="mb-1 text-base font-semibold text-slate-900">৪.২ ফ্রি প্ল্যান</h3>
                 <p>
-                  We offer a 14-day free trial for Pro plans. No credit card is required for the trial. After the trial period, your subscription will automatically convert to a paid plan unless you cancel.
+                  The Free plan has no time limit and requires no card. It is not a trial: it does not expire and it never converts to a paid plan on its own. Upgrading to Pro is always an explicit choice you make.
                 </p>
               </div>
               <div>

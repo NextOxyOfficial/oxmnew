@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import Hero from '@/components/home/Hero';
 import {
   AdvancedSection,
   ComparisonSection,
@@ -132,7 +133,7 @@ export default function Home() {
         'নিজের মতো রিপোর্ট',
         'API অ্যাক্সেস',
       ],
-      cta: 'প্রো ট্রায়াল নিন',
+      cta: 'প্রো নিন',
       popular: true,
     },
     {
@@ -177,7 +178,7 @@ export default function Home() {
                 alt="OxyManager — Your Smart Assistant"
                 width={378}
                 height={96}
-                className="h-9 w-auto"
+                className="h-11 w-auto sm:h-12"
                 priority
               />
             </Link>
@@ -280,136 +281,7 @@ export default function Home() {
         )}
       </nav>
 
-      {/* Hero Section */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-          <div className="mx-auto max-w-3xl text-center">
-            <span className="badge badge-info">বাংলাদেশের ১ নম্বর বিজনেস সফটওয়্যার</span>
-
-            {/* Headline */}
-            <h1 className="mt-5 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-              আপনার ব্যবসা
-              <span className="block text-cyan-600">সহজে ম্যানেজ করুন</span>
-            </h1>
-
-            {/* Subheadline */}
-            <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg">
-              স্টক, বিক্রি, কাস্টমার, ব্যাংকিং আর এসএমএস — সব এক জায়গায়। ছোট স্টোর থেকে বড় প্রতিষ্ঠান,
-              সবার হিসাব রাখার পুরো ব্যবস্থা।
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link href="/auth/register" className="btn btn-primary w-full sm:w-auto">
-                ফ্রি শুরু করুন
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a href="#features" className="btn btn-ghost w-full sm:w-auto">
-                কী কী আছে দেখুন
-              </a>
-            </div>
-
-            {/* Trust Badges */}
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-500">
-              <span className="inline-flex items-center gap-1.5">
-                <CheckCircle className="h-4 w-4 text-emerald-600" />
-                কার্ড লাগবে না
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <CheckCircle className="h-4 w-4 text-emerald-600" />
-                ১৪ দিন ফ্রি ট্রায়াল
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <CheckCircle className="h-4 w-4 text-emerald-600" />
-                যেকোনো সময় বন্ধ করুন
-              </span>
-            </div>
-
-            {/* Contact Info */}
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-500">
-              <a href="tel:+8801234567890" className="inline-flex items-center gap-1.5 hover:text-slate-900">
-                <Phone className="h-4 w-4" />
-                +880 1234-567890
-              </a>
-              <a href="mailto:support@oxymanager.com" className="inline-flex items-center gap-1.5 hover:text-slate-900">
-                <Mail className="h-4 w-4" />
-                support@oxymanager.com
-              </a>
-            </div>
-          </div>
-
-          {/* Dashboard Preview */}
-          <div className="mx-auto mt-12 max-w-4xl">
-            <div className="plane">
-              <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5">
-                <span className="flex gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-slate-300"></span>
-                  <span className="h-2.5 w-2.5 rounded-full bg-slate-300"></span>
-                  <span className="h-2.5 w-2.5 rounded-full bg-slate-300"></span>
-                </span>
-                <span className="flex-1 text-center text-xs text-slate-500">oxymanager.com/dashboard</span>
-              </div>
-
-              <div className="stat-strip">
-                <div className="stat">
-                  <div className="stat-label">আজকের বিক্রি</div>
-                  <div className="stat-value num">৳৪২,৮০০</div>
-                  <div className="stat-meta">গতকালের চেয়ে বেশি</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-label">মোট অর্ডার</div>
-                  <div className="stat-value num">১৩৭</div>
-                  <div className="stat-meta">এই মাসে</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-label">বাকি</div>
-                  <div className="stat-value num money-neg">৳৯,২৫০</div>
-                  <div className="stat-meta">১২ জন কাস্টমার</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-label">স্টক কম</div>
-                  <div className="stat-value num">৫</div>
-                  <div className="stat-meta">প্রোডাক্ট শেষ হয়ে আসছে</div>
-                </div>
-              </div>
-
-              <div className="tbl-wrap">
-                <table className="tbl">
-                  <thead>
-                    <tr>
-                      <th>প্রোডাক্ট</th>
-                      <th className="cell-num">পরিমাণ</th>
-                      <th className="cell-num">মোট</th>
-                      <th>অবস্থা</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="cell-strong">সুতির শার্ট</td>
-                      <td className="cell-num">১২</td>
-                      <td className="cell-num money-pos">৳৯,৬০০</td>
-                      <td><span className="badge badge-success">পরিশোধ</span></td>
-                    </tr>
-                    <tr>
-                      <td className="cell-strong">চামড়ার বেল্ট</td>
-                      <td className="cell-num">৪</td>
-                      <td className="cell-num money-pos">৳৩,২০০</td>
-                      <td><span className="badge badge-warn">পেন্ডিং</span></td>
-                    </tr>
-                    <tr>
-                      <td className="cell-strong">স্পোর্টস জুতা</td>
-                      <td className="cell-num">২</td>
-                      <td className="cell-num money-pos">৳৫,৪০০</td>
-                      <td><span className="badge badge-success">পরিশোধ</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <p className="mt-3 text-center text-xs text-slate-500">ড্যাশবোর্ডের এক ঝলক</p>
-          </div>
-        </div>
-      </section>
+      <Hero />
 
       {/* Stats Section */}
       <section className="border-y border-slate-200 bg-white">
@@ -677,11 +549,11 @@ export default function Home() {
             ব্যবসা বাড়ানোর জন্য তৈরি?
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-slate-600">
-            ১০,০০০+ ব্যবসায়ী এখন OxyManager ব্যবহার করছেন। আজই ফ্রি ট্রায়াল শুরু করুন।
+            ১০,০০০+ ব্যবসায়ী এখন OxyManager ব্যবহার করছেন। ফ্রি অ্যাকাউন্ট খুলে আজই শুরু করুন।
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link href="/auth/register" className="btn btn-primary w-full sm:w-auto">
-              ফ্রি ট্রায়াল শুরু করুন
+              ফ্রি অ্যাকাউন্ট খুলুন
               <ArrowRight className="h-4 w-4" />
             </Link>
             <a href="mailto:support@oxymanager.com" className="btn btn-ghost w-full sm:w-auto">

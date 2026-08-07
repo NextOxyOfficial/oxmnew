@@ -227,6 +227,10 @@ export default function SmsPage() {
 		let successCount = 0;
 		let failCount = 0;
 		let creditsUsed = 0;
+		// Why it failed, kept so the summary below can say it instead of
+		// replacing it with "look at the problem above" — there was nothing
+		// above, because that line overwrote it.
+		let lastError: string | null = null;
 
 		for (const contact of contacts) {
 			const name = contact.name && contact.name.trim() ? contact.name : contact.number;
@@ -240,7 +244,7 @@ export default function SmsPage() {
 					failCount++;
 					// Set specific error message from backend
 					if (response.error) {
-						setStatus(`সমস্যা: ${response.error}`);
+						lastError = response.error;
 					}
 				}
 			} catch (e: any) {
@@ -254,8 +258,13 @@ export default function SmsPage() {
 					return;
 				} else {
 					// Handle other types of errors
-					const errorMessage = e.response?.data?.error || e.response?.data?.message || e.message || 'কিছু একটা সমস্যা হয়েছে';
-					setStatus(`এসএমএস পাঠাতে সমস্যা: ${errorMessage}`);
+					// ApiService throws a plain Error whose message is already the
+					// backend's Bangla text, so e.message is the useful one.
+					lastError =
+						e.response?.data?.error ||
+						e.response?.data?.message ||
+						e.message ||
+						'কিছু একটা সমস্যা হয়েছে';
 					setShowCreditError(false);
 				}
 			}
@@ -293,7 +302,7 @@ export default function SmsPage() {
 				fetchSmsHistory(currentPage);
 			}
 		} else if (failCount > 0 && !showCreditError) {
-			setStatus("এসএমএস পাঠানো যায়নি। উপরের সমস্যাটা একবার দেখুন।");
+			setStatus(lastError ?? "এসএমএস পাঠানো যায়নি।");
 			setShowCreditError(false);
 		}
 		setIsSending(false);
