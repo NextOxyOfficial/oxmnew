@@ -149,6 +149,28 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG
+
+# ── HTTPS hardening ───────────────────────────────────────────────────
+# nginx terminates TLS and forwards X-Forwarded-Proto, so Django has to be told
+# to trust that header — without it `request.is_secure()` is always False and
+# the cookie/redirect settings below would misbehave.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = False  # the SPA reads this token to send it back
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+
+# nginx already redirects http → https; this is the backstop for any request
+# that reaches Django over plain HTTP anyway. Off in development, where there
+# is no certificate to redirect to.
+SECURE_SSL_REDIRECT = not DEBUG
+
+# Six months. Only meaningful in production, and deliberately not preloaded:
+# preload is effectively irreversible and is the owner's decision, not a
+# default.
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 180
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SESSION_COOKIE_SAMESITE = "Lax"
 
 MIDDLEWARE = [

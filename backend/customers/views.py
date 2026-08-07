@@ -1,4 +1,4 @@
-from core.scoping import HasPermission, owner_for
+from core.scoping import HasPermission, owner_for, require_permission
 from datetime import datetime, timedelta
 
 from core.models import Achievement, Gift, Level
@@ -378,6 +378,7 @@ def redeem_points(request, customer_id):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@require_permission("sms.send")
 def send_sms(request, customer_id):
     """Send SMS to customer"""
     from subscription.models import SMSSentHistory, UserSMSCredit
@@ -507,6 +508,7 @@ def send_sms(request, customer_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@require_permission("customers.view")
 def customer_statistics(request):
     """Get customer statistics for dashboard"""
     user = owner_for(request)
@@ -546,6 +548,7 @@ def customer_statistics(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@require_permission("customers.view")
 def customer_summary(request, customer_id):
     """Get a summary of customer data for the detail page"""
     try:
@@ -606,6 +609,7 @@ def customer_summary(request, customer_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@require_permission("customers.view")
 def customer_orders(request, customer_id):
     """Get all orders for a specific customer with pagination support"""
     try:
@@ -648,6 +652,7 @@ def customer_orders(request, customer_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@require_permission("customers.due")
 def customer_due_payments(request, customer_id):
     """Get all due payments for a specific customer with pagination"""
     try:
@@ -765,6 +770,7 @@ def customer_achievements(request, customer_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@require_permission("customers.due")
 def duebook_customers(request):
     """Get customers with due payments for the duebook page"""
     try:

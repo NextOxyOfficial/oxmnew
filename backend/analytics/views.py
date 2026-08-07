@@ -1,4 +1,4 @@
-from core.scoping import owner_for
+from core.scoping import owner_for, require_permission
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,6 +8,7 @@ from . import details, feed, periods, services
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@require_permission("analytics.view", "dashboard.money")
 def overview(request):
     """The whole analytics report for one period, in a single round trip.
 
@@ -35,6 +36,7 @@ def period_options(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@require_permission("analytics.view")
 def detail(request):
     """Rows behind one analytics signal, e.g. every idle product.
 
@@ -58,6 +60,7 @@ def detail(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@require_permission("analytics.view", "dashboard.money")
 def dashboard_feed(request):
     """Recent activity across every module, for the dashboard's short reports.
 

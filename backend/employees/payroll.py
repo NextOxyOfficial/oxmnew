@@ -84,10 +84,10 @@ def _employee_row(employee, ledger=None):
         "outstanding": float(outstanding),
         "advance_taken": float(-outstanding) if outstanding < 0 else 0.0,
         "unsettled_advance": float(ledger["unsettled_advance"]),
-        "last_paid_on": (
-            employee.salary_payments.order_by("-paid_on")
-            .values_list("paid_on", flat=True)
-            .first()
+        # From the prefetched list for the same reason as the ledger above —
+        # an .order_by() here would re-hit the database per employee.
+        "last_paid_on": max(
+            (p.paid_on for p in employee.salary_payments.all()), default=None
         ),
     }
 

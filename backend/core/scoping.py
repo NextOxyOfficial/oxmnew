@@ -95,3 +95,66 @@ class HasPermission(permissions.BasePermission):
         if isinstance(code, (list, tuple)):
             return any(c in granted for c in code)
         return code in granted
+
+
+# ── Guards for plain function views ───────────────────────────────────
+#
+# `HasPermission` only covers viewsets. A large part of the API is
+# `@api_view` functions, and those were reachable by any signed-in staff
+# login — including the shop's public API key and the endpoints that spend
+# the owner's money.
+
+from functools import wraps
+
+from rest_framework import status as _status
+from rest_framework.response import Response as _Response
+
+
+def require_permission(*codes):
+    """Refuse the request unless the login holds one of `codes`.
+
+    Owners always pass — `can()` returns True when there are no restrictions.
+    """
+
+    def decorator(view):
+        @wraps(view)
+        def wrapper(request, *args, **kwargs):
+            if not any(can(request, code) for code in codes):
+                return _Response(
+                    {"error": "এই কাজটা করার অনুমতি আপনার নেই।"},
+                    status=_status.HTTP_403_FORBIDDEN,
+                )
+            return view(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def owner_only(view):
+    """For things only the person who owns the shop may touch.
+
+    Billing, the public API key, the custom domain: no permission checkbox
+    should be able to hand these to an employee, so they are refused for any
+    staff login regardless of what is ticked.
+    """
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if staff_access(getattr(request, "user", None)) is not None:
+            return _Response(
+                {"error": "এটা শুধু দোকানের মালিক করতে পারবেন।"},
+                status=_status.HTTP_403_FORBIDDEN,
+            )
+        return view(request, *args, **kwargs)
+
+    return wrapper
+
+
+class IsShopOwner(permissions.BasePermission):
+    """Permission-class form of `owner_only`, for viewsets."""
+
+    message = "এটা শুধু দোকানের মালিক করতে পারবেন।"
+
+    def has_permission(self, request, view):
+        return staff_access(request.user) is None

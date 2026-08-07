@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Download } from "lucide-react";
 
 /**
  * The sales window and the report that follows it.
@@ -23,7 +24,17 @@ const SalesRangeFilter: React.FC<SalesRangeFilterProps> = ({
   onDateChange,
   onDownloadReport,
 }) => (
-  <div className="flex flex-wrap items-center gap-2">
+  /* The button leads on a phone (order-first) so it never ends up below the
+     date pair; from `sm` up everything sits on one line as before. */
+  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+    <button
+      type="button"
+      onClick={onDownloadReport}
+      className="btn btn-ghost btn-sm order-first ml-auto sm:order-last sm:ml-0"
+    >
+      <Download className="h-3.5 w-3.5" />
+      রিপোর্ট নামান
+    </button>
     <label className="label mb-0 shrink-0" htmlFor="orders-from">
       শুরু
     </label>
@@ -55,13 +66,6 @@ const SalesRangeFilter: React.FC<SalesRangeFilterProps> = ({
         সব সময়
       </button>
     )}
-    <button
-      type="button"
-      onClick={onDownloadReport}
-      className="btn btn-ghost btn-sm"
-    >
-      রিপোর্ট নামান
-    </button>
   </div>
 );
 

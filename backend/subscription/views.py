@@ -1,4 +1,4 @@
-from core.scoping import owner_for
+from core.scoping import owner_for, owner_only
 # subscription/views.py
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
@@ -136,6 +136,7 @@ def get_my_sms_credits(request):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])  # Only admin users can add credits
+@owner_only
 def add_sms_credits(request):
     """Add SMS credits to user account - ADMIN ONLY"""
     user_id = request.data.get('user_id')
@@ -182,6 +183,7 @@ def add_sms_credits(request):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@owner_only
 def upgrade_subscription(request):
     """Upgrade user subscription plan - ADMIN ONLY.
 
@@ -235,6 +237,7 @@ def upgrade_subscription(request):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@owner_only
 def purchase_sms_package(request):
     """Manually add SMS credits for a user - ADMIN ONLY.
 

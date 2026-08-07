@@ -1,3 +1,4 @@
+from core.scoping import owner_only
 import time
 
 from django.utils import timezone
@@ -8,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.scoping import IsShopOwner
 from .authentication import PublicAPIKeyAuthentication, RateLimitMixin
 from .models import APIKeyUsageLog, PublicAPIKey
 from .serializers import (
@@ -129,9 +131,11 @@ class APIKeyListCreateView(generics.ListCreateAPIView):
     """
     Authenticated endpoint for users to view and create their API keys
     """
+    # The shop's public API key can create orders against the store, so it
+    # is the owner's alone — no permission checkbox grants it.
+    permission_classes = [IsAuthenticated, IsShopOwner]
 
     serializer_class = PublicAPIKeySerializer
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return PublicAPIKey.objects.filter(user=self.request.user)
@@ -150,9 +154,11 @@ class APIKeyDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     Authenticated endpoint for users to manage their specific API key
     """
+    # The shop's public API key can create orders against the store, so it
+    # is the owner's alone — no permission checkbox grants it.
+    permission_classes = [IsAuthenticated, IsShopOwner]
 
     serializer_class = PublicAPIKeySerializer
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return PublicAPIKey.objects.filter(user=self.request.user)
@@ -160,6 +166,7 @@ class APIKeyDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def regenerate_api_key(request):
     """
     Regenerate the user's API key
@@ -185,6 +192,7 @@ def regenerate_api_key(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def api_key_usage_stats(request):
     """
     Get usage statistics for the user's API key
@@ -247,9 +255,11 @@ class APIUsageLogListView(generics.ListAPIView):
     """
     Authenticated endpoint for users to view their API usage logs
     """
+    # The shop's public API key can create orders against the store, so it
+    # is the owner's alone — no permission checkbox grants it.
+    permission_classes = [IsAuthenticated, IsShopOwner]
 
     serializer_class = APIKeyUsageLogSerializer
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         try:

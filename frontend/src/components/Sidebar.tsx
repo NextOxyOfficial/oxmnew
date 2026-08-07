@@ -61,43 +61,64 @@ export default function Sidebar({ isOpen, onClose, navigation }: SidebarProps) {
       : smsCredits.toLocaleString();
 
   const smsPanel = (
+    /* One tinted card rather than three loose rows. The balance is the thing
+       the shopkeeper glances at, so it leads at full size; the plan and the
+       top-up sit around it instead of competing with it. */
     <div className="px-3 py-3 border-b border-slate-200">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-          এসএমএস ব্যালেন্স
-        </span>
-        <span className={`badge ${isPro ? "badge-warn" : "badge-muted"}`}>
-          <Crown className="h-3 w-3" />
-          {subscriptionLoading ? "…" : isPro ? "প্রো" : "ফ্রি"}
-        </span>
-      </div>
-
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 min-w-0">
-          <MessageCircle className="h-4 w-4 shrink-0 text-slate-400" />
-          <span className="text-[15px] font-semibold text-slate-900 num truncate">
-            {creditLabel}
+      <div
+        className={`rounded-xl border p-3 ${
+          isPro
+            ? "border-amber-200 bg-gradient-to-br from-amber-50 to-white"
+            : "border-slate-200 bg-gradient-to-br from-slate-50 to-white"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <MessageCircle className="h-3.5 w-3.5 text-slate-400" />
+            এসএমএস ব্যালেন্স
           </span>
-        </span>
-        <Link
-          href="/dashboard/subscriptions"
-          onClick={onClose}
-          className="btn btn-ghost btn-sm"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          কিনুন
-        </Link>
-      </div>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              isPro
+                ? "bg-amber-100 text-amber-800"
+                : "bg-slate-200 text-slate-600"
+            }`}
+          >
+            <Crown className="h-3 w-3" />
+            {subscriptionLoading ? "…" : isPro ? "প্রো" : "ফ্রি"}
+          </span>
+        </div>
 
-      {!isPro && !subscriptionLoading && (
-        <Link
-          href="/dashboard/subscriptions"
-          onClick={onClose}
-          className="mt-2 inline-block text-xs font-medium text-cyan-600 hover:text-cyan-700"
-        >
-          প্রো তে আপগ্রেড করুন
-        </Link>
-      )}
+        <div className="mt-2 flex items-end justify-between gap-2">
+          <span className="min-w-0">
+            <span className="num block truncate text-2xl font-bold leading-none text-slate-900">
+              {creditLabel}
+            </span>
+            <span className="mt-0.5 block text-[11px] text-slate-500">
+              টা এসএমএস বাকি
+            </span>
+          </span>
+          <Link
+            href="/dashboard/subscriptions"
+            onClick={onClose}
+            className="btn btn-primary btn-sm shrink-0"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            কিনুন
+          </Link>
+        </div>
+
+        {!isPro && !subscriptionLoading && (
+          <Link
+            href="/dashboard/subscriptions"
+            onClick={onClose}
+            className="mt-2.5 flex items-center justify-center gap-1 rounded-lg bg-amber-500 px-2 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-amber-600"
+          >
+            <Crown className="h-3 w-3" />
+            প্রো তে আপগ্রেড করুন
+          </Link>
+        )}
+      </div>
     </div>
   );
 

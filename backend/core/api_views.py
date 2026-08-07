@@ -1,3 +1,4 @@
+from core.scoping import require_permission
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -10,6 +11,7 @@ from suppliers.models import Supplier
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@require_permission("dashboard.money", "analytics.view")
 def dashboard_stats(request):
     """Get comprehensive dashboard statistics"""
     user = request.user

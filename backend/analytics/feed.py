@@ -291,10 +291,14 @@ def upcoming_costs(user, today=None):
 
 
 def build_feed(user):
-    from analytics import coach, restock
+    from analytics import coach, restock, services
+
+    # Built once and shared: the coach lines and the upcoming-cost card both
+    # read today's report, and it is the most expensive thing here.
+    today = services.build_overview(user, preset="today")
 
     return {
-        "coach": coach.build_messages(user),
+        "coach": coach.build_messages(user, today=today),
         "restock": restock.restock_for_feed(user),
         "inventory": inventory_value(user),
         "recent_sales": recent_sales(user),

@@ -1,3 +1,4 @@
+from core.scoping import owner_only
 import json
 import os
 from decimal import Decimal, InvalidOperation
@@ -38,6 +39,7 @@ engine = ShurjopayPlugin(
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def verifyPayment(request):
     # Extracting query parameters
     required_params = [
@@ -340,6 +342,7 @@ def verifyPayment(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def makePayment(request):
     # Extracting query parameters
     required_params = [

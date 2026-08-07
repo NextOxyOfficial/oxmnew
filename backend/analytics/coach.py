@@ -41,10 +41,28 @@ def _num(value):
     return text.translate(_BN_DIGITS)
 
 
-def build_messages(user):
-    """Ranked nudges — the most actionable first, capped so the strip stays short."""
-    today = services.build_overview(user, preset="today")
-    yesterday = services.build_overview(user, preset="yesterday")
+def _net_for(user, preset):
+    """Just the profit/loss for one window, without building a whole report."""
+    first, last, _ = periods.resolve(preset)
+    begin, finish = periods.as_range(first, last)
+    sales = services.sales_for(user, begin, finish)
+    costs = services.costs_for(user, begin, finish)
+    net = sales["gross_profit"] - costs["total"]
+    return {"net": {"profit": float(net), "is_profit": net >= 0}}
+
+
+def build_messages(user, today=None):
+    """Ranked nudges — the most actionable first, capped so the strip stays short.
+
+    `today` can be passed in when the caller has already built it, which the
+    feed does — otherwise the dashboard pays for the same ~55-query report
+    twice on every load.
+    """
+    today = today or services.build_overview(user, preset="today")
+    # Only yesterday's net result is needed, and a full overview costs ~55
+    # queries to produce it — the comparison window, dead stock, the focus
+    # engine, all discarded. Two aggregates give the same number.
+    yesterday = _net_for(user, "yesterday")
 
     messages = []
 

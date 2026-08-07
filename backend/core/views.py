@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate
 from django.db.models import Q
 from django.utils import timezone
-from core.scoping import owner_for
+from core.scoping import owner_for, owner_only, require_permission
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -1790,6 +1790,7 @@ def toggle_level(request, level_id):
 
 @permission_classes([IsAuthenticated])
 @api_view(["POST", "GET"])
+@require_permission("sms.send")
 def smsSend(request):
     from subscription.models import SMSSentHistory, UserSMSCredit
     import re
@@ -2350,6 +2351,7 @@ def toggle_payment_method(request, payment_method_id):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def custom_domain_view(request):
     """
     Get or create/update custom domain for authenticated user
@@ -2461,6 +2463,7 @@ def custom_domain_view(request):
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def delete_custom_domain(request):
     """
     Delete custom domain for authenticated user
@@ -2486,6 +2489,7 @@ def delete_custom_domain(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def verify_custom_domain(request):
     """
     Verify custom domain DNS configuration
@@ -2534,6 +2538,7 @@ def verify_custom_domain(request):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def dns_records_view(request):
     """
     Get or create DNS records for user's custom domain
@@ -2629,6 +2634,7 @@ def dns_records_view(request):
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def delete_dns_record(request, record_id):
     """
     Delete a specific DNS record

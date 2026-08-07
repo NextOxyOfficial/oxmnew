@@ -430,15 +430,19 @@ def salary_ledger(employee):
 
     `outstanding` positive means the shop still owes him. Negative means he has
     drawn more than he has earned — an advance not yet worked off.
-    """
-    from django.db.models import Sum
 
-    earned = employee.salary_records.aggregate(total=Sum("net_salary"))["total"] or 0
-    paid = employee.salary_payments.aggregate(total=Sum("amount"))["total"] or 0
-    advances = (
-        employee.salary_payments.filter(kind="advance", salary_record__isnull=True)
-        .aggregate(total=Sum("amount"))["total"]
-        or 0
+    Summed in Python rather than with `.aggregate()`: the payroll screen
+    prefetches both sets for every employee, and an aggregate would ignore that
+    and fire three fresh queries per person.
+    """
+    records = employee.salary_records.all()
+    payments = employee.salary_payments.all()
+
+    earned = sum((r.net_salary for r in records), Decimal("0"))
+    paid = sum((p.amount for p in payments), Decimal("0"))
+    advances = sum(
+        (p.amount for p in payments if p.kind == "advance" and not p.salary_record_id),
+        Decimal("0"),
     )
     return {
         "earned": earned,
