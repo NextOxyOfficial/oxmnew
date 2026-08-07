@@ -176,3 +176,8 @@ local.db
 
 # Claude Code local settings
 .claude/
+
+# Verification build output (never commit)
+.next-verify/
+frontend/.next-verify/
+frontend/src/.next-verify/
