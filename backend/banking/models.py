@@ -116,7 +116,14 @@ class Transaction(models.Model):
         related_name="verified_transactions",
     )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="verified")
-    date = models.DateTimeField(auto_now_add=True)
+    #: When the money actually moved — NOT when the row was typed.
+    #:
+    #: This was auto_now_add, which meant a shopkeeper entering Tuesday's fuel
+    #: bill on Friday had it filed under Friday. Every monthly expense report,
+    #: daily target and profit figure was then computed against the day of
+    #: data entry rather than the day of spending, which is the one thing an
+    #: accounts book must not get wrong.
+    date = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     reference_number = models.CharField(max_length=50, unique=True, blank=True)
 

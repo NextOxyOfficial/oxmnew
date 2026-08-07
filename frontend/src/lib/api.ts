@@ -737,6 +737,8 @@ export class ApiService {
     purpose: string;
     verified_by: string | null;
     status?: string;
+    /** ISO datetime of when the money actually moved. Omitted means now. */
+    date?: string;
   }) {
     return this.post("/banking/transactions/", {
       ...transactionData,

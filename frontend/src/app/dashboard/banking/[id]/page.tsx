@@ -1244,6 +1244,15 @@ export default function BankAccountPage() {
 }
 
 // Add Transaction Modal Component
+/** Today as YYYY-MM-DD in the browser's own timezone — `toISOString` would
+ *  hand back UTC and file a late-evening entry under tomorrow. */
+function todayISO() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+    now.getDate()
+  ).padStart(2, "0")}`;
+}
+
 function AddTransactionModal({ isOpen, onClose, onSubmit, preset }: {
   isOpen: boolean;
   onClose: () => void;
@@ -1263,6 +1272,11 @@ function AddTransactionModal({ isOpen, onClose, onSubmit, preset }: {
     amount: "",
     purpose: "",
     verified_by: "",
+    // When the money actually moved. Defaults to today, because that is the
+    // common case — but a shop writes up last week's spending all the time,
+    // and until this field existed those entries were filed under the day they
+    // were typed, throwing off every monthly report.
+    date: todayISO(),
   });
   const [loading, setLoading] = useState(false);
   // Categories this shop has typed before, offered alongside the presets.
@@ -1316,6 +1330,9 @@ function AddTransactionModal({ isOpen, onClose, onSubmit, preset }: {
       const submitData = {
         ...formData,
         amount: parseFloat(formData.amount),
+        // Midday, not midnight: a date-only value serialised as 00:00 local
+        // can land on the previous day once the server applies its timezone.
+        date: new Date(`${formData.date}T12:00:00`).toISOString(),
         // Money coming in is never an expense, and a withdrawal carries no cost
         // bucket — sending either would put the wrong row into the cost report.
         nature: formData.type === "credit" ? "income" : formData.nature,
@@ -1332,6 +1349,7 @@ function AddTransactionModal({ isOpen, onClose, onSubmit, preset }: {
         amount: "",
         purpose: "",
         verified_by: "",
+        date: todayISO(),
       });
     } catch (error) {
       console.error("Error in modal submit:", error);
@@ -1454,6 +1472,26 @@ function AddTransactionModal({ isOpen, onClose, onSubmit, preset }: {
                 </div>
               </div>
             )}
+
+            <div>
+              <label className="label" htmlFor="transaction-date">
+                কবেকার লেনদেন
+              </label>
+              <input
+                id="transaction-date"
+                type="date"
+                value={formData.date}
+                max={todayISO()}
+                onChange={(e) =>
+                  setFormData({ ...formData, date: e.target.value || todayISO() })
+                }
+                className="input num"
+                required
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                আজকের না হলে আসল তারিখটা দিন — মাসের হিসাব এই তারিখ ধরেই হবে
+              </p>
+            </div>
 
             <div>
               <label className="label" htmlFor="transaction-amount">

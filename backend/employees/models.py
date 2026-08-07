@@ -3,6 +3,7 @@ from core.uploads import validate_document, validate_image
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
+from django.utils import timezone
 from datetime import date
 from decimal import Decimal
 
@@ -127,7 +128,9 @@ class Incentive(models.Model):
     description = models.TextField(blank=True, null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[
                                  MinValueValidator(Decimal('0.01'))])
-    date_awarded = models.DateTimeField(auto_now_add=True)
+    #: When the bonus was awarded, not when it was typed in — see the note on
+    #: banking.Transaction.date.
+    date_awarded = models.DateTimeField(default=timezone.now)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -153,7 +156,7 @@ class IncentiveWithdrawal(models.Model):
         Employee, on_delete=models.CASCADE, related_name='incentive_withdrawals')
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[
                                  MinValueValidator(Decimal('0.01'))])
-    withdrawal_date = models.DateTimeField(auto_now_add=True)
+    withdrawal_date = models.DateTimeField(default=timezone.now)
     reason = models.TextField(blank=True, null=True)
     
     # Optional: Track which incentives were affected
@@ -209,7 +212,8 @@ class SalaryRecord(models.Model):
         max_digits=10, decimal_places=2, default=0)
     net_salary = models.DecimalField(
         max_digits=10, decimal_places=2, default=0)
-    payment_date = models.DateTimeField(auto_now_add=True)
+    #: When the salary was paid, not when the record was created.
+    payment_date = models.DateTimeField(default=timezone.now)
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default='pending')
 

@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from employees.models import Employee
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import (
@@ -12,6 +13,25 @@ from .models import (
     Transaction,
     UserBankingPlan,
 )
+
+
+def not_in_the_future(value):
+    """Reject a date ahead of today; everything past is fair game.
+
+    A shop writes up last week's spending all the time, so there is no lower
+    bound on how far back an entry may be dated. A date in the future, though,
+    is always a typo — and it would sit in the books inflating a month that has
+    not happened yet.
+    """
+    if value is None:
+        return value
+    when = timezone.localtime(value).date() if timezone.is_aware(value) else value.date()
+    if when > timezone.localdate():
+        raise serializers.ValidationError(
+            "সামনের তারিখ দেওয়া যাবে না — আজ বা আগের কোনো দিন বেছে নিন।"
+        )
+    return value
+
 
 
 class BankAccountSerializer(serializers.ModelSerializer):
@@ -99,15 +119,22 @@ class TransactionSerializer(serializers.ModelSerializer):
             "verified_by_details",
             "account_name",
         ]
-        read_only_fields = ["id", "date", "updated_at", "reference_number"]
+        read_only_fields = ["id", "updated_at", "reference_number"]
 
     def validate_amount(self, value):
         if value <= 0:
             raise serializers.ValidationError("Amount must be greater than zero.")
         return value
 
+    def validate_date(self, value):
+        return not_in_the_future(value)
+
 
 class TransactionCreateSerializer(serializers.ModelSerializer):
+    #: Optional. Left out, the model's default stamps it with now, so the
+    #: existing "just record it" flow is unchanged.
+    date = serializers.DateTimeField(required=False)
+
     class Meta:
         model = Transaction
         fields = [
@@ -119,7 +146,11 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
             "purpose",
             "verified_by",
             "status",
+            "date",
         ]
+
+    def validate_date(self, value):
+        return not_in_the_future(value)
 
     def validate_amount(self, value):
         if value <= 0:
