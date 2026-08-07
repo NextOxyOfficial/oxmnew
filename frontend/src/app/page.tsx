@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Hero from '@/components/home/Hero';
+import FeatureRows from '@/components/home/FeatureRows';
 import Reveal from '@/components/home/Reveal';
 import TestimonialSlider from '@/components/home/TestimonialSlider';
 import {
@@ -169,7 +170,7 @@ export default function Home() {
     <div className="min-h-screen overflow-x-clip text-slate-900">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-2">
           <div className="flex h-16 items-center justify-between gap-3">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
@@ -285,25 +286,17 @@ export default function Home() {
 
       <Hero />
 
-      {/* Stats — the one dark band on the page, so the numbers land. */}
-      <section className="relative overflow-hidden bg-slate-900">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_70%_80%_at_50%_50%,#000_40%,transparent_100%)]"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-24 left-1/2 h-56 w-full max-w-[40rem] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl"
-        />
-        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
+      {/* Stats — a light band, so the figures read as part of the page. */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-7xl px-2">
+          <div className="grid grid-cols-2 gap-6 py-10 lg:grid-cols-4">
             {stats.map((stat, index) => (
               <Reveal key={index} delay={index * 70}>
                 <div className="text-center">
-                  <div className="num bg-gradient-to-b from-white to-slate-300 bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-4xl">
+                  <div className="num bg-gradient-to-br from-cyan-600 to-emerald-600 bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-4xl">
                     {stat.value}
                   </div>
-                  <div className="mt-1 text-xs text-slate-400 sm:text-sm">
+                  <div className="mt-1 text-xs text-slate-500 sm:text-sm">
                     {stat.label}
                   </div>
                 </div>
@@ -314,13 +307,13 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="relative overflow-hidden py-16 lg:py-24">
+      <section id="features" className="relative overflow-hidden py-8 lg:py-10">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_40%,#000_50%,transparent_100%)]"
         />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center">
+        <div className="relative mx-auto max-w-7xl px-2">
+          <div className="mb-8 text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               ব্যবসা চালাতে যা যা লাগে,
               <span className="block text-cyan-600">সবই এখানে আছে</span>
@@ -366,13 +359,15 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
+      <FeatureRows />
+
       <IndustriesSection />
 
       <AdvancedSection />
 
-      <section className="border-y border-slate-200 bg-white py-16 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center">
+      <section className="bg-white py-8 lg:py-10">
+        <div className="mx-auto max-w-7xl px-2">
+          <div className="mb-8 text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               শুরু করুন মাত্র <span className="text-cyan-600">3 ধাপে</span>
             </h2>
@@ -421,14 +416,14 @@ export default function Home() {
       <SafetySection />
 
       {/* ── what people say ─────────────────────────────────────── */}
-      <section id="testimonials" className="relative overflow-hidden py-16 lg:py-24">
+      <section id="testimonials" className="relative overflow-hidden py-8 lg:py-10">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_50%,transparent_100%)]"
         />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-2">
           <Reveal>
-            <div className="mb-10 text-center">
+            <div className="mb-8 text-center">
               <span className="mb-3 inline-block rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
                 রিভিউ
               </span>
@@ -444,9 +439,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="pricing" className="border-y border-slate-200 bg-white py-16 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center">
+      <section id="pricing" className="bg-white py-8 lg:py-10">
+        <div className="mx-auto max-w-7xl px-2">
+          <div className="mb-8 text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               সহজ আর <span className="text-cyan-600">পরিষ্কার দাম</span>
             </h2>
@@ -490,9 +485,9 @@ export default function Home() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-16 lg:py-24">
+      <section id="faq" className="py-8 lg:py-10">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center">
+          <div className="mb-8 text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               যা প্রায়ই <span className="text-cyan-600">জিজ্ঞেস করা হয়</span>
             </h2>
@@ -534,7 +529,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section id="contact" className="border-t border-slate-200 bg-white py-16 lg:py-24">
+      <section id="contact" className="bg-white py-8 lg:py-10">
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             ব্যবসা বাড়ানোর জন্য তৈরি?
@@ -567,16 +562,19 @@ export default function Home() {
           className="pointer-events-none absolute -top-20 left-1/2 h-48 w-full max-w-[40rem] -translate-x-1/2 rounded-full bg-cyan-500/15 blur-3xl"
         />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-2 py-14 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             <div className="col-span-2 md:col-span-1">
               <Link href="/" className="mb-4 inline-block">
+                {/* A dedicated white-on-transparent asset. logo.png has an
+                    opaque white background, so a CSS invert filter painted the
+                    whole rectangle white instead of just the mark. */}
                 <Image
-                  src="/logo.png"
+                  src="/logo-white.png"
                   alt="OxyManager — Your Smart Assistant"
-                  width={378}
-                  height={96}
-                  className="h-10 w-auto brightness-0 invert"
+                  width={757}
+                  height={192}
+                  className="h-10 w-auto"
                 />
               </Link>
               <p className="mb-5 text-sm leading-relaxed">
@@ -642,7 +640,7 @@ export default function Home() {
             ))}
 
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-white">আইনি</h3>
+              <h3 className="mb-3 text-sm font-semibold text-white">শর্তাবলি & পলিসি</h3>
               <ul className="space-y-2.5 text-sm">
                 <li><Link href="/privacy" className="transition-colors hover:text-white">প্রাইভেসি পলিসি</Link></li>
                 <li><Link href="/terms" className="transition-colors hover:text-white">শর্তাবলি</Link></li>

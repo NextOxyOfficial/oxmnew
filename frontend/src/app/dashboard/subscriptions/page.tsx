@@ -91,6 +91,14 @@ export default function SubscriptionsPage() {
   const [isSubscriptionPaymentLoading, setIsSubscriptionPaymentLoading] =
     useState(false);
   const [isSmsPaymentLoading, setIsSmsPaymentLoading] = useState(false);
+  /**
+   * Which package / plan is mid-purchase.
+   *
+   * A single page-level boolean made every button show a spinner when one was
+   * pressed, so the shopkeeper could not tell what they had actually clicked.
+   */
+  const [busyPackageId, setBusyPackageId] = useState<number | null>(null);
+  const [busyPlanName, setBusyPlanName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -713,7 +721,7 @@ export default function SubscriptionsPage() {
               const isCurrent = currentPlan === plan.name;
               const isDisabled =
                 isCurrent ||
-                isProcessing ||
+                busyPlanName !== null ||
                 isSubscriptionPaymentLoading ||
                 isUpdatingPlan ||
                 (plan.name === "free" && currentPlan === "pro"); // Disable free plan when user has pro
@@ -773,14 +781,17 @@ export default function SubscriptionsPage() {
                       if (plan.price > 0) {
                         handleSubscriptionPayment(plan.name, plan.price);
                       } else {
-                        handlePlanSelect(plan.name);
+                        setBusyPlanName(plan.name);
+                        handlePlanSelect(plan.name).finally(() =>
+                          setBusyPlanName(null)
+                        );
                       }
                     }}
                   >
                     {isCurrent
                       ? "এখন এটাই চলছে"
-                      : isProcessing || isSubscriptionPaymentLoading
-                      ? "কাজ চলছে…"
+                      : busyPlanName === plan.name
+                      ? "পেমেন্টে যাচ্ছে…"
                       : isUpdatingPlan
                       ? "প্ল্যান আপডেট হচ্ছে…"
                       : plan.name === "free" && currentPlan === "pro"
@@ -826,13 +837,19 @@ export default function SubscriptionsPage() {
                 </div>
                 <button
                   className="btn btn-primary mt-auto w-full"
-                  onClick={() =>
-                    pkg.id && handleSmsPackagePurchase(pkg.id, pkg.price)
-                  }
-                  disabled={isProcessing || isSmsPaymentLoading}
+                  onClick={() => {
+                    if (!pkg.id) return;
+                    setBusyPackageId(pkg.id);
+                    handleSmsPackagePurchase(pkg.id, pkg.price).finally(() =>
+                      setBusyPackageId(null)
+                    );
+                  }}
+                  // Siblings still disable — two payments at once would be
+                  // worse than a wait — but only the pressed one says so.
+                  disabled={busyPackageId !== null || isSmsPaymentLoading}
                 >
-                  {isProcessing || isSmsPaymentLoading
-                    ? "কাজ চলছে…"
+                  {busyPackageId === pkg.id
+                    ? "পেমেন্টে যাচ্ছে…"
                     : `৳${pkg.price} দিয়ে কিনুন`}
                 </button>
               </div>

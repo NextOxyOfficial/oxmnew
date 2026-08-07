@@ -8,7 +8,6 @@ import {
   BadgeCheck,
   Bell,
   CheckCircle,
-  Sparkles,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -192,16 +191,11 @@ export default function Hero() {
         className="pointer-events-none absolute -top-24 left-1/2 h-72 w-full max-w-[36rem] -translate-x-1/2 rounded-full bg-cyan-100/50 blur-3xl"
       />
 
-      <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+      <div className="relative mx-auto max-w-7xl px-2 py-14 sm:px-6 lg:px-8 lg:py-20">
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-12">
           {/* ── Copy ─────────────────────────────────────────────── */}
           <div className="text-center lg:text-left">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
-              <Sparkles className="h-3.5 w-3.5" />
-              বাংলাদেশের ব্যবসার জন্য তৈরি
-            </span>
-
-            <h1 className="mt-5 text-3xl font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+            <h1 className=" text-3xl font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
               দোকানের হিসাব
               <span className="mt-1 block bg-gradient-to-r from-cyan-600 to-emerald-600 bg-clip-text text-transparent">
                 নিজে থেকেই মিলে যাক

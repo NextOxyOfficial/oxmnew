@@ -136,7 +136,7 @@ function SectionHead({
   sub?: string;
 }) {
   return (
-    <div className="mb-10 text-center">
+    <div className="mb-8 text-center">
       {eyebrow && (
         <span className="mb-3 inline-block rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
           {eyebrow}
@@ -153,12 +153,12 @@ function SectionHead({
 
 export function IndustriesSection() {
   return (
-    <section id="industries" className="relative overflow-hidden py-16 lg:py-24">
+    <section id="industries" className="relative overflow-hidden py-8 lg:py-10">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_50%,transparent_100%)]"
         />
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-7xl px-2">
         <Reveal><SectionHead
           eyebrow="কাদের জন্য"
           title="আপনার দোকানটাও"
@@ -201,8 +201,8 @@ export function IndustriesSection() {
 
 export function ComparisonSection() {
   return (
-    <section className="border-y border-slate-200 bg-white py-16 lg:py-24">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+    <section className="bg-white py-8 lg:py-10">
+      <div className="mx-auto max-w-5xl px-2">
         <Reveal><SectionHead
           eyebrow="কেন বদলাবেন"
           title="খাতা-কলম আর"
@@ -261,12 +261,12 @@ export function ComparisonSection() {
 
 export function AdvancedSection() {
   return (
-    <section id="advanced" className="relative overflow-hidden py-16 lg:py-24">
+    <section id="advanced" className="relative overflow-hidden py-8 lg:py-10">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_50%,transparent_100%)]"
         />
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-7xl px-2">
         <Reveal><SectionHead
           eyebrow="যা আর কোথাও পাবেন না"
           title="শুধু হিসাব রাখা নয় —"
@@ -303,8 +303,8 @@ export function AdvancedSection() {
 
 export function SafetySection() {
   return (
-    <section className="border-y border-slate-200 bg-slate-50 py-16 lg:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section className="bg-slate-50 py-8 lg:py-10">
+      <div className="mx-auto max-w-7xl px-2">
         <Reveal><SectionHead
           eyebrow="নিরাপত্তা"
           title="আপনার হিসাব"
