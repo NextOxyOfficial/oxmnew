@@ -20,6 +20,7 @@ import {
   Briefcase,
   CreditCard,
   BookOpen,
+  FolderLock,
   Building2,
   Smartphone,
   Diamond,
@@ -152,6 +153,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
     // Tools & Utilities
     {
+      name: "জরুরি কাগজপত্র",
+      href: "/dashboard/documents",
+      permission: "documents.use",
+      icon: FolderLock,
+      current: pathname.startsWith("/dashboard/documents"),
+      category: "tools",
+    },
+    {
       name: "নোটবুক",
       href: "/dashboard/notebook",
       permission: "notebook.use",
@@ -193,6 +202,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     "office-rent": "অফিস ম্যানেজমেন্ট",
     payroll: "বেতন ম্যানেজমেন্ট",
     sms: "এসএমএস সেন্টার",
+    documents: "জরুরি কাগজপত্র",
     notebook: "নোটবুক",
     subscriptions: "সাবস্ক্রিপশন",
     vehicles: "মোটর বাইক",
@@ -232,6 +242,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return "কর্মচারী";
       case pathname.startsWith("/dashboard/duebook"):
         return "বাকির খাতা";
+      case pathname.startsWith("/dashboard/documents"):
+        return "জরুরি কাগজপত্র";
       case pathname.startsWith("/dashboard/notebook"):
         return "নোটবুক";
       case pathname.startsWith("/dashboard/sms"):

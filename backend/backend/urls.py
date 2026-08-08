@@ -28,6 +28,7 @@ urlpatterns = [
     path("api/", include("notebook.urls")),  # Added notebook app endpoints
     path("api/", include("vehicles.urls")),  # Serial-tracked vehicles
     path("api/", include("analytics.urls")),  # Business analytics
+    path("api/", include("documents.urls")),  # Shop papers
 ]
 
 # Serve media files during development

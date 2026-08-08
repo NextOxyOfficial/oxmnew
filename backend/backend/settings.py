@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "notebook",  # Added notebook app for note management
     "vehicles",  # Serial-tracked vehicle units (bikes, CNGs, cars)
     "analytics",  # Cross-app business reporting
+    "documents",  # The shop's own papers (trade licence, TIN, VAT ...)
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -303,6 +304,7 @@ JAZZMIN_SETTINGS = {
     # Human labels for the app groups in the sidebar.
     "custom_links": {},
     "icons": {
+        "documents.importantdocument": "fas fa-folder-open",
         # auth
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
@@ -437,6 +439,7 @@ os.makedirs(os.path.join(MEDIA_ROOT, "banner_images"), exist_ok=True)
 os.makedirs(os.path.join(MEDIA_ROOT, "purchase_proofs"), exist_ok=True)
 os.makedirs(os.path.join(MEDIA_ROOT, "payment_proofs"), exist_ok=True)
 os.makedirs(os.path.join(MEDIA_ROOT, "products"), exist_ok=True)
+os.makedirs(os.path.join(MEDIA_ROOT, "important_documents"), exist_ok=True)
 
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = config("FILE_UPLOAD_MAX_MEMORY_SIZE", default=10485760, cast=int)  # 10MB

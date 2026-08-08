@@ -2687,4 +2687,42 @@ export class ApiService {
   ) {
     return this.post(`/banking/loans/${id}/pay/`, data ?? {});
   }
+
+  // ── Important documents (জরুরি কাগজপত্র) ────────────────────────────
+  // The shop's own papers: trade licence, TIN, VAT, rent agreement. Every
+  // write is multipart because a document is a file first.
+
+  static async getImportantDocuments(params?: {
+    search?: string;
+    doc_type?: string;
+    ordering?: string;
+    page?: number;
+    page_size?: number;
+  }) {
+    return this.get(`/important-documents/${this.buildQuery(params)}`);
+  }
+
+  static async getImportantDocumentStats() {
+    return this.get("/important-documents/stats/");
+  }
+
+  static async createImportantDocument(formData: FormData) {
+    return this.postFormData("/important-documents/", formData);
+  }
+
+  /** PATCH, so editing the details never requires re-uploading the file. */
+  static async updateImportantDocument(id: number | string, formData: FormData) {
+    return this.request(`/important-documents/${id}/`, {
+      method: "PATCH",
+      body: formData,
+    });
+  }
+
+  static async deleteImportantDocument(id: number | string) {
+    return this.delete(`/important-documents/${id}/`);
+  }
+
+  static async toggleImportantDocumentPin(id: number | string) {
+    return this.post(`/important-documents/${id}/toggle-pin/`, {});
+  }
 }
