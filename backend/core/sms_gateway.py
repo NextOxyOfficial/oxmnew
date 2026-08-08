@@ -30,20 +30,33 @@ MODERN_BALANCE_URL = "https://login.smsinbd.com/api/external/v1/balance"
 TIMEOUT = 20
 
 #: Gateway error codes turned into something a shopkeeper can act on.
-#: "ACCOUNT_SUSPENDED" on a screen is not an instruction; "ring the provider" is.
+#:
+#: Who our upstream SMS provider is, and what its account is doing, is our
+#: problem and not the customer's — OxyManager is sold as one product, so the
+#: user is pointed at OxyManager support, never at a third party they have no
+#: relationship with and cannot help. The machine-readable `code` still travels
+#: in the response and the raw body is logged, so support can see the real
+#: cause without any of it reaching the screen.
+SUPPORT = "OxyManager সাপোর্টে যোগাযোগ করুন"
+
 GATEWAY_MESSAGES = {
     "ACCOUNT_SUSPENDED": (
-        "এসএমএস গেটওয়ের অ্যাকাউন্টটা বন্ধ বা মেয়াদ শেষ। "
-        "smsinbd.com-এ যোগাযোগ করে চালু করিয়ে নিন — অ্যাপে কোনো সমস্যা নেই, "
-        "আপনার ক্রেডিটও কাটা হয়নি।"
+        f"এসএমএস সার্ভিসটা এখন সাময়িকভাবে বন্ধ আছে। {SUPPORT} — "
+        "আপনার কোনো ক্রেডিট কাটা হয়নি।"
     ),
-    "INSUFFICIENT_BALANCE": "গেটওয়েতে টাকা শেষ। smsinbd.com-এ রিচার্জ করলে আবার যাবে।",
+    "INSUFFICIENT_BALANCE": (
+        f"এখন এসএমএস পাঠানো যাচ্ছে না। {SUPPORT} — আপনার কোনো ক্রেডিট কাটা হয়নি।"
+    ),
+    # The one code the user can actually fix themselves.
     "INVALID_NUMBER": "নম্বরটা ঠিক নেই — আরেকবার দেখে নিন।",
     "INVALID_API_TOKEN": (
-        "গেটওয়ের API কি কাজ করছে না। সেটিংসে নতুন কি বসাতে হবে।"
+        f"এসএমএস সার্ভিসে সমস্যা হচ্ছে। {SUPPORT} — আপনার কোনো ক্রেডিট কাটা হয়নি।"
     ),
     "API_KEY_REQUIRED": (
-        "গেটওয়ের API কি বসানো নেই। সার্ভারের .env-এ API_SMS দিতে হবে।"
+        f"এসএমএস সার্ভিসটা এখনো চালু করা হয়নি। {SUPPORT}।"
+    ),
+    "NETWORK": (
+        "এই মুহূর্তে এসএমএস সার্ভিসে পৌঁছানো যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।"
     ),
 }
 
@@ -59,11 +72,17 @@ class SmsResult:
 
     @property
     def message(self):
-        """Bangla text safe to show the user."""
+        """Bangla text safe to show the user.
+
+        An unmapped code falls back to a generic line rather than to
+        `self.detail`: the detail is the provider's own English wording, which
+        would both name a vendor the customer knows nothing about and read as
+        broken Bangla-English on the screen.
+        """
         if self.ok:
             return "এসএমএস পাঠানো হয়েছে।"
         return GATEWAY_MESSAGES.get(self.code) or (
-            self.detail or "এসএমএস পাঠানো যায়নি। একটু পরে আবার চেষ্টা করুন।"
+            f"এসএমএস পাঠানো যায়নি। আবার চেষ্টা করুন, না হলে {SUPPORT}।"
         )
 
     def __repr__(self):

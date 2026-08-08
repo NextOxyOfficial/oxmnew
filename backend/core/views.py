@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 import requests
@@ -8,6 +9,8 @@ from django.db.models import Q
 from django.utils import timezone
 from core import business_days
 from core.sms_gateway import send_sms as send_sms_via_gateway
+
+logger = logging.getLogger(__name__)
 from core.scoping import owner_for, owner_only, require_permission
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
@@ -1947,9 +1950,21 @@ def smsSend(request):
         status="failed",
         sms_count=sms_count,
     )
+    # The upstream provider's own wording goes to the log, not to the browser.
+    # OxyManager is sold as one product; a customer should never be shown the
+    # name or the raw error of a supplier they have no relationship with.
+    # Support can read the real cause here, keyed by the code the client did get.
+    logger.warning(
+        "SMS send failed for user=%s code=%s detail=%s raw=%s",
+        getattr(owner_for(request), "id", None),
+        result.code,
+        result.detail,
+        result.raw,
+    )
+
     # The gateway is a third party; its refusal is not a fault in this
     # application, so 502 rather than 500. A network failure keeps its own
-    # code so the shop can tell "try again" from "ring the provider".
+    # code so the shop can tell "try again later" from "this needs support".
     http_status = (
         status.HTTP_503_SERVICE_UNAVAILABLE
         if result.code == "NETWORK"
@@ -1960,7 +1975,6 @@ def smsSend(request):
             "success": False,
             "error": result.message,
             "code": result.code or "gateway_error",
-            "service_response": result.raw,
         },
         status=http_status,
     )
