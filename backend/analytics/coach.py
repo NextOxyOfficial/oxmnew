@@ -86,13 +86,13 @@ def build_messages(user, today=None):
     closed = business_days.closed_weekdays(user)
     is_closed_today = (timezone.localdate().weekday() in closed)
 
-    # The shop has to clear its share of rent and payroll before a day counts
-    # as profitable, so the target is the break-even revenue, not just costs.
-    daily_need = max(
-        targets.get("breakeven_daily_revenue", 0),
-        commitment["daily"] / (targets.get("margin_pct", 0) / 100 or 1),
-    )
-    shortfall = max(0, daily_need - t_sales["revenue"])
+    # The break-even already carries the shop's share of rent and payroll —
+    # charged_costs_for spreads them across the month's open days — so this is
+    # the whole target. It used to be max()'d against the commitment on its
+    # own, back when the two were computed separately and could disagree.
+    daily_need = targets.get("daily_profit_needed", 0)
+    shortfall = max(0, daily_need - t_sales["gross_profit"])
+    to_do = today.get("to_do") or {}
 
     # 1. Yesterday's result is the frame for today.
     if not y_net["is_profit"] and abs(y_net["profit"]) > 0:
@@ -101,7 +101,7 @@ def build_messages(user, today=None):
             "😟",
             f"গতকাল {_money(abs(y_net['profit']))} লোকসান হয়েছিল",
             f"আজ একটু বেশি নজর দিন — {_money(abs(y_net['profit']) + shortfall)} "
-            "বিক্রি করলে গতকালেরটাও উঠে যাবে।",
+            "লাভ করলে গতকালেরটাও উঠে যাবে।",
         )
     elif y_net["is_profit"] and y_net["profit"] > 0:
         add(
@@ -124,17 +124,20 @@ def build_messages(user, today=None):
         add(
             "warn",
             "🎯",
-            f"আজ আরও {_money(shortfall)} বিক্রি দরকার",
-            f"দিনের খরচ উঠতে {_money(daily_need)} লাগে, এখন পর্যন্ত হয়েছে "
-            f"{_money(t_sales['revenue'])}।",
+            f"আজ আরও {_money(shortfall)} লাভ দরকার",
+            (
+                f"দিনের খরচ উঠতে {_money(daily_need)} লাভ লাগে, এখন পর্যন্ত "
+                f"হয়েছে {_money(t_sales['gross_profit'])}।"
+            )
+            + (f" মানে {to_do['headline']}।" if to_do.get("headline") else ""),
         )
     elif t_sales["revenue"] > 0:
         add(
             "good",
             "✅",
             "আজকের টার্গেট পেরিয়ে গেছে",
-            f"{_num(t_sales['orders_count'])} টা অর্ডারে {_money(t_sales['revenue'])} "
-            "— আজকের খরচ উঠে গেছে।",
+            f"{_num(t_sales['orders_count'])} টা অর্ডারে "
+            f"{_money(t_sales['gross_profit'])} লাভ — আজকের খরচ উঠে গেছে।",
         )
 
     # 3. Money already earned but not collected. Nothing to sell, just to ask for.

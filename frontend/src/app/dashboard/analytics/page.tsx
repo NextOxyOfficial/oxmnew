@@ -343,14 +343,17 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="stat-meta">খরচ বাদ দেওয়ার আগে</div>
               </div>
+              {/* The charged figure, not the cash. Rent bought the whole
+                  month, so it is spread across the month rather than dropped
+                  on the day the bank was debited. */}
               <div className="stat">
                 <div className="stat-label">মোট খরচ</div>
                 <div className="stat-value num money-neg">
                   {money(data.costs.total)}
                 </div>
                 <div className="stat-meta">
-                  {data.costs.by_category[0]
-                    ? `সবচেয়ে বেশি ${data.costs.by_category[0].label}`
+                  {Math.abs(data.costs.cash_out - data.costs.total) > 1
+                    ? `ব্যাংক থেকে গেছে ${money(data.costs.cash_out)}`
                     : `দিনে গড়ে ${money(data.targets.daily_cost)}`}
                 </div>
               </div>
@@ -387,28 +390,27 @@ export default function AnalyticsPage() {
                     {[
                       {
                         title: data.period.closed_label
-                          ? "খরচ উঠতে খোলার দিনে বিক্রি"
-                          : "খরচ উঠতে দিনে বিক্রি",
-                        value: data.targets.breakeven_daily_revenue,
-                        note: "এর নিচে নামলেই লোকসান",
+                          ? "খোলার দিনে যত লাভ দরকার"
+                          : "দিনে যত লাভ দরকার",
+                        value: data.targets.daily_profit_needed,
+                        note: "খরচ লাভ থেকেই ওঠে — বিক্রির অঙ্ক থেকে নয়",
                         done: data.targets.on_track,
                       },
                       {
-                        title: data.period.closed_label
-                          ? "লাভসহ খোলার দিনের টার্গেট"
-                          : "লাভসহ দিনের টার্গেট",
-                        value: data.targets.target_daily_revenue,
-                        note: "খরচের 20% লাভ ধরে",
-                        done:
-                          data.targets.daily_revenue >=
-                          data.targets.target_daily_revenue,
-                      },
-                      {
                         title: "এখন হচ্ছে",
-                        value: data.targets.daily_revenue,
+                        value: data.targets.daily_profit,
                         note: data.targets.on_track
                           ? "টার্গেটের উপরে আছেন"
-                          : `দিনে ${money(Math.abs(data.targets.gap))} কম পড়ছে`,
+                          : `দিনে ${money(
+                              Math.abs(data.targets.profit_gap)
+                            )} লাভ কম পড়ছে`,
+                        done: data.targets.on_track,
+                        plain: true,
+                      },
+                      {
+                        title: "গড় মার্জিন ধরলে বিক্রি",
+                        value: data.targets.breakeven_daily_revenue,
+                        note: `মার্জিন ${data.targets.margin_pct}% ধরে — বাইক আর পার্টসের মার্জিন আলাদা বলে এটা আন্দাজ`,
                         done: data.targets.on_track,
                         plain: true,
                       },
@@ -450,6 +452,44 @@ export default function AnalyticsPage() {
                       </li>
                     ))}
                   </ol>
+
+                  {/* The target in things to sell. A bike and a spare part
+                      cover wildly different amounts of the day, so a taka
+                      figure alone is not actionable. */}
+                  {!data.to_do.covered && data.to_do.lines.length > 0 && (
+                    <div className="mt-3 rounded-lg border border-cyan-200 bg-cyan-50/60 p-3">
+                      <p className="text-xs font-medium text-cyan-900">
+                        বাকিটা উঠতে যা লাগবে
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {data.to_do.lines.map((line, index) => (
+                          <span key={line.key} className="flex items-center gap-2">
+                            {index > 0 && (
+                              <span className="text-xs text-slate-500">বা</span>
+                            )}
+                            <span className="inline-flex items-baseline gap-1 rounded-lg bg-white px-2.5 py-1.5 text-sm text-cyan-800 shadow-sm">
+                              <span className="num font-semibold">
+                                {line.units}
+                              </span>
+                              টা {line.label}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                      <ul className="mt-2 space-y-0.5 text-[11px] text-slate-600">
+                        {data.to_do.lines.map((line) => (
+                          <li key={line.key}>
+                            • {line.label} — {line.note} (শেষ{" "}
+                            <span className="num">
+                              {data.to_do.lookback_days}
+                            </span>{" "}
+                            দিনের <span className="num">{line.sample}</span> টা
+                            বিক্রি ধরে)
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {data.loans.monthly_due > 0 && (
                     <div className="mt-3 rounded-lg border border-slate-200 px-3 py-2.5">
@@ -549,16 +589,18 @@ export default function AnalyticsPage() {
                           নতুন বিক্রি ছাড়াই হাতে টাকা আসবে
                         </li>
                       )}
-                      {data.loans.monthly_due > 0 && (
+                      {data.targets.monthly_share_daily > 0 && (
                         <li>
-                          • এর মধ্যে লোনের কিস্তি বাবদ দিনে{" "}
-                          {money(data.targets.loan_share_daily)} ধরা আছে
+                          • ভাড়া, বেতন, বিল আর কিস্তি — সব মিলিয়ে মাসে{" "}
+                          {money(data.monthly_commitment.total)}, তাই খোলার
+                          দিনে {money(data.targets.monthly_share_daily)} ধরা আছে
+                          (যেদিন টাকাটা দেওয়া হয় শুধু সেদিন নয়)
                         </li>
                       )}
-                      {data.fixed_costs.monthly_total > 0 && (
+                      {data.targets.variable_daily > 0 && (
                         <li>
-                          • অফিস ভাড়াসহ নির্দিষ্ট খরচ বাবদ দিনে{" "}
-                          {money(data.fixed_costs.monthly_total / 30)} ধরা আছে
+                          • এর বাইরে মাল-পরিবহন-মেরামত বাবদ দিনে{" "}
+                          {money(data.targets.variable_daily)} যাচ্ছে
                         </li>
                       )}
                       <li>

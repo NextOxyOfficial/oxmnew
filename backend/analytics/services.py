@@ -318,12 +318,60 @@ def dead_stock_for(user, begin, finish, limit=6):
 # ── the brain ───────────────────────────────────────────────────────────
 
 
-def build_targets(sales, costs, day_count, loan_monthly=ZERO, open_month_days=30):
+def charged_costs_for(costs, commitment, open_days, open_month_days):
+    """What the window's trading actually has to carry.
+
+    A month's rent is paid on one day, but it is not that day's cost — it buys
+    the whole month. Charging it to the day it left the bank produced a shop
+    that "lost ৳56,961 today" and needed ৳3,05,655 of sales to break even,
+    while the day before and after looked free. The number moved with the
+    landlord's calendar, not with the shop's trading.
+
+    So costs are split by how they behave, not by where they are stored:
+
+    * **periodic** — rent, bills, payroll, loan instalments. Owed every month
+      regardless of trading, so each open day carries its share of the month.
+    * **variable** — stock, transport, repairs, a bonus. Spent on a day
+      because of that day, so charged to it.
+
+    Payroll comes from the commitment (what the staff are owed) rather than
+    from salary payments, which is why salary rows are not in `variable`:
+    counting both would charge the shop twice for the same wages — exactly the
+    double count this replaced, where rent was billed once as cash out and
+    again as its monthly share.
+    """
+    variable = (
+        costs["expense"] + costs["payment"] + costs["unclassified"]
+        + costs["incentives"]
+    )
+    # `commitment` has already been through _money, so it arrives as a float
+    # while `costs` is still Decimal. Everything is normalised here rather than
+    # leaving the mix to bite whichever caller multiplies first.
+    month_days = Decimal(open_month_days or 30)
+    monthly_total = Decimal(str(commitment["total"] or 0))
+    daily_share = monthly_total / month_days
+    periodic = daily_share * Decimal(open_days or 0)
+    variable = Decimal(str(variable or 0))
+
+    # Decimal out, not float: these feed the same arithmetic as `costs`, and
+    # _money() is applied once at the response boundary.
+    return {
+        "variable": variable,
+        "periodic": periodic,
+        "daily_share": daily_share,
+        "total": variable + periodic,
+    }
+
+
+def build_targets(sales, charged, day_count):
     """What the shop must sell per open day just to stop losing money.
 
     Break-even is driven by gross margin, not by revenue: selling more at a thin
     margin can raise turnover and still lose money, which is exactly the trap
     this is meant to expose.
+
+    `charged` comes from `charged_costs_for`, so the monthly commitments are
+    already spread — this function must never add them again.
 
     `day_count` is the number of *trading* days in the window, never its length
     — see core.business_days. A shop closed on Fridays still owes a full
@@ -332,13 +380,7 @@ def build_targets(sales, costs, day_count, loan_monthly=ZERO, open_month_days=30
     """
     revenue = sales["revenue"]
     margin_ratio = (sales["gross_profit"] / revenue) if revenue else ZERO
-    # The recorded cost covers what was actually spent in the window. A loan
-    # instalment that has not fallen due yet is still owed this month, so it is
-    # added as a daily share — otherwise the target looks reachable right up
-    # until the payment date.
-    daily_cost = costs["total"] / day_count if day_count else ZERO
-    month_days = Decimal(open_month_days or 30)
-    daily_cost += (loan_monthly / month_days) if loan_monthly else ZERO
+    daily_cost = charged["total"] / day_count if day_count else ZERO
 
     if margin_ratio > 0:
         breakeven_daily = daily_cost / margin_ratio
@@ -354,6 +396,16 @@ def build_targets(sales, costs, day_count, loan_monthly=ZERO, open_month_days=30
     )
 
     return {
+        # The honest target: costs are covered by profit, whatever was sold to
+        # earn it. Revenue only works as a target when the margin is a single
+        # number, and for a shop selling both bikes and parts it is not.
+        "daily_profit_needed": _money(daily_cost),
+        "daily_profit": _money(
+            sales["gross_profit"] / day_count if day_count else ZERO
+        ),
+        "profit_gap": _money(
+            (sales["gross_profit"] / day_count if day_count else ZERO) - daily_cost
+        ),
         "daily_cost": _money(daily_cost),
         "daily_revenue": _money(daily_revenue),
         "breakeven_daily_revenue": _money(breakeven_daily),
@@ -362,12 +414,19 @@ def build_targets(sales, costs, day_count, loan_monthly=ZERO, open_month_days=30
         "gap": _money(daily_revenue - breakeven_daily),
         # With no costs recorded there is nothing to fall short of, so a shop
         # that has simply not entered its expenses yet is not "behind target".
-        "on_track": daily_revenue >= breakeven_daily,
-        "has_margin": margin_ratio > 0,
-        "has_costs": costs["total"] > 0 or loan_monthly > 0,
-        "loan_share_daily": _money(
-            (loan_monthly / Decimal(open_month_days or 30)) if loan_monthly else ZERO
+        "on_track": (
+            (sales["gross_profit"] / day_count if day_count else ZERO) >= daily_cost
         ),
+        "has_margin": margin_ratio > 0,
+        "has_costs": charged["total"] > 0,
+        # The monthly commitments' share of one open day, named so the UI can
+        # explain where a target came from without redoing the arithmetic.
+        "monthly_share_daily": _money(charged["daily_share"]),
+        "variable_daily": _money(
+            charged["variable"] / day_count if day_count else ZERO
+        ),
+        # Kept under the old name: the analytics screen labels this row.
+        "loan_share_daily": _money(charged["daily_share"]),
         "open_days": day_count,
     }
 
@@ -644,30 +703,45 @@ def build_overview(user, preset="this_month", start=None, end=None):
     prev_sales = sales_for(user, prev_begin, prev_finish)
     prev_costs = costs_for(user, prev_begin, prev_finish)
 
-    net_profit = sales["gross_profit"] - costs["total"]
-    prev_net = prev_sales["gross_profit"] - prev_costs["total"]
-
     # The shop's own calendar, resolved once and threaded through everything
     # that divides by a day count.
     closed = business_days.closed_weekdays(user)
     calendar_days = periods.days_in(first, last)
     day_count = business_days.open_days_between(first, last, closed)
     open_month_days = business_days.open_days_in_month(last, closed)
+    prev_day_count = business_days.open_days_between(prev_first, prev_last, closed)
 
     loans = loans_for(user)
     fixed = fixed_costs_for(user)
-    targets = build_targets(
-        sales,
-        costs,
-        day_count,
-        loans["monthly_due"] + fixed["monthly_total"],
-        open_month_days,
+    commitment = monthly_commitment_for(user, loans, fixed, open_month_days)
+
+    # What the window's trading actually carries: monthly commitments spread
+    # over the month's open days, day-of spending charged to its own day. The
+    # cash figure (`costs["total"]`) is still reported — it answers "কত টাকা
+    # বেরিয়েছে" — but it is not what a day is judged against.
+    charged = charged_costs_for(costs, commitment, day_count, open_month_days)
+    prev_charged = charged_costs_for(
+        prev_costs, commitment, prev_day_count, open_month_days
+    )
+
+    net_profit = sales["gross_profit"] - charged["total"]
+    prev_net = prev_sales["gross_profit"] - prev_charged["total"]
+    cash_profit = sales["gross_profit"] - costs["total"]
+
+    targets = build_targets(sales, charged, day_count)
+    # …and what that profit means in things the shop can actually go and sell.
+    from analytics.mix import what_it_takes
+
+    to_do = what_it_takes(
+        user,
+        targets["daily_profit_needed"],
+        targets["daily_profit"],
     )
 
     comparison = {
         "revenue": _change(sales["revenue"], prev_sales["revenue"]),
         "gross_profit": _change(sales["gross_profit"], prev_sales["gross_profit"]),
-        "cost": _change(costs["total"], prev_costs["total"]),
+        "cost": _change(charged["total"], prev_charged["total"]),
         "net_profit": _change(net_profit, prev_net),
         "orders": _change(sales["orders_count"], prev_sales["orders_count"]),
     }
@@ -713,12 +787,25 @@ def build_overview(user, preset="this_month", start=None, end=None):
             "incentives": _money(costs["incentives"]),
             "loan": _money(costs["loan"]),
             "recurring": _money(costs["recurring"]),
-            "total": _money(costs["total"]),
+            # Cash that actually left in this window. True, and the figure the
+            # খরচ report and the bank statement agree with — but lumpy, because
+            # a month's rent lands on one day.
+            "cash_out": _money(costs["total"]),
+            # What this window's trading carries: monthly commitments spread
+            # over the month's open days, day-of spending on its own day. This
+            # is what every target and the profit figure are judged against.
+            "total": _money(charged["total"]),
+            "variable": _money(charged["variable"]),
+            "periodic": _money(charged["periodic"]),
+            "monthly_share_daily": _money(charged["daily_share"]),
             "by_category": costs["by_category"],
         },
         "net": {
             "profit": _money(net_profit),
             "is_profit": net_profit >= 0,
+            # Same figure on a cash basis: useful on the day a big bill is
+            # paid, misleading as a measure of how the day traded.
+            "cash_profit": _money(cash_profit),
             "margin_pct": (
                 round(float(net_profit / sales["revenue"] * 100), 1)
                 if sales["revenue"]
@@ -727,6 +814,7 @@ def build_overview(user, preset="this_month", start=None, end=None):
         },
         "comparison": comparison,
         "targets": targets,
+        "to_do": to_do,
         "receivables": receivables,
         "inventory": {k: _money(v) if k != "vehicle_count" else v
                       for k, v in inventory_for(user).items()},
@@ -740,9 +828,7 @@ def build_overview(user, preset="this_month", start=None, end=None):
             "overdue_count": loans["overdue_count"],
             "next": loans["next"],
         },
-        "monthly_commitment": monthly_commitment_for(
-            user, loans, fixed, open_month_days
-        ),
+        "monthly_commitment": commitment,
         "fixed_costs": {
             "count": fixed["count"],
             "monthly_total": _money(fixed["monthly_total"]),

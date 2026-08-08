@@ -149,14 +149,16 @@ export default function DashboardPage() {
 
   const commitment = month.monthly_commitment;
   const target = today.targets;
-  // Break-even needs the running cost covered too, not just what was spent
-  // today — a quiet day still owes its share of rent and payroll.
-  const dailyNeed = Math.max(
-    target.breakeven_daily_revenue,
-    commitment.daily / (target.margin_pct / 100 || 1)
-  );
-  const progress = dailyNeed > 0 ? (today.sales.revenue / dailyNeed) * 100 : 0;
-  const shortfall = Math.max(0, dailyNeed - today.sales.revenue);
+  const toDo = today.to_do;
+  // The target is PROFIT, not revenue. Revenue only works as a target when the
+  // margin is one number, and this shop's is two: a bike is a big ticket at a
+  // thin margin, a spare part a small ticket at a fat one. Quoted in revenue,
+  // the same day's costs "need" ৳3 lakh of bikes or ৳40,000 of parts — a
+  // number that moves with what happened to sell last, not with what is owed.
+  const dailyNeed = target.daily_profit_needed;
+  const earned = today.sales.gross_profit;
+  const progress = dailyNeed > 0 ? (earned / dailyNeed) * 100 : 0;
+  const shortfall = Math.max(0, dailyNeed - earned);
 
   return (
     <div className="page space-y-4">
@@ -253,10 +255,13 @@ export default function DashboardPage() {
 
           <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
             <span className="num text-2xl font-semibold text-slate-900">
-              {money(today.sales.revenue)}
+              {money(earned)}
+              <span className="ml-1.5 text-xs font-normal text-slate-500">
+                লাভ
+              </span>
             </span>
             <span className="text-sm text-slate-600">
-              টার্গেট {money(dailyNeed)}
+              টার্গেট {money(dailyNeed)} লাভ
             </span>
           </div>
 
@@ -278,11 +283,36 @@ export default function DashboardPage() {
             ) : (
               <span className="text-slate-600">
                 আরও <span className="money-neg font-medium">{money(shortfall)}</span>{" "}
-                বিক্রি করলে আজকের খরচ উঠে যাবে · এখন পর্যন্ত{" "}
+                লাভ হলেই আজকের খরচ উঠে যাবে · এখন পর্যন্ত{" "}
                 {today.sales.orders_count} টা অর্ডার
               </span>
             )}
           </p>
+
+          {/* What that profit means in things to go and sell. "or", not
+              "and" — either one on its own clears the day. */}
+          {!toDo.covered && toDo.lines.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-slate-500">যেভাবে উঠবে:</span>
+              {toDo.lines.map((line, index) => (
+                <span key={line.key} className="flex items-center gap-2">
+                  {index > 0 && (
+                    <span className="text-xs text-slate-400">বা</span>
+                  )}
+                  <span
+                    className="inline-flex items-baseline gap-1 rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-1 text-xs text-cyan-800"
+                    title={line.note}
+                  >
+                    <span className="num font-semibold">{line.units}</span>
+                    টা {line.label}
+                  </span>
+                </span>
+              ))}
+              <span className="text-[11px] text-slate-400">
+                (আপনার নিজের গড় লাভ ধরে)
+              </span>
+            </div>
+          )}
 
           <div className="stat-strip mt-3 rounded-lg border border-slate-200">
             <div className="stat">
@@ -292,13 +322,21 @@ export default function DashboardPage() {
               </div>
               <div className="stat-meta">খরচ বাদ দেওয়ার আগে</div>
             </div>
+            {/* The amortised figure, not the day's cash. A month's rent
+                leaving the bank today is not today's cost — it buys the whole
+                month — and charging it here made one day look catastrophic
+                while the days either side looked free. */}
             <div className="stat">
               <div className="stat-label">আজকের খরচ</div>
               <div className="stat-value num money-neg">
                 {money(today.costs.total)}
               </div>
               <div className="stat-meta">
-                {today.costs.by_category[0]
+                {today.costs.monthly_share_daily > 0
+                  ? `মাসিক খরচের আজকের ভাগ ${money(
+                      today.costs.monthly_share_daily
+                    )}`
+                  : today.costs.by_category[0]
                   ? `সবচেয়ে বেশি ${today.costs.by_category[0].label}`
                   : "কোনো খরচ ওঠেনি"}
               </div>
@@ -314,6 +352,8 @@ export default function DashboardPage() {
               </div>
               <div className="stat-meta">
                 {today.net.is_profit ? "লাভ" : "ঘাটতি"}
+                {Math.abs(today.costs.cash_out - today.costs.total) > 1 &&
+                  ` · আজ ব্যাংক থেকে গেছে ${money(today.costs.cash_out)}`}
               </div>
             </div>
             <div className="stat">

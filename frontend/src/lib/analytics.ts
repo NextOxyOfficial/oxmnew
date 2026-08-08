@@ -66,7 +66,21 @@ export interface AnalyticsOverview {
     unclassified: number;
     salaries: number;
     incentives: number;
+    /**
+     * Cash that actually left in the window — what the bank statement says.
+     * Lumpy: a month's rent lands on one day.
+     */
+    cash_out: number;
+    /**
+     * What the window's trading carries: monthly commitments spread over the
+     * month's open days, day-of spending charged to its own day. Every target
+     * and the profit figure are judged against this, not against cash_out.
+     */
     total: number;
+    variable: number;
+    periodic: number;
+    /** One open day's share of the monthly commitments. */
+    monthly_share_daily: number;
     by_category: { category: string; label: string; amount: number }[];
   };
   net: { profit: number; is_profit: boolean; margin_pct: number };
@@ -77,7 +91,33 @@ export interface AnalyticsOverview {
     net_profit: Change;
     orders: Change;
   };
+  /** What still has to be sold to cover the day, in units the shop deals in. */
+  to_do: {
+    need_profit: number;
+    earned_profit: number;
+    remaining_profit: number;
+    covered: boolean;
+    lines: {
+      key: string;
+      label: string;
+      avg_profit: number;
+      units: number | null;
+      sample: number;
+      note: string;
+    }[];
+    /** "2 টা মোটর বাইক বা 48 টা পার্টস", or empty when there is no history. */
+    headline: string;
+    lookback_days: number;
+  };
   targets: {
+    /**
+     * The day's target, as PROFIT. Costs are covered by profit, whatever was
+     * sold to earn it — revenue only works as a target when the margin is a
+     * single number, and a shop selling both bikes and parts has two.
+     */
+    daily_profit_needed: number;
+    daily_profit: number;
+    profit_gap: number;
     daily_cost: number;
     loan_share_daily: number;
     daily_revenue: number;
@@ -88,6 +128,10 @@ export interface AnalyticsOverview {
     on_track: boolean;
     has_margin: boolean;
     has_costs: boolean;
+    /** One open day's share of rent, payroll, bills and loan instalments. */
+    monthly_share_daily: number;
+    /** Day-of spending (stock, transport, repairs) per open day. */
+    variable_daily: number;
     /** Trading days the window's costs were spread across. */
     open_days: number;
   };

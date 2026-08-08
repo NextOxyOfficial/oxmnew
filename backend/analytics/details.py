@@ -307,10 +307,14 @@ def targets(user, begin, finish):
     day_count = business_days.open_days_between(begin.date(), finish.date(), closed)
     sales = services.sales_for(user, begin, finish)
     cost = services.costs_for(user, begin, finish)
-    plan = services.build_targets(
-        sales, cost, day_count,
-        open_month_days=business_days.open_days_in_month(finish.date(), closed),
-    )
+    open_month_days = business_days.open_days_in_month(finish.date(), closed)
+    # The day-by-day view has to use the same rule as the headline target, or
+    # the drill-down would disagree with the number it is explaining.
+    loans = services.loans_for(user)
+    fixed = services.fixed_costs_for(user)
+    commitment = services.monthly_commitment_for(user, loans, fixed, open_month_days)
+    charged = services.charged_costs_for(cost, commitment, day_count, open_month_days)
+    plan = services.build_targets(sales, charged, day_count)
 
     orders = (
         Order.objects.filter(user=user, created_at__range=(begin, finish))
