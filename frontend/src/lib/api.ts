@@ -2702,6 +2702,10 @@ export class ApiService {
     return this.get(`/important-documents/${this.buildQuery(params)}`);
   }
 
+  static async getImportantDocument(id: number | string) {
+    return this.get(`/important-documents/${id}/`);
+  }
+
   static async getImportantDocumentStats() {
     return this.get("/important-documents/stats/");
   }

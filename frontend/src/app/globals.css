@@ -394,7 +394,27 @@ body {
     border-bottom: 1px solid var(--border);
   }
   .modal-title { font-size: 0.9375rem; font-weight: 600; color: var(--foreground); }
-  .modal-body { padding: 1.25rem; overflow-y: auto; }
+  .modal-body {
+    padding: 1.25rem;
+    overflow-y: auto;
+    /* `min-height: 0` is what actually makes it scroll. A flex item defaults
+       to `min-height: auto`, which refuses to shrink below its content — so
+       the body grew past the 90vh cap, `.modal`'s overflow:hidden clipped it,
+       and the bottom of a long form was simply unreachable. */
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  /* A dialog whose body and footer sit inside a <form> puts that form between
+     `.modal` and its children, which swallows the height constraint. Make the
+     form a pass-through flex column so the body still knows what to scroll in. */
+  .modal > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .modal-head,
+  .modal-foot { flex-shrink: 0; }
   .modal-foot {
     display: flex;
     align-items: center;
