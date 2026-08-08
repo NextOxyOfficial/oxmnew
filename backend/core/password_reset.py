@@ -12,7 +12,6 @@ successful one.
 
 import random
 
-import requests
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
@@ -24,6 +23,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 
+from core.sms_gateway import send_sms as send_sms_via_gateway
 from .models import PasswordResetCode
 
 VAGUE_OK = {
@@ -89,21 +89,18 @@ def _send_email(user, code):
 
 def _send_sms(phone, code):
     """Uses the same gateway as the rest of the app, but never charges credits —
-    a locked-out user cannot be asked to buy any."""
-    response = requests.post(
-        "http://api.smsinbd.com/sms-api/sendsms",
-        data={
-            "api_token": settings.API_SMS,
-            "senderid": "8809617614969",
-            "contact_number": phone,
-            "message": (
-                f"OxyManager password reset code: {code}. "
-                f"Valid for {PasswordResetCode.LIFETIME_MINUTES} minutes."
-            ),
-        },
-        timeout=15,
+    a locked-out user cannot be asked to buy any.
+
+    Raises on failure so the caller still reports "could not send" rather than
+    telling a locked-out user to go and check their phone for nothing.
+    """
+    result = send_sms_via_gateway(
+        phone,
+        f"OxyManager password reset code: {code}. "
+        f"Valid for {PasswordResetCode.LIFETIME_MINUTES} minutes.",
     )
-    response.raise_for_status()
+    if not result.ok:
+        raise RuntimeError(f"SMS gateway refused: {result.code} {result.detail}")
 
 
 @api_view(["POST"])

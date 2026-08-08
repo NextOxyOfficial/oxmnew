@@ -102,12 +102,27 @@ export function printAnalyticsReport({
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  @page { size: A4; margin: 14mm 12mm; }
+  /* Margin is 0 on purpose. An @page margin is only honoured while the print
+     dialog's own Margins setting is "Default" — the moment a user picks
+     "None" (which is what people do to drop the browser's header and footer)
+     the page box collapses and the report prints against the paper edge.
+     So the sheet owns its own padding instead of asking the dialog for it. */
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   body {
     font-family: "Inter", "Hind Siliguri", system-ui, sans-serif;
     color: #0f172a; margin: 0; font-size: 11px; line-height: 1.5;
   }
+  /* Padding on <body> alone would only apply to the first and last page
+     fragments, leaving page 2 flush against the top edge. A thead/tfoot
+     repeats on every printed page, so these spacers give real top and bottom
+     padding throughout; the cell padding handles left and right. */
+  .sheet { width: 100%; border-collapse: collapse; }
+  .sheet > thead > tr > td,
+  .sheet > tfoot > tr > td { border: 0; padding: 0; }
+  .sheet-pad-top { height: 14mm; }
+  .sheet-pad-bottom { height: 12mm; }
+  .sheet > tbody > tr > td { padding: 0 12mm; border: 0; vertical-align: top; }
   header {
     display: flex; align-items: center; justify-content: space-between;
     gap: 16px; padding-bottom: 12px; border-bottom: 2px solid #0891b2;
@@ -153,6 +168,10 @@ export function printAnalyticsReport({
 </style>
 </head>
 <body>
+<table class="sheet">
+<thead><tr><td><div class="sheet-pad-top"></div></td></tr></thead>
+<tfoot><tr><td><div class="sheet-pad-bottom"></div></td></tr></tfoot>
+<tbody><tr><td>
   <header>
     <img src="${origin}/logo.png" alt="">
     <div class="meta">
@@ -174,6 +193,8 @@ export function printAnalyticsReport({
     <span>${storeName ? escapeHtml(storeName) : "OxyManager"}</span>
     <span>${today}</span>
   </footer>
+</td></tr></tbody>
+</table>
 </body>
 </html>`);
   win.document.close();

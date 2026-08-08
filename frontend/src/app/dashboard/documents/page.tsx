@@ -229,23 +229,29 @@ export default function ImportantDocumentsPage() {
           </div>
         )}
 
-        {/* Filters */}
+        {/* Filters.
+            A two-column grid on a phone, a flex row from `sm` up. The previous
+            single flex row let the search box shrink to ~10px on a 375px
+            screen: `flex-1 min-w-0` yields to the two selects, which claim
+            their intrinsic width and leave nothing behind. Here the search
+            spans both columns, the selects take one each, and the desktop
+            layout is unchanged. */}
         <div className="plane-section">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-0 flex-1 sm:max-w-xs">
+          <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
+            <div className="relative col-span-2 sm:col-auto sm:min-w-0 sm:flex-1 sm:max-w-xs">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="নাম, লাইসেন্স নম্বর বা নোট দিয়ে খুঁজুন"
+                placeholder="নাম বা লাইসেন্স নম্বর দিয়ে খুঁজুন"
                 className="input w-full pl-9"
               />
             </div>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="select w-auto"
+              className="select w-full min-w-0 sm:w-auto"
               aria-label="কাগজের টাইপ"
             >
               <option value="">সব রকম কাগজ</option>
@@ -258,7 +264,7 @@ export default function ImportantDocumentsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="select w-auto"
+              className="select w-full min-w-0 sm:w-auto"
               aria-label="মেয়াদের অবস্থা"
             >
               <option value="">সব অবস্থা</option>
@@ -275,7 +281,7 @@ export default function ImportantDocumentsPage() {
                   setTypeFilter("");
                   setStatusFilter("");
                 }}
-                className="btn btn-ghost btn-sm shrink-0"
+                className="btn btn-ghost btn-sm col-span-2 sm:col-auto sm:shrink-0"
               >
                 সাফ করুন
               </button>

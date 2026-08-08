@@ -240,6 +240,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # sms settings
 API_SMS = config("API_SMS", default="")
+# The smsinbd account, sender ID and endpoint are configuration, not code:
+# swapping to a different account (e.g. after one is suspended) must not need
+# a source edit and a redeploy. Both of smsinbd's APIs are supported —
+# core.sms_gateway picks the shape from the URL.
+SMS_SENDER_ID = config("SMS_SENDER_ID", default="8809617628808")
+SMS_API_URL = config(
+    "SMS_API_URL", default="https://login.smsinbd.com/api/external/v1/sms/send"
+)
 
 # Internationalization
 LANGUAGE_CODE = "en-us"
