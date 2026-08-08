@@ -1024,6 +1024,13 @@ export default function SuppliersPage() {
               getPaymentMethodIcon={getPaymentMethodIcon}
               onUpdatePayment={handleUpdatePayment}
               onDeletePayment={handleDeletePayment}
+              onPaymentPatched={(updated) =>
+                setPayments((prev) =>
+                  prev.map((payment) =>
+                    payment.id === updated.id ? { ...payment, ...updated } : payment
+                  )
+                )
+              }
             />
           )}
 

@@ -746,6 +746,31 @@ export class ApiService {
     });
   }
 
+  // ── Supplier paperwork: the invoice or receipt behind a row ─────────
+  //
+  // Purchases and payments share one endpoint shape, so these four are thin
+  // wrappers over the same two calls rather than four separate flows.
+
+  static async uploadPaymentProof(paymentId: number, file: File) {
+    const formData = new FormData();
+    formData.append("proof_document", file);
+    return this.postFormData(`/payments/${paymentId}/proof/`, formData);
+  }
+
+  static async deletePaymentProof(paymentId: number) {
+    return this.delete(`/payments/${paymentId}/proof/`);
+  }
+
+  static async uploadPurchaseProof(purchaseId: number, file: File) {
+    const formData = new FormData();
+    formData.append("proof_document", file);
+    return this.postFormData(`/purchases/${purchaseId}/proof/`, formData);
+  }
+
+  static async deletePurchaseProof(purchaseId: number) {
+    return this.delete(`/purchases/${purchaseId}/proof/`);
+  }
+
   static async getAccountSummary(accountId: string) {
     return this.get(`/banking/accounts/${accountId}/summary/`);
   }

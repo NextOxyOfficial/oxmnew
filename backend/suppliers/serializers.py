@@ -5,15 +5,21 @@ from .models import Supplier, Purchase, Payment
 class SupplierSerializer(serializers.ModelSerializer):
     total_orders = serializers.ReadOnlyField()
     total_amount = serializers.ReadOnlyField()
+    total_paid = serializers.ReadOnlyField()
+    #: Signed: positive = still owed to the supplier, negative = paid ahead.
+    balance = serializers.ReadOnlyField()
 
     class Meta:
         model = Supplier
         fields = [
-            'id', 'name', 'address', 'phone', 'email', 'website', 
-            'contact_person', 'notes', 'is_active', 'total_orders', 
-            'total_amount', 'created_at', 'updated_at'
+            'id', 'name', 'address', 'phone', 'email', 'website',
+            'contact_person', 'notes', 'is_active', 'total_orders',
+            'total_amount', 'total_paid', 'balance', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'total_orders', 'total_amount']
+        read_only_fields = [
+            'id', 'created_at', 'updated_at', 'total_orders', 'total_amount',
+            'total_paid', 'balance',
+        ]
 
     def create(self, validated_data):
         # Get the current user from the request context

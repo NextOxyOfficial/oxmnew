@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { CreditCard, Pencil, ShoppingCart, Trash2 } from "lucide-react";
+import { RowAction, RowActions } from "@/components/ui/RowAction";
 
 interface Supplier {
   id: number;
@@ -16,6 +18,9 @@ interface Supplier {
   is_active: boolean;
   total_orders: number;
   total_amount: number;
+  total_paid?: number;
+  /** Signed: positive = still owed to the supplier, negative = paid ahead. */
+  balance?: number;
 }
 
 interface SuppliersTabProps {
@@ -68,7 +73,6 @@ export default function SuppliersTab({
   totalCount = 0,
   onLoadMore,
 }: SuppliersTabProps) {
-  const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
   const [searchInput, setSearchInput] = useState(""); // Immediate input
   const [searchTerm, setSearchTerm] = useState(""); // Debounced search
 
@@ -80,18 +84,6 @@ export default function SuppliersTab({
 
     return () => clearTimeout(debounceTimer);
   }, [searchInput]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (activeDropdown !== null) {
-        setActiveDropdown(null);
-      }
-    };
-
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, [activeDropdown]);
 
   // Filter suppliers based on search term
   const filteredSuppliers = suppliers.filter((supplier) => {
@@ -285,16 +277,18 @@ export default function SuppliersTab({
             <tr>
               <th>সাপ্লায়ার</th>
               <th>যোগাযোগ</th>
-              <th className="cell-num">মোট অর্ডার</th>
-              <th className="cell-num">মোট টাকা</th>
+              <th className="cell-num">অর্ডার</th>
+              <th className="cell-num">কেনা হয়েছে</th>
+              <th className="cell-num">দেওয়া হয়েছে</th>
+              <th className="cell-num">পাওনা / অগ্রিম</th>
               <th>অবস্থা</th>
-              <th></th>
+              <th className="text-right">কাজ</th>
             </tr>
           </thead>
           <tbody>
             {filteredSuppliers.length === 0 ? (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={8}>
                   <div className="empty">
                     {searchTerm
                       ? `“${searchTerm}” দিয়ে কোনো সাপ্লায়ার পাওয়া যায়নি`
@@ -351,143 +345,74 @@ export default function SuppliersTab({
                     {formatCurrency(supplier.total_amount)}
                   </td>
 
+                  <td className="cell-num text-slate-600">
+                    {formatCurrency(supplier.total_paid ?? 0)}
+                  </td>
+
+                  {/* Bought minus paid, as one signed number. Positive is
+                      money the shop still owes; negative means it paid ahead
+                      and has credit sitting with the supplier. Showing them in
+                      one column keeps the two from ever disagreeing. */}
+                  <td className="cell-num">
+                    {(() => {
+                      const balance = supplier.balance ?? 0;
+                      if (Math.abs(balance) < 0.005) {
+                        return <span className="text-slate-400">মিলে গেছে</span>;
+                      }
+                      const owed = balance > 0;
+                      return (
+                        <span
+                          className={`inline-flex flex-col items-end ${
+                            owed ? "text-rose-600" : "text-emerald-600"
+                          }`}
+                        >
+                          <span className="font-semibold">
+                            {formatCurrency(Math.abs(balance))}
+                          </span>
+                          <span className="text-[11px] font-normal opacity-80">
+                            {owed ? "দিতে হবে" : "অগ্রিম দেওয়া"}
+                          </span>
+                        </span>
+                      );
+                    })()}
+                  </td>
+
                   <td>
                     <span
                       className={`badge ${
                         supplier.is_active ? "badge-success" : "badge-muted"
                       }`}
                     >
-                      {supplier.is_active ? "Active" : "Inactive"}
+                      {supplier.is_active ? "চালু" : "বন্ধ"}
                     </span>
                   </td>
 
-                  <td className="text-right">
-                    <div className="relative inline-block text-left">
-                      <button
-                        type="button"
-                        aria-label="আরও কাজ"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveDropdown(
-                            activeDropdown === supplier.id ? null : supplier.id
-                          );
-                        }}
-                        className="text-slate-500 hover:text-cyan-600"
-                      >
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 5v.01M12 12v.01M12 19v.01"
-                          />
-                        </svg>
-                      </button>
-
-                      {/* Dropdown menu */}
-                      {activeDropdown === supplier.id && (
-                        <div className="absolute right-0 top-6 z-10 w-48 rounded-lg border border-slate-200 bg-white py-1 text-left shadow-lg">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onCreatePurchase(supplier);
-                              setActiveDropdown(null);
-                            }}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                              />
-                            </svg>
-                            নতুন কেনাকাটা
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onCreatePayment(supplier);
-                              setActiveDropdown(null);
-                            }}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                              />
-                            </svg>
-                            পেমেন্ট করুন
-                          </button>
-                          <div className="my-1 border-t border-slate-200"></div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onEditSupplier(supplier);
-                              setActiveDropdown(null);
-                            }}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                            এডিট করুন
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onDeleteSupplier(supplier);
-                              setActiveDropdown(null);
-                            }}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                            ডিলিট করুন
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                  <td>
+                    <RowActions>
+                      <RowAction
+                        icon={ShoppingCart}
+                        label="নতুন কেনাকাটা"
+                        tone="primary"
+                        onClick={() => onCreatePurchase(supplier)}
+                      />
+                      <RowAction
+                        icon={CreditCard}
+                        label="পেমেন্ট করুন"
+                        tone="primary"
+                        onClick={() => onCreatePayment(supplier)}
+                      />
+                      <RowAction
+                        icon={Pencil}
+                        label="এডিট করুন"
+                        onClick={() => onEditSupplier(supplier)}
+                      />
+                      <RowAction
+                        icon={Trash2}
+                        label="ডিলিট করুন"
+                        tone="danger"
+                        onClick={() => onDeleteSupplier(supplier)}
+                      />
+                    </RowActions>
                   </td>
                 </tr>
               ))

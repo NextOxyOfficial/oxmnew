@@ -38,6 +38,24 @@ class Supplier(models.Model):
             total=Sum('amount')
         )['total'] or 0
 
+    @property
+    def total_paid(self):
+        """What has actually been handed over, cancelled payments excluded."""
+        return self.payments.filter(is_active=True).exclude(
+            status='cancelled'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+    @property
+    def balance(self):
+        """Bought minus paid.
+
+        Positive means the shop still owes the supplier (দেনা); negative means
+        the shop has paid ahead (অগ্রিম). One signed number rather than two
+        fields, because a supplier is never both at once and two fields would
+        eventually disagree with each other.
+        """
+        return (self.total_amount or 0) - (self.total_paid or 0)
+
 
 class Purchase(models.Model):
     STATUS_CHOICES = [

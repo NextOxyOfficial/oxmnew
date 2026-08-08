@@ -2,9 +2,9 @@
 
 import { sumBy } from "@/lib/money";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
+import FilterSelect from "@/components/ui/FilterSelect";
 import {
-  ChevronDown,
   FileSpreadsheet,
   FileText,
   ImageIcon,
@@ -71,32 +71,12 @@ export default function PurchaseHistoryTab({
   onUpdatePurchase,
   onDeletePurchase,
 }: PurchaseHistoryTabProps) {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [editingPurchaseId, setEditingPurchaseId] = useState<number | null>(
     null
   );
   const [updating, setUpdating] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const filteredSuppliers = getUniqueSuppliers().filter((supplier) =>
-    supplier.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsDropdownOpen(false);
-        setSearchTerm("");
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   // Unknown statuses fall back to the colour hint the parent supplies.
   const badgeClassFor = (status: string): string =>
@@ -105,8 +85,6 @@ export default function PurchaseHistoryTab({
 
   const handleSupplierSelect = (supplier: string) => {
     setSelectedSupplier(supplier);
-    setIsDropdownOpen(false);
-    setSearchTerm("");
   };
 
   const handleStatusUpdate = async (
@@ -292,69 +270,14 @@ export default function PurchaseHistoryTab({
 
       <div className="plane-section">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full sm:w-auto" ref={dropdownRef}>
-            <button
-              type="button"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="btn btn-ghost w-full sm:w-56 justify-between"
-            >
-              <span className="truncate">
-                {selectedSupplier === "all" ? "সব সাপ্লায়ার" : selectedSupplier}
-              </span>
-              <ChevronDown
-                className={`h-4 w-4 transition-transform ${
-                  isDropdownOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 z-20 max-h-64 overflow-hidden rounded-lg border border-slate-200 bg-white">
-                <div className="p-2 border-b border-slate-200">
-                  <input
-                    type="text"
-                    placeholder="সাপ্লায়ার খুঁজুন…"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="input"
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-48 overflow-y-auto">
-                  <button
-                    type="button"
-                    onClick={() => handleSupplierSelect("all")}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 truncate ${
-                      selectedSupplier === "all"
-                        ? "text-cyan-600"
-                        : "text-slate-600"
-                    }`}
-                  >
-                    সব সাপ্লায়ার
-                  </button>
-                  {filteredSuppliers.map((supplier) => (
-                    <button
-                      type="button"
-                      key={supplier}
-                      onClick={() => handleSupplierSelect(supplier)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-50 truncate ${
-                        selectedSupplier === supplier
-                          ? "text-cyan-600"
-                          : "text-slate-600"
-                      }`}
-                    >
-                      {supplier}
-                    </button>
-                  ))}
-                  {filteredSuppliers.length === 0 && searchTerm && (
-                    <div className="px-3 py-2 text-sm text-slate-500">
-                      কিছু পাওয়া যায়নি
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <FilterSelect
+            value={selectedSupplier}
+            options={getUniqueSuppliers()}
+            onChange={handleSupplierSelect}
+            allLabel="সব সাপ্লায়ার"
+            placeholder="সাপ্লায়ার খুঁজুন…"
+            label="সাপ্লায়ার বেছে নিন"
+          />
 
           {selectedSupplier !== "all" && (
             <button

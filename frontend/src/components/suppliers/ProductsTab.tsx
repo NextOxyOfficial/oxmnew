@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import FilterSelect from "@/components/ui/FilterSelect";
 import { Product as BackendProduct } from '@/types/product';
 import { ApiService } from '@/lib/api';
 
@@ -29,15 +30,12 @@ export default function ProductsTab({
   formatCurrency,
   formatDate
 }: ProductsTabProps) {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedProductSupplier, setSelectedProductSupplier] = useState<string>('all');
   const [products, setProducts] = useState<BackendProduct[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Pagination state for server-side pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -135,13 +133,6 @@ export default function ProductsTab({
   }, [selectedProductSupplier, currentPage, suppliers]);
 
   // Get unique suppliers from products that have suppliers (legacy - not used with server pagination)
-  const getUniqueSuppliersFromProducts = (): string[] => {
-    const supplierNames = products
-      .filter(product => product.supplier_name)
-      .map(product => product.supplier_name!)
-      .filter(Boolean);
-    return [...new Set(supplierNames)];
-  };
 
   // Get current page products (server-side pagination - products are already filtered)
   const getCurrentPageProducts = (): BackendProduct[] => {
@@ -158,27 +149,10 @@ export default function ProductsTab({
   };
 
   // Use all suppliers from the suppliers list instead of just those with products
-  const filteredSuppliers = suppliers
-    .filter(supplier => supplier.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .map(supplier => supplier.name);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-        setSearchTerm('');
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const handleSupplierSelect = (supplier: string) => {
     setSelectedProductSupplier(supplier);
     setCurrentPage(1); // Reset to first page when supplier changes
-    setIsDropdownOpen(false);
-    setSearchTerm('');
   };
 
   return (
@@ -186,63 +160,14 @@ export default function ProductsTab({
       {/* Supplier filter */}
       <div className="plane-section">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full sm:w-auto" ref={dropdownRef}>
-            <button
-              type="button"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="btn btn-ghost w-full sm:w-auto sm:min-w-[200px] justify-between"
-            >
-              <span className="truncate">
-                {selectedProductSupplier === 'all' ? 'সব সাপ্লায়ার' : selectedProductSupplier}
-              </span>
-              <svg className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 z-10 max-h-64 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
-                <div className="border-b border-slate-200 p-2">
-                  <input
-                    type="text"
-                    placeholder="সাপ্লায়ার খুঁজুন"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="input"
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-48 overflow-y-auto">
-                  <button
-                    type="button"
-                    onClick={() => handleSupplierSelect('all')}
-                    className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-100 ${
-                      selectedProductSupplier === 'all' ? 'bg-slate-100 text-cyan-600' : 'text-slate-600'
-                    }`}
-                  >
-                    সব সাপ্লায়ার
-                  </button>
-                  {filteredSuppliers.map((supplier) => (
-                    <button
-                      key={supplier}
-                      type="button"
-                      onClick={() => handleSupplierSelect(supplier)}
-                      className={`w-full truncate px-3 py-2 text-left text-sm hover:bg-slate-100 ${
-                        selectedProductSupplier === supplier ? 'bg-slate-100 text-cyan-600' : 'text-slate-600'
-                      }`}
-                    >
-                      {supplier}
-                    </button>
-                  ))}
-                  {filteredSuppliers.length === 0 && searchTerm && (
-                    <div className="px-3 py-2 text-sm text-slate-500">
-                      কিছু পাওয়া যায়নি
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <FilterSelect
+            value={selectedProductSupplier}
+            options={suppliers.map((supplier) => supplier.name)}
+            onChange={handleSupplierSelect}
+            allLabel="সব সাপ্লায়ার"
+            placeholder="সাপ্লায়ার খুঁজুন…"
+            label="সাপ্লায়ার বেছে নিন"
+          />
 
           {selectedProductSupplier !== 'all' && (
             <button
