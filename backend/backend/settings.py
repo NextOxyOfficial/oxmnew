@@ -465,7 +465,11 @@ SECURE_FILE_UPLOAD = True
 
 # WhiteNoise configuration for static files in production
 if not DEBUG:
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    # Subclassed so a path missing from the manifest degrades to an unhashed
+    # URL instead of raising. Jazzmin's base.html runs {% static %} over the
+    # bootswatch *directory*, which no manifest can contain — with the stock
+    # storage that ValueError took the whole admin down with a 500.
+    STATICFILES_STORAGE = "core.storage.ForgivingManifestStaticFilesStorage"
     # Add cache control for static files
     WHITENOISE_MAX_AGE = 31536000  # 1 year
     WHITENOISE_SKIP_COMPRESS_EXTENSIONS = [
