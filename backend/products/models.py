@@ -231,15 +231,23 @@ class ProductVariant(models.Model):
 
     @property
     def profit(self):
-        """Calculate profit for this variant"""
+        """Profit per unit, or None while a price is still unset.
+
+        Both columns are non-null in the database, so a saved variant always
+        has them — but the admin's "add variant" form renders this property
+        against an empty instance before anything is typed, and subtracting
+        None from None raised TypeError and returned 500 for the whole page.
+        """
+        if self.sell_price is None or self.buy_price is None:
+            return None
         return self.sell_price - self.buy_price
 
     @property
     def profit_margin(self):
-        """Calculate profit margin percentage for this variant"""
-        if self.sell_price > 0:
-            return ((self.sell_price - self.buy_price) / self.sell_price) * 100
-        return 0
+        """Margin as a percentage; 0 when there is no sell price to divide by."""
+        if not self.sell_price or self.buy_price is None:
+            return 0
+        return ((self.sell_price - self.buy_price) / self.sell_price) * 100
 
     @property
     def weight_display(self):
