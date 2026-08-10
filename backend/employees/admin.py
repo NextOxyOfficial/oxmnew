@@ -193,7 +193,10 @@ class EmployeeAdmin(admin.ModelAdmin):
     def salary_display(self, obj):
         if obj.salary is None:
             return "—"
-        return format_html('<span class="oxm-num">{:,.0f}</span>', obj.salary)
+        # Format the number BEFORE handing it over: format_html escapes each
+        # argument into a SafeString first, and a SafeString has no numeric
+        # __format__, so a "{:,.0f}" spec raises ValueError and 500s the page.
+        return format_html('<span class="oxm-num">{}</span>', f"{obj.salary:,.0f}")
 
     @admin.display(description="Tasks")
     def task_progress(self, obj):

@@ -56,7 +56,13 @@ class OnlineProductAdmin(admin.ModelAdmin):
         if obj.product and obj.product.buy_price is not None and obj.product.sell_price is not None:
             profit = obj.product.sell_price - obj.product.buy_price
             color = "green" if profit > 0 else "red" if profit < 0 else "orange"
-            return format_html('<span style="color: {}; font-weight: bold;">${:.2f}</span>', color, profit)
+            # Formatted before the call: format_html escapes arguments into
+            # SafeStrings, which have no numeric __format__, so a "{:.2f}" spec
+            # raises ValueError and 500s this admin page.
+            return format_html(
+                '<span style="color: {}; font-weight: bold;">{}</span>',
+                color, f"${profit:.2f}",
+            )
         return format_html('<span style="color: gray;">-</span>')
     profit_display.short_description = "Profit/Unit"
     
@@ -66,7 +72,10 @@ class OnlineProductAdmin(admin.ModelAdmin):
             profit = obj.product.sell_price - obj.product.buy_price
             margin = (profit / obj.product.sell_price) * 100
             color = "green" if margin > 20 else "orange" if margin > 10 else "red"
-            return format_html('<span style="color: {}; font-weight: bold;">{:.1f}%</span>', color, margin)
+            return format_html(
+                '<span style="color: {}; font-weight: bold;">{}</span>',
+                color, f"{margin:.1f}%",
+            )
         return format_html('<span style="color: gray;">-</span>')
     profit_margin_display.short_description = "Profit Margin"
     
