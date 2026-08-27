@@ -49,6 +49,12 @@ function PanelBar({ label }: { label: string }) {
       <span className="ml-2 truncate text-[11px] font-medium text-slate-400">
         {label}
       </span>
+      {/* The rows below are made-up so the screen has something to show. The
+          names look like customers and staff, so the panel says outright that
+          they are not. */}
+      <span className="ml-auto shrink-0 rounded bg-slate-200/70 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+        নমুনা
+      </span>
     </div>
   );
 }

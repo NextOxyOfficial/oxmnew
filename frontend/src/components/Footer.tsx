@@ -8,7 +8,9 @@ export default function Footer() {
     <footer className="border-t border-slate-200 bg-white py-4">
       <div className="mx-auto max-w-7xl px-2">
         <div className="flex flex-col items-center gap-2 text-center text-[13px] text-slate-500 sm:flex-row sm:justify-between sm:text-left">
-          <div>© 2025 OxyManager — সব অধিকার সংরক্ষিত।</div>
+          {/* Derived, not typed: the hard-coded 2025 was already a year out of
+              date beside the homepage's own footer. */}
+          <div>© {new Date().getFullYear()} OxyManager — সব অধিকার সংরক্ষিত।</div>
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1">
             <Link href="/privacy" className="hover:text-slate-900 transition-colors">
               প্রাইভেসি পলিসি

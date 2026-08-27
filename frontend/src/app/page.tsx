@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Hero from '@/components/home/Hero';
 import FeatureRows from '@/components/home/FeatureRows';
 import Reveal from '@/components/home/Reveal';
-import TestimonialSlider from '@/components/home/TestimonialSlider';
 import {
   AdvancedSection,
   ComparisonSection,
@@ -25,13 +24,11 @@ import {
   Shield,
   CheckCircle,
   ArrowRight,
-  Star,
   TrendingUp,
   Clock,
   Globe,
   Smartphone,
   ChevronRight,
-  Phone,
   Mail,
   Menu,
   X,
@@ -41,7 +38,6 @@ export default function Home() {
   const { isAuthenticated, loading, logout } = useAuth();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeTestimonial, setActiveTestimonial] = useState(0);
 
   const features = [
     {
@@ -76,32 +72,15 @@ export default function Home() {
     },
   ];
 
+  // Every figure here is checkable inside the product. The strip used to read
+  // "10,000+ Active ব্যবসা · ৳11 কোটি+ লেনদেন · 99.9% আপটাইম" — none of which
+  // was true, and the first customer to ask would have been owed an answer we
+  // did not have.
   const stats = [
-    { value: '10,000+', label: 'Active ব্যবসা' },
-    { value: '৳11 কোটি+', label: 'লেনদেন হয়েছে' },
-    { value: '99.9%', label: 'আপটাইম' },
-    { value: '24/7', label: 'সাপোর্ট' },
-  ];
-
-  const testimonials = [
-    {
-      name: 'রহিম উদ্দিন',
-      business: 'ফ্যাশন হাউস বিডি',
-      quote: 'OxyManager আসার পর কাপড়ের ব্যবসার হিসাব রাখা অনেক সহজ হয়ে গেছে। স্টক মেলানো নিয়ে আর ঝামেলা নেই।',
-      rating: 5,
-    },
-    {
-      name: 'ফাতেমা আক্তার',
-      business: 'গ্রোসারি মার্ট',
-      quote: 'এসএমএস সেন্টার দিয়ে পুরোনো কাস্টমারদের খবর দিই। এতে বিক্রি 40% বেড়েছে।',
-      rating: 5,
-    },
-    {
-      name: 'কামাল হোসেন',
-      business: 'ইলেকট্রনিকস প্লাস',
-      quote: 'অবশেষে এমন একটা সফটওয়্যার পেলাম যেটা আমাদের দেশের ব্যবসা বোঝে। বাকির খাতাটা তো জীবন বাঁচিয়ে দিয়েছে।',
-      rating: 5,
-    },
+    { value: '9', label: 'বিভাগ এক জায়গায়' },
+    { value: '37', label: 'আলাদা পারমিশন' },
+    { value: 'প্রতিদিন', label: 'ডেটার ব্যাকআপ' },
+    { value: '৳0', label: 'শুরু করতে' },
   ];
 
   const pricingPlans = [
@@ -158,13 +137,6 @@ export default function Home() {
       popular: false,
     },
   ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [testimonials.length]);
 
   return (
     <div className="min-h-screen overflow-x-clip text-slate-900">
@@ -251,7 +223,7 @@ export default function Home() {
               <a href="#industries" className="block py-2 text-sm text-slate-600 hover:text-slate-900">কাদের জন্য</a>
               <a href="#features" className="block py-2 text-sm text-slate-600 hover:text-slate-900">ফিচার</a>
               <a href="#pricing" className="block py-2 text-sm text-slate-600 hover:text-slate-900">দাম</a>
-              <a href="#testimonials" className="block py-2 text-sm text-slate-600 hover:text-slate-900">রিভিউ</a>
+              <a href="#story" className="block py-2 text-sm text-slate-600 hover:text-slate-900">কেন বানানো</a>
               <a href="#faq" className="block py-2 text-sm text-slate-600 hover:text-slate-900">প্রশ্ন-উত্তর</a>
               <div className="space-y-2 border-t border-slate-200 pt-3">
                 {isAuthenticated ? (
@@ -415,8 +387,13 @@ export default function Home() {
 
       <SafetySection />
 
-      {/* ── what people say ─────────────────────────────────────── */}
-      <section id="testimonials" className="relative overflow-hidden py-8 lg:py-10">
+      {/* ── why it exists ───────────────────────────────────────────
+          This slot used to hold four invented reviews with invented names.
+          A shop owner who asked to speak to "রহিম উদ্দিন" would have found
+          nobody, and the whole page would have gone with him. An honest
+          account of where the software came from is both true and a better
+          reason to trust it. */}
+      <section id="story" className="relative overflow-hidden py-8 lg:py-10">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_50%,transparent_100%)]"
@@ -425,17 +402,49 @@ export default function Home() {
           <Reveal>
             <div className="mb-8 text-center">
               <span className="mb-3 inline-block rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
-                রিভিউ
+                কেন বানানো
               </span>
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                10,000+ ব্যবসায়ীর
-                <span className="block text-cyan-600">ভরসা</span>
+                একটা আসল দোকানের হিসাব
+                <span className="block text-cyan-600">সামলাতে গিয়ে তৈরি</span>
               </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-slate-600">
+                OxyManager নতুন। বড় বড় সংখ্যা দেখিয়ে ভরসা কেনার চেষ্টা করব না —
+                বরং কী কী সত্যিই কাজ করে, সেটা নিজে চালিয়ে দেখুন।
+              </p>
             </div>
           </Reveal>
-          <Reveal delay={80}>
-            <TestimonialSlider />
-          </Reveal>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {[
+              {
+                title: 'মোটরবাইকের দোকান থেকে শুরু',
+                body:
+                  'ইঞ্জিন-চেসিস নম্বর ধরে প্রতিটা বাইক, কিস্তির তারিখ, পার্টসের স্টক — এই সমস্যাগুলো সামলাতে গিয়েই সফটওয়্যারটা তৈরি। তাই বাকির খাতা বা কিস্তির হিসাব পরে জোড়া লাগানো কিছু নয়।',
+              },
+              {
+                title: 'বিদেশি সফটওয়্যারের অনুবাদ নয়',
+                body:
+                  'বাকির খাতা, অগ্রিম বেতন, অফিস ভাড়া, এসএমএসে তাগাদা — এগুলো বাইরের সফটওয়্যারে থাকেই না। টাকার অঙ্ক লাখ-কোটিতে, মাস বাংলায়।',
+              },
+              {
+                title: 'যা দেখাই, যাচাই করা যায়',
+                body:
+                  'দিনের টার্গেট কেন এত, কোন খরচ কোথা থেকে এল — প্রতিটা সংখ্যার পেছনের তালিকা খুলে দেখা যায়। বিশ্বাস করতে বলি না, মিলিয়ে নিতে বলি।',
+              },
+            ].map((card, index) => (
+              <Reveal key={card.title} delay={index * 80}>
+                <div className="h-full rounded-2xl border border-slate-200 bg-white p-5">
+                  <h3 className="text-base font-semibold text-slate-900">
+                    {card.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    {card.body}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -535,7 +544,8 @@ export default function Home() {
             ব্যবসা বাড়ানোর জন্য তৈরি?
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-slate-600">
-            10,000+ ব্যবসায়ী এখন OxyManager ব্যবহার করছেন। ফ্রি অ্যাকাউন্ট খুলে আজই শুরু করুন।
+            ফ্রি অ্যাকাউন্টে 25টা প্রোডাক্ট পর্যন্ত রাখতে পারবেন — কার্ড লাগবে না।
+            পছন্দ হলে তখন প্রো নেবেন।
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link href="/auth/register" className="btn btn-primary w-full sm:w-auto">
@@ -583,15 +593,6 @@ export default function Home() {
               </p>
               <div className="space-y-2.5 text-sm">
                 <a
-                  href="tel:+8801234567890"
-                  className="flex items-center gap-2.5 transition-colors hover:text-white"
-                >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5">
-                    <Phone className="h-3.5 w-3.5" />
-                  </span>
-                  +880 1234-567890
-                </a>
-                <a
                   href="mailto:support@oxymanager.com"
                   className="flex items-center gap-2.5 transition-colors hover:text-white"
                 >
@@ -616,7 +617,7 @@ export default function Home() {
               {
                 heading: 'কোম্পানি',
                 links: [
-                  { label: 'রিভিউ', href: '#testimonials' },
+                  { label: 'কেন বানানো', href: '#story' },
                   { label: 'প্রশ্ন-উত্তর', href: '#faq' },
                   { label: 'যোগাযোগ', href: '#contact' },
                   { label: 'সাপোর্ট', href: 'mailto:support@oxymanager.com' },

@@ -82,6 +82,11 @@ function DashboardMock() {
           <span className="ml-2 truncate text-[11px] font-medium text-slate-400">
             oxymanager.com/dashboard
           </span>
+          {/* The figures in this mock are invented; say so rather than let a
+              visitor read them as somebody's real takings. */}
+          <span className="ml-auto shrink-0 rounded bg-slate-200/70 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+            নমুনা
+          </span>
         </div>
 
         <div className="space-y-3 p-4 sm:p-5">
@@ -235,26 +240,24 @@ export default function Hero() {
               )}
             </div>
 
-            <div className="mt-6 flex items-center justify-center gap-3 lg:justify-start">
-              <div className="flex -space-x-2">
-                {["bg-cyan-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500"].map(
-                  (tone, i) => (
-                    <span
-                      key={tone}
-                      className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white ${tone}`}
-                    >
-                      {["ম", "ক", "স", "র"][i]}
-                    </span>
-                  )
-                )}
-              </div>
-              <p className="text-sm text-slate-600">
-                <span className="inline-flex items-center gap-1 font-semibold text-slate-900">
-                  <BadgeCheck className="h-4 w-4 text-cyan-600" />
-                  10,000+
-                </span>{" "}
-                ব্যবসায়ী ব্যবহার করছেন
-              </p>
+            {/* This was a cluster of invented avatars over "10,000+ ব্যবসায়ী
+                ব্যবহার করছেন". Borrowed credibility is the easiest kind to
+                lose, so it says what is actually guaranteed instead — each of
+                these is something the product does today. */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 lg:justify-start">
+              {[
+                "প্রতিটা দোকানের হিসাব আলাদা",
+                "সব তথ্য HTTPS-এ",
+                "প্রতিদিন ব্যাকআপ",
+              ].map((item) => (
+                <span
+                  key={item}
+                  className="inline-flex items-center gap-1.5 text-sm text-slate-600"
+                >
+                  <BadgeCheck className="h-4 w-4 shrink-0 text-cyan-600" />
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
 
