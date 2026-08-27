@@ -11,6 +11,12 @@ export interface Customer {
 }
 
 export interface Order {
+  /**
+   * Which of this order's products the current search matched. Empty unless a
+   * search is running — a result list is only readable if each row says why it
+   * is there.
+   */
+  matched_items?: string[];
   id: number;
   order_number?: string;
   status?:

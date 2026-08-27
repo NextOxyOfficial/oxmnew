@@ -101,11 +101,16 @@ class OrderSerializer(serializers.ModelSerializer):
     unit_price = serializers.SerializerMethodField()
     buy_price = serializers.SerializerMethodField()
     sale_date = serializers.DateTimeField(source="created_at", read_only=True)
+    #: Which of this order's products the search hit. Empty unless a search is
+    #: running — a result list is only readable if each row says why it is
+    #: there, otherwise "40 orders matched" is just 40 rows to open one by one.
+    matched_items = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             "id",
+            "matched_items",
             "order_number",
             "customer",
             "customer_name",
@@ -190,6 +195,12 @@ class OrderSerializer(serializers.ModelSerializer):
         first_item = obj.items.first()
         return first_item.buy_price if first_item else 0
     
+    def get_matched_items(self, obj):
+        from orders.search import matched_item_names
+
+        terms = self.context.get("search_terms") or []
+        return matched_item_names(obj, terms)
+
     def get_employee(self, obj):
         """Get employee details for frontend display"""
         if obj.employee:

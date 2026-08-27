@@ -56,6 +56,35 @@ class SalaryRecordSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
     def get_overtime_pay(self, obj):
         return float(obj.overtime_hours * obj.overtime_rate)
 
+    def validate(self, attrs):
+        """Refuse a second record for a month that already has one.
+
+        The model has unique_together on (employee, month, year), but DRF could
+        not enforce it: `employee` is read-only and supplied by the view at
+        save() time, so it never reached the built-in UniqueTogetherValidator.
+        The constraint fired in Postgres instead and the shopkeeper got a 500
+        with no explanation — the month simply refused to save.
+        """
+        employee = self.context.get("employee") or getattr(
+            self.instance, "employee", None
+        )
+        if employee is None:
+            return attrs
+
+        month = attrs.get("month", getattr(self.instance, "month", None))
+        year = attrs.get("year", getattr(self.instance, "year", None))
+        if month is None or year is None:
+            return attrs
+
+        clash = SalaryRecord.objects.filter(employee=employee, month=month, year=year)
+        if self.instance is not None:
+            clash = clash.exclude(pk=self.instance.pk)
+        if clash.exists():
+            raise serializers.ValidationError(
+                {"month": f"{month} {year} মাসের বেতনের হিসাব আগেই যোগ করা আছে।"}
+            )
+        return attrs
+
 
 class TaskSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
     owned_relations = ("employee",)

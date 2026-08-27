@@ -60,6 +60,13 @@ export default function OrdersPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [sortBy, setSortBy] = useState("date");
+  /**
+   * "relevance" is a real sort value, not a derived flag. It has to be, because
+   * a separate effect syncs sortBy from the URL — anything derived from
+   * `searchParams` alongside it could disagree with what the fetch was about
+   * to send, which is how an explicit sort ended up being ignored.
+   */
+  const usingRelevance = sortBy === "relevance";
   const [isNavigating, setIsNavigating] = useState(false);
   const [showInvoicePopup, setShowInvoicePopup] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -290,7 +297,9 @@ export default function OrdersPage() {
     const urlPageSize = sizeParam ? parseInt(sizeParam, 10) : 10;
     const urlSearch = searchParam || '';
     const urlCustomer = customerParam || 'all';
-    const urlSort = sortParam || 'date';
+    // A search with no sort chosen means best-match. Defaulting to 'date' here
+    // is what kept overwriting it and pushing the newest matches to the top.
+    const urlSort = sortParam || (urlSearch ? 'relevance' : 'date');
     
     setCurrentPage(urlPage);
     setPageSize(urlPageSize);
@@ -441,8 +450,15 @@ export default function OrdersPage() {
         params.customer = filterCustomer;
       }
 
-      // Add ordering
-      if (sortBy) {
+      // Add ordering.
+      //
+      // Sending nothing is what asks the API to rank by match score. The
+      // default `-sale_date` used to go out on every request, silently undoing
+      // that ranking so a search returned the newest matches rather than the
+      // best ones. So: searching with no sort deliberately chosen means
+      // best-match; choosing one from the dropdown writes `sort` to the URL
+      // and takes over from there.
+      if (sortBy && !usingRelevance) {
         switch (sortBy) {
           case "date":
             params.ordering = "-sale_date";
@@ -658,16 +674,20 @@ export default function OrdersPage() {
     fetchOverallStats();
   }, [fetchUserProfile, fetchOverallStats]);
 
-  const handlePageChange = useCallback((page: number) => {
+  // Plain functions, not memoised: every one of these calls a URL updater
+  // that reads `searchParams`, and an empty dep array freezes that at the
+  // first render — paging while a search was running rewrote the URL without
+  // it and silently dropped the search.
+  const handlePageChange = (page: number) => {
     setCurrentPage(page);
     updateOrdersUrlParams({ page });
-  }, []);
+  };
 
-  const handlePageSizeChange = useCallback((newPageSize: number) => {
+  const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentPage(1); // Reset to first page when changing page size
     updateOrdersUrlParams({ page: 1, pageSize: newPageSize });
-  }, []);
+  };
 
   /**
    * Sales report for whatever range is on screen.
@@ -1052,16 +1072,21 @@ export default function OrdersPage() {
     // URL update is handled in debounced effect
   }, []);
 
-  const handleFilterChange = useCallback((value: string) => {
+  // Same stale-closure trap as handleSortChange below — see the note there.
+  const handleFilterChange = (value: string) => {
     setFilterCustomer(value);
     setCurrentPage(1); // Reset to first page when filtering
     updateOrdersUrlParams({ customer: value, page: 1 });
-  }, []);
+  };
 
-  const handleSortChange = useCallback((value: string) => {
+  // NOT useCallback with an empty dep array: `updateOrdersUrlParams` reads
+  // `searchParams`, so a memoised handler kept the *first* render's empty
+  // query string and rewrote the URL from that — picking a sort silently threw
+  // away the search that was running.
+  const handleSortChange = (value: string) => {
     setSortBy(value);
     updateOrdersUrlParams({ sort: value });
-  }, []);
+  };
 
   // Product tab handlers
   const handleProductSearchChange = useCallback((value: string) => {
@@ -1069,11 +1094,11 @@ export default function OrdersPage() {
     // URL update is handled in debounced effect
   }, []);
 
-  const handleProductSortChange = useCallback((value: string) => {
+  const handleProductSortChange = (value: string) => {
     setProductSortBy(value);
     setProductCurrentPage(1); // Reset to first page when sorting
     updateProductsUrlParams({ sort: value, page: 1 });
-  }, []);
+  };
 
   const handleProductDateFilterChange = useCallback((filter: string) => {
     setProductDateFilter(filter);
@@ -1115,16 +1140,16 @@ export default function OrdersPage() {
   }, [router]);
 
   // Product pagination handlers
-  const handleProductPageChange = useCallback((page: number) => {
+  const handleProductPageChange = (page: number) => {
     setProductCurrentPage(page);
     updateProductsUrlParams({ page });
-  }, []);
+  };
 
-  const handleProductPageSizeChange = useCallback((newPageSize: number) => {
+  const handleProductPageSizeChange = (newPageSize: number) => {
     setProductPageSize(newPageSize);
     setProductCurrentPage(1); // Reset to first page when changing page size
     updateProductsUrlParams({ page: 1, pageSize: newPageSize });
-  }, []);
+  };
 
   // Excel export functionality
   const exportToExcel = useCallback(async () => {

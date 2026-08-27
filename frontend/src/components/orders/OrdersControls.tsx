@@ -97,7 +97,7 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
         <div className="relative w-full sm:max-w-md">
           <input
             type="text"
-            placeholder="অর্ডার বা কাস্টমার খুঁজুন (#110 দিলে অর্ডার আইডি, #0010 দিলে অর্ডার নম্বর)"
+            placeholder="প্রোডাক্ট, কাস্টমার বা অর্ডার খুঁজুন — কয়েকটা শব্দ দিলেও চলবে"
             value={searchInput}
             onChange={(e) => onSearchChange(e.target.value)}
             className={`input pr-16 ${
@@ -210,6 +210,12 @@ const OrdersControls: React.FC<OrdersControlsProps> = ({
           className="select sm:w-auto"
           aria-label="সাজানোর নিয়ম"
         >
+          {/* Only meaningful while something is being searched for. */}
+          {searchInput.trim() && (
+            <option value="relevance">
+              {isMobile ? "সবচেয়ে মিল" : "সবচেয়ে বেশি মিল আগে"}
+            </option>
+          )}
           <option value="date">{isMobile ? "তারিখ" : "তারিখ (নতুন আগে)"}</option>
           <option value="product">{isMobile ? "প্রোডাক্ট" : "প্রোডাক্টের নাম"}</option>
           <option value="customer">

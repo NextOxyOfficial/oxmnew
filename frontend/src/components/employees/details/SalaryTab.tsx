@@ -5,6 +5,7 @@ import { Trash2, X } from "lucide-react";
 import { SalaryRecord, CreateSalaryRecordData } from "@/types/employee";
 import { useCurrencyFormatter } from "@/contexts/CurrencyContext";
 import { ApiService } from "@/lib/api";
+import { employeeAPI } from "@/lib/employeeAPI";
 
 interface SalaryTabProps {
   salaryRecords: SalaryRecord[];
@@ -109,6 +110,7 @@ export default function SalaryTab({ salaryRecords, employeeId, onSalaryRecordsUp
   const [salaryToDelete, setSalaryToDelete] = useState<number | null>(null);
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
   const [isDeletingSalary, setIsDeletingSalary] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [newTransaction, setNewTransaction] = useState({
     month: "",
@@ -148,14 +150,29 @@ export default function SalaryTab({ salaryRecords, employeeId, onSalaryRecordsUp
   };
 
   const handleAddTransaction = async () => {
-    if (!newTransaction.month || !newTransaction.year || !newTransaction.base_salary) return;
+    if (!newTransaction.month || !newTransaction.year || !newTransaction.base_salary)
+      return;
 
     setIsAddingTransaction(true);
+    setSaveError(null);
     try {
-      // API call would go here
-      console.log("Adding salary transaction:", newTransaction);
-      // const createdRecord = await employeeAPI.createSalaryRecord(employeeId, newTransaction);
-      // onSalaryRecordsUpdate([...salaryRecords, createdRecord]);
+      // Blank optional fields have to become 0, not "": the API rejects an
+      // empty string for a decimal, which is why the form appeared to do
+      // nothing at all.
+      const num = (value: string) => Number(value || 0);
+      const created = await employeeAPI.createSalaryRecord(Number(employeeId), {
+        month: newTransaction.month,
+        year: num(newTransaction.year),
+        base_salary: num(newTransaction.base_salary),
+        overtime_hours: num(newTransaction.overtime_hours),
+        overtime_rate: num(newTransaction.overtime_rate),
+        bonuses: num(newTransaction.bonuses),
+        deductions: num(newTransaction.deductions),
+      });
+
+      onSalaryRecordsUpdate([created, ...salaryRecords]);
+      // The ledger above counts these records, so it has to be re-read.
+      await loadPayroll();
 
       setShowAddTransactionModal(false);
       setNewTransaction({
@@ -168,7 +185,17 @@ export default function SalaryTab({ salaryRecords, employeeId, onSalaryRecordsUp
         deductions: "",
       });
     } catch (error) {
-      console.error("Error adding salary transaction:", error);
+      // Show what the server said. It already answers in Bangla and names the
+      // actual problem ("May 2026 মাসের হিসাব আগেই যোগ করা আছে"), which beats
+      // any guess made here. The field prefix DRF adds is stripped — the user
+      // does not need to know the field is called `month`.
+      const raw = String((error as { message?: string })?.message ?? "").trim();
+      const message = raw.replace(/^[a-z_]+:\s*/i, "");
+      setSaveError(
+        message && !/^HTTP error/i.test(message)
+          ? message
+          : "সেভ করা গেল না। সংখ্যাগুলো ঠিক আছে কিনা দেখে আবার চেষ্টা করুন।"
+      );
     } finally {
       setIsAddingTransaction(false);
     }
@@ -179,10 +206,9 @@ export default function SalaryTab({ salaryRecords, employeeId, onSalaryRecordsUp
 
     setIsDeletingSalary(true);
     try {
-      // API call would go here
-      console.log("Deleting salary record:", salaryToDelete);
-      // await employeeAPI.deleteSalaryRecord(salaryToDelete);
-      // onSalaryRecordsUpdate(salaryRecords.filter(r => r.id !== salaryToDelete));
+      await employeeAPI.deleteSalaryRecord(salaryToDelete);
+      onSalaryRecordsUpdate(salaryRecords.filter((r) => r.id !== salaryToDelete));
+      await loadPayroll();
 
       setShowSalaryDeleteModal(false);
       setSalaryToDelete(null);
@@ -568,10 +594,22 @@ export default function SalaryTab({ salaryRecords, employeeId, onSalaryRecordsUp
               </div>
             </div>
 
+            {/* A failed save used to leave the form sitting there looking
+                fine, because nothing was ever sent. Whatever goes wrong now
+                has to say so here. */}
+            {saveError && (
+              <div className="mx-5 mb-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                {saveError}
+              </div>
+            )}
+
             {/* Modal Footer */}
             <div className="modal-foot">
               <button
-                onClick={() => setShowAddTransactionModal(false)}
+                onClick={() => {
+                  setSaveError(null);
+                  setShowAddTransactionModal(false);
+                }}
                 className="btn btn-ghost"
               >
                 বাতিল

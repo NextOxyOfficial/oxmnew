@@ -14,6 +14,7 @@ from .serializers import (
     OrderSerializer,
     OrderUpdateSerializer,
 )
+from orders import search
 from django.db.models import (
     Sum,
     Max,
@@ -54,17 +55,24 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     serializer_class = OrderSerializer
     pagination_class = OrdersPagination
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = [
-        "id",
-        "customer_name",
-        "customer_phone",
-        "items__product__name",
-        "order_number",
-        "notes",
-    ]
+    # `search` is handled in get_queryset by orders.search, which ranks by
+    # relevance and reports which products matched. SearchFilter cannot do
+    # either, and running both would filter the same param twice.
+    # OrderingFilter is deliberately absent: get_queryset already handles the
+    # `ordering` param itself, and the filter's default (`ordering` below) was
+    # re-sorting relevance results back into date order, silently undoing the
+    # ranking.
+    filter_backends = [DjangoFilterBackend]
     ordering_fields = ["created_at", "customer_name", "total_amount"]
     ordering = ["-created_at"]
+
+    def get_serializer_context(self):
+        """Hand the parsed terms down so each row can say what it matched."""
+        context = super().get_serializer_context()
+        context["search_terms"] = search.parse_terms(
+            self.request.query_params.get("search")
+        )
+        return context
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -182,17 +190,25 @@ class OrderViewSet(viewsets.ModelViewSet):
                 )
 
         # Handle custom date range
-        elif start_date and end_date:
+        elif start_date or end_date:
+            # Either end on its own is a valid range. Requiring both meant that
+            # picking only "from" or only "to" filtered nothing at all, silently
+            # — the list looked unfiltered and the user could not tell why.
             try:
-                start_datetime = timezone.make_aware(
-                    datetime.strptime(start_date, "%Y-%m-%d")
-                )
-                end_datetime = timezone.make_aware(
-                    datetime.strptime(end_date + " 23:59:59", "%Y-%m-%d %H:%M:%S")
-                )
-                queryset = queryset.filter(
-                    created_at__range=[start_datetime, end_datetime]
-                )
+                if start_date:
+                    queryset = queryset.filter(
+                        created_at__gte=timezone.make_aware(
+                            datetime.strptime(start_date, "%Y-%m-%d")
+                        )
+                    )
+                if end_date:
+                    queryset = queryset.filter(
+                        created_at__lte=timezone.make_aware(
+                            datetime.strptime(
+                                end_date + " 23:59:59", "%Y-%m-%d %H:%M:%S"
+                            )
+                        )
+                    )
             except ValueError:
                 pass  # Invalid date format, ignore filter
 
@@ -205,6 +221,16 @@ class OrderViewSet(viewsets.ModelViewSet):
         elif customer_filter and customer_filter.isdigit():
             # Filter by specific customer ID
             queryset = queryset.filter(customer=int(customer_filter))
+
+        # Relevance search runs after the date range and customer filters, so
+        # it ranks what is left rather than the whole book — a search inside a
+        # chosen date range stays inside it.
+        terms = search.parse_terms(self.request.query_params.get("search"))
+        if terms:
+            queryset = search.apply(queryset, terms)
+            # Best-match order is the point; an explicit sort still wins below.
+            if not self.request.query_params.get("ordering"):
+                return queryset
 
         # Handle custom ordering parameter
         ordering = self.request.query_params.get("ordering", None)

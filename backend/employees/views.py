@@ -152,7 +152,12 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
         elif request.method == "POST":
-            serializer = SalaryRecordSerializer(data=request.data)
+            # The employee rides in the context so the uniqueness check can see
+            # it — it is read-only on the serializer and only arrives at save().
+            serializer = SalaryRecordSerializer(
+                data=request.data,
+                context={"request": request, "employee": employee},
+            )
             if serializer.is_valid():
                 serializer.save(employee=employee)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)

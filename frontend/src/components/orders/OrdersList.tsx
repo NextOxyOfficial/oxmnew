@@ -178,6 +178,23 @@ const OrdersList: React.FC<OrdersListProps> = ({
                 <div className="text-xs text-slate-500 mt-0.5">
                   {formatDate(order.sale_date)}
                 </div>
+
+                {/* Which products the search hit. Without this a long result
+                    list is just rows to open one by one — the shopkeeper can
+                    see "চেইন স্প্রোকেট সেট" and know this is the order. */}
+                {order.matched_items && order.matched_items.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {order.matched_items.map((name) => (
+                      <span
+                        key={name}
+                        className="inline-block max-w-[13rem] truncate rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-900"
+                        title={name}
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </td>
               <td>
                 {order.customer_name ? (
