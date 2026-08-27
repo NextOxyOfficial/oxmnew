@@ -1240,17 +1240,19 @@ export default function AddOrderPage() {
                               key={customer.id}
                               onClick={() => {
                                 handleCustomerSelection(customer.id);
-                                setCustomerSearch(
-                                  `${customer.name}${
-                                    customer.email
-                                      ? ` (${customer.email})`
-                                      : ""
-                                  }${
-                                    customer.phone
-                                      ? ` - ${customer.phone}`
-                                      : ""
-                                  }`
-                                );
+                                // The input is bound to customerSearchInput;
+                                // customerSearch is only its debounced copy,
+                                // used for filtering. Setting just the latter
+                                // left the box showing whatever was typed, so
+                                // picking a customer looked like it did
+                                // nothing. Both are set — and both must be, or
+                                // the 400ms debounce would immediately put the
+                                // half-typed text back.
+                                const label = `${customer.name}${
+                                  customer.email ? ` (${customer.email})` : ""
+                                }${customer.phone ? ` - ${customer.phone}` : ""}`;
+                                setCustomerSearchInput(label);
+                                setCustomerSearch(label);
                                 setIsCustomerDropdownOpen(false);
                               }}
                               className="p-3 hover:bg-slate-100 cursor-pointer transition-colors border-b border-slate-200 last:border-b-0"

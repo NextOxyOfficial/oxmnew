@@ -1,3 +1,4 @@
+from products import search as product_search
 from core.scoping import HasPermission, owner_for
 import csv
 import io
@@ -919,14 +920,9 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         queryset = self.get_queryset()
 
-        # Search in multiple fields
-        search_results = queryset.filter(
-            Q(name__icontains=query)
-            | Q(details__icontains=query)
-            | Q(location__icontains=query)
-            | Q(category__name__icontains=query)
-            | Q(supplier__name__icontains=query)
-        ).distinct()
+        # Same word-by-word rule as the order picker, so the two searches do
+        # not disagree about what "motul 10w40" means.
+        search_results, _terms = product_search.apply(queryset, query)
 
         # Format results for frontend
         results = []
@@ -964,16 +960,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not query or len(query) < 1:
             return Response({"results": [], "count": 0})
 
-        queryset = (
-            Product.objects.filter(user=owner_for(request), is_active=True)
-            .filter(
-                Q(name__icontains=query)
-                | Q(product_code__icontains=query)
-                | Q(category__name__icontains=query)
-            )
-            .select_related("category")
-            .prefetch_related("variants")[:limit]
+        # Word-by-word, ranked — see products.search. Matching the whole typed
+        # string in one piece meant "motul 10w40" could not find "Motul Royel
+        # 10W40 Mineral", which is the normal shape of a parts name.
+        queryset, _terms = product_search.apply(
+            Product.objects.filter(user=owner_for(request), is_active=True), query
         )
+        queryset = queryset.select_related("category").prefetch_related("variants")[
+            :limit
+        ]
 
         serializer = ProductSearchSerializer(queryset, many=True)
         return Response({"results": serializer.data, "count": len(serializer.data)})
