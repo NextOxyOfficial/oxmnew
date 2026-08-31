@@ -3,7 +3,7 @@
 import OrdersControls from "@/components/orders/OrdersControls";
 import OrdersHeader from "@/components/orders/OrdersHeader";
 import OrdersList from "@/components/orders/OrdersList";
-import OrdersStats from "@/components/orders/OrdersStats";
+import SalesRangeReport from "@/components/reports/SalesRangeReport";
 import SalesRangeFilter from "@/components/orders/SalesRangeFilter";
 import SmsComposer from "@/components/sms/SmsComposer";
 import Pagination from "@/components/ui/Pagination";
@@ -119,16 +119,6 @@ export default function OrdersPage() {
   const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-
-  // Overall statistics (not affected by search/filter)
-  const [overallStats, setOverallStats] = useState({
-    totalOrders: 0,
-    totalRevenue: 0,
-    totalProfit: 0,
-    todaysOrders: 0,
-    todaysRevenue: 0,
-  });
-  const [isStatsLoading, setIsStatsLoading] = useState(true);
 
   // Function to update URL parameters for orders
   const updateOrdersUrlParams = (updates: { 
@@ -641,38 +631,11 @@ export default function OrdersPage() {
     }
   }, []);
 
-  const fetchOverallStats = useCallback(async () => {
-    try {
-      setIsStatsLoading(true);
-      // Fetch stats from dedicated endpoint
-      const statsData = await ApiService.getOrderStats();
-
-      setOverallStats({
-        totalOrders: statsData.totalOrders || 0,
-        totalRevenue: statsData.totalRevenue || 0,
-        totalProfit: statsData.totalProfit || 0,
-        todaysOrders: statsData.todaysOrders || 0,
-        todaysRevenue: statsData.todaysRevenue || 0,
-      });
-    } catch (error) {
-      console.error("Error fetching overall statistics:", error);
-      setOverallStats({
-        totalOrders: 0,
-        totalRevenue: 0,
-        totalProfit: 0,
-        todaysOrders: 0,
-        todaysRevenue: 0,
-      });
-    } finally {
-      setIsStatsLoading(false);
-    }
-  }, []); // Empty dependency array - only run once on mount
-
-  // Fetch user profile and stats only once on mount
+  // SalesRangeReport fetches its own figures for whichever window is chosen,
+  // so the page no longer holds a copy of the lifetime totals.
   useEffect(() => {
     fetchUserProfile();
-    fetchOverallStats();
-  }, [fetchUserProfile, fetchOverallStats]);
+  }, [fetchUserProfile]);
 
   // Plain functions, not memoised: every one of these calls a URL updater
   // that reads `searchParams`, and an empty dep array freezes that at the
@@ -1476,10 +1439,7 @@ export default function OrdersPage() {
 
       <div className="plane">
         {/* KPIs */}
-        <OrdersStats
-          overallStats={overallStats}
-          isStatsLoading={isStatsLoading}
-        />
+        <SalesRangeReport />
 
         {/* Tab Navigation — the range picker shares this row rather than
             taking a band of its own: the window applies to both tabs, and the

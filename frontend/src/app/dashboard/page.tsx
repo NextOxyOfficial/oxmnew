@@ -24,6 +24,7 @@ import { AnalyticsOverview } from "@/lib/analytics";
 import ReportCard, { ReportRow } from "@/components/dashboard/ReportCard";
 import CoachStrip from "@/components/dashboard/CoachStrip";
 import MonthlyExpenseButton from "@/components/dashboard/MonthlyExpenseButton";
+import SalesRangeReport from "@/components/reports/SalesRangeReport";
 import {
   DashboardFeed,
   SMS_STATUS,
@@ -240,6 +241,10 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Same component as the sales page, so the two can never quote a
+            different profit for the same days. */}
+        <SalesRangeReport title="কেনা-বেচা ও লাভ" showLifetime={false} />
 
         {/* ── today against the target ───────────────────────────── */}
         <div className="plane-section">

@@ -1,4 +1,4 @@
-from core.scoping import HasPermission, owner_for
+from core.scoping import HasPermission, can, owner_for
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -454,44 +454,89 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def stats(self, request):
-        """Get overall statistics for all user orders"""
+        """কেনা দাম, বেচা দাম and লাভ for a chosen window — today by default.
+
+        The card used to show lifetime totals only, which answer "how big is
+        this shop" but never "how did today go" — and a lifetime profit figure
+        barely moves, so it stops being read. A window with today as its
+        default puts the number that changes in front of the number that does
+        not, and the lifetime totals ride along as context.
+
+        Sales come from analytics.services.sales_for, the same function the
+        dashboard and the analytics page use, so the three cannot disagree
+        about what a sale is worth or which order states count.
+        """
         from datetime import datetime, time
 
-        from django.db.models import Sum
         from django.utils import timezone
 
-        # Get all user orders
-        queryset = Order.objects.filter(user=owner_for(request))
+        from analytics import services
 
-        # Basic stats
-        total_orders = queryset.count()
+        owner = owner_for(request)
+        today = timezone.localdate()
 
-        # Revenue and profit calculations
-        revenue_data = queryset.aggregate(
-            total_revenue=Sum("total_amount"), total_profit=Sum("gross_profit")
+        def parse(value, fallback):
+            try:
+                return datetime.strptime(value, "%Y-%m-%d").date()
+            except (TypeError, ValueError):
+                return fallback
+
+        first = parse(request.query_params.get("start_date"), today)
+        last = parse(request.query_params.get("end_date"), today)
+        if last < first:
+            first, last = last, first
+
+        tz = timezone.get_current_timezone()
+        begin = timezone.make_aware(datetime.combine(first, time.min), tz)
+        finish = timezone.make_aware(datetime.combine(last, time.max), tz)
+
+        window = services.sales_for(owner, begin, finish)
+        # Everything ever sold, for the "সব মিলিয়ে" line under the window.
+        lifetime = services.sales_for(
+            owner,
+            timezone.make_aware(datetime(1970, 1, 1), tz),
+            timezone.make_aware(datetime.combine(today, time.max), tz),
         )
 
-        total_revenue = revenue_data["total_revenue"] or 0
-        total_profit = revenue_data["total_profit"] or 0
+        # Buying price and margin are what a salesperson is normally not shown;
+        # revenue and order count are harmless. Same rule as the order list.
+        show_cost = can(request, "orders.profit")
 
-        # Today's stats
-        today = timezone.now().date()
-        today_start = timezone.make_aware(datetime.combine(today, time.min))
-        today_end = timezone.make_aware(datetime.combine(today, time.max))
-
-        today_queryset = queryset.filter(created_at__range=[today_start, today_end])
-        todays_orders = today_queryset.count()
-
-        todays_data = today_queryset.aggregate(todays_revenue=Sum("total_amount"))
-        todays_revenue = todays_data["todays_revenue"] or 0
+        def block(data):
+            out = {
+                "orders": data["orders_count"],
+                "revenue": float(data["revenue"]),
+                "avg_order_value": float(data["avg_order_value"]),
+                "collected": float(data["collected"]),
+            }
+            if show_cost:
+                revenue = data["revenue"]
+                out["cogs"] = float(data["cogs"])
+                out["profit"] = float(data["gross_profit"])
+                out["margin_pct"] = (
+                    round(float(data["gross_profit"] / revenue * 100), 1)
+                    if revenue
+                    else 0.0
+                )
+            return out
 
         return Response(
             {
-                "totalOrders": total_orders,
-                "totalRevenue": float(total_revenue),
-                "totalProfit": float(total_profit),
-                "todaysOrders": todays_orders,
-                "todaysRevenue": float(todays_revenue),
+                "range": {
+                    "start": first.isoformat(),
+                    "end": last.isoformat(),
+                    "is_today": first == today == last,
+                    **block(window),
+                },
+                "lifetime": block(lifetime),
+                "shows_cost": show_cost,
+                # The old flat keys, kept so nothing that still reads them
+                # breaks mid-deploy.
+                "totalOrders": lifetime["orders_count"],
+                "totalRevenue": float(lifetime["revenue"]),
+                "totalProfit": float(lifetime["gross_profit"]) if show_cost else 0.0,
+                "todaysOrders": window["orders_count"],
+                "todaysRevenue": float(window["revenue"]),
             }
         )
 

@@ -1768,8 +1768,16 @@ export class ApiService {
     return this.get(`/sales/${id}/`);
   }
 
-  static async getOrderStats() {
-    return this.get("/sales/stats/");
+  /**
+   * কেনা দাম / বেচা দাম / লাভ for a window, plus lifetime totals.
+   * No dates means today, which is what the report cards default to.
+   */
+  static async getOrderStats(range?: { start_date?: string; end_date?: string }) {
+    const query = new URLSearchParams();
+    if (range?.start_date) query.set("start_date", range.start_date);
+    if (range?.end_date) query.set("end_date", range.end_date);
+    const suffix = query.toString() ? `?${query}` : "";
+    return this.get(`/sales/stats/${suffix}`);
   }
 
 
