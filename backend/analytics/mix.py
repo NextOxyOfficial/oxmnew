@@ -66,6 +66,10 @@ def _avg_part_profit(user, since):
     rows = (
         OrderItem.objects.filter(order__user=user, order__created_at__gte=since)
         .exclude(order__status__in=DEAD_ORDER_STATES)
+        # A service charge or labour line is not a part, and neither is the
+        # placeholder that carries an old order's lost lines. Both have no
+        # shelf, and counting them would skew "how much a part earns".
+        .exclude(product__no_stock_required=True)
         .aggregate(
             profit=Coalesce(
                 Sum((F("unit_price") - F("buy_price")) * F("quantity")),

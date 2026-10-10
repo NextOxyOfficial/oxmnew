@@ -181,3 +181,6 @@ local.db
 .next-verify/
 frontend/.next-verify/
 frontend/src/.next-verify/
+
+# Exports that contain customer data — never commit
+reports/
