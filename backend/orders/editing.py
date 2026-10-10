@@ -138,8 +138,13 @@ def replace_items(order, owner, lines):
             )
 
         # ── what the order holds now, per shelf ─────────────────────────
+        # of=("self",): lock only the item rows. Postgres refuses FOR UPDATE on
+        # the nullable side of the variant LEFT JOIN, and the product/variant
+        # rows that actually hold stock are locked one by one just below.
         existing = list(
-            order.items.select_related("product", "variant").select_for_update()
+            order.items.select_related("product", "variant").select_for_update(
+                of=("self",)
+            )
         )
         held = defaultdict(int)
         for item in existing:
