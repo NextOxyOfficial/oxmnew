@@ -283,8 +283,14 @@ export class ApiService {
           errorDetails = errorData;
           errorMessage = errorData.error || errorData.detail || errorMessage;
 
-          // If it's a validation error, show field-specific errors
-          if (response.status === 400 && errorData) {
+          // Field-by-field messages only for genuine field validation. A
+          // response that already carries a sentence in `error`/`detail` is
+          // shown as written — prefixing it produced "error: …" on screen,
+          // the field name leaking into every message the server wrote.
+          const hasSentence =
+            typeof errorData?.error === "string" ||
+            typeof errorData?.detail === "string";
+          if (response.status === 400 && errorData && !hasSentence) {
             const fieldErrors = [];
             for (const [field, errors] of Object.entries(errorData)) {
               if (Array.isArray(errors)) {
@@ -1705,6 +1711,27 @@ export class ApiService {
     }
   ) {
     return this.post(`/orders/${orderId}/items/`, itemData);
+  }
+
+  /**
+   * Save an edited order — its lines, the stock they move and the header — in
+   * one transaction. Replaces the old remove-every-line-then-re-add-every-line
+   * sequence, which left orders half rebuilt whenever one line was refused.
+   */
+  static async saveOrderEdit(
+    orderId: number,
+    payload: {
+      items: {
+        product: number;
+        variant: number | null;
+        quantity: number;
+        unit_price: number;
+        buy_price?: number | string | null;
+      }[];
+      order: Record<string, unknown>;
+    }
+  ) {
+    return this.post(`/orders/${orderId}/save-edit/`, payload);
   }
 
   static async removeOrderItem(orderId: number, itemId: number) {

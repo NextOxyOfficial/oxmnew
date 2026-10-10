@@ -53,6 +53,13 @@ class OwnedRelationsMixin:
         # Staff run support tasks across shops; everyone else is confined.
         if user.is_staff or user.is_superuser:
             return attrs
+        # Compare against the SHOP, not the login. A salesperson's account owns
+        # nothing — every customer and product belongs to their employer — so
+        # checking request.user rejected every legitimate write a staff login
+        # made. owner_for() is the same resolution every queryset already uses.
+        from core.scoping import owner_for
+
+        user = owner_for(request)
 
         errors = {}
         for field in self.owned_relations:

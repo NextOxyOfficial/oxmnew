@@ -589,7 +589,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             if item.variant:
                 item.variant.stock += item.quantity
                 item.variant.save()
-            else:
+            elif not item.product.no_stock_required:
                 item.product.stock += item.quantity
                 item.product.save()
 
@@ -610,12 +610,51 @@ class OrderViewSet(viewsets.ModelViewSet):
                 if item.variant:
                     item.variant.stock += item.quantity
                     item.variant.save(update_fields=["stock"])
-                else:
+                elif not item.product.no_stock_required:
                     item.product.stock += item.quantity
                     item.product.save(update_fields=["stock"])
 
         # Delete the order
         return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=["post"], url_path="save-edit")
+    def save_edit(self, request, pk=None):
+        """Save an edited order — items, stock and header — all or nothing.
+
+        Replaces the edit page's old sequence of a remove and an add request
+        per line (60+ for a 31-item invoice, with no transaction), which left
+        orders half rebuilt whenever one line was refused. See orders.editing.
+        """
+        from django.db import transaction
+
+        from .editing import EditRefused, replace_items
+
+        order = self.get_object()
+        if order.status == "cancelled":
+            # A cancelled order's stock has already gone back to the shelf;
+            # editing its lines would move that stock a second time.
+            return Response(
+                {"error": "বাতিল করা অর্ডার এডিট করা যায় না।"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        header = request.data.get("order") or {}
+        try:
+            with transaction.atomic():
+                replace_items(order, owner_for(request), request.data.get("items"))
+                # The header goes through the existing update serializer, so
+                # totals are recalculated from the new lines and the due-book
+                # entry follows the new due amount — same as any other update.
+                serializer = OrderUpdateSerializer(
+                    order, data=header, partial=True, context={"request": request}
+                )
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+        except EditRefused as refused:
+            return Response({"error": str(refused)}, status=status.HTTP_400_BAD_REQUEST)
+
+        order.refresh_from_db()
+        return Response(OrderSerializer(order, context={"request": request}).data)
 
     @action(detail=True, methods=["patch"], url_path="items/(?P<item_id>[^/.]+)")
     def update_item(self, request, pk=None, item_id=None):
@@ -702,11 +741,14 @@ class OrderViewSet(viewsets.ModelViewSet):
                                 },
                                 status=status.HTTP_400_BAD_REQUEST,
                             )
-                    else:
+                    elif not product.no_stock_required:
+                        # A service charge or labour line has no shelf. Order
+                        # creation already skipped it; this path did not, so
+                        # such a line could be sold once and never re-saved.
                         if product.stock < quantity:
                             return Response(
                                 {
-                                    "error": f"Insufficient stock. Available: {product.stock}, Requested: {quantity}"
+                                    "error": f"{product.name}: স্টকে আছে {product.stock} টা, চাওয়া হয়েছে {quantity} টা।"
                                 },
                                 status=status.HTTP_400_BAD_REQUEST,
                             )
@@ -718,7 +760,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                     if product.has_variants and variant_id:
                         variant.stock -= quantity
                         variant.save(update_fields=["stock"])
-                    else:
+                    elif not product.no_stock_required:
                         product.stock -= quantity
                         product.save(update_fields=["stock"])
 
@@ -758,7 +800,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             if item.variant:
                 item.variant.stock += item.quantity
                 item.variant.save()
-            else:
+            elif not item.product.no_stock_required:
                 item.product.stock += item.quantity
                 item.product.save()
 

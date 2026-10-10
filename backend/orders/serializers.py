@@ -666,8 +666,12 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             return order
 
 
-class OrderUpdateSerializer(serializers.ModelSerializer):
+class OrderUpdateSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
     """Serializer for updating orders"""
+
+    # DRF only checks that a related row exists. Without this, an edit could
+    # attach another shop's customer or employee to this order.
+    owned_relations = ("customer", "employee")
 
     class Meta:
         model = Order

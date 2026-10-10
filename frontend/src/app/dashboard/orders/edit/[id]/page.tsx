@@ -213,17 +213,11 @@ export default function EditOrderPage() {
       setIsSubmitting(true); setError(null);
       const orderId = params.id as string;
       const round = (v: number | null | undefined) => Math.round((typeof v === 'number' ? v : 0) * 100) / 100;
-      const currentOrder = await ApiService.getOrder(parseInt(orderId));
-      const existingItems = currentOrder.items || [];
-
-      // Completed orders are locked for add/remove item APIs.
-      // Temporarily switch them to draft first, then apply final status at the end.
-      if (currentOrder.status === "completed") {
-        await ApiService.updateOrder(parseInt(orderId), { status: "draft" } as any);
-      }
-
-      for (const existingItem of existingItems) { try { await ApiService.removeOrderItem(parseInt(orderId), existingItem.id); } catch {} }
-      for (const item of orderForm.items) { const itemData: any = { product: item.product, quantity: item.quantity, unit_price: item.unit_price, buy_price: item.buy_price, variant: item.variant ?? null }; await ApiService.addOrderItem(parseInt(orderId), itemData); }
+      // One request, one transaction. This used to remove every line and
+      // re-add every line one request at a time — 60-odd calls for a 31-item
+      // invoice — and when one line was refused the order was left half
+      // rebuilt with its old totals. The server now moves stock by the
+      // difference and either saves everything or nothing.
       const orderUpdateData = { 
         customer: selectedCustomerId || undefined, 
         customer_name: orderForm.customer.name, 
@@ -246,8 +240,18 @@ export default function EditOrderPage() {
         employee: orderForm.employee_id || undefined,
         incentive_amount: round(orderForm.incentive_amount || 0)
       };
-      
-      await ApiService.updateOrder(parseInt(orderId), orderUpdateData);
+
+      await ApiService.saveOrderEdit(parseInt(orderId), {
+        items: orderForm.items.map((item) => ({
+          product: item.product,
+          variant: item.variant ?? null,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          // Sent back unchanged: an existing line's buy price is history.
+          buy_price: item.buy_price,
+        })),
+        order: orderUpdateData,
+      });
       router.push("/dashboard/orders?updated=true");
     } catch (error) {
       let msg = "অর্ডার আপডেট করা যায়নি। আবার চেষ্টা করুন।";
