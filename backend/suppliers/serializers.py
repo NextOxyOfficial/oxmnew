@@ -1,5 +1,26 @@
+from core.scoping import owner_for
 from rest_framework import serializers
 from .models import Supplier, Purchase, Payment
+
+TAKEN = "এই নামে একটা সাপ্লায়ার আগে থেকেই আছে। অন্য নাম দিন।"
+
+
+def supplier_name_clash(serializer, value):
+    """The supplier already holding this name in this shop, if any.
+
+    Supplier has unique_together ("name", "user") and the user is attached on
+    save, so DRF cannot check it — a duplicate reached the INSERT and came back
+    as a bare 500. Deleting a supplier only flips is_active, so a deleted one
+    still holds its name; callers decide what that means for them.
+    """
+    request = serializer.context.get("request")
+    name = (value or "").strip()
+    if request is None or not name:
+        return name, None
+    clash = Supplier.objects.filter(user=owner_for(request), name=name)
+    if serializer.instance is not None:
+        clash = clash.exclude(pk=serializer.instance.pk)
+    return name, clash.first()
 
 
 class SupplierSerializer(serializers.ModelSerializer):
@@ -21,10 +42,19 @@ class SupplierSerializer(serializers.ModelSerializer):
             'total_paid', 'balance',
         ]
 
+    def validate_name(self, value):
+        name, clash = supplier_name_clash(self, value)
+        if clash is not None:
+            raise serializers.ValidationError(
+                TAKEN if clash.is_active
+                else "এই নামে আগে একটা সাপ্লায়ার ছিল, সেটা মুছে ফেলা হয়েছে। অন্য নাম দিন।"
+            )
+        return name
+
     def create(self, validated_data):
-        # Get the current user from the request context
-        user = self.context['request'].user
-        validated_data['user'] = user
+        # The shop, not the login — and never overwrite a user the caller
+        # already passed to save(), which is how the viewset attaches it.
+        validated_data.setdefault('user', owner_for(self.context['request']))
         return super().create(validated_data)
 
 
@@ -32,6 +62,14 @@ class SupplierCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier
         fields = ['name', 'address', 'phone', 'email', 'website', 'contact_person', 'notes']
+
+    def validate_name(self, value):
+        # A deleted supplier with this name is not an error here: the viewset
+        # brings that one back instead of refusing a name the user cannot see.
+        name, clash = supplier_name_clash(self, value)
+        if clash is not None and clash.is_active:
+            raise serializers.ValidationError(TAKEN)
+        return name
 
     def create(self, validated_data):
         # Get the current user from the request context

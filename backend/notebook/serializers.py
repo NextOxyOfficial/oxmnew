@@ -4,6 +4,9 @@ from django.contrib.auth.models import User
 from .models import Notebook, NotebookSection, NotebookTag
 
 
+TAG_TAKEN = "এই নামে একটা ট্যাগ আগে থেকেই আছে।"
+
+
 class NotebookTagSerializer(serializers.ModelSerializer):
     """Serializer for NotebookTag model"""
     
@@ -14,6 +17,26 @@ class NotebookTagSerializer(serializers.ModelSerializer):
             'usage_count', 'created_at', 'created_by'
         ]
         read_only_fields = ['id', 'usage_count', 'created_at', 'created_by']
+
+    def validate_name(self, value):
+        """Refuse a tag name this shop already has.
+
+        NotebookTag is unique on (created_by, name), and created_by is
+        attached on save — so DRF built no validator for it and a repeated
+        name reached the INSERT and returned 500.
+        """
+        from core.scoping import owner_for
+
+        name = (value or "").strip()
+        request = self.context.get("request")
+        if request is None or not name:
+            return name
+        clash = NotebookTag.objects.filter(created_by=owner_for(request), name=name)
+        if self.instance is not None:
+            clash = clash.exclude(pk=self.instance.pk)
+        if clash.exists():
+            raise serializers.ValidationError(TAG_TAKEN)
+        return name
 
 
 class NotebookSectionSerializer(OwnedRelationsMixin, serializers.ModelSerializer):

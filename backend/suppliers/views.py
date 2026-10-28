@@ -1,10 +1,13 @@
 from core.scoping import HasPermission, owner_for
 from core.uploads import document_error
+from django.db import IntegrityError, transaction
 from rest_framework import viewsets, status, permissions
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import Supplier, Purchase, Payment
+from .serializers import TAKEN
 from .serializers import (
     SupplierSerializer, SupplierCreateSerializer, 
     PurchaseSerializer, PurchaseCreateSerializer, PurchaseUpdateSerializer,
@@ -77,9 +80,45 @@ class SupplierViewSet(viewsets.ModelViewSet):
             return SupplierCreateSerializer
         return SupplierSerializer
 
+    def create(self, request, *args, **kwargs):
+        """Add a supplier — or bring back a deleted one with the same name.
+
+        Deleting only flips is_active, and the list hides inactive rows, so a
+        deleted supplier still holds its name while being invisible. Re-adding
+        that name used to hit the unique constraint (a 500); refusing it would
+        leave the user unable to see the supplier or add it. Reviving the
+        archived row is what they meant — and it keeps that supplier's
+        purchases and payments attached instead of orphaning them.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        archived = Supplier.objects.filter(
+            user=owner_for(request),
+            name=serializer.validated_data["name"],
+            is_active=False,
+        ).first()
+        if archived is not None:
+            for field, value in serializer.validated_data.items():
+                setattr(archived, field, value)
+            archived.is_active = True
+            archived.save()
+            revived = self.get_serializer(archived)
+            return Response(revived.data, status=status.HTTP_201_CREATED)
+
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     def perform_create(self, serializer):
-        """Assign the current user to the supplier when creating"""
-        serializer.save(user=owner_for(self.request))
+        """Assign the shop to the supplier when creating."""
+        try:
+            # Savepoint, so a lost race leaves the connection usable.
+            with transaction.atomic():
+                serializer.save(user=owner_for(self.request))
+        except IntegrityError:
+            # Two saves passed validation at once; the second met the
+            # constraint. Still the caller's duplicate — 400, not 500.
+            raise ValidationError({"name": [TAKEN]})
 
     def perform_destroy(self, instance):
         """Soft delete - mark as inactive instead of actually deleting"""

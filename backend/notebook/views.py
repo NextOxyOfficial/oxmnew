@@ -1,5 +1,7 @@
 from core.scoping import HasPermission, owner_for
+from django.db import IntegrityError, transaction
 from rest_framework import viewsets, status, permissions
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -8,6 +10,7 @@ from django.db.models import Count, Q
 from collections import Counter
 
 from .models import Notebook, NotebookSection, NotebookTag
+from .serializers import TAG_TAKEN
 from .serializers import (
     NotebookListSerializer, NotebookDetailSerializer, NotebookCreateUpdateSerializer,
     NotebookSectionSerializer, NotebookSectionCreateUpdateSerializer,
@@ -246,4 +249,10 @@ class NotebookTagViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set current user as tag creator"""
-        serializer.save(created_by=owner_for(self.request))
+        try:
+            # Savepoint: two saves racing past validate_name must end in a
+            # 400 on the second, not a 500 with a broken connection.
+            with transaction.atomic():
+                serializer.save(created_by=owner_for(self.request))
+        except IntegrityError:
+            raise ValidationError({"name": [TAG_TAKEN]})
