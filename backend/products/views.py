@@ -170,7 +170,12 @@ class ProductViewSet(viewsets.ModelViewSet):
                     serializer_data.get("name"),
                 )
                 return Response(
-                    {"name": ["এই নামে একটা প্রোডাক্ট আগে থেকেই আছে। অন্য নাম দিন।"]},
+                    {
+                        "name": [
+                            "এই নাম আর কোডে একটা প্রোডাক্ট আগে থেকেই আছে। "
+                            "কোড আলাদা দিন।"
+                        ]
+                    },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -518,12 +523,24 @@ class ProductViewSet(viewsets.ModelViewSet):
                             )
                             continue
 
-                        # Check for existing product with same name for this user
-                        if Product.objects.filter(
+                        # Same identity rule as the add form: one name may
+                        # appear under several codes, but not twice with the
+                        # same code — or twice with none.
+                        row_code = (row.get("product_code") or "").strip()
+                        existing = Product.objects.filter(
                             name=name, user=owner_for(request)
-                        ).exists():
+                        )
+                        if row_code:
+                            existing = existing.filter(product_code=row_code)
+                        else:
+                            existing = existing.filter(
+                                Q(product_code__isnull=True) | Q(product_code="")
+                            )
+                        if existing.exists():
                             products_errors.append(
-                                f"Row {row_num}: Product '{name}' already exists"
+                                f"Row {row_num}: Product '{name}'"
+                                + (f" with code '{row_code}'" if row_code else "")
+                                + " already exists"
                             )
                             continue
 

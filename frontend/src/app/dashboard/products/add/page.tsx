@@ -167,6 +167,20 @@ export default function AddProductPage() {
       }
       router.push("/dashboard/products");
     } catch (error) {
+      // A taken name comes back as {"name": [...]}. Put it under the name
+      // field where the user is looking, instead of as "name: …" (with the
+      // English key leaking through) down by the submit button.
+      const details = (error as Error & { details?: Record<string, unknown> })
+        ?.details;
+      const nameError = Array.isArray(details?.name)
+        ? String(details.name[0])
+        : typeof details?.name === "string"
+        ? details.name
+        : null;
+      if (nameError) {
+        setErrors({ name: nameError });
+        return;
+      }
       setErrors({
         submit:
           error instanceof Error

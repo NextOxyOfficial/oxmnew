@@ -1,37 +1,69 @@
 from core.ownership import OwnedRelationsMixin
 from core.scoping import owner_for
+from django.db.models import Q
 from rest_framework import serializers
 
 from .models import Product, ProductPhoto, ProductStockMovement, ProductVariant
 
 
-def check_name_is_free(serializer, value):
-    """Reject a product name this shop already uses, before the database does.
+def check_identity_is_free(serializer, attrs):
+    """Reject a product that would duplicate one this shop already has.
 
-    Product carries unique_together ("name", "user"), but `user` is attached
-    inside create() rather than arriving with the payload. DRF can only build
-    a UniqueTogetherValidator when every field of the constraint is present in
-    the input, so it built none: is_valid() passed, the INSERT hit the
-    constraint, and the API answered a bare "Server Error (500)" instead of
-    saying the name was taken.
+    A name alone is not an identity here: shops routinely stock several items
+    under one name and tell them apart by product code ("Engine Oil" 1L vs 4L,
+    the same part from two makers). So the rule mirrors the two constraints on
+    Product:
 
-    Matching is exact, like the constraint itself — rejecting "ABC" because
-    "abc" exists would refuse a row the database would have accepted.
+      * with a code    — name + code together must be new;
+      * without a code — the name must be new among code-less products, since
+                         nothing else distinguishes them.
+
+    Checking here matters because `user` is attached in create() rather than
+    arriving with the payload, so DRF cannot build a UniqueTogetherValidator
+    on its own; without this the INSERT hit the constraint and the API
+    answered a bare "Server Error (500)".
+
+    Matching is exact, like the constraints — refusing "ABC" because "abc"
+    exists would reject a row the database itself accepts.
     """
-    name = (value or "").strip()
     request = serializer.context.get("request")
-    if not name or request is None:
-        return name
+    if request is None:
+        return attrs
+    instance = serializer.instance
 
-    clash = Product.objects.filter(name=name, user=owner_for(request))
-    if serializer.instance is not None:
-        # An edit that leaves the name alone must not collide with itself.
-        clash = clash.exclude(pk=serializer.instance.pk)
+    # A PATCH may carry only one of the two; the other keeps its saved value.
+    name = attrs.get("name", getattr(instance, "name", None))
+    code = attrs.get("product_code", getattr(instance, "product_code", None))
+    name = (name or "").strip()
+    code = (code or "").strip()
+    if "name" in attrs:
+        attrs["name"] = name
+    if "product_code" in attrs:
+        # Blank is stored as NULL, the same way the CSV import stores it.
+        attrs["product_code"] = code or None
+    if not name:
+        return attrs
+
+    clash = Product.objects.filter(user=owner_for(request), name=name)
+    if code:
+        clash = clash.filter(product_code=code)
+    else:
+        clash = clash.filter(Q(product_code__isnull=True) | Q(product_code=""))
+    if instance is not None:
+        # Saving a product without renaming it must not collide with itself.
+        clash = clash.exclude(pk=instance.pk)
+
     if clash.exists():
         raise serializers.ValidationError(
-            "এই নামে একটা প্রোডাক্ট আগে থেকেই আছে। অন্য নাম দিন।"
+            {
+                "name": [
+                    "এই নাম আর কোডে একটা প্রোডাক্ট আগে থেকেই আছে। কোড আলাদা দিন।"
+                    if code
+                    else "এই নামে একটা প্রোডাক্ট আগে থেকেই আছে। আলাদা প্রোডাক্ট কোড দিলে একই নামেও রাখা যাবে।"
+                ]
+            }
         )
-    return name
+    return attrs
 
 
 class ProductPhotoSerializer(serializers.ModelSerializer):
@@ -228,10 +260,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
                         "Sell price must be greater than or equal to buy price"
                     )
 
-        return data
-
-    def validate_name(self, value):
-        return check_name_is_free(self, value)
+        return check_identity_is_free(self, data)
 
     def validate_category(self, value):
         """Ensure the category belongs to this shop."""
@@ -354,7 +383,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                 if buy_price > 0 and sell_price > 0 and sell_price < buy_price:
                     raise serializers.ValidationError("Sell price must be >= buy price")
 
-        return data
+        return check_identity_is_free(self, data)
 
     def validate_colorSizeVariants(self, value):
         """Validate colorSizeVariants JSON field"""
@@ -369,9 +398,6 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             value = value[0]
 
         return value
-
-    def validate_name(self, value):
-        return check_name_is_free(self, value)
 
     def validate_category(self, value):
         """Ensure the category belongs to this shop."""

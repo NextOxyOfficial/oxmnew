@@ -69,7 +69,27 @@ class Product(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        unique_together = ["name", "user"]
+        # A name alone is not an identity: shops stock several items under one
+        # name and tell them apart by product code. So uniqueness is split:
+        #   * with a code    — (shop, name, code) must be unique;
+        #   * without a code — (shop, name) must be unique, because nothing
+        #                      else distinguishes two code-less products.
+        # Product code by itself is deliberately NOT unique — live data already
+        # has shops reusing one code across differently-named items.
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "name", "product_code"],
+                condition=models.Q(product_code__isnull=False)
+                & ~models.Q(product_code=""),
+                name="uniq_product_name_code_per_shop",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "name"],
+                condition=models.Q(product_code__isnull=True)
+                | models.Q(product_code=""),
+                name="uniq_product_name_per_shop_without_code",
+            ),
+        ]
 
     def __str__(self):
         return self.name

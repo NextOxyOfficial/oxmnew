@@ -501,6 +501,19 @@ export default function EditProductPage() {
       }, 1500);
     } catch (error) {
       console.error("Error updating product:", error);
+      // A name/code clash comes back as {"name": [...]}: show it under the
+      // name field instead of as "name: …" in a toast.
+      const details = (error as Error & { details?: Record<string, unknown> })
+        ?.details;
+      const nameError = Array.isArray(details?.name)
+        ? String(details.name[0])
+        : typeof details?.name === "string"
+        ? details.name
+        : null;
+      if (nameError) {
+        setErrors((prev) => ({ ...prev, name: nameError }));
+        return;
+      }
       showNotification(
         "error",
         error instanceof Error
