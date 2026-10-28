@@ -408,7 +408,11 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
     "theme": "default",
-    "dark_mode_theme": None,
+    # Pinned to light. The old `dark_mode_theme` key is deprecated in Jazzmin
+    # 3, and its mere presence — even set to None — made Jazzmin fall back to
+    # default_theme_mode="auto", flipping the admin dark for anyone whose OS
+    # is in dark mode. oxm-jazzmin.css is designed for the light chrome only.
+    "default_theme_mode": "light",
     "button_classes": {
         "primary": "btn-primary",
         "secondary": "btn-outline-secondary",

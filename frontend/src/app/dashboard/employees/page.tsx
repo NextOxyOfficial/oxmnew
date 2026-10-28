@@ -854,7 +854,12 @@ export default function EmployeesPage() {
         {activeTab === "employees" && (
           <>
             <div className="plane-section">
+              {/* On a phone this wraps into three tidy rows — actions, search,
+                  filters — instead of five ragged ones. Each group is its own
+                  flex/grid item, and the PDF button drops its label below sm:
+                  with it, the three actions miss one line by just 8px. */}
               <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2">
                 {/* Add Employee Button */}
                 <button
                   onClick={() => setShowCreateModal(true)}
@@ -878,10 +883,13 @@ export default function EmployeesPage() {
                 <button
                   onClick={downloadEmployeesList}
                   className="btn btn-ghost"
+                  aria-label="কর্মচারীর তালিকা PDF নামান"
+                  title="PDF নামান"
                 >
                   <Download className="w-4 h-4" />
-                  PDF
+                  <span className="hidden sm:inline">PDF</span>
                 </button>
+                </div>
 
                 {/* Search */}
                 <input
@@ -892,11 +900,13 @@ export default function EmployeesPage() {
                   className="input max-w-xs"
                 />
 
+                <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto">
                 {/* Status Filter */}
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="select w-auto"
+                  className="select w-full min-w-0 sm:w-auto"
+                  aria-label="অবস্থা দিয়ে ফিল্টার"
                 >
                   <option value="all">সব অবস্থা</option>
                   <option value="active">Active</option>
@@ -909,7 +919,8 @@ export default function EmployeesPage() {
                 <select
                   value={filterDepartment}
                   onChange={(e) => setFilterDepartment(e.target.value)}
-                  className="select w-auto"
+                  className="select w-full min-w-0 sm:w-auto"
+                  aria-label="ডিপার্টমেন্ট দিয়ে ফিল্টার"
                 >
                   <option value="all">সব ডিপার্টমেন্ট</option>
                   {departments.map((dept) => (
@@ -923,13 +934,15 @@ export default function EmployeesPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="select w-auto"
+                  className="select col-span-2 w-full min-w-0 sm:col-auto sm:w-auto"
+                  aria-label="সাজানোর ক্রম"
                 >
                   <option value="name">নাম অনুযায়ী</option>
                   <option value="salary-high">বেতন: বেশি থেকে কম</option>
                   <option value="salary-low">বেতন: কম থেকে বেশি</option>
                   <option value="recent">নতুন জয়েন করা</option>
                 </select>
+                </div>
               </div>
             </div>
 
