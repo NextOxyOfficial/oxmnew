@@ -1,7 +1,37 @@
 from core.ownership import OwnedRelationsMixin
+from core.scoping import owner_for
 from rest_framework import serializers
 
 from .models import Product, ProductPhoto, ProductStockMovement, ProductVariant
+
+
+def check_name_is_free(serializer, value):
+    """Reject a product name this shop already uses, before the database does.
+
+    Product carries unique_together ("name", "user"), but `user` is attached
+    inside create() rather than arriving with the payload. DRF can only build
+    a UniqueTogetherValidator when every field of the constraint is present in
+    the input, so it built none: is_valid() passed, the INSERT hit the
+    constraint, and the API answered a bare "Server Error (500)" instead of
+    saying the name was taken.
+
+    Matching is exact, like the constraint itself — rejecting "ABC" because
+    "abc" exists would refuse a row the database would have accepted.
+    """
+    name = (value or "").strip()
+    request = serializer.context.get("request")
+    if not name or request is None:
+        return name
+
+    clash = Product.objects.filter(name=name, user=owner_for(request))
+    if serializer.instance is not None:
+        # An edit that leaves the name alone must not collide with itself.
+        clash = clash.exclude(pk=serializer.instance.pk)
+    if clash.exists():
+        raise serializers.ValidationError(
+            "এই নামে একটা প্রোডাক্ট আগে থেকেই আছে। অন্য নাম দিন।"
+        )
+    return name
 
 
 class ProductPhotoSerializer(serializers.ModelSerializer):
@@ -200,15 +230,18 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
         return data
 
+    def validate_name(self, value):
+        return check_name_is_free(self, value)
+
     def validate_category(self, value):
-        """Ensure category belongs to the user"""
-        if value and value.user != self.context["request"].user:
+        """Ensure the category belongs to this shop."""
+        if value and value.user != owner_for(self.context["request"]):
             raise serializers.ValidationError("Category not found")
         return value
 
     def validate_supplier(self, value):
-        """Ensure supplier belongs to the user"""
-        if value and value.user != self.context["request"].user:
+        """Ensure the supplier belongs to this shop."""
+        if value and value.user != owner_for(self.context["request"]):
             raise serializers.ValidationError("Supplier not found")
         return value
 
@@ -337,15 +370,21 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
         return value
 
+    def validate_name(self, value):
+        return check_name_is_free(self, value)
+
     def validate_category(self, value):
-        """Ensure category belongs to the user"""
-        if value and value.user != self.context["request"].user:
+        """Ensure the category belongs to this shop."""
+        # owner_for(), not request.user: a staff login owns no records of its
+        # own, so comparing against the login rejected every category its
+        # employer owns — i.e. all of them.
+        if value and value.user != owner_for(self.context["request"]):
             raise serializers.ValidationError("Category not found")
         return value
 
     def validate_supplier(self, value):
-        """Ensure supplier belongs to the user"""
-        if value and value.user != self.context["request"].user:
+        """Ensure the supplier belongs to this shop."""
+        if value and value.user != owner_for(self.context["request"]):
             raise serializers.ValidationError("Supplier not found")
         return value
 
@@ -354,8 +393,10 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         variants_data = validated_data.pop("colorSizeVariants", [])
         photos_data = validated_data.pop("photos", [])
 
-        # Set user
-        validated_data["user"] = self.context["request"].user
+        # The shop, not the login. get_queryset() filters on owner_for(), so a
+        # product saved under a staff account's own id would vanish from the
+        # owner's list the moment it was created.
+        validated_data["user"] = owner_for(self.context["request"])
 
         # For non-variant products, ensure stock is set properly
         if not validated_data.get("has_variants", False):

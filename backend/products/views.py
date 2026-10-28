@@ -1,12 +1,13 @@
 from products import search as product_search
 from core.scoping import HasPermission, owner_for
+import logging
 import csv
 import io
 import json
 
 import openpyxl
 import xlrd
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Max, Q, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
@@ -14,6 +15,8 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 from .models import Product, ProductPhoto, ProductStockMovement, ProductVariant
 from .serializers import (
@@ -154,7 +157,22 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=serializer_data)
 
         if serializer.is_valid():
-            product = serializer.save()
+            try:
+                product = serializer.save()
+            except IntegrityError:
+                # validate_name catches the ordinary case. This is the race:
+                # two saves pass the check, then the second one meets the
+                # unique constraint. A refused duplicate is the caller's
+                # mistake either way, so answer 400 rather than 500.
+                logger.warning(
+                    "Product create hit a unique constraint for user=%s name=%r",
+                    getattr(owner_for(request), "id", None),
+                    serializer_data.get("name"),
+                )
+                return Response(
+                    {"name": ["এই নামে একটা প্রোডাক্ট আগে থেকেই আছে। অন্য নাম দিন।"]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             if photos:
                 for i, photo in enumerate(photos):
