@@ -1,3 +1,4 @@
+from core.scoping import owner_for
 from core.ownership import OwnedRelationsMixin
 from rest_framework import serializers
 
@@ -490,7 +491,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             if not items_data:
                 raise serializers.ValidationError("At least one item is required")
 
-            request_user = self.context["request"].user
+            request_user = owner_for(self.context["request"])
 
             # Find or create customer if customer info provided
             customer = validated_data.get("customer")
@@ -732,7 +733,7 @@ class OrderUpdateSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
                     try:
                         customer = Customer.objects.get(
                             email=instance.customer_email, 
-                            user=self.context["request"].user
+                            user=owner_for(self.context["request"])
                         )
                     except Customer.DoesNotExist:
                         pass
@@ -742,7 +743,7 @@ class OrderUpdateSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
                     try:
                         customer = Customer.objects.get(
                             phone=instance.customer_phone, 
-                            user=self.context["request"].user
+                            user=owner_for(self.context["request"])
                         )
                     except Customer.DoesNotExist:
                         pass
@@ -754,7 +755,7 @@ class OrderUpdateSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
                         email=instance.customer_email,
                         phone=instance.customer_phone,
                         address=instance.customer_address,
-                        user=self.context["request"].user,
+                        user=owner_for(self.context["request"]),
                     )
                     instance.customer = customer
                     instance.save()
@@ -776,7 +777,7 @@ class OrderUpdateSerializer(OwnedRelationsMixin, serializers.ModelSerializer):
                         payment_type="due",
                         due_date=validated_data.get("due_date", instance.due_date),
                         notes=f"Due amount from order #{instance.order_number}",
-                        user=self.context["request"].user,
+                        user=owner_for(self.context["request"]),
                     )
         
         return instance

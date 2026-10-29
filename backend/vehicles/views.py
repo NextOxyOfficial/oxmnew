@@ -25,7 +25,7 @@ from .serializers import (
 class VehicleViewSet(viewsets.ModelViewSet):
     """Serial-tracked vehicle units.
 
-    Everything is scoped to request.user — a shop never sees another shop's
+    Everything is scoped to owner_for(request) — a shop never sees another shop's
     stock, and that filtering happens in one place (get_queryset) so no action
     can forget it.
     """

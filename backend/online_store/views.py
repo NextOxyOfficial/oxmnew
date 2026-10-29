@@ -10,11 +10,16 @@ from .serializers import (
     PublicOnlineProductSerializer
 )
 from products.models import Product
+from core.scoping import IsShopOwner, owner_only
+
+# The online store is the owner's storefront and has no staff permission
+# checkbox, so every signed-in endpoint here is the owner's alone. That also
+# keeps request.user correct below: it can only ever be the shop owner.
 
 
 class OnlineProductListCreateView(generics.ListCreateAPIView):
     serializer_class = OnlineProductSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsShopOwner]
 
     def get_queryset(self):
         return OnlineProduct.objects.filter(user=self.request.user)
@@ -40,7 +45,7 @@ class OnlineProductListCreateView(generics.ListCreateAPIView):
 
 class OnlineProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = OnlineProductSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsShopOwner]
 
     def get_queryset(self):
         return OnlineProduct.objects.filter(user=self.request.user)
@@ -48,6 +53,7 @@ class OnlineProductDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@owner_only
 def toggle_product_publication(request, product_id):
     """Toggle publication status of a product."""
     try:
@@ -87,7 +93,7 @@ def toggle_product_publication(request, product_id):
 
 class OnlineOrderListView(generics.ListAPIView):
     serializer_class = OnlineOrderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsShopOwner]
 
     def get_queryset(self):
         return OnlineOrder.objects.filter(user=self.request.user)
@@ -95,7 +101,7 @@ class OnlineOrderListView(generics.ListAPIView):
 
 class OnlineOrderDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = OnlineOrderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsShopOwner]
 
     def get_queryset(self):
         return OnlineOrder.objects.filter(user=self.request.user)
@@ -181,7 +187,7 @@ def create_public_order(request, domain):
 
 class StoreSettingsView(generics.RetrieveUpdateAPIView):
     serializer_class = StoreSettingsSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsShopOwner]
 
     def get_object(self):
         settings, created = StoreSettings.objects.get_or_create(user=self.request.user)
@@ -196,6 +202,7 @@ class StoreSettingsView(generics.RetrieveUpdateAPIView):
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@owner_only
 def store_terms(request):
     """Read or update the store's terms and conditions."""
     settings, _created = StoreSettings.objects.get_or_create(user=request.user)
@@ -208,6 +215,7 @@ def store_terms(request):
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@owner_only
 def store_privacy(request):
     """Read or update the store's privacy policy."""
     settings, _created = StoreSettings.objects.get_or_create(user=request.user)

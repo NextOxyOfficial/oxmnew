@@ -1,3 +1,4 @@
+from core.scoping import owner_for
 from rest_framework import serializers
 
 from products.models import Product
@@ -185,7 +186,7 @@ class VehicleWriteSerializer(serializers.ModelSerializer):
     def _check_unique(self, field, value):
         """Engine/chassis numbers are unique per shop. Checked here so the user
         gets a readable message instead of a database IntegrityError."""
-        user = self.context["request"].user
+        user = owner_for(self.context["request"])
         qs = Vehicle.objects.filter(user=user, **{f"{field}__iexact": value.strip()})
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
@@ -206,7 +207,7 @@ class VehicleWriteSerializer(serializers.ModelSerializer):
         return value
 
     def validate_product(self, value):
-        if value and value.user_id != self.context["request"].user.id:
+        if value and value.user_id != owner_for(self.context["request"]).id:
             raise serializers.ValidationError("প্রোডাক্টটা পাওয়া যায়নি।")
         return value
 
@@ -221,7 +222,7 @@ class VehicleWriteSerializer(serializers.ModelSerializer):
 
         if not attrs.get("product"):
             if name:
-                user = self.context["request"].user
+                user = owner_for(self.context["request"])
                 product = Product.objects.filter(user=user, name__iexact=name).first()
                 if not product:
                     product = Product.objects.create(

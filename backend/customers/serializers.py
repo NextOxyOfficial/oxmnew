@@ -1,3 +1,4 @@
+from core.scoping import owner_for
 from core.ownership import OwnedRelationsMixin
 from core.models import Achievement, Gift, Level
 from rest_framework import serializers
@@ -275,7 +276,7 @@ class CustomerCreateUpdateSerializer(serializers.ModelSerializer):
         fields = ["name", "email", "phone", "address", "status", "notes"]
 
     def create(self, validated_data):
-        validated_data["user"] = self.context["request"].user
+        validated_data["user"] = owner_for(self.context["request"])
         return super().create(validated_data)
 
 

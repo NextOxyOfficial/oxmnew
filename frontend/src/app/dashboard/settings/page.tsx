@@ -13,6 +13,7 @@ import LevelTab from "@/components/settings/LevelTab";
 import PaymentMethodsTab from "@/components/settings/PaymentMethodsTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { CURRENCY_SYMBOLS, useCurrency } from "@/contexts/CurrencyContext";
+import { isOwner } from "@/lib/access";
 import { ApiService } from "@/lib/api";
 import { useEffect, useState } from "react";
 
@@ -175,6 +176,9 @@ function ConfirmDelete({
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  // A staff login may look at the shop's setup but not rewrite it — the
+  // server refuses those writes, so the form is drawn read-only to match.
+  const ownerView = isOwner(user);
   const { currency, currencySymbol, setCurrency, refreshCurrency } =
     useCurrency();
   // Store is the first tab, so settings should open on it rather than
@@ -293,9 +297,14 @@ export default function SettingsPage() {
     fetchLevels();
     fetchBrands();
     fetchPaymentMethods();
-    fetchApiKeys();
     fetchStoreProfile();
   }, []);
+
+  // The key endpoints refuse staff; asking anyway only raises an error toast.
+  // Waits for the login to load — before that isOwner(null) reads as owner.
+  useEffect(() => {
+    if (user && ownerView) fetchApiKeys();
+  }, [user, ownerView]);
 
   // Fetch data when specific tabs become active
   useEffect(() => {
@@ -303,7 +312,7 @@ export default function SettingsPage() {
       fetchAchievements();
     } else if (activeTab === "levels") {
       fetchLevels();
-    } else if (activeTab === "api-keys") {
+    } else if (activeTab === "api-keys" && ownerView) {
       fetchApiKeys(); // This will fetch usage stats if API keys exist
     } else if (activeTab === "store") {
       fetchStoreProfile();
@@ -1030,7 +1039,10 @@ export default function SettingsPage() {
     { id: "levels", label: "লেভেল" },
     { id: "brand", label: "ব্র্যান্ড" },
     { id: "payment-methods", label: "পেমেন্ট মাধ্যম" },
-  ];
+  ].filter(
+    // Logins and the API key are the owner's alone; staff never get them.
+    (tab) => ownerView || (tab.id !== "roles" && tab.id !== "api-keys")
+  );
 
   return (
     <div className="page">
@@ -1087,6 +1099,16 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {!ownerView && (
+          <div className="plane-section text-sm text-[var(--text-muted)]">
+            আপনি কর্মচারী হিসেবে লগইন করেছেন। সেটিংস শুধু দেখতে পারবেন, বদলাতে
+            পারবেন দোকানের মালিক।
+          </div>
+        )}
+
+        {/* disabled on a fieldset switches off every input and button inside,
+            including the ones the tab components draw. */}
+        <fieldset disabled={!ownerView} className="plane-fieldset">
         {/* Categories */}
         {activeTab === "categories" && (
           <>
@@ -1598,7 +1620,7 @@ export default function SettingsPage() {
         )}
 
         {/* API keys */}
-        {activeTab === "api-keys" && (
+        {activeTab === "api-keys" && ownerView && (
           <>
             {usageStats && (
               <div className="stat-strip">
@@ -1864,7 +1886,7 @@ export default function SettingsPage() {
 
         {/* Gift */}
         {/* Role settings — who may sign in and what they may do */}
-        {activeTab === "roles" && <RoleSettingsTab />}
+        {activeTab === "roles" && ownerView && <RoleSettingsTab />}
 
         {activeTab === "gift" && (
           <GiftsTab
@@ -1919,6 +1941,7 @@ export default function SettingsPage() {
             onDeleteClick={handlePaymentMethodDeleteClick}
           />
         )}
+        </fieldset>
       </div>
 
       {/* Delete confirmations */}

@@ -171,6 +171,17 @@ body {
      cards, no shadow-on-shadow. */
   .plane-section { padding: 1rem 1.25rem; }
   .plane-section + .plane-section { border-top: 1px solid var(--border); }
+  /* A <fieldset> that only groups sections (to disable them together) must
+     not add a box of its own, nor swallow the hairline above its first one. */
+  .plane-fieldset { display: contents; }
+  .plane-section + .plane-fieldset > :first-child { border-top: 1px solid var(--border); }
+  /* A disabled fieldset already switches off its inputs; a file picker drawn
+     as a styled <label> still looked clickable, so dim it to match. */
+  .plane-fieldset:disabled label:has(input[type="file"]) {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
 
   .section-title {
     font-size: 0.75rem;

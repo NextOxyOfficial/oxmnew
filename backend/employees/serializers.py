@@ -1,3 +1,4 @@
+from core.scoping import owner_for
 from core.ownership import OwnedRelationsMixin
 from rest_framework import serializers
 
@@ -243,7 +244,7 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
     def validate_employee_id(self, value):
         """Ensure employee_id is unique within the current user's employees"""
         instance = getattr(self, "instance", None)
-        user = self.context["request"].user
+        user = owner_for(self.context["request"])
         if (
             Employee.objects.filter(employee_id=value, user=user)
             .exclude(pk=instance.pk if instance else None)
@@ -255,7 +256,7 @@ class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         """Ensure email is unique within the current user's employees"""
         instance = getattr(self, "instance", None)
-        user = self.context["request"].user
+        user = owner_for(self.context["request"])
         if (
             Employee.objects.filter(email=value, user=user)
             .exclude(pk=instance.pk if instance else None)

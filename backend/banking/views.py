@@ -174,7 +174,7 @@ class BankAccountViewSet(viewsets.ModelViewSet):
             account = BankAccount.objects.get(id=pk, is_active=True)
 
             if not request.user.is_staff and not request.user.is_superuser:
-                if account.owner != request.user:
+                if account.owner != owner_for(request):
                     return Response(
                         {"error": "You don't have permission to access this account."},
                         status=status.HTTP_403_FORBIDDEN
@@ -302,7 +302,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
         # Check if user owns the account (unless they're staff/admin)
         if not (self.request.user.is_staff or self.request.user.is_superuser):
-            if account.owner != self.request.user:
+            if account.owner != owner_for(self.request):
                 raise PermissionDenied(
                     "You can only create transactions for your own accounts"
                 )
@@ -661,7 +661,8 @@ def activate_banking_plan(request):
             if user_accounts.exists():
                 account = user_accounts.first()
             else:
-                account_name = f"{request.user.first_name or request.user.username}'s Banking Account"
+                shop = owner_for(request)
+                account_name = f"{shop.first_name or shop.username}'s Banking Account"
                 account = BankAccount.objects.create(
                     owner=owner_for(request), name=account_name, balance=0.00
                 )

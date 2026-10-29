@@ -73,7 +73,7 @@ class SupplierCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Get the current user from the request context
-        user = self.context['request'].user
+        user = owner_for(self.context['request'])
         validated_data['user'] = user
         return super().create(validated_data)
 
@@ -106,7 +106,7 @@ class PurchaseSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Get the current user from the request context
-        user = self.context['request'].user
+        user = owner_for(self.context['request'])
         validated_data['user'] = user
         return super().create(validated_data)
 
@@ -118,7 +118,7 @@ class PurchaseCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Get the current user from the request context
-        user = self.context['request'].user
+        user = owner_for(self.context['request'])
         validated_data['user'] = user
         return super().create(validated_data)
 
@@ -172,7 +172,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Get the current user from the request context
-        user = self.context['request'].user
+        user = owner_for(self.context['request'])
         validated_data['user'] = user
         return super().create(validated_data)
 
@@ -184,7 +184,7 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Get the current user from the request context
-        user = self.context['request'].user
+        user = owner_for(self.context['request'])
         validated_data['user'] = user
         return super().create(validated_data)
 

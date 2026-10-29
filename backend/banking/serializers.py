@@ -3,6 +3,8 @@ from employees.models import Employee
 from django.utils import timezone
 from rest_framework import serializers
 
+from core.scoping import owner_for
+
 from .models import (
     BankAccount,
     BankingPlan,
@@ -167,7 +169,7 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and not (request.user.is_staff or request.user.is_superuser):
             verified_by = data.get("verified_by")
-            if verified_by is not None and verified_by.user_id != request.user.id:
+            if verified_by is not None and verified_by.user_id != owner_for(request).id:
                 raise serializers.ValidationError(
                     {"verified_by": "Invalid employee selection."}
                 )

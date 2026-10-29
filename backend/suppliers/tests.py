@@ -58,4 +58,5 @@ class SupplierAPITest(APITestCase):
         
         response = self.client.get('/api/suppliers/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        # The list is paginated, so the rows sit under "results".
+        self.assertEqual(len(response.data["results"]), 2)

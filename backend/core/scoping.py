@@ -158,3 +158,26 @@ class IsShopOwner(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return staff_access(request.user) is None
+
+
+_SAFE_METHODS = ("GET", "HEAD", "OPTIONS")
+
+
+def owner_writes(view):
+    """Staff may read it, only the owner may change it.
+
+    For the shop's own configuration — store profile, settings, categories,
+    brands, payment methods, loyalty levels. A salesperson needs to *see* the
+    categories to fill in a product form, but there is no permission checkbox
+    for rewriting the shop's setup, so writes are refused for any staff login.
+    """
+
+    guarded = owner_only(view)
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if request.method in _SAFE_METHODS:
+            return view(request, *args, **kwargs)
+        return guarded(request, *args, **kwargs)
+
+    return wrapper

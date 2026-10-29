@@ -11,7 +11,7 @@ from core import business_days
 from core.sms_gateway import send_sms as send_sms_via_gateway
 
 logger = logging.getLogger(__name__)
-from core.scoping import owner_for, owner_only, require_permission
+from core.scoping import owner_for, owner_only, owner_writes, require_permission
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -249,6 +249,41 @@ def register(request):
 
 
 
+
+def _login_identity(account):
+    """The signed-in login as the frontend needs it, owner or staff alike.
+
+    Login and the profile reload must return the same shape: the menu is drawn
+    from is_employee and permissions, and whichever one the browser saw last
+    wins.
+    """
+    from core.scoping import staff_access
+
+    access = staff_access(account)
+    return {
+        "id": account.id,
+        "username": account.username,
+        "email": account.email,
+        "first_name": account.first_name,
+        "last_name": account.last_name,
+        "date_joined": account.date_joined,
+        "last_login": account.last_login,
+        "is_active": account.is_active,
+        "is_staff": account.is_staff,
+        "is_superuser": account.is_superuser,
+        # Everything the frontend needs to draw the right menu.
+        "is_employee": access is not None,
+        "employee_name": access.employee.name if access else None,
+        "employee_id": access.employee_id if access else None,
+        "store_owner": access.owner.username if access else account.username,
+        "permissions": (
+            (list(access.permissions or []) if access.is_enabled else [])
+            if access
+            else None
+        ),
+    }
+
+
 def _staff_login(identifier, password):
     """Authenticate an employee by the phone or email on their record."""
     from employees.models import EmployeeAccess
@@ -353,24 +388,7 @@ def login(request):
         return Response(
             {
                 "message": "Login successful",
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                    "email": user.email,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                    "date_joined": user.date_joined,
-                    "last_login": user.last_login,
-                    "is_active": user.is_active,
-                    "is_staff": user.is_staff,
-                    "is_superuser": user.is_superuser,
-                    # Everything the frontend needs to draw the right menu.
-                    "is_employee": access is not None,
-                    "employee_name": access.employee.name if access else None,
-                    "employee_id": access.employee_id if access else None,
-                    "store_owner": data_owner.username,
-                    "permissions": list(access.permissions or []) if access else None,
-                },
+                "user": _login_identity(user),
                 "profile": {
                     "company": profile.company or "",
                     "company_address": profile.company_address or "",
@@ -424,6 +442,7 @@ def logout(request):
 
 @api_view(["GET", "PUT"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def profile(request):
     """
     Get or update user profile
@@ -450,18 +469,10 @@ def profile(request):
 
         return Response(
             {
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                    "email": user.email,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                    "date_joined": user.date_joined,
-                    "last_login": user.last_login,
-                    "is_active": user.is_active,
-                    "is_staff": user.is_staff,
-                    "is_superuser": user.is_superuser,
-                },
+                # Who is signed in — not the shop. On a page reload this is
+                # the only source of is_employee and permissions, so returning
+                # the owner here handed a staff login the owner's whole menu.
+                "user": _login_identity(request.user),
                 "profile": {
                     "company": profile.company or "",
                     "company_address": profile.company_address or "",
@@ -570,6 +581,7 @@ def profile(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def upload_store_logo(request):
     """
     Upload store logo
@@ -626,6 +638,7 @@ def upload_store_logo(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def upload_banner_image(request):
     """
     Upload banner image
@@ -682,6 +695,7 @@ def upload_banner_image(request):
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def remove_store_logo(request):
     """
     Remove store logo
@@ -707,6 +721,7 @@ def remove_store_logo(request):
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
+@owner_only
 def remove_banner_image(request):
     """
     Remove banner image
@@ -732,13 +747,14 @@ def remove_banner_image(request):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def categories(request):
     """
     Get all categories or create a new category
     """
     if request.method == "GET":
         try:
-            user_categories = Category.objects.filter(user=request.user)
+            user_categories = Category.objects.filter(user=owner_for(request))
             categories_data = []
 
             for category in user_categories:
@@ -772,7 +788,7 @@ def categories(request):
                 )
 
             # Check if category with same name already exists for this user
-            if Category.objects.filter(user=request.user, name__iexact=name).exists():
+            if Category.objects.filter(user=owner_for(request), name__iexact=name).exists():
                 return Response(
                     {"error": "Category with this name already exists"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -780,7 +796,7 @@ def categories(request):
 
             # Create new category
             category = Category.objects.create(
-                name=name, description=description, user=request.user
+                name=name, description=description, user=owner_for(request)
             )
 
             return Response(
@@ -806,12 +822,13 @@ def categories(request):
 
 @api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def category_detail(request, category_id):
     """
     Update or delete a specific category
     """
     try:
-        category = Category.objects.get(id=category_id, user=request.user)
+        category = Category.objects.get(id=category_id, user=owner_for(request))
     except Category.DoesNotExist:
         return Response(
             {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
@@ -830,7 +847,7 @@ def category_detail(request, category_id):
 
                 # Check if another category with same name exists for this user
                 if (
-                    Category.objects.filter(user=request.user, name__iexact=name)
+                    Category.objects.filter(user=owner_for(request), name__iexact=name)
                     .exclude(id=category_id)
                     .exists()
                 ):
@@ -884,12 +901,13 @@ def category_detail(request, category_id):
 
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def toggle_category(request, category_id):
     """
     Toggle category active status
     """
     try:
-        category = Category.objects.get(id=category_id, user=request.user)
+        category = Category.objects.get(id=category_id, user=owner_for(request))
         category.is_active = not category.is_active
         category.save()
 
@@ -918,6 +936,7 @@ def toggle_category(request, category_id):
 
 @api_view(["GET", "PUT"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def user_settings(request):
     """
     Get or update user settings
@@ -1127,13 +1146,14 @@ def request_password_reset(request):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def gifts(request):
     """
     Get all gifts or create a new gift
     """
     if request.method == "GET":
         try:
-            user_gifts = Gift.objects.filter(user=request.user)
+            user_gifts = Gift.objects.filter(user=owner_for(request))
             gifts_data = []
             for gift in user_gifts:
                 gifts_data.append(
@@ -1164,7 +1184,7 @@ def gifts(request):
                 )
 
             # Check if gift with same name already exists for this user
-            if Gift.objects.filter(user=request.user, name__iexact=name).exists():
+            if Gift.objects.filter(user=owner_for(request), name__iexact=name).exists():
                 return Response(
                     {"error": "Gift with this name already exists"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -1173,7 +1193,7 @@ def gifts(request):
             # Create new gift
             gift = Gift.objects.create(
                 name=name,
-                user=request.user,
+                user=owner_for(request),
                 is_active=request.data.get("is_active", True),
             )
 
@@ -1199,12 +1219,13 @@ def gifts(request):
 
 @api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def gift_detail(request, gift_id):
     """
     Update or delete a specific gift
     """
     try:
-        gift = Gift.objects.get(id=gift_id, user=request.user)
+        gift = Gift.objects.get(id=gift_id, user=owner_for(request))
     except Gift.DoesNotExist:
         return Response({"error": "Gift not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1221,7 +1242,7 @@ def gift_detail(request, gift_id):
 
                 # Check if another gift with same name exists for this user
                 if (
-                    Gift.objects.filter(user=request.user, name__iexact=name)
+                    Gift.objects.filter(user=owner_for(request), name__iexact=name)
                     .exclude(id=gift_id)
                     .exists()
                 ):
@@ -1271,12 +1292,13 @@ def gift_detail(request, gift_id):
 
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def toggle_gift(request, gift_id):
     """
     Toggle gift active status
     """
     try:
-        gift = Gift.objects.get(id=gift_id, user=request.user)
+        gift = Gift.objects.get(id=gift_id, user=owner_for(request))
         gift.is_active = not gift.is_active
         gift.save()
 
@@ -1305,6 +1327,7 @@ def toggle_gift(request, gift_id):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def achievements(request):
     """
     GET: Retrieve all achievements for the authenticated user
@@ -1312,7 +1335,7 @@ def achievements(request):
     """
     if request.method == "GET":
         try:
-            user_achievements = Achievement.objects.filter(user=request.user)
+            user_achievements = Achievement.objects.filter(user=owner_for(request))
             achievements_data = [
                 {
                     "id": achievement.id,
@@ -1381,7 +1404,7 @@ def achievements(request):
 
             # Check for duplicate achievement names for this user
             if Achievement.objects.filter(
-                user=request.user, name=achievement_name
+                user=owner_for(request), name=achievement_name
             ).exists():
                 return Response(
                     {"error": "Achievement with this name already exists"},
@@ -1390,7 +1413,7 @@ def achievements(request):
 
             # Create the achievement
             achievement = Achievement.objects.create(
-                user=request.user,
+                user=owner_for(request),
                 name=achievement_name,
                 type=data["type"],
                 value=value,
@@ -1432,6 +1455,7 @@ def achievements(request):
 
 @api_view(["GET", "PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def achievement_detail(request, achievement_id):
     """
     GET: Retrieve a specific achievement
@@ -1439,7 +1463,7 @@ def achievement_detail(request, achievement_id):
     DELETE: Delete a specific achievement
     """
     try:
-        achievement = Achievement.objects.get(id=achievement_id, user=request.user)
+        achievement = Achievement.objects.get(id=achievement_id, user=owner_for(request))
     except Achievement.DoesNotExist:
         return Response(
             {"error": "Achievement not found"}, status=status.HTTP_404_NOT_FOUND
@@ -1470,7 +1494,7 @@ def achievement_detail(request, achievement_id):
             if "name" in data:
                 # Check for duplicate names (excluding current achievement)
                 if (
-                    Achievement.objects.filter(user=request.user, name=data["name"])
+                    Achievement.objects.filter(user=owner_for(request), name=data["name"])
                     .exclude(id=achievement.id)
                     .exists()
                 ):
@@ -1569,12 +1593,13 @@ def achievement_detail(request, achievement_id):
 
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def toggle_achievement(request, achievement_id):
     """
     Toggle achievement active/inactive status
     """
     try:
-        achievement = Achievement.objects.get(id=achievement_id, user=request.user)
+        achievement = Achievement.objects.get(id=achievement_id, user=owner_for(request))
 
         # Toggle the active status
         achievement.is_active = not achievement.is_active
@@ -1610,6 +1635,7 @@ def toggle_achievement(request, achievement_id):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def levels(request):
     """
     GET: Retrieve all levels for the authenticated user
@@ -1617,7 +1643,7 @@ def levels(request):
     """
     if request.method == "GET":
         try:
-            user_levels = Level.objects.filter(user=request.user)
+            user_levels = Level.objects.filter(user=owner_for(request))
             levels_data = [
                 {
                     "id": level.id,
@@ -1650,7 +1676,7 @@ def levels(request):
             level_name = data["name"].strip()
 
             # Check for duplicate level names for this user
-            if Level.objects.filter(user=request.user, name=level_name).exists():
+            if Level.objects.filter(user=owner_for(request), name=level_name).exists():
                 return Response(
                     {"error": "Level with this name already exists"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -1658,7 +1684,7 @@ def levels(request):
 
             # Create the level
             level = Level.objects.create(
-                user=request.user,
+                user=owner_for(request),
                 name=level_name,
                 is_active=data.get("is_active", True),
             )
@@ -1694,6 +1720,7 @@ def levels(request):
 
 @api_view(["GET", "PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def level_detail(request, level_id):
     """
     GET: Retrieve a specific level
@@ -1701,7 +1728,7 @@ def level_detail(request, level_id):
     DELETE: Delete a specific level
     """
     try:
-        level = Level.objects.get(id=level_id, user=request.user)
+        level = Level.objects.get(id=level_id, user=owner_for(request))
     except Level.DoesNotExist:
         return Response({"error": "Level not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1734,7 +1761,7 @@ def level_detail(request, level_id):
 
                 # Check for duplicate names (excluding current level)
                 if (
-                    Level.objects.filter(user=request.user, name=new_name)
+                    Level.objects.filter(user=owner_for(request), name=new_name)
                     .exclude(id=level.id)
                     .exists()
                 ):
@@ -1795,12 +1822,13 @@ def level_detail(request, level_id):
 
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def toggle_level(request, level_id):
     """
     Toggle level active/inactive status
     """
     try:
-        level = Level.objects.get(id=level_id, user=request.user)
+        level = Level.objects.get(id=level_id, user=owner_for(request))
 
         # Toggle the active status
         level.is_active = not level.is_active
@@ -1985,13 +2013,14 @@ def smsSend(request):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def brands(request):
     """
     Get all brands or create a new brand
     """
     if request.method == "GET":
         try:
-            user_brands = Brand.objects.filter(user=request.user)
+            user_brands = Brand.objects.filter(user=owner_for(request))
             brands_data = []
             for brand in user_brands:
                 brands_data.append(
@@ -2022,7 +2051,7 @@ def brands(request):
                 )
 
             # Check if brand with same name already exists for this user
-            if Brand.objects.filter(user=request.user, name__iexact=name).exists():
+            if Brand.objects.filter(user=owner_for(request), name__iexact=name).exists():
                 return Response(
                     {"error": "Brand with this name already exists"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -2031,7 +2060,7 @@ def brands(request):
             # Create new brand
             brand = Brand.objects.create(
                 name=name,
-                user=request.user,
+                user=owner_for(request),
                 is_active=request.data.get("is_active", True),
             )
 
@@ -2057,12 +2086,13 @@ def brands(request):
 
 @api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def brand_detail(request, brand_id):
     """
     Update or delete a specific brand
     """
     try:
-        brand = Brand.objects.get(id=brand_id, user=request.user)
+        brand = Brand.objects.get(id=brand_id, user=owner_for(request))
     except Brand.DoesNotExist:
         return Response({"error": "Brand not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -2079,7 +2109,7 @@ def brand_detail(request, brand_id):
 
                 # Check if another brand with same name exists for this user
                 if (
-                    Brand.objects.filter(user=request.user, name__iexact=name)
+                    Brand.objects.filter(user=owner_for(request), name__iexact=name)
                     .exclude(id=brand_id)
                     .exists()
                 ):
@@ -2129,12 +2159,13 @@ def brand_detail(request, brand_id):
 
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def toggle_brand(request, brand_id):
     """
     Toggle brand active status
     """
     try:
-        brand = Brand.objects.get(id=brand_id, user=request.user)
+        brand = Brand.objects.get(id=brand_id, user=owner_for(request))
         brand.is_active = not brand.is_active
         brand.save()
 
@@ -2163,13 +2194,14 @@ def toggle_brand(request, brand_id):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def payment_methods(request):
     """
     Get all payment methods or create a new payment method
     """
     if request.method == "GET":
         try:
-            user_payment_methods = PaymentMethod.objects.filter(user=request.user)
+            user_payment_methods = PaymentMethod.objects.filter(user=owner_for(request))
             payment_methods_data = []
             for payment_method in user_payment_methods:
                 payment_methods_data.append(
@@ -2203,7 +2235,7 @@ def payment_methods(request):
 
             # Check if payment method with same name already exists for this user
             if PaymentMethod.objects.filter(
-                user=request.user, name__iexact=name
+                user=owner_for(request), name__iexact=name
             ).exists():
                 return Response(
                     {"error": "Payment method with this name already exists"},
@@ -2213,7 +2245,7 @@ def payment_methods(request):
             # Create new payment method
             payment_method = PaymentMethod.objects.create(
                 name=name,
-                user=request.user,
+                user=owner_for(request),
                 is_active=request.data.get("is_active", True),
             )
 
@@ -2239,13 +2271,14 @@ def payment_methods(request):
 
 @api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def payment_method_detail(request, payment_method_id):
     """
     Update or delete a specific payment method
     """
     try:
         payment_method = PaymentMethod.objects.get(
-            id=payment_method_id, user=request.user
+            id=payment_method_id, user=owner_for(request)
         )
     except PaymentMethod.DoesNotExist:
         return Response(
@@ -2265,7 +2298,7 @@ def payment_method_detail(request, payment_method_id):
 
                 # Check if another payment method with same name exists for this user
                 if (
-                    PaymentMethod.objects.filter(user=request.user, name__iexact=name)
+                    PaymentMethod.objects.filter(user=owner_for(request), name__iexact=name)
                     .exclude(id=payment_method_id)
                     .exists()
                 ):
@@ -2316,13 +2349,14 @@ def payment_method_detail(request, payment_method_id):
 
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
+@owner_writes
 def toggle_payment_method(request, payment_method_id):
     """
     Toggle payment method active status
     """
     try:
         payment_method = PaymentMethod.objects.get(
-            id=payment_method_id, user=request.user
+            id=payment_method_id, user=owner_for(request)
         )
         payment_method.is_active = not payment_method.is_active
         payment_method.save()

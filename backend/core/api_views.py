@@ -1,4 +1,4 @@
-from core.scoping import require_permission
+from core.scoping import can, owner_for, require_permission
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -14,7 +14,7 @@ from suppliers.models import Supplier
 @require_permission("dashboard.money", "analytics.view")
 def dashboard_stats(request):
     """Get comprehensive dashboard statistics"""
-    user = request.user
+    user = owner_for(request)
 
     # Product stats
     products = Product.objects.filter(user=user)
@@ -119,11 +119,17 @@ def search_global(request):
     if not query or len(query) < 2:
         return Response({"results": [], "total": 0})
 
-    user = request.user
+    user = owner_for(request)
     results = []
 
     # Search products
-    products = Product.objects.filter(user=user, name__icontains=query)[:5]
+    # Each section only for a login that may open it — search must not be
+    # a side door into the customer list for someone without that tick.
+    products = (
+        Product.objects.filter(user=user, name__icontains=query)[:5]
+        if can(request, "products.view")
+        else []
+    )
 
     for product in products:
         stock_level = (
@@ -145,7 +151,11 @@ def search_global(request):
         )
 
     # Search customers
-    customers = Customer.objects.filter(user=user, name__icontains=query)[:5]
+    customers = (
+        Customer.objects.filter(user=user, name__icontains=query)[:5]
+        if can(request, "customers.view")
+        else []
+    )
 
     for customer in customers:
         results.append(
@@ -162,7 +172,11 @@ def search_global(request):
         )
 
     # Search suppliers
-    suppliers = Supplier.objects.filter(user=user, name__icontains=query)[:3]
+    suppliers = (
+        Supplier.objects.filter(user=user, name__icontains=query)[:3]
+        if can(request, "suppliers.view")
+        else []
+    )
 
     for supplier in suppliers:
         results.append(

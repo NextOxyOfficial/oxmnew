@@ -337,7 +337,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 movement_data = {
                     "product": product,
                     "variant": variant,
-                    "user": request.user,
+                    "user": owner_for(request),
                     "movement_type": "adjustment",
                     "quantity": quantity,
                     "previous_stock": previous_stock,
@@ -375,7 +375,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 # Record stock movement
                 movement_data = {
                     "product": product,
-                    "user": request.user,
+                    "user": owner_for(request),
                     "movement_type": "adjustment",
                     "quantity": quantity,
                     "previous_stock": previous_stock,
@@ -550,7 +550,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                             "product_code": row.get("product_code", "").strip() or None,
                             "location": row.get("location", "").strip() or None,
                             "details": row.get("details", "").strip() or "",
-                            "user": request.user,
+                            "user": owner_for(request),
                             "has_variants": False,  # Default for CSV upload
                         }
 

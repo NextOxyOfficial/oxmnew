@@ -1,3 +1,4 @@
+from core.scoping import owner_for
 from core.ownership import OwnedRelationsMixin
 from rest_framework import serializers
 from django.contrib.auth.models import User
@@ -140,7 +141,7 @@ class NotebookSectionCreateUpdateSerializer(serializers.ModelSerializer):
     def validate_notebook(self, value):
         """Ensure user owns the notebook"""
         request = self.context.get('request')
-        if request and value.created_by != request.user:
+        if request and value.created_by != owner_for(request):
             raise serializers.ValidationError("You can only add sections to your own notebooks.")
         return value
 
